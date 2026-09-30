@@ -20,6 +20,7 @@ Es un proyecto independiente: tiene sus propias dependencias y no importa códig
 | `PORT` | `3000` | Puerto HTTP |
 | `DATABASE_URL` | | Cadena de conexión a PostgreSQL (se usa a partir de GH-3) |
 | `TZ` | | Zona horaria; debe ser `Europe/Madrid` |
+| `CHOKIDAR_USEPOLLING` | `false` | `true` para que `npm run dev` detecte cambios por sondeo (código montado desde Windows). En Compose se activa con `RECARGA_POLLING` |
 
 ## Desarrollo
 

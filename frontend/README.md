@@ -21,7 +21,7 @@ Es un proyecto independiente: tiene sus propias dependencias y no importa códig
 | Variable | Por defecto | Descripción |
 |---|---|---|
 | `API_PROXY_TARGET` | `http://localhost:3000` | Adónde redirige Vite las peticiones a `/api` |
-| `VITE_USE_POLLING` | `false` | `true` si los cambios no se detectan con el código montado en Docker (p. ej. en Windows) |
+| `VITE_USE_POLLING` | `false` | `true` para detectar cambios por sondeo (código montado desde Windows). En Compose se activa con `RECARGA_POLLING` |
 
 ## Desarrollo
 

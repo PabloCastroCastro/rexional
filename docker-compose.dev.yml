@@ -38,6 +38,8 @@ services:
       PORT: 3000
       DATABASE_URL: postgres://${POSTGRES_USER:-vestuario}:${POSTGRES_PASSWORD:-vestuario}@db:5432/${POSTGRES_DB:-vestuario}
       TZ: ${TZ:-Europe/Madrid}
+      # Detección de cambios por sondeo (tsx usa chokidar); necesaria con el código en Windows
+      CHOKIDAR_USEPOLLING: ${RECARGA_POLLING:-false}
     volumes:
       - ./backend:/app
       # node_modules del contenedor (Linux), no el del equipo
@@ -55,7 +57,7 @@ services:
       target: dev
     environment:
       API_PROXY_TARGET: http://backend:3000
-      VITE_USE_POLLING: ${VITE_USE_POLLING:-false}
+      VITE_USE_POLLING: ${RECARGA_POLLING:-false}
     volumes:
       - ./frontend:/app
       - /app/node_modules
