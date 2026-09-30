@@ -53,6 +53,51 @@ El avance de cada ciclo se sigue en los [milestones](https://github.com/PabloCas
 
 El detalle está en la [guía de contribución](CONTRIBUTING.md).
 
+## Estructura del repositorio
+
+```
+frontend/                PWA (React + Vite)
+backend/                 API (Node + Hono) y base de datos (PostgreSQL)
+proxy/                   nginx: sirve la PWA y redirige /api al backend
+docker-compose.dev.yml   desarrollo local
+docker-compose.yml       servidor (pruebas y producción)
+.env.example             configuración de Compose
+docs/                    documento de proyecto
+```
+
+Cada proyecto es independiente: tiene sus propias dependencias, su Dockerfile y su README, y no importa código de los demás.
+
 ## Desarrollo local
 
-Pendiente de la issue GH-2 (estructura del monorepo y Docker Compose). Cuando esté lista, el entorno completo se arrancará con un solo comando.
+Requisitos: [Docker](https://docs.docker.com/get-docker/) con Docker Compose. Node.js 24 solo hace falta para trabajar en un proyecto fuera de Docker.
+
+Arranca todo con un solo comando:
+
+```
+docker compose -f docker-compose.dev.yml up --build
+```
+
+| Servicio | Dirección |
+|---|---|
+| Aplicación (Vite, con recarga en caliente) | http://localhost:5173 |
+| API | http://localhost:3000/api/health (también a través de http://localhost:5173/api) |
+| PostgreSQL | `localhost:5432`, usuario, contraseña y base de datos `vestuario` |
+
+El código de `backend/` y `frontend/` se monta en los contenedores, así que los cambios se aplican al guardar. En Windows, si el frontend no detecta los cambios, pon `VITE_USE_POLLING=true` en un `.env` (copia de `.env.example`).
+
+Si cambian las dependencias de un proyecto, reconstruye y renueva sus `node_modules`:
+
+```
+docker compose -f docker-compose.dev.yml up --build --renew-anon-volumes
+```
+
+Para trabajar en un solo proyecto sin Docker, sigue el README de su carpeta.
+
+## Probar la versión de servidor en local
+
+```
+cp .env.example .env        # y define POSTGRES_PASSWORD
+docker compose up --build
+```
+
+La aplicación queda en http://localhost:8080, servida por nginx.
