@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/PabloCastroCastro/rexional/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/PabloCastroCastro/rexional/actions/workflows/ci.yml)
 
-Aplicación web para gestionar clubes de fútbol amateur desde el móvil, con varios equipos por club (uno por categoría): plantilla, asistencia a entrenamientos, convocatorias, caja de multas, personalización por club, estadísticas de partido y planificación de entrenos.
+Aplicación web para gestionar clubes de fútbol amateur desde el móvil, con una plantilla por categoría y temporada: jugadores, asistencia a entrenamientos, convocatorias, caja de multas, personalización por club, estadísticas de partido y planificación de entrenos.
 
 Se instala como PWA desde el navegador, sin tiendas de aplicaciones, y se autoaloja en un servidor propio con software libre y coste cero.
 
@@ -38,7 +38,7 @@ El acceso se hace inicialmente por Tailscale. La exposición pública a internet
 | 2 | Entrenos | v0.2.0 |
 | 3 | Convocatorias | v0.3.0 |
 | 4 | Multas (paridad con el MVP) | v1.0.0 |
-| 5 | Personalización | v1.1.0 |
+| 5 | Personalización y temporadas | v1.1.0 |
 | 6 | Estadísticas | v1.2.0 |
 | 7 | Planificación de entrenos | v1.3.0 |
 | 8 | Operación | v1.4.0 |
@@ -91,6 +91,12 @@ Si cambian las dependencias de un proyecto, reconstruye y renueva sus `node_modu
 
 ```
 docker compose -f docker-compose.dev.yml up --build --renew-anon-volumes
+```
+
+El backend aplica las migraciones de la base de datos al arrancar. Para cargar datos de ejemplo (dos clubes con dos temporadas, jugadores y usuarios con contraseña `vestuario-dev`; ver el README del backend):
+
+```
+docker compose -f docker-compose.dev.yml exec backend npm run db:seed
 ```
 
 Para trabajar en un solo proyecto sin Docker, sigue el README de su carpeta.

@@ -31,6 +31,9 @@ backups/
 *.dump
 *.sql.gz
 
+# Copias temporales de npm run db:check (backend)
+.db-check-*/
+
 # Cachés de herramientas
 .cache/
 .eslintcache

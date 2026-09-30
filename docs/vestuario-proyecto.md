@@ -1,6 +1,6 @@
 # Vestuario · Documento de proyecto
 
-Aplicación para la gestión de clubes y equipos de fútbol amateur, con varias categorías por club: plantilla, asistencia a entrenamientos, convocatorias, multas, personalización visual por club y estadísticas de partido.
+Aplicación para la gestión de clubes de fútbol amateur, con una plantilla por categoría y temporada: jugadores, asistencia a entrenamientos, convocatorias, multas, personalización visual por club y estadísticas de partido.
 
 Este documento recoge todas las decisiones funcionales, técnicas y de organización del proyecto, y el backlog completo de issues organizado por ciclos.
 
@@ -31,18 +31,20 @@ Este documento recoge todas las decisiones funcionales, técnicas y de organizac
 4. **Idempotencia**: antes de crear cada issue, comprueba si ya existe otra con el mismo título. Si existe, no la dupliques y continúa.
 5. **Verificación**: al terminar, muestra una tabla con número, título y milestone de cada issue creada, y avisa si algún número no coincide con el previsto (por ejemplo, porque el repositorio ya tuviera issues o pull requests).
 
+**Issues posteriores**: las issues añadidas después de la creación inicial (GH-63 en adelante) se crean individualmente, en el milestone bajo el que aparecen; su número real depende de las issues y pull requests que ya existan.
+
 **No hagas**: cerrar issues, crear proyectos, modificar la configuración del repositorio ni la protección de ramas. Eso lo hará el usuario.
 
 ---
 
 ## 1. Visión y alcance
 
-**Problema:** el entrenador de dos equipos amateur necesita llevar de forma sencilla la plantilla, la asistencia a entrenamientos, las convocatorias de partido y la caja de multas del vestuario, hoy repartidas entre WhatsApp, notas y hojas de cálculo.
+**Problema:** el entrenador de dos plantillas de fútbol amateur necesita llevar de forma sencilla la plantilla, la asistencia a entrenamientos, las convocatorias de partido y la caja de multas del vestuario, hoy repartidas entre WhatsApp, notas y hojas de cálculo.
 
 **Usuarios**
 
-- **Fase actual:** solo el entrenador, con acceso a los dos equipos.
-- **Clubes con varias categorías:** un club puede tener equipos en varias categorías (alevín, infantil, cadete…), cada uno con su propia plantilla, entrenos, partidos y multas, y todos con la identidad visual del club.
+- **Fase actual:** solo el entrenador, con acceso a sus dos plantillas.
+- **Clubes, plantillas y temporadas:** un club tiene una plantilla por categoría y temporada (Senior 2025-26, Senior 2026-27, Cadete 2026-27…), cada una con sus jugadores, cuerpo técnico, entrenos, partidos, multas y estadísticas, y todas con la identidad visual del club. Los jugadores son del club y conservan su historial de una temporada a otra.
 - **Fase futura:** delegados y jugadores con acceso limitado según su rol. El modelo de datos y los permisos se diseñan con roles desde el principio, aunque inicialmente solo se use el de entrenador/admin.
 
 **Principios**
@@ -63,26 +65,30 @@ Este documento recoge todas las decisiones funcionales, técnicas y de organizac
 
 ## 2. Requisitos funcionales
 
-### 2.1 Clubes y equipos
+### 2.1 Clubes, plantillas y temporadas
 
-- **Club:** la entidad que agrupa categorías. Tiene nombre e identidad visual (escudo y colores), compartida por todos sus equipos.
-- **Equipo:** cada categoría concreta de un club (p. ej. "Infantil A", "Infantil B", "Cadete"). Es la unidad de trabajo: tiene su propia plantilla, entrenos, partidos, catálogo y caja de multas, estadísticas y biblioteca de ejercicios.
-  - Datos: nombre, categoría y temporada.
-  - Categoría elegida de una lista sugerida (prebenjamín, benjamín, alevín, infantil, cadete, juvenil, sénior, veteranos) o texto libre.
-  - Puede haber varios equipos de la misma categoría en un club.
-- El sistema gestiona varios clubes, cada uno con uno o varios equipos (inicialmente, dos equipos).
-- Los **administradores del club** crean, editan y borran sus equipos, gestionan la identidad del club y tienen rol admin en todos sus equipos.
-- Un usuario puede tener acceso a uno o varios equipos, de uno o varios clubes, con un rol en cada uno.
-- Tras iniciar sesión, si el usuario tiene acceso a más de un equipo, elige el **equipo activo** en un selector agrupado por club. Puede cambiarlo desde cualquier pantalla y la aplicación recuerda el último usado.
-- Todas las funcionalidades trabajan siempre sobre el equipo activo.
-- Un jugador pertenece a un único equipo. Convocar a jugadores de otra categoría del mismo club queda fuera de alcance por ahora.
+- **Club:** la entidad permanente (p. ej. "CD Rexional"). Tiene nombre, identidad visual (escudo y colores) compartida por todas sus plantillas, administradores y biblioteca de ejercicios.
+- **Temporada:** se escribe con el formato `AAAA-AA` (p. ej. `2026-27`).
+- **Plantilla:** una categoría del club en una temporada (p. ej. "Senior 2026-27", "Infantil A 2026-27"). Es la unidad de trabajo: tiene sus jugadores, su cuerpo técnico (entrenadores y delegados), entrenos, partidos, catálogo y caja de multas, y estadísticas.
+  - Datos: nombre, categoría y temporada. La temporada no cambia una vez creada.
+  - Categoría elegida de una lista sugerida (prebenjamín, benjamín, alevín, infantil, cadete, juvenil, sénior, veteranos) o texto libre. Puede haber varias plantillas de la misma categoría y temporada en un club (Infantil A e Infantil B).
+  - Cada plantilla puede enlazar con la que la precede en la temporada anterior (Senior 2026-27 → Senior 2025-26), para seguir su historia año a año.
+- **Jugador:** la persona, que pertenece al club y es permanente. Su participación en cada temporada es una **ficha** en una plantilla, con su dorsal, su posición y si está activo. Así un jugador puede ser el 7 del Alevín una temporada y el 10 del Infantil la siguiente, conservando todo su historial.
+  - Un jugador tiene como máximo una ficha por temporada. Convocar a jugadores de otra plantilla queda fuera de alcance por ahora.
+- **Cuerpo técnico por temporada:** los roles (entrenador, delegado…) se asignan en cada plantilla, así que pueden cambiar de una temporada a otra.
+- **Cambio de temporada:** las plantillas de una temporada nueva se crean a partir de las de la anterior, copiando jugadores (con la opción de moverlos de categoría o no continuar), cuerpo técnico y catálogo de multas.
+- El sistema gestiona varios clubes. Los **administradores del club** crean, editan y borran sus plantillas, hacen el cambio de temporada, gestionan la identidad del club y tienen rol admin en todas sus plantillas.
+- Un usuario puede tener acceso a una o varias plantillas, de uno o varios clubes, con un rol en cada una.
+- Tras iniciar sesión, si el usuario tiene acceso a más de una plantilla, elige la **plantilla activa** en un selector agrupado por club y temporada, con la temporada más reciente primero. Puede cambiarla desde cualquier pantalla y la aplicación recuerda la última usada.
+- Todas las funcionalidades trabajan siempre sobre la plantilla activa.
 
-### 2.2 Plantilla
+### 2.2 Jugadores de la plantilla
 
-- Alta de jugador: nombre, dorsal (opcional, 0–99) y posición (portero, defensa, centrocampista, delantero).
-- Edición de los datos del jugador.
-- Baja **lógica**: el jugador deja de aparecer en la plantilla activa pero se conserva su historial de asistencia, multas y estadísticas. Posibilidad de reactivarlo.
-- El dorsal es único entre los jugadores activos de un mismo equipo.
+- Alta en la plantilla de un jugador nuevo en el club (nombre) o de uno que ya existe en el club, por ejemplo de otra categoría o de una temporada anterior. En su ficha se indican dorsal (opcional, 0–99) y posición (portero, defensa, centrocampista, delantero).
+- Edición de los datos del jugador, comunes a todas sus temporadas, y de su ficha en la plantilla (dorsal y posición).
+- Baja **lógica** de la ficha: el jugador deja de aparecer en la plantilla, pero se conserva su historial de asistencia, multas y estadísticas. Posibilidad de reactivarlo.
+- El dorsal es único entre los jugadores activos de una misma plantilla.
+- Un jugador tiene como máximo una ficha por temporada.
 - Lista ordenada por dorsal y, a igualdad, por nombre. En cada jugador se muestra su porcentaje de asistencia y su deuda de multas pendiente (cuando existan esos módulos).
 
 ### 2.3 Entrenamientos y asistencia
@@ -97,12 +103,12 @@ Este documento recoge todas las decisiones funcionales, técnicas y de organizac
 
 - Crear partido: rival, fecha, hora del partido, hora de citación, lugar, local/visitante y competición (opcional).
 - Seleccionar los convocados entre los jugadores activos.
-- Generar el mensaje de convocatoria en texto, listo para copiar o compartir por WhatsApp (enlace `wa.me`), con equipo, rival, fecha, horas, lugar y lista de convocados por dorsal.
+- Generar el mensaje de convocatoria en texto, listo para copiar o compartir por WhatsApp (enlace `wa.me`), con club y plantilla, rival, fecha, horas, lugar y lista de convocados por dorsal.
 - Listado de partidos próximos y pasados; editar o borrar un partido.
 
 ### 2.5 Multas
 
-- **Catálogo de motivos** por equipo con importe (editable). Valores iniciales al crear un equipo: llegar tarde al entreno (2 €), faltar sin avisar (5 €), olvidar la equipación (3 €), tarjeta amarilla por protestar (5 €), tarjeta roja (10 €).
+- **Catálogo de motivos** por plantilla con importe (editable). Al crear una plantilla se copia el de la plantilla anterior si la hay; si no, se crea con estos valores iniciales: llegar tarde al entreno (2 €), faltar sin avisar (5 €), olvidar la equipación (3 €), tarjeta amarilla por protestar (5 €), tarjeta roja (10 €).
 - Cada motivo puede asociarse opcionalmente a un tipo de tarjeta (amarilla o roja), para proponerlo al registrar estadísticas de partido (ciclo 6). En el catálogo inicial, "tarjeta amarilla por protestar" se asocia a amarilla y "tarjeta roja" a roja.
 - Registrar multa: jugador, motivo (del catálogo u "otro" con texto libre), importe (se rellena desde el catálogo y es editable) y fecha.
 - El motivo y el importe se **copian** en la multa: cambiar el catálogo no altera multas pasadas.
@@ -112,26 +118,28 @@ Este documento recoge todas las decisiones funcionales, técnicas y de organizac
 ### 2.6 Personalización visual (ciclo posterior al MVP)
 
 - Pantalla de configuración con dos partes:
-  - **Datos del equipo** (entrenador o superior): nombre, categoría y temporada.
+  - **Datos de la plantilla** (entrenador o superior): nombre y categoría. La temporada es fija.
   - **Identidad del club** (solo administradores del club): nombre del club, escudo y dos colores (principal y secundario), comunes a todas sus categorías.
 - Escudo en PNG o WebP (SVG excluido inicialmente por seguridad), tamaño máximo configurable.
 - Vista previa en vivo de la aplicación con los colores elegidos.
-- Al cambiar de equipo activo, toda la interfaz adopta el escudo y los colores de su club.
+- Al cambiar de plantilla activa, toda la interfaz adopta el escudo y los colores de su club.
 - Contraste automático: el texto sobre el color principal se muestra en blanco o negro según su luminosidad.
 
 ### 2.7 Estadísticas de partido (ciclo posterior)
 
-- Cada partido pertenece a una temporada (por defecto, la temporada actual del equipo al crearlo), de modo que cambiar la temporada del equipo no altera los partidos pasados.
+- Cada partido pertenece a una plantilla, así que las estadísticas quedan separadas por temporada sin necesidad de guardarla en el partido.
 - Registrar el resultado (goles a favor y en contra) y marcar el partido como jugado.
 - Participación de cada convocado: titular o suplente y minutos jugados (calculables a partir de los cambios).
 - Eventos del partido con jugador y minuto: gol, asistencia, tarjeta amarilla, tarjeta roja, entra, sale, gol en propia puerta.
-- Estadísticas acumuladas de temporada: goleadores, asistentes, minutos, partidos jugados y tarjetas por jugador.
+- Estadísticas acumuladas de la plantilla (su temporada): goleadores, asistentes, minutos, partidos jugados y tarjetas por jugador.
+- Trayectoria del jugador: sus estadísticas en cada temporada y los totales en el club, a partir de todas sus fichas.
+- Solo se almacenan los datos de cada partido (participaciones y eventos); los acumulados se calculan con consultas.
 - Al registrar una tarjeta, la aplicación propone las multas del catálogo asociadas a ese tipo de tarjeta, si las hay (el entrenador confirma).
 - **Arquitectura de importadores**: las estadísticas entran por un único servicio con fuentes intercambiables. Fuente inicial: manual. Previstas: importación asistida desde el PDF del acta y, si se obtiene acceso, datos de la federación.
 
 ### 2.8 Planificación de entrenamientos (ciclo posterior)
 
-**Biblioteca de ejercicios** del equipo, reutilizable entre sesiones:
+**Biblioteca de ejercicios** del club, compartida por todas sus plantillas y temporadas, y reutilizable entre sesiones:
 
 - Ejercicio: nombre, descripción, objetivo o categoría (calentamiento, técnica, táctica, físico, finalización, porteros, partido, vuelta a la calma), duración orientativa en minutos, número de jugadores, material necesario y etiquetas libres.
 - **Medios adjuntos** a cada ejercicio, varios por ejercicio y ordenables:
@@ -139,7 +147,7 @@ Este documento recoge todas las decisiones funcionales, técnicas y de organizac
   - Vídeos (MP4 y WebM; se admiten los grabados con el móvil, incluidos los `.mov`/HEVC del iPhone, que se recodifican a MP4 H.264 en segundo plano porque no se reproducen en Android ni en Chrome). Los MP4 H.264 y WebM se guardan tal cual. Tamaño máximo configurable; se genera miniatura y se reproducen en la app con avance y retroceso.
   - Enlaces a vídeos externos (por ejemplo, YouTube) como alternativa que no ocupa espacio en el servidor.
   - Cada medio puede llevar un pie o comentario.
-- Búsqueda y filtro por categoría y etiquetas. Duplicar un ejercicio para crear variantes. Copiar ejercicios a otro equipo al que tenga acceso el entrenador.
+- Búsqueda y filtro por categoría y etiquetas. Duplicar un ejercicio para crear variantes. Copiar ejercicios a otro club al que tenga acceso el entrenador.
 - Archivar ejercicios en lugar de borrarlos si ya se han usado en alguna sesión.
 
 **Sesiones planificadas**: cada entreno (la misma entidad en la que se pasa lista) puede tener un plan:
@@ -147,7 +155,7 @@ Este documento recoge todas las decisiones funcionales, técnicas y de organizac
 - Datos de la sesión: fecha, hora, duración prevista, objetivo principal y notas.
 - Lista **ordenada** de ejercicios de la biblioteca, cada uno con duración, indicaciones específicas para esa sesión y organización de grupos si se quiere.
 - Duración total calculada y comparada con la prevista.
-- Duplicar una sesión en otra fecha y guardar sesiones como plantilla.
+- Duplicar una sesión en otra fecha y guardar sesiones como **modelo** para reutilizarlas.
 - Calendario o lista de próximas sesiones planificadas.
 - **Modo campo**: ver la sesión ejercicio a ejercicio en el móvil durante el entreno, con sus fotos y vídeos, y acceso directo a pasar lista.
 
@@ -155,7 +163,7 @@ Este documento recoge todas las decisiones funcionales, técnicas y de organizac
 
 - El admin invita a una persona por email con un rol y, si es jugador, vinculada a su ficha de la plantilla.
 - Enlace de invitación de un solo uso con caducidad.
-- Delegado: mismas capacidades de gestión que el entrenador, salvo gestionar accesos, la configuración del equipo y la biblioteca de ejercicios y planificación (que solo puede consultar). Ver la tabla de la sección 3.
+- Delegado: mismas capacidades de gestión que el entrenador, salvo gestionar accesos, la configuración de la plantilla y la biblioteca de ejercicios y planificación (que solo puede consultar). Ver la tabla de la sección 3.
 - Jugador: ve plantilla, convocatorias, partidos y catálogo de multas; ve **solo sus propias** asistencias, multas y estadísticas acumuladas. No modifica nada.
 - El admin puede cambiar el rol o revocar el acceso de cualquier miembro.
 - Un administrador del club puede invitar por email a otra persona como administrador del club.
@@ -164,27 +172,29 @@ Este documento recoge todas las decisiones funcionales, técnicas y de organizac
 
 ## 3. Roles y permisos
 
-Roles por equipo: **admin**, **entrenador**, **delegado** y **jugador**. Un mismo usuario puede tener roles distintos en equipos distintos.
+Roles por plantilla: **admin**, **entrenador**, **delegado** y **jugador**. Un mismo usuario puede tener roles distintos en plantillas distintas y, por tanto, en temporadas distintas.
 
 Además, a nivel de club existe el **administrador del club**. Quien crea un club pasa a ser su administrador. Un administrador del club:
 
-- Tiene rol **admin en todos los equipos del club**, aunque no tenga membresía en ellos. Su rol efectivo en un equipo es el mayor entre su membresía en ese equipo y admin.
-- Crea, edita y borra los equipos (categorías) del club.
+- Tiene rol **admin en todas las plantillas del club**, de cualquier temporada, aunque no tenga membresía en ellas. Su rol efectivo en una plantilla es el mayor entre su membresía en esa plantilla y admin.
+- Crea, edita y borra las plantillas del club y hace el cambio de temporada.
 - Gestiona la identidad del club (nombre, escudo y colores).
 - Nombra o retira a otros administradores del club. Un club nunca puede quedarse sin administradores.
 
 | Acción | Admin | Entrenador | Delegado | Jugador |
 |---|---|---|---|---|
 | Ver plantilla, partidos, convocatorias, catálogo de multas | Sí | Sí | Sí | Sí |
-| Gestionar plantilla, entrenos, partidos y convocatorias | Sí | Sí | Sí | No |
+| Gestionar jugadores de la plantilla, entrenos, partidos y convocatorias | Sí | Sí | Sí | No |
 | Ver asistencias, multas y estadísticas | Todas | Todas | Todas | Solo las suyas |
 | Registrar y cobrar multas, editar catálogo | Sí | Sí | Sí | No |
 | Registrar estadísticas de partido | Sí | Sí | Sí | No |
 | Ver ejercicios y sesiones planificadas | Sí | Sí | Sí | Sí |
 | Gestionar biblioteca de ejercicios, medios y planificación | Sí | Sí | No | No |
-| Editar datos del equipo (nombre, categoría, temporada) | Sí | Sí | No | No |
+| Editar datos de la plantilla (nombre, categoría) | Sí | Sí | No | No |
 | Invitar, cambiar roles y revocar accesos | Sí | No | No | No |
-| Crear y borrar equipos del club; identidad del club (escudo, colores); administradores del club | Solo administrador del club | No | No | No |
+| Crear y borrar plantillas, cambio de temporada; identidad del club (escudo, colores); administradores del club | Solo administrador del club | No | No | No |
+
+La biblioteca de ejercicios es del club: la consulta cualquier miembro de una plantilla del club y la gestiona quien sea entrenador o admin en alguna de ellas.
 
 Los permisos se aplican **siempre en el backend**. El frontend solo oculta lo que el usuario no puede hacer, por comodidad.
 
@@ -235,7 +245,7 @@ Móvil / PC (Tailscale)
 - **Better Auth** para autenticación: email y contraseña, sesiones por cookie segura (`HttpOnly`, `Secure`, `SameSite=Lax`). Configurado para generar identificadores UUID (por defecto genera texto no UUID), de modo que todas las claves `→ user` del modelo sean `uuid`.
 - Zona horaria de la aplicación `Europe/Madrid` (variable `TZ`): "hoy" y todas las fechas `date` se calculan en esa zona, no en UTC.
 - Subidas de archivos procesadas en streaming (por ejemplo, con `busboy`), sin cargarlas enteras en memoria: el `parseBody()` de Hono las carga completas.
-- Permisos en un middleware que resuelve el rol efectivo del usuario en el equipo de la ruta y comprueba el rol requerido. El rol efectivo es el de su membresía en el equipo, o admin si es administrador del club del equipo. Las rutas `/clubes/:cid/...` comprueban que es administrador del club. Para el rol jugador, la capa de servicio filtra por su ficha.
+- Permisos en un middleware que resuelve el rol efectivo del usuario en la plantilla de la ruta y comprueba el rol requerido. El rol efectivo es el de su membresía en la plantilla, o admin si es administrador del club de la plantilla. Las rutas `/clubes/:cid/...` comprueban que es administrador del club (o, para la biblioteca de ejercicios, su rol en las plantillas del club). Para el rol jugador, la capa de servicio filtra por su ficha.
 - Al arrancar aplica las migraciones pendientes.
 - Tests con **Vitest** contra una base PostgreSQL real en contenedor.
 - Lint y formato con **Biome** (`npm run lint`, `npm run format`).
@@ -330,33 +340,51 @@ Tablas de autenticación gestionadas por Better Auth (`user`, `session`, `accoun
 | usuario_id | uuid → user | PK compuesta, cascade |
 | created_at | timestamptz | |
 
-### equipos
+### plantillas
+Una categoría del club en una temporada. Es la unidad de trabajo.
+
 | Campo | Tipo | Notas |
 |---|---|---|
 | id | uuid | PK |
 | club_id | uuid → clubes | cascade |
-| nombre | text | obligatorio, ej. `Infantil A`. Único por club y temporada |
+| nombre | text | obligatorio, ej. `Senior`, `Infantil A`. Único por club y temporada |
 | categoria | text | obligatorio; valor de la lista sugerida o texto libre |
-| temporada | text | ej. `2026-27` |
+| temporada | text | formato `AAAA-AA` (`2026-27`), con el segundo año consecutivo al primero. No se modifica |
+| plantilla_anterior_id | uuid → plantillas | nullable, set null. La misma plantilla en la temporada anterior; del mismo club y de una temporada anterior (validado en el servicio) |
 | creado_por | uuid → user | |
 | created_at | timestamptz | |
 
 ### membresias
+El cuerpo técnico y el resto de roles de cada plantilla, y por tanto de cada temporada.
+
 | Campo | Tipo | Notas |
 |---|---|---|
-| equipo_id | uuid → equipos | PK compuesta, cascade |
+| plantilla_id | uuid → plantillas | PK compuesta, cascade |
 | usuario_id | uuid → user | PK compuesta, cascade |
 | rol | enum `admin, entrenador, delegado, jugador` | |
 | created_at | timestamptz | |
 
 ### jugadores
+La persona, del club y permanente.
+
 | Campo | Tipo | Notas |
 |---|---|---|
 | id | uuid | PK |
-| equipo_id | uuid → equipos | cascade |
-| usuario_id | uuid → user | nullable; se vincula al aceptar invitación. Único por equipo |
+| club_id | uuid → clubes | cascade |
+| usuario_id | uuid → user | nullable, set null; se vincula al aceptar invitación. Único por club |
 | nombre | text | obligatorio |
-| dorsal | smallint | 0–99, nullable. Único por equipo entre activos (índice parcial) |
+| created_at | timestamptz | |
+
+### fichas
+La participación de un jugador en una plantilla (una temporada).
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| plantilla_id | uuid → plantillas | PK compuesta, cascade |
+| jugador_id | uuid → jugadores | PK compuesta, cascade |
+| club_id | uuid | Garantiza que jugador y plantilla son del mismo club, con las FK compuestas `(plantilla_id, club_id, temporada) → plantillas` y `(jugador_id, club_id) → jugadores` |
+| temporada | text | Copia de la temporada de la plantilla, garantizada por la FK compuesta. Único `(jugador_id, temporada)`: una ficha por temporada |
+| dorsal | smallint | 0–99, nullable. Único por plantilla entre activos (índice parcial) |
 | posicion | enum `portero, defensa, centrocampista, delantero` | nullable |
 | activo | boolean | por defecto true (baja lógica) |
 | created_at | timestamptz | |
@@ -365,20 +393,20 @@ Tablas de autenticación gestionadas por Better Auth (`user`, `session`, `accoun
 | Campo | Tipo | Notas |
 |---|---|---|
 | id | uuid | PK |
-| equipo_id | uuid → equipos | cascade |
-| fecha | date | nullable solo si `es_plantilla`. Única por equipo entre los que no son plantilla (índice único parcial `WHERE NOT es_plantilla`) |
+| plantilla_id | uuid → plantillas | cascade |
+| fecha | date | nullable solo si `es_modelo`. Única por plantilla entre los que no son modelo (índice único parcial `WHERE NOT es_modelo`) |
 | hora | time | opcional (ciclo 7) |
 | duracion_prevista | smallint | minutos, opcional (ciclo 7) |
 | objetivo | text | opcional (ciclo 7) |
-| es_plantilla | boolean | por defecto false. Sesión guardada como plantilla, sin fecha (ciclo 7). Las plantillas no cuentan en el historial ni en el porcentaje de asistencia |
-| nombre_plantilla | text | obligatorio si `es_plantilla` (ciclo 7) |
+| es_modelo | boolean | por defecto false. Sesión guardada como modelo, sin fecha (ciclo 7). Los modelos no cuentan en el historial ni en el porcentaje de asistencia |
+| nombre_modelo | text | obligatorio si `es_modelo` (ciclo 7) |
 | notas | text | opcional |
 
 ### asistencias
 | Campo | Tipo | Notas |
 |---|---|---|
 | entreno_id | uuid → entrenos | PK compuesta, cascade |
-| jugador_id | uuid → jugadores | PK compuesta, cascade |
+| jugador_id | uuid → jugadores | PK compuesta, cascade. Con ficha en la plantilla del entreno (validado en el servicio) |
 | estado | enum `asiste, justificada, falta` | |
 | motivo | text | opcional, para justificadas |
 
@@ -386,9 +414,8 @@ Tablas de autenticación gestionadas por Better Auth (`user`, `session`, `accoun
 | Campo | Tipo | Notas |
 |---|---|---|
 | id | uuid | PK |
-| equipo_id | uuid → equipos | cascade |
+| plantilla_id | uuid → plantillas | cascade |
 | rival | text | obligatorio |
-| temporada | text | ej. `2026-27`; por defecto, la temporada del equipo al crear el partido |
 | competicion | text | opcional |
 | fecha | date | |
 | hora | time | opcional |
@@ -404,7 +431,7 @@ Tablas de autenticación gestionadas por Better Auth (`user`, `session`, `accoun
 | Campo | Tipo | Notas |
 |---|---|---|
 | partido_id | uuid → partidos | PK compuesta, cascade |
-| jugador_id | uuid → jugadores | PK compuesta, cascade |
+| jugador_id | uuid → jugadores | PK compuesta, cascade. Con ficha activa en la plantilla del partido (validado en el servicio) |
 
 ### participaciones (ciclo 6)
 | Campo | Tipo | Notas |
@@ -428,7 +455,7 @@ Tablas de autenticación gestionadas por Better Auth (`user`, `session`, `accoun
 | Campo | Tipo | Notas |
 |---|---|---|
 | id | uuid | PK |
-| equipo_id | uuid → equipos | cascade |
+| plantilla_id | uuid → plantillas | cascade |
 | descripcion | text | |
 | importe | numeric(8,2) | ≥ 0 |
 | tipo_evento | enum `amarilla, roja` | nullable; tarjeta que propone este motivo (ciclo 6) |
@@ -438,7 +465,8 @@ Tablas de autenticación gestionadas por Better Auth (`user`, `session`, `accoun
 | Campo | Tipo | Notas |
 |---|---|---|
 | id | uuid | PK |
-| jugador_id | uuid → jugadores | cascade |
+| plantilla_id | uuid → plantillas | cascade. La caja es de cada plantilla y temporada |
+| jugador_id | uuid → jugadores | cascade. FK compuesta `(plantilla_id, jugador_id) → fichas`: solo jugadores de la plantilla |
 | motivo_id | uuid → motivos_multa | nullable, set null |
 | motivo | text | copia del texto |
 | importe | numeric(8,2) | > 0, copia del importe |
@@ -452,7 +480,7 @@ Tablas de autenticación gestionadas por Better Auth (`user`, `session`, `accoun
 | Campo | Tipo | Notas |
 |---|---|---|
 | id | uuid | PK |
-| equipo_id | uuid → equipos | cascade |
+| club_id | uuid → clubes | cascade. La biblioteca es del club |
 | nombre | text | obligatorio |
 | descripcion | text | desarrollo del ejercicio |
 | categoria | enum `calentamiento, tecnica, tactica, fisico, finalizacion, porteros, partido, vuelta_calma` | |
@@ -495,62 +523,65 @@ Tablas de autenticación gestionadas por Better Auth (`user`, `session`, `accoun
 |---|---|---|
 | id | uuid | PK |
 | club_id | uuid → clubes | cascade |
-| equipo_id | uuid → equipos | nullable, cascade. Nulo = invitación como administrador del club |
+| plantilla_id | uuid → plantillas | nullable, cascade. Nulo = invitación como administrador del club |
 | email | text | |
-| rol | enum rol | nullable; obligatorio si hay `equipo_id` |
-| jugador_id | uuid → jugadores | nullable, ficha a vincular |
+| rol | enum rol | nullable; obligatorio si hay `plantilla_id` |
+| jugador_id | uuid → jugadores | nullable, jugador del club al que se vinculará el usuario |
 | token_hash | text | nunca se guarda el token en claro |
 | expira | timestamptz | |
 | usada_en | timestamptz | nullable |
 | revocada_en | timestamptz | nullable |
 | creada_por | uuid → user | |
 
-**Reglas generales:** al crear un club, su creador pasa a ser administrador del club (`admins_club`) en la misma transacción. Al crear un equipo se crea su catálogo de multas por defecto en la misma transacción. No hace falta crear membresía para el creador, porque como administrador del club ya es admin del equipo. Nunca se edita una migración ya desplegada.
+**Reglas generales:** al crear un club, su creador pasa a ser administrador del club (`admins_club`) en la misma transacción. Al crear una plantilla se crea su catálogo de multas (copiado de la plantilla anterior o el de por defecto) en la misma transacción. No hace falta crear membresía para el creador, porque como administrador del club ya es admin de la plantilla. Las garantías que no expresa una clave foránea se validan en la capa de servicio y se cubren con tests. Nunca se edita una migración ya desplegada.
 
 ---
 
 ## 7. API
 
-Prefijo `/api`. JSON. Todas las rutas de datos cuelgan del equipo (o del club, las de identidad y gestión del club) para facilitar la comprobación de permisos. Errores con formato común `{ error: { codigo, mensaje, detalles? } }`.
+Prefijo `/api`. JSON. Todas las rutas de datos cuelgan de la plantilla (o del club: identidad, plantillas, jugadores del club y biblioteca de ejercicios) para facilitar la comprobación de permisos. Errores con formato común `{ error: { codigo, mensaje, detalles? } }`.
 
 | Módulo | Método y ruta | Rol mínimo |
 |---|---|---|
 | Salud | `GET /health` | Público |
 | Auth | `/auth/*` (login, logout, sesión) — Better Auth | Público |
 | Clubes | `POST /clubes` (el creador pasa a ser administrador) | Autenticado |
-| | `GET /clubes/:cid` (datos e identidad visual) | Miembro de algún equipo del club |
+| | `GET /clubes/:cid` (datos e identidad visual) | Miembro de alguna plantilla del club |
 | | `PATCH /clubes/:cid` (nombre, colores) · `PUT /clubes/:cid/escudo` (multipart) | Administrador del club |
-| | `POST /clubes/:cid/equipos` | Administrador del club |
+| | `POST /clubes/:cid/plantillas` (con plantilla anterior opcional) | Administrador del club |
+| | `POST /clubes/:cid/temporadas` (cambio de temporada: crea las plantillas nuevas a partir de las anteriores) | Administrador del club |
+| | `GET /clubes/:cid/jugadores?q=` (jugadores del club, para añadirlos a una plantilla) | Delegado en alguna plantilla del club |
+| | `GET /clubes/:cid/jugadores/:jid` (ficha y trayectoria por temporadas) | Delegado en alguna plantilla del club (jugador: solo la suya) |
 | | `GET/POST/DELETE /clubes/:cid/admins` | Administrador del club |
-| Equipos | `GET /equipos` (los míos, con su club y mi rol efectivo) | Autenticado |
-| | `GET /equipos/:id` · `PATCH /equipos/:id` (nombre, categoría, temporada) | Miembro · Entrenador |
-| | `DELETE /equipos/:id` (con confirmación del nombre; borra también sus archivos) | Administrador del club |
-| Jugadores | `GET /equipos/:id/jugadores?activos=` | Miembro (jugador: asistencia y deuda solo suyas) |
-| | `POST /equipos/:id/jugadores` · `PATCH /equipos/:id/jugadores/:jid` | Delegado |
-| Entrenos | `GET /equipos/:id/entrenos` | Miembro |
-| | `GET /equipos/:id/entrenos/:fecha` | Miembro (jugador: solo su fila) |
-| | `PUT /equipos/:id/entrenos/:fecha/asistencias` (lista completa) | Delegado |
-| | `GET /equipos/:id/asistencia/resumen` | Miembro (jugador: solo suyo) |
-| Ejercicios | `GET /equipos/:id/ejercicios?categoria=&etiqueta=&q=&archivados=` · `GET /equipos/:id/ejercicios/:eid` | Miembro |
-| | `POST/PATCH/DELETE /equipos/:id/ejercicios/:eid` · `POST .../:eid/duplicar` · `POST .../:eid/copiar` (a otro equipo) | Entrenador |
-| | `POST /equipos/:id/ejercicios/:eid/medios` (multipart o enlace) · `PATCH/DELETE .../medios/:mid` · `PUT .../medios/orden` | Entrenador |
-| | `GET /medios/:mid` y `GET /medios/:mid/miniatura` (con `Range` para vídeo) | Miembro del equipo del medio |
-| Planificación | `GET /equipos/:id/sesiones?desde=&hasta=` · `GET /equipos/:id/sesiones/plantillas` | Miembro |
-| | `PUT /equipos/:id/entrenos/:fecha/plan` (datos de sesión y lista ordenada de ejercicios) | Entrenador |
-| | `POST /equipos/:id/entrenos/:fecha/duplicar` · `POST .../guardar-plantilla` · `POST /equipos/:id/sesiones/plantillas/:tid/aplicar` | Entrenador |
-| Partidos | `GET/POST /equipos/:id/partidos` · `GET/PATCH/DELETE /equipos/:id/partidos/:pid` | Miembro / Delegado |
-| | `PUT /equipos/:id/partidos/:pid/convocados` (lista completa) | Delegado |
-| | `GET /equipos/:id/partidos/:pid/mensaje` | Miembro |
-| Estadísticas | `PUT /equipos/:id/partidos/:pid/resultado` | Delegado |
-| | `PUT /equipos/:id/partidos/:pid/participaciones` | Delegado |
-| | `GET/POST/DELETE /equipos/:id/partidos/:pid/eventos` | Miembro (eventos públicos del partido) / Delegado |
-| | `GET /equipos/:id/estadisticas?temporada=` | Miembro (jugador: solo suyas) |
-| Multas | `GET/POST/PATCH /equipos/:id/motivos-multa` | Miembro / Delegado |
-| | `GET/POST /equipos/:id/multas` · `PATCH/DELETE /equipos/:id/multas/:mid` | Miembro (jugador: suyas) / Delegado |
-| | `POST /equipos/:id/jugadores/:jid/saldar` | Delegado |
-| | `GET /equipos/:id/multas/resumen` | Delegado |
-| Miembros | `GET /equipos/:id/miembros` · `PATCH/DELETE /equipos/:id/miembros/:uid` | Miembro / Admin |
-| Invitaciones | `GET/POST /equipos/:id/invitaciones` · `DELETE /equipos/:id/invitaciones/:iid` (revocar) | Admin |
+| Plantillas | `GET /plantillas` (las mías, con su club, temporada y mi rol efectivo) | Autenticado |
+| | `GET /plantillas/:id` · `PATCH /plantillas/:id` (nombre, categoría) | Miembro · Entrenador |
+| | `DELETE /plantillas/:id` (con confirmación del nombre; borra también sus datos) | Administrador del club |
+| Jugadores | `GET /plantillas/:id/jugadores?activos=` (fichas con los datos del jugador) | Miembro (jugador: asistencia y deuda solo suyas) |
+| | `POST /plantillas/:id/jugadores` (jugador nuevo o `jugador_id` existente del club) · `PATCH /plantillas/:id/jugadores/:jid` | Delegado |
+| Entrenos | `GET /plantillas/:id/entrenos` | Miembro |
+| | `GET /plantillas/:id/entrenos/:fecha` | Miembro (jugador: solo su fila) |
+| | `PUT /plantillas/:id/entrenos/:fecha/asistencias` (lista completa) | Delegado |
+| | `GET /plantillas/:id/asistencia/resumen` | Miembro (jugador: solo suyo) |
+| Ejercicios | `GET /clubes/:cid/ejercicios?categoria=&etiqueta=&q=&archivados=` · `GET /clubes/:cid/ejercicios/:eid` | Miembro de alguna plantilla del club |
+| | `POST/PATCH/DELETE /clubes/:cid/ejercicios/:eid` · `POST .../:eid/duplicar` · `POST .../:eid/copiar` (a otro club) | Entrenador en alguna plantilla del club |
+| | `POST /clubes/:cid/ejercicios/:eid/medios` (multipart o enlace) · `PATCH/DELETE .../medios/:mid` · `PUT .../medios/orden` | Entrenador en alguna plantilla del club |
+| | `GET /medios/:mid` y `GET /medios/:mid/miniatura` (con `Range` para vídeo) | Miembro de alguna plantilla del club del medio |
+| Planificación | `GET /plantillas/:id/sesiones?desde=&hasta=` · `GET /plantillas/:id/sesiones/modelos` | Miembro |
+| | `PUT /plantillas/:id/entrenos/:fecha/plan` (datos de sesión y lista ordenada de ejercicios) | Entrenador |
+| | `POST /plantillas/:id/entrenos/:fecha/duplicar` · `POST .../guardar-modelo` · `POST /plantillas/:id/sesiones/modelos/:mid/aplicar` | Entrenador |
+| Partidos | `GET/POST /plantillas/:id/partidos` · `GET/PATCH/DELETE /plantillas/:id/partidos/:pid` | Miembro / Delegado |
+| | `PUT /plantillas/:id/partidos/:pid/convocados` (lista completa) | Delegado |
+| | `GET /plantillas/:id/partidos/:pid/mensaje` | Miembro |
+| Estadísticas | `PUT /plantillas/:id/partidos/:pid/resultado` | Delegado |
+| | `PUT /plantillas/:id/partidos/:pid/participaciones` | Delegado |
+| | `GET/POST/DELETE /plantillas/:id/partidos/:pid/eventos` | Miembro (eventos públicos del partido) / Delegado |
+| | `GET /plantillas/:id/estadisticas` (de la plantilla) | Miembro (jugador: solo suyas) |
+| Multas | `GET/POST/PATCH /plantillas/:id/motivos-multa` | Miembro / Delegado |
+| | `GET/POST /plantillas/:id/multas` · `PATCH/DELETE /plantillas/:id/multas/:mid` | Miembro (jugador: suyas) / Delegado |
+| | `POST /plantillas/:id/jugadores/:jid/saldar` | Delegado |
+| | `GET /plantillas/:id/multas/resumen` | Delegado |
+| Miembros | `GET /plantillas/:id/miembros` · `PATCH/DELETE /plantillas/:id/miembros/:uid` | Miembro / Admin |
+| Invitaciones | `GET/POST /plantillas/:id/invitaciones` · `DELETE /plantillas/:id/invitaciones/:iid` (revocar) | Admin |
 | | `POST /clubes/:cid/invitaciones` (como administrador del club) | Administrador del club |
 | | `POST /invitaciones/aceptar` | Público con token |
 
@@ -560,20 +591,20 @@ Pasar lista y convocar se guardan como lista completa en una sola petición.
 
 ## 8. Frontend
 
-**Navegación inferior:** Plantilla · Entrenos · Partidos · Multas · Más (configuración, estadísticas, cambio de equipo, cerrar sesión).
+**Navegación inferior:** Plantilla · Entrenos · Partidos · Multas · Más (configuración, estadísticas, cambio de plantilla, cerrar sesión).
 
 **Pantallas**
 
 - Login.
-- Selector de equipo (si hay más de uno), agrupado por club con el escudo de cada club. Los administradores del club pueden crear un equipo nuevo desde aquí.
-- Plantilla: lista, alta/edición en hoja inferior, baja con confirmación, ver bajas y reactivar.
+- Selector de plantilla (si hay más de una), agrupado por club, con su escudo, y por temporada, la más reciente primero. Los administradores del club pueden crear una plantilla nueva desde aquí.
+- Plantilla: lista de jugadores, alta (jugador nuevo o existente del club) y edición en hoja inferior, baja con confirmación, ver bajas y reactivar. Ficha del jugador con su trayectoria por temporadas.
 - Entrenos: selector de fecha, lista con control de tres estados por jugador, historial.
-- Planificación (ciclo 7): biblioteca de ejercicios con galería de fotos y vídeos, editor de sesión con ejercicios ordenables, plantillas y modo campo. Accesible desde la pestaña Entrenos.
+- Planificación (ciclo 7): biblioteca de ejercicios con galería de fotos y vídeos, editor de sesión con ejercicios ordenables, modelos de sesión y modo campo. Accesible desde la pestaña Entrenos.
 - Partidos: lista próximos/pasados, formulario de partido, selección de convocados, mensaje para copiar/compartir.
 - Multas: totales, formulario rápido, deuda por jugador, listado, catálogo editable.
-- Configuración (ciclo 5): datos del equipo; identidad del club (escudo y colores con vista previa); equipos y administradores del club.
+- Configuración (ciclo 5): datos de la plantilla; identidad del club (escudo y colores con vista previa); plantillas y administradores del club; cambio de temporada.
 - Partido jugado (ciclo 6): resultado, titulares, registro de eventos por minuto.
-- Estadísticas (ciclo 6): tablas de temporada.
+- Estadísticas (ciclo 6): tablas de la temporada de la plantilla y trayectoria de cada jugador.
 - Miembros e invitaciones (ciclo 9).
 
 **Criterios transversales:** diseño adaptable (móvil primero), foco visible y navegación por teclado, respeto a `prefers-reduced-motion`, modo claro/oscuro, estados vacíos que invitan a actuar, mensajes de error que indican qué pasó y cómo resolverlo.
@@ -620,12 +651,12 @@ Una issue está terminada cuando: cumple sus criterios de aceptación en el ento
 
 | Ciclo | Objetivo | Versión |
 |---|---|---|
-| 1 · Base y plantilla | Tres proyectos funcionando, login, clubes y equipos por categoría, selector de equipo, plantilla, despliegue y CI | v0.1.0 |
+| 1 · Base y plantilla | Tres proyectos funcionando, login, clubes, plantillas por temporada, selector de plantilla, jugadores, despliegue y CI | v0.1.0 |
 | 2 · Entrenos | Pasar lista, historial y porcentaje de asistencia | v0.2.0 |
 | 3 · Convocatorias | Partidos, convocados y mensaje de WhatsApp | v0.3.0 |
 | 4 · Multas | Catálogo, registro, cobro, deudas y caja. Paridad con el MVP | v1.0.0 |
-| 5 · Personalización | Escudo y colores por club | v1.1.0 |
-| 6 · Estadísticas | Resultado, participaciones, eventos, estadísticas de temporada | v1.2.0 |
+| 5 · Personalización y temporadas | Escudo y colores por club, y cambio de temporada | v1.1.0 |
+| 6 · Estadísticas | Resultado, participaciones, eventos, estadísticas de temporada y trayectoria de cada jugador | v1.2.0 |
 | 7 · Planificación de entrenos | Biblioteca de ejercicios con fotos y vídeos, y sesiones planificadas | v1.3.0 |
 | 8 · Operación | Backups automáticos, restauración, logs, actualizaciones | v1.4.0 |
 | 9 · Roles en uso | Invitaciones, delegados y jugadores | v1.5.0 |
@@ -653,12 +684,12 @@ Una issue está terminada cuando: cumple sus criterios de aceptación en el ento
 
 | Título | Descripción |
 |---|---|
-| Ciclo 1 · Base y plantilla | Tres proyectos funcionando, login, clubes y equipos por categoría, selector de equipo, plantilla, despliegue y CI (v0.1.0) |
+| Ciclo 1 · Base y plantilla | Tres proyectos funcionando, login, clubes, plantillas por temporada, selector de plantilla, jugadores, despliegue y CI (v0.1.0) |
 | Ciclo 2 · Entrenos | Pasar lista, historial y porcentaje de asistencia (v0.2.0) |
 | Ciclo 3 · Convocatorias | Partidos, convocados y mensaje de WhatsApp (v0.3.0) |
 | Ciclo 4 · Multas | Catálogo, registro, cobro, deudas y caja. Paridad con el MVP (v1.0.0) |
-| Ciclo 5 · Personalización | Escudo y colores por club (v1.1.0) |
-| Ciclo 6 · Estadísticas | Resultado, participaciones, eventos y estadísticas de temporada (v1.2.0) |
+| Ciclo 5 · Personalización y temporadas | Escudo y colores por club, y cambio de temporada (v1.1.0) |
+| Ciclo 6 · Estadísticas | Resultado, participaciones, eventos, estadísticas de temporada y trayectoria de cada jugador (v1.2.0) |
 | Ciclo 7 · Planificación de entrenos | Biblioteca de ejercicios con fotos y vídeos, y sesiones planificadas (v1.3.0) |
 | Ciclo 8 · Operación | Backups automáticos, restauración, logs y actualizaciones (v1.4.0) |
 | Ciclo 9 · Roles en uso | Invitaciones, delegados y jugadores (v1.5.0) |
@@ -711,13 +742,15 @@ Tres proyectos independientes en el mismo repositorio, sin workspaces ni herrami
 Primeras tablas con Drizzle y sistema de migraciones. Depende de GH-2.
 
 **Criterios de aceptación**
-- [ ] Tablas de Better Auth, configurado para generar `user.id` como UUID
-- [ ] Tablas `clubes` (incluidos `escudo`, `color_principal` y `color_secundario` con valores por defecto, para el ciclo 5), `admins_club`, `equipos` (con `club_id` y `categoria`), `membresias` con enum de rol y `jugadores` según la sección 6
-- [ ] Índice único parcial de dorsal por equipo entre jugadores activos
-- [ ] Nombre de equipo único por club y temporada
+- [ ] Tablas de Better Auth, con `user.id` de tipo UUID
+- [ ] Tablas `clubes` (incluidos `escudo`, `color_principal` y `color_secundario` con valores por defecto, para el ciclo 5), `admins_club`, `plantillas` (con `club_id`, `categoria`, `temporada` y `plantilla_anterior_id`), `membresias` con enum de rol, `jugadores` (del club) y `fichas` según la sección 6
+- [ ] Identificadores UUID v7 generados por PostgreSQL (`uuidv7()`)
+- [ ] Nombre de plantilla único por club y temporada; temporada con formato `AAAA-AA` y años consecutivos
+- [ ] Fichas: jugador y plantilla del mismo club, una sola ficha por jugador y temporada, y dorsal 0–99 único por plantilla entre jugadores activos (índice parcial)
+- [ ] Restricciones `CHECK` de colores en hex y de textos obligatorios no vacíos
 - [ ] Migraciones versionadas generadas con drizzle-kit y aplicadas automáticamente al arrancar el backend
 - [ ] Script `npm run db:check` que falla si el esquema de Drizzle tiene cambios sin migración generada (lo ejecuta la CI, GH-12)
-- [ ] Seed de datos de ejemplo para desarrollo y pruebas: un club con dos equipos de categorías distintas, un segundo club con un equipo, un usuario administrador del primer club, un entrenador con membresía en un solo equipo y jugadores
+- [ ] Seed de datos de ejemplo para desarrollo y pruebas (`npm run db:seed`, idempotente y que se niega a ejecutarse en producción): un club con las temporadas 2025-26 y 2026-27 y dos plantillas de categorías distintas en cada una, enlazadas con su plantilla anterior; un jugador que cambia de categoría entre temporadas y un entrenador que cambia de plantilla; un segundo club con una plantilla; un administrador del primer club y jugadores
 
 #### GH-4
 **Título:** API base con Hono
@@ -750,44 +783,46 @@ Inicio de sesión con email y contraseña mediante Better Auth. Depende de GH-3 
 - [ ] Tests de login correcto, incorrecto y sesión caducada
 
 #### GH-6
-**Título:** Permisos por club, equipo y rol
+**Título:** Permisos por club, plantilla y rol
 **Etiquetas:** feature, backend, seguridad
 
-Middleware de autorización para todas las rutas `/api/equipos/:id/...` y `/api/clubes/:cid/...`. Depende de GH-5.
+Middleware de autorización para todas las rutas `/api/plantillas/:id/...` y `/api/clubes/:cid/...`. Depende de GH-5.
 
 **Criterios de aceptación**
-- [ ] Resuelve el rol efectivo del usuario en el equipo y lo deja en el contexto de la petición: su membresía en el equipo, o admin si es administrador del club del equipo (se toma el mayor)
+- [ ] Resuelve el rol efectivo del usuario en la plantilla y lo deja en el contexto de la petición: su membresía en la plantilla, o admin si es administrador del club de la plantilla (se toma el mayor)
 - [ ] 401 sin sesión; 403 si no es miembro ni administrador del club, o si su rol no alcanza el mínimo
 - [ ] Helper declarativo por ruta, p. ej. `requireRol('delegado')`, con jerarquía admin > entrenador > delegado > jugador
-- [ ] Helper `requireAdminClub()` para las rutas de club
+- [ ] Helpers para las rutas de club: `requireAdminClub()` y, para la biblioteca de ejercicios y los jugadores del club, el rol más alto del usuario en las plantillas del club
 - [ ] Tests de cada caso
 
 #### GH-7
-**Título:** API de clubes y equipos
+**Título:** API de clubes y plantillas
 **Etiquetas:** feature, backend
 
 Depende de GH-6.
 
 **Criterios de aceptación**
 - [ ] `POST /api/clubes` crea el club y, en la misma transacción, hace a su creador administrador del club
-- [ ] `GET /api/clubes/:cid` para cualquier miembro de un equipo del club
-- [ ] `POST /api/clubes/:cid/equipos` (administrador del club) crea un equipo con nombre, categoría y temporada
+- [ ] `GET /api/clubes/:cid` para cualquier miembro de una plantilla del club
+- [ ] `POST /api/clubes/:cid/plantillas` (administrador del club) crea una plantilla con nombre, categoría, temporada y plantilla anterior opcional
 - [ ] `GET/POST/DELETE /api/clubes/:cid/admins`: añadir un usuario existente como administrador del club y retirarlo; un club nunca queda sin administradores
-- [ ] `GET /api/equipos` devuelve los equipos del usuario agrupables por club, con los datos del club y su rol efectivo en cada uno
-- [ ] `GET /api/equipos/:id` y `PATCH /api/equipos/:id` (nombre, categoría, temporada)
-- [ ] `DELETE /api/equipos/:id` solo para administradores del club, exigiendo el nombre del equipo como confirmación; borra en cascada sus datos y sus archivos en `uploads`
+- [ ] `GET /api/plantillas` devuelve las plantillas del usuario agrupables por club y temporada, con los datos del club y su rol efectivo en cada una
+- [ ] `GET /api/plantillas/:id` y `PATCH /api/plantillas/:id` (nombre y categoría; la temporada no se modifica)
+- [ ] `DELETE /api/plantillas/:id` solo para administradores del club, exigiendo el nombre de la plantilla como confirmación; borra en cascada sus datos (los jugadores siguen en el club)
 - [ ] Tests
 
 #### GH-8
-**Título:** API de jugadores
+**Título:** API de jugadores y fichas
 **Etiquetas:** feature, backend
 
-CRUD de la plantilla. Depende de GH-6.
+Jugadores del club y sus fichas en cada plantilla (sección 2.2). Depende de GH-6.
 
 **Criterios de aceptación**
-- [ ] `GET /api/equipos/:id/jugadores` con filtro de activos/bajas, ordenado por dorsal y nombre
-- [ ] `POST` y `PATCH` (incluida baja y reactivación mediante `activo`)
-- [ ] Error claro si el dorsal ya está en uso por un jugador activo
+- [ ] `GET /api/plantillas/:id/jugadores` con filtro de activos/bajas, ordenado por dorsal y nombre, con los datos del jugador y de su ficha
+- [ ] `POST /api/plantillas/:id/jugadores`: da de alta un jugador nuevo en el club con su ficha, o crea la ficha de un jugador existente del club (`jugador_id`)
+- [ ] `PATCH /api/plantillas/:id/jugadores/:jid`: datos del jugador y de su ficha, incluida baja y reactivación mediante `activo`
+- [ ] `GET /api/clubes/:cid/jugadores?q=` para buscar jugadores del club y `GET /api/clubes/:cid/jugadores/:jid` con sus fichas por temporada
+- [ ] Error claro si el dorsal ya está en uso por un jugador activo o si el jugador ya tiene ficha en otra plantilla de la misma temporada
 - [ ] Modificar requiere rol delegado o superior
 - [ ] Tests
 
@@ -806,7 +841,7 @@ Depende de GH-2 y GH-4.
 - [ ] Componentes base: botón, campo, hoja inferior, confirmación, aviso (toast), estado vacío
 
 #### GH-10
-**Título:** Login y selector de equipo
+**Título:** Login y selector de plantilla
 **Etiquetas:** feature, frontend
 
 Depende de GH-5, GH-7 y GH-9.
@@ -814,9 +849,9 @@ Depende de GH-5, GH-7 y GH-9.
 **Criterios de aceptación**
 - [ ] Pantalla de login con errores claros
 - [ ] Rutas protegidas: sin sesión redirige al login
-- [ ] Con un solo equipo entra directamente; con varios muestra el selector, agrupado por club y con la categoría de cada equipo
-- [ ] Cambio de equipo desde cualquier pantalla; se recuerda el último equipo usado
-- [ ] Los administradores del club pueden crear un equipo nuevo (nombre, categoría de la lista sugerida o libre, y temporada) desde el selector
+- [ ] Con una sola plantilla entra directamente; con varias muestra el selector, agrupado por club y por temporada (la más reciente primero), con la categoría de cada plantilla
+- [ ] Cambio de plantilla desde cualquier pantalla; se recuerda la última usada
+- [ ] Los administradores del club pueden crear una plantilla nueva (nombre, categoría de la lista sugerida o libre, y temporada) desde el selector
 - [ ] Cerrar sesión
 
 #### GH-11
@@ -827,7 +862,8 @@ Depende de GH-8 y GH-10.
 
 **Criterios de aceptación**
 - [ ] Lista ordenada por dorsal con nombre y posición
-- [ ] Alta y edición en hoja inferior (nombre, dorsal, posición)
+- [ ] Alta en hoja inferior de un jugador nuevo (nombre, dorsal, posición) o de uno existente del club, con buscador
+- [ ] Edición del jugador y de su ficha; vista del jugador con sus temporadas en el club
 - [ ] Baja con confirmación; vista de bajas con opción de reactivar
 - [ ] Error de dorsal repetido mostrado en el campo
 - [ ] Estado vacío que invita a añadir el primer jugador
@@ -875,7 +911,7 @@ Entornos de pruebas y producción en el servidor. Depende de GH-1 y GH-2.
 Depende de GH-3.
 
 **Criterios de aceptación**
-- [ ] Tablas `entrenos` (fecha única por equipo) y `asistencias` con enum `asiste, justificada, falta` y motivo opcional
+- [ ] Tablas `entrenos` (fecha única por plantilla) y `asistencias` con enum `asiste, justificada, falta` y motivo opcional
 - [ ] Migración y actualización del seed con entrenos de ejemplo
 
 #### GH-15
@@ -885,10 +921,10 @@ Depende de GH-3.
 Depende de GH-14.
 
 **Criterios de aceptación**
-- [ ] `GET /api/equipos/:id/entrenos` con recuentos por estado
-- [ ] `GET /api/equipos/:id/entrenos/:fecha` con la asistencia de cada jugador activo
-- [ ] `PUT /api/equipos/:id/entrenos/:fecha/asistencias` guarda la lista completa en una transacción; crea el entreno si no existe y lo elimina si queda sin asistencias (en el ciclo 7 solo si además no tiene planificación)
-- [ ] `GET /api/equipos/:id/asistencia/resumen`: asistencias, justificadas, faltas y porcentaje por jugador
+- [ ] `GET /api/plantillas/:id/entrenos` con recuentos por estado
+- [ ] `GET /api/plantillas/:id/entrenos/:fecha` con la asistencia de cada jugador activo
+- [ ] `PUT /api/plantillas/:id/entrenos/:fecha/asistencias` guarda la lista completa en una transacción; crea el entreno si no existe y lo elimina si queda sin asistencias (en el ciclo 7 solo si además no tiene planificación)
+- [ ] `GET /api/plantillas/:id/asistencia/resumen`: asistencias, justificadas, faltas y porcentaje por jugador
 - [ ] El rol jugador solo obtiene sus propios datos (en el listado, solo recuentos agregados)
 - [ ] Tests
 
@@ -927,7 +963,7 @@ Depende de GH-11 y GH-15.
 Depende de GH-3.
 
 **Criterios de aceptación**
-- [ ] Tabla `partidos` según la sección 6, con `temporada` tomada por defecto del equipo (los campos de estado y resultado pueden añadirse ya, sin uso hasta el ciclo 6)
+- [ ] Tabla `partidos` según la sección 6, de la plantilla (los campos de estado y resultado pueden añadirse ya, sin uso hasta el ciclo 6)
 - [ ] Tabla `convocados`
 - [ ] Migración y seed
 
@@ -939,8 +975,8 @@ Depende de GH-18.
 
 **Criterios de aceptación**
 - [ ] CRUD de partidos con listado de próximos y pasados
-- [ ] `PUT /api/equipos/:id/partidos/:pid/convocados` con la lista completa; solo jugadores activos del equipo
-- [ ] `GET /api/equipos/:id/partidos/:pid/mensaje` devuelve el texto de convocatoria (equipo, rival, fecha, horas, lugar, convocados por dorsal)
+- [ ] `PUT /api/plantillas/:id/partidos/:pid/convocados` con la lista completa; solo jugadores con ficha activa en la plantilla
+- [ ] `GET /api/plantillas/:id/partidos/:pid/mensaje` devuelve el texto de convocatoria (club y plantilla, rival, fecha, horas, lugar, convocados por dorsal)
 - [ ] Tests
 
 #### GH-20
@@ -977,9 +1013,9 @@ Depende de GH-20.
 Depende de GH-7.
 
 **Criterios de aceptación**
-- [ ] Tablas `motivos_multa` (con `tipo_evento` nullable) y `multas` (con `evento_id` nullable para el ciclo 6) según la sección 6
+- [ ] Tablas `motivos_multa` (con `tipo_evento` nullable) y `multas` (de la plantilla, con FK compuesta `(plantilla_id, jugador_id)` a `fichas`) (con `evento_id` nullable para el ciclo 6) según la sección 6
 - [ ] Una multa está cobrada si y solo si tiene `fecha_pago`; sin campo `pagada` redundante
-- [ ] Al crear un equipo se crea el catálogo por defecto en la misma transacción; migración de datos para los equipos existentes
+- [ ] Al crear una plantilla se crea su catálogo en la misma transacción, copiado de la plantilla anterior si la hay o con los valores por defecto; migración de datos para las plantillas existentes
 - [ ] Seed con multas de ejemplo
 
 #### GH-23
@@ -1003,8 +1039,8 @@ Depende de GH-22.
 - [ ] Registrar multa desde motivo del catálogo (copia texto e importe, importe editable) o con motivo libre
 - [ ] Listar con filtros por jugador y estado
 - [ ] Cobrar (fija `fecha_pago`) y deshacer cobro (la vacía); borrar
-- [ ] `POST /api/equipos/:id/jugadores/:jid/saldar` marca como pagadas todas sus pendientes
-- [ ] `GET /api/equipos/:id/multas/resumen`: total pendiente, total en caja y deuda por jugador
+- [ ] `POST /api/plantillas/:id/jugadores/:jid/saldar` marca como pagadas todas sus pendientes
+- [ ] `GET /api/plantillas/:id/multas/resumen`: total pendiente, total en caja y deuda por jugador
 - [ ] El rol jugador solo ve sus multas
 - [ ] Importes con precisión decimal, sin coma flotante
 - [ ] Tests
@@ -1031,13 +1067,13 @@ Comprobar que la aplicación cubre todo lo que hacía el MVP inicial antes de pu
 
 **Criterios de aceptación**
 - [ ] Recorrido completo en el móvil: plantilla, pasar lista, convocatoria, multas
-- [ ] Funciona con los dos equipos y el cambio entre ellos
+- [ ] Funciona con las dos plantillas y el cambio entre ellas
 - [ ] Sin issues `bug` abiertas que impidan completar el recorrido anterior
 - [ ] Release `v1.0.0` en GitHub y desplegada en producción
 
 ---
 
-### Milestone: Ciclo 5 · Personalización
+### Milestone: Ciclo 5 · Personalización y temporadas
 
 #### GH-27
 **Título:** API de configuración visual del club
@@ -1048,7 +1084,7 @@ Depende de GH-7.
 **Criterios de aceptación**
 - [ ] `PATCH /api/clubes/:cid` acepta `nombre`, `color_principal` y `color_secundario`, con los colores validados como hex
 - [ ] Solo para administradores del club
-- [ ] Los datos visuales del club se incluyen en `GET /api/equipos` para aplicar el tema sin peticiones adicionales
+- [ ] Los datos visuales del club se incluyen en `GET /api/plantillas` para aplicar el tema sin peticiones adicionales
 - [ ] Tests
 
 #### GH-28
@@ -1071,23 +1107,40 @@ Depende de GH-7.
 Depende de GH-27.
 
 **Criterios de aceptación**
-- [ ] Al cargar el equipo activo se aplican los colores de su club a las variables CSS de toda la aplicación
+- [ ] Al cargar la plantilla activa se aplican los colores de su club a las variables CSS de toda la aplicación
 - [ ] Contraste automático: texto blanco o negro sobre el color principal según luminosidad (WCAG AA)
-- [ ] Escudo del club en la cabecera (junto al nombre y la categoría del equipo) y en el selector de equipo
+- [ ] Escudo del club en la cabecera (junto al nombre, la categoría y la temporada de la plantilla) y en el selector de plantilla
 - [ ] Color de la barra del navegador (`theme-color`) acorde al club
 - [ ] Sin parpadeo de colores por defecto al abrir la app
 
 #### GH-30
-**Título:** Pantalla de configuración del equipo y del club
+**Título:** Pantalla de configuración de la plantilla y del club
 **Etiquetas:** feature, frontend
 
 Depende de GH-28 y GH-29.
 
 **Criterios de aceptación**
-- [ ] Datos del equipo (entrenador y admin): editar nombre, categoría y temporada
+- [ ] Datos de la plantilla (entrenador y admin): editar nombre y categoría
 - [ ] Identidad del club (solo administradores del club): nombre del club, subir y cambiar escudo con vista previa, selectores de color con vista previa en vivo antes de guardar y restablecer colores por defecto
-- [ ] Aviso de que el escudo y los colores se aplican a todos los equipos del club
-- [ ] Equipos del club (solo administradores del club): listado con categoría, crear equipo y borrar equipo con confirmación escribiendo su nombre
+- [ ] Aviso de que el escudo y los colores se aplican a todas las plantillas del club
+- [ ] Plantillas del club (solo administradores del club): listado por temporada con su categoría, crear plantilla y borrar plantilla con confirmación escribiendo su nombre
+
+#### GH-63
+**Título:** Cambio de temporada
+**Etiquetas:** feature, backend, frontend
+
+Crear las plantillas de una temporada nueva a partir de las de la anterior (sección 2.1). Depende de GH-7, GH-8 y GH-22.
+
+**Criterios de aceptación**
+- [ ] `POST /api/clubes/:cid/temporadas` (solo administradores del club): por cada plantilla elegida de la temporada anterior crea la de la temporada nueva, enlazada con `plantilla_anterior_id`, todo en una transacción
+- [ ] Cada plantilla nueva puede cambiar de nombre y categoría (p. ej. Alevín → Infantil)
+- [ ] Jugadores: se copian sus fichas (dorsal y posición); cada jugador se puede mover a otra plantilla nueva o marcar como que no continúa
+- [ ] Cuerpo técnico: se copian las membresías, con opción de quitar o cambiar a cada persona
+- [ ] Catálogo de multas copiado de la plantilla anterior
+- [ ] Las multas pendientes de la temporada anterior siguen en su plantilla y se pueden consultar y cobrar
+- [ ] Asistente en el frontend (solo administradores del club) con un resumen antes de confirmar
+- [ ] La temporada anterior sigue consultable; el selector muestra primero la nueva
+- [ ] Tests
 
 ---
 
@@ -1099,7 +1152,7 @@ Depende de GH-28 y GH-29.
 
 **Criterios de aceptación**
 - [ ] Campos `estado`, `goles_favor`, `goles_contra` en `partidos` si no se añadieron en GH-18
-- [ ] Asociación de tipo de tarjeta en el catálogo por defecto (amarilla por protestar → amarilla, roja → roja), con migración de datos para los equipos existentes
+- [ ] Asociación de tipo de tarjeta en el catálogo por defecto (amarilla por protestar → amarilla, roja → roja), con migración de datos para las plantillas existentes
 - [ ] Tablas `participaciones` y `eventos_partido` (con `origen`) según la sección 6
 - [ ] Migración y seed con partidos jugados de ejemplo
 
@@ -1126,7 +1179,8 @@ Depende de GH-32.
 - [ ] `PUT .../partidos/:pid/resultado` marca el partido como jugado
 - [ ] `PUT .../partidos/:pid/participaciones` (titulares y suplentes)
 - [ ] Crear, listar y borrar eventos; los eventos de un partido los ve cualquier miembro
-- [ ] `GET /api/equipos/:id/estadisticas?temporada=` (filtra por `partidos.temporada`): goles, asistencias, minutos, partidos, titularidades y tarjetas por jugador; el rol jugador solo ve las suyas
+- [ ] `GET /api/plantillas/:id/estadisticas`: goles, asistencias, minutos, partidos, titularidades y tarjetas por jugador en la temporada de la plantilla; el rol jugador solo ve las suyas
+- [ ] `GET /api/clubes/:cid/jugadores/:jid/estadisticas`: trayectoria del jugador por temporada y totales en el club; el rol jugador solo ve la suya
 - [ ] Tests
 
 #### GH-34
@@ -1150,7 +1204,8 @@ Depende de GH-33.
 **Criterios de aceptación**
 - [ ] Tablas de goleadores, asistentes, minutos y tarjetas
 - [ ] Ficha de estadísticas por jugador
-- [ ] Resultados de la temporada del equipo (ganados, empatados, perdidos, goles)
+- [ ] Resultados de la temporada de la plantilla (ganados, empatados, perdidos, goles)
+- [ ] Trayectoria del jugador por temporadas en su vista
 
 #### GH-36
 **Título:** Propuesta de multa al registrar una tarjeta
@@ -1185,8 +1240,9 @@ Evaluar la extracción de datos del PDF del acta oficial que descarga el entrena
 
 **Criterios de aceptación**
 - [ ] Tablas `ejercicios`, `ejercicio_medios` y `entreno_ejercicios` según la sección 6
-- [ ] Nuevos campos en `entrenos`: `hora`, `duracion_prevista`, `objetivo`, `es_plantilla` y `nombre_plantilla`; `fecha` nullable solo en plantillas y unicidad de fecha mediante índice parcial que excluye plantillas
-- [ ] Las plantillas no aparecen en el historial ni cuentan para el porcentaje de asistencia
+- [ ] La biblioteca (`ejercicios`) es del club (`club_id`), compartida por todas sus plantillas y temporadas
+- [ ] Nuevos campos en `entrenos`: `hora`, `duracion_prevista`, `objetivo`, `es_modelo` y `nombre_modelo`; `fecha` nullable solo en modelos de sesión y unicidad de fecha mediante índice parcial que los excluye
+- [ ] Los modelos de sesión no aparecen en el historial ni cuentan para el porcentaje de asistencia
 - [ ] Un ejercicio usado en alguna sesión no se puede borrar, solo archivar
 - [ ] Ajuste de GH-15: un entreno con planificación no se elimina al quedar sin asistencias
 - [ ] Migración y seed con ejercicios y una sesión de ejemplo
@@ -1205,7 +1261,7 @@ Servicio común de medios para los ejercicios. Depende de GH-28 y GH-38.
 - [ ] Vídeos: miniatura y duración extraídas con ffmpeg. Los MP4 H.264 y WebM se guardan tal cual; los MOV o HEVC (iPhone) se recodifican a MP4 H.264 en segundo plano, con estado "procesando" visible
 - [ ] La subida del escudo de GH-28 pasa a usar este servicio común
 - [ ] Nombres de archivo generados; nunca se usa el nombre original en disco
-- [ ] Servido solo a miembros del equipo, con caché y soporte de `Range` para avanzar en los vídeos
+- [ ] Servido solo a miembros de alguna plantilla del club, con caché y soporte de `Range` para avanzar en los vídeos
 - [ ] Al borrar un medio o un ejercicio se eliminan sus archivos
 - [ ] Tests
 
@@ -1218,9 +1274,9 @@ Depende de GH-38 y GH-39.
 **Criterios de aceptación**
 - [ ] Listar con búsqueda por texto y filtros por categoría, etiqueta y archivados
 - [ ] Crear, editar, archivar y borrar (si no se ha usado)
-- [ ] Duplicar ejercicio con sus medios y copiarlo a otro equipo en el que el usuario sea entrenador o admin
+- [ ] Duplicar ejercicio con sus medios y copiarlo a otro club en el que el usuario sea entrenador o admin
 - [ ] Añadir medios (archivo o enlace externo), editar pie, reordenar y borrar
-- [ ] Gestión solo para entrenador y admin; lectura para cualquier miembro
+- [ ] Gestión para quien sea entrenador o admin en alguna plantilla del club; lectura para cualquier miembro de una plantilla del club
 - [ ] Tests
 
 #### GH-41
@@ -1230,10 +1286,10 @@ Depende de GH-38 y GH-39.
 Depende de GH-38.
 
 **Criterios de aceptación**
-- [ ] `PUT /api/equipos/:id/entrenos/:fecha/plan` guarda en una transacción los datos de la sesión y la lista ordenada de ejercicios
+- [ ] `PUT /api/plantillas/:id/entrenos/:fecha/plan` guarda en una transacción los datos de la sesión y la lista ordenada de ejercicios
 - [ ] Listado de sesiones por rango de fechas con duración total y número de ejercicios
 - [ ] Duplicar una sesión en otra fecha
-- [ ] Guardar una sesión como plantilla y aplicar una plantilla a una fecha
+- [ ] Guardar una sesión como modelo y aplicar un modelo a una fecha
 - [ ] La planificación y la asistencia de un mismo entreno conviven sin interferir
 - [ ] Tests
 
@@ -1249,7 +1305,7 @@ Depende de GH-40.
 - [ ] Formulario de ejercicio con subida de fotos y vídeos desde la galería o la cámara del móvil
 - [ ] Barra de progreso de subida, posibilidad de cancelar y mensaje claro si el archivo supera el límite
 - [ ] Reordenar medios y editar su pie
-- [ ] Duplicar, copiar a otro equipo y archivar
+- [ ] Duplicar, copiar a otro club y archivar
 
 #### GH-43
 **Título:** Pantalla de planificación de sesión
@@ -1262,7 +1318,7 @@ Depende de GH-41 y GH-42.
 - [ ] Editor de sesión: fecha, hora, duración prevista, objetivo y notas
 - [ ] Añadir ejercicios desde la biblioteca con buscador; reordenar arrastrando; duración e indicaciones por ejercicio
 - [ ] Duración total frente a la prevista, con aviso si se supera
-- [ ] Duplicar sesión, guardar como plantilla y crear desde plantilla
+- [ ] Duplicar sesión, guardar como modelo y crear desde un modelo
 - [ ] El entreno planificado aparece en la pantalla de pasar lista de esa fecha
 
 #### GH-44
@@ -1335,7 +1391,7 @@ Depende de GH-45.
 
 **Criterios de aceptación**
 - [ ] Tabla `invitaciones` según la sección 6; solo se guarda el hash del token
-- [ ] `POST /api/equipos/:id/invitaciones` (solo admin): email, rol y ficha de jugador opcional; devuelve enlace de un solo uso con caducidad
+- [ ] `POST /api/plantillas/:id/invitaciones` (solo admin): email, rol y jugador del club opcional (se vincula a su usuario); devuelve enlace de un solo uso con caducidad
 - [ ] `POST /api/clubes/:cid/invitaciones` (solo administradores del club): invitación como administrador del club
 - [ ] Listar y revocar invitaciones pendientes (`revocada_en`)
 - [ ] Tests
@@ -1352,13 +1408,13 @@ Depende de GH-49.
 - [ ] Enlaces caducados, usados o revocados muestran un mensaje claro
 
 #### GH-51
-**Título:** Gestión de miembros del equipo y administradores del club
+**Título:** Gestión de miembros de la plantilla y administradores del club
 **Etiquetas:** feature, backend, frontend
 
 Depende de GH-49.
 
 **Criterios de aceptación**
-- [ ] Pantalla (solo admin) con miembros, rol e invitaciones pendientes; los administradores del club aparecen como admin heredado, sin poder quitarlos desde el equipo
+- [ ] Pantalla (solo admin) con miembros, rol e invitaciones pendientes; los administradores del club aparecen como admin heredado, sin poder quitarlos desde la plantilla
 - [ ] Cambiar rol y revocar acceso
 - [ ] Pantalla (solo administradores del club) para invitar, listar y retirar administradores del club; un club nunca queda sin administradores
 
@@ -1379,8 +1435,8 @@ Depende de GH-50.
 
 **Criterios de aceptación**
 - [ ] Test por cada fila de la tabla de la sección 3 y cada rol
-- [ ] Casos de acceso a un equipo ajeno y a datos de otro jugador
-- [ ] Casos de club: el administrador del club es admin en todos sus equipos pero no en los de otro club; un miembro de un equipo no accede a otros equipos de su mismo club; solo los administradores del club gestionan la identidad y los equipos del club
+- [ ] Casos de acceso a una plantilla ajena y a datos de otro jugador
+- [ ] Casos de club y temporada: el administrador del club es admin en todas sus plantillas pero no en las de otro club; un miembro de una plantilla no accede a otras plantillas de su club, tampoco a las de otra temporada; solo los administradores del club gestionan la identidad, las plantillas y el cambio de temporada
 - [ ] Integrados en la CI
 
 ---

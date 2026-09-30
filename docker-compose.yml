@@ -39,6 +39,8 @@ services:
     environment:
       PORT: 3000
       DATABASE_URL: postgres://${POSTGRES_USER:-vestuario}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-vestuario}
+      # produccion salvo que el .env diga otra cosa; el seed solo se permite en desarrollo y pruebas
+      ENTORNO: ${ENTORNO:-produccion}
       TZ: ${TZ:-Europe/Madrid}
     volumes:
       - uploads:/app/uploads
