@@ -20,7 +20,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "openapi": "tsx src/scripts/openapi.ts",
-    "openapi:check": "tsx src/scripts/openapi.ts --check"
+    "openapi:check": "tsx src/scripts/openapi.ts --check",
+    "crear-admin": "tsx src/scripts/crear-admin.ts"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.3",

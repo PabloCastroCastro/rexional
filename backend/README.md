@@ -14,6 +14,7 @@ Es un proyecto independiente: tiene sus propias dependencias y no importa códig
 | `npm run lint` | Lint y formato con Biome; falla también con avisos |
 | `npm run format` | Aplica el formato y las correcciones seguras de Biome |
 | `npm run typecheck` | Comprueba los tipos sin compilar |
+| `npm run crear-admin` | Crea un usuario y su club, del que queda como administrador (ver [Autenticación](#autenticación)) |
 | `npm test` | Tests con Vitest contra PostgreSQL (ver [Tests](#tests)) |
 | `npm run openapi` | Exporta el contrato a `openapi.json` |
 | `npm run openapi:check` | Falla si `openapi.json` no coincide con la API (lo ejecuta la CI) |
@@ -29,6 +30,8 @@ Es un proyecto independiente: tiene sus propias dependencias y no importa códig
 | `ENTORNO` | | Obligatoria: `desarrollo`, `pruebas` o `produccion`. En producción no se publica la documentación de la API y el seed no se ejecuta |
 | `DATABASE_URL` | | Obligatoria. Cadena de conexión a PostgreSQL |
 | `TZ` | | Obligatoria y debe ser `Europe/Madrid` |
+| `BETTER_AUTH_SECRET` | | Obligatoria, secreta y distinta en cada entorno (mínimo 32 caracteres). Firma las cookies de sesión: `openssl rand -base64 32` |
+| `URL_PUBLICA` | | Obligatoria. Dirección desde la que se usa la app (p. ej. `https://servidor.tailnet.ts.net:8443`); solo se aceptan peticiones de autenticación desde ella |
 | `PORT` | `3000` | Puerto HTTP |
 | `DB_POOL_MAX` | `10` | Conexiones máximas del pool de PostgreSQL |
 | `DB_TIMEOUT_CONEXION_MS` | `5000` | Tiempo máximo para obtener una conexión |
@@ -60,6 +63,35 @@ src/
 - **Documentación** interactiva en `/api/docs` (Scalar) y contrato en `/api/openapi.json`, salvo con `ENTORNO=produccion`. Tras cambiar la API, actualiza el contrato versionado con `npm run openapi`.
 - **Logs** con pino: JSON de una línea en pruebas y producción, legibles en desarrollo. Cada petición registra método, ruta, estado y duración, sin cuerpos, cabeceras ni parámetros; los healthchecks solo con `LOG_LEVEL=debug`.
 
+## Autenticación
+
+Email y contraseña con **Better Auth**, montado en `/api/auth`. Solo están activas estas rutas; el resto responden 404:
+
+| Ruta | Uso |
+|---|---|
+| `POST /api/auth/sign-in/email` | Iniciar sesión (`{ email, password }`) |
+| `POST /api/auth/sign-out` | Cerrar sesión |
+| `GET /api/auth/get-session` | Sesión actual y usuario, o `null` |
+| `POST /api/auth/change-password` | Cambiar la contraseña |
+
+- **Sin registro público**: los usuarios se crean con `crear-admin` y, más adelante, por invitación (GH-50).
+- **Sesión** en la cookie `vestuario.session_token` (`__Secure-` en pruebas y producción): `HttpOnly`, `SameSite=Lax` y `Secure` salvo en desarrollo (Safari no guarda cookies `Secure` en `http://localhost`). Dura **30 días** y se renueva con el uso.
+- **Límite de intentos**: 5 inicios de sesión por minuto y por IP (429 al superarlo). La IP es la de `X-Real-IP`, que nginx sobrescribe siempre; `X-Forwarded-For` lo podría falsear el cliente. No se bloquean cuentas, para que nadie pueda dejar sin acceso a otro equivocándose a propósito.
+- **Origen**: las peticiones de un navegador desde un origen distinto de `URL_PUBLICA` se rechazan con 403, con sesión o sin ella.
+- Contraseñas de al menos 10 caracteres. Los identificadores de usuario los genera PostgreSQL (`generateId: false`).
+- El frontend usará el cliente de Better Auth; estas rutas no forman parte de `openapi.json`.
+
+### Crear el primer administrador
+
+Crea el usuario, su club y su rol de administrador en una sola transacción; si el email ya existe, no crea nada.
+
+```
+npm run crear-admin                                               # desarrollo
+docker compose exec backend node dist/scripts/crear-admin.js      # servidor
+```
+
+Pregunta email, nombre, club y contraseña (oculta y dos veces). Para automatizarlo: `--email`, `--nombre` y `--club`, y la contraseña en la variable `CONTRASENA_ADMIN`, nunca como argumento, para que no quede en el historial de la terminal.
+
 ## Tests
 
 Vitest contra un PostgreSQL real. Los tests crean y borran datos, así que solo se ejecutan contra una base cuyo nombre termine en `_test`; si no existe, se crea y se le aplican las migraciones.
@@ -71,6 +103,7 @@ docker compose -f docker-compose.dev.yml exec backend npm test      # desde la r
 En Docker la base es `vestuario_test`, en el mismo PostgreSQL de desarrollo. Fuera de Docker, define `TEST_DATABASE_URL` (por ejemplo `postgres://vestuario:vestuario@localhost:5432/vestuario_test`).
 
 - `test/api.test.ts`: salud, documentación y formato de errores.
+- `test/auth.test.ts`: inicio de sesión (cookie, 401, origen, límite de intentos), sesión actual, caducada y cerrada, rutas desactivadas y `crearAdministrador`.
 - `test/config.test.ts`: validación de la configuración.
 - `test/restricciones.test.ts`: reglas del modelo que garantiza la base de datos; cada caso en una transacción que se deshace.
 

@@ -1,8 +1,9 @@
 import { OpenAPIHono } from '@hono/zod-openapi'
 import { Scalar } from '@scalar/hono-api-reference'
+import { auth } from './auth.js'
 import { config } from './config.js'
 import { comprobarBaseDeDatos } from './db/cliente.js'
-import { manejarError, rutaNoEncontrada, validacionFallida } from './errores.js'
+import { manejarError, rutaNoEncontrada, soloMismoOrigen, validacionFallida } from './errores.js'
 import { registrarPeticiones } from './peticiones.js'
 import { rutasSalud } from './rutas/salud.js'
 
@@ -35,6 +36,10 @@ export function crearApp(dependencias: Partial<Dependencias> = {}) {
   app.use(registrarPeticiones())
   app.onError(manejarError)
   app.notFound(rutaNoEncontrada)
+
+  // Autenticación (Better Auth): /api/auth/sign-in/email, /sign-out, /get-session y /change-password
+  app.post('/auth/*', soloMismoOrigen(config.urlPublica))
+  app.on(['GET', 'POST'], '/auth/*', (c) => auth.handler(c.req.raw))
 
   app.route('/', rutasSalud(d.comprobarBaseDeDatos))
 

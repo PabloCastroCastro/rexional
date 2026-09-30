@@ -1,6 +1,6 @@
 import type { Hook } from '@hono/zod-openapi'
 import { z } from '@hono/zod-openapi'
-import type { Context, Env, ErrorHandler, NotFoundHandler } from 'hono'
+import type { Context, Env, ErrorHandler, MiddlewareHandler, NotFoundHandler } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import type { ContentfulStatusCode } from 'hono/utils/http-status'
 import { logger } from './logger.js'
@@ -79,3 +79,19 @@ export const validacionFallida: Hook<unknown, Env, string, unknown> = (resultado
     return c.json(cuerpoError('validacion', 'Los datos enviados no son válidos', detalles), 400)
   }
 }
+
+// Rechaza las peticiones de un navegador desde otro origen. Better Auth solo comprueba el origen si
+// la petición lleva cookie de sesión; así también se cubre el inicio de sesión. Los navegadores
+// siempre envían Origin en un POST; sin Origin (p. ej. curl) decide la ruta.
+export const soloMismoOrigen =
+  (origenPermitido: string): MiddlewareHandler =>
+  async (c, next) => {
+    const origen = c.req.header('origin')
+    if (origen && origen !== origenPermitido) {
+      return c.json(
+        cuerpoError('origen_no_permitido', 'Petición desde un origen no permitido'),
+        403,
+      )
+    }
+    await next()
+  }

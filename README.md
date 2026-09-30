@@ -100,6 +100,12 @@ El backend aplica las migraciones de la base de datos al arrancar. Para cargar d
 docker compose -f docker-compose.dev.yml exec backend npm run db:seed
 ```
 
+Los datos de ejemplo incluyen usuarios para iniciar sesión. Para crear otro usuario con su club:
+
+```
+docker compose -f docker-compose.dev.yml exec backend npm run crear-admin
+```
+
 Los tests del backend se ejecutan en su contenedor, contra una base de datos de test aparte:
 
 ```
