@@ -7,10 +7,10 @@ main {
   padding: 1rem;
 }
 
-[data-estado='ok'] {
+[data-estado="ok"] {
   color: #1f8a5b;
 }
 
-[data-estado='error'] {
+[data-estado="error"] {
   color: #c93b3b;
 }

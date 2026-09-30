@@ -1,0 +1,204 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop, main]
+
+# Una sola ejecución por rama o PR: un push nuevo cancela la anterior
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  cambios:
+    name: Detectar cambios
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filtro.outputs.backend }}
+      frontend: ${{ steps.filtro.outputs.frontend }}
+      proxy: ${{ steps.filtro.outputs.proxy }}
+      humo: ${{ steps.filtro.outputs.humo }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dorny/paths-filter@v4
+        id: filtro
+        with:
+          # Un cambio en este workflow ejecuta todos los trabajos
+          filters: |
+            backend:
+              - 'backend/**'
+              - '.github/workflows/ci.yml'
+            frontend:
+              - 'frontend/**'
+              - '.github/workflows/ci.yml'
+            proxy:
+              - 'proxy/**'
+              - 'frontend/**'
+              - '.github/workflows/ci.yml'
+            humo:
+              - 'backend/**'
+              - 'frontend/**'
+              - 'proxy/**'
+              - 'docker-compose.yml'
+              - '.github/workflows/ci.yml'
+
+  backend:
+    name: Backend
+    needs: cambios
+    if: needs.cambios.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_DB: vestuario_test
+          POSTGRES_USER: vestuario
+          POSTGRES_PASSWORD: vestuario
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U vestuario -d vestuario_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://vestuario:vestuario@localhost:5432/vestuario_test
+      TZ: Europe/Madrid
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+
+      - name: Lint y formato
+        run: npx biome ci --error-on-warnings --reporter=github .
+      - name: Tipos
+        run: npm run typecheck
+      - name: Compilación
+        run: npm run build
+
+      # Los siguientes scripts se ejecutan solo cuando el proyecto los define (ver CONTRIBUTING.md)
+      - name: Tests contra PostgreSQL
+        run: npm run test --if-present
+      - name: Sin migraciones pendientes de generar
+        run: npm run db:check --if-present
+      - name: Contrato OpenAPI actualizado
+        run: npm run openapi:check --if-present
+
+      - name: Imagen Docker
+        run: docker build --target runtime -t vestuario-backend:ci .
+
+  frontend:
+    name: Frontend
+    needs: cambios
+    if: needs.cambios.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+
+      - name: Lint y formato
+        run: npx biome ci --error-on-warnings --reporter=github .
+      - name: Tipos
+        run: npm run typecheck
+      - name: Compilación
+        run: npm run build
+      - name: Tests
+        run: npm run test --if-present
+
+  proxy:
+    name: Proxy
+    needs: cambios
+    if: needs.cambios.outputs.proxy == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - name: Imagen Docker (incluye la compilación del frontend)
+        run: docker build --build-context frontend=frontend -t vestuario-proxy:ci proxy
+      - name: Configuración de nginx
+        # El entrypoint procesa las plantillas antes de ejecutar nginx -t
+        run: docker run --rm vestuario-proxy:ci nginx -t
+
+  humo:
+    name: Prueba de humo
+    needs: [cambios, backend, frontend, proxy]
+    # Se ejecuta si hubo cambios relevantes y ningún trabajo anterior falló (los omitidos no cuentan)
+    if: >-
+      !cancelled()
+      && !contains(needs.*.result, 'failure')
+      && needs.cambios.outputs.humo == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      POSTGRES_PASSWORD: ci
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Configuración de Compose
+        run: docker compose config --quiet
+
+      - name: Arranque completo hasta que los healthchecks pasan
+        run: docker compose up -d --build --wait --wait-timeout 180
+
+      - name: Solo el proxy publica puertos
+        run: |
+          publicados=$(docker compose ps --format json | jq -rs '.[] | .Service as $s | .Publishers[] | select(.PublishedPort != 0) | $s' | sort -u | tr '\n' ' ')
+          echo "Servicios con puertos publicados: $publicados"
+          test "$publicados" = "proxy "
+
+      - name: API a través del proxy
+        run: curl -fsS http://localhost:8080/api/health | grep -q '"estado":"ok"'
+
+      - name: PWA y rutas de la aplicación
+        run: |
+          curl -fsS http://localhost:8080/ | grep -q '<title>Vestuario</title>'
+          curl -fsS http://localhost:8080/ruta/de/la/app | grep -q '<title>Vestuario</title>'
+
+      - name: Logs
+        if: always()
+        run: docker compose logs --no-color
+
+      - name: Parada
+        if: always()
+        run: docker compose down -v
+
+  resultado:
+    name: Resultado de la CI
+    needs: [cambios, backend, frontend, proxy, humo]
+    # Comprobación única para la protección de ramas: falla si algún trabajo falló o se canceló
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Estado de los trabajos
+        env:
+          TRABAJOS: ${{ toJSON(needs) }}
+          FALLO: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+        run: |
+          echo "$TRABAJOS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          if [ "$FALLO" = "true" ]; then
+            echo "La CI ha fallado"
+            exit 1
+          fi

@@ -1,5 +1,7 @@
 # Vestuario
 
+[![CI](https://github.com/PabloCastroCastro/rexional/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/PabloCastroCastro/rexional/actions/workflows/ci.yml)
+
 Aplicación web para gestionar clubes de fútbol amateur desde el móvil, con varios equipos por club (uno por categoría): plantilla, asistencia a entrenamientos, convocatorias, caja de multas, personalización por club, estadísticas de partido y planificación de entrenos.
 
 Se instala como PWA desde el navegador, sin tiendas de aplicaciones, y se autoaloja en un servidor propio con software libre y coste cero.

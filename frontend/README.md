@@ -14,6 +14,8 @@ Es un proyecto independiente: tiene sus propias dependencias y no importa códig
 | `npm run dev` | Servidor de desarrollo de Vite en `http://localhost:5173` |
 | `npm run build` | Comprueba los tipos y genera los estáticos en `dist/` |
 | `npm run preview` | Sirve localmente la versión compilada |
+| `npm run lint` | Lint y formato con Biome; falla también con avisos |
+| `npm run format` | Aplica el formato y las correcciones seguras de Biome |
 | `npm run typecheck` | Comprueba los tipos |
 
 ## Variables de entorno (desarrollo)
