@@ -1,0 +1,71 @@
+# Desarrollo local: PostgreSQL, y backend y frontend con recarga en caliente.
+#   docker compose -f docker-compose.dev.yml up --build
+# La app queda en http://localhost:5173 (Vite redirige /api al backend). Sin nginx.
+
+name: vestuario-dev
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-vestuario}
+      POSTGRES_USER: ${POSTGRES_USER:-vestuario}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vestuario}
+      TZ: ${TZ:-Europe/Madrid}
+    ports:
+      # Accesible desde el equipo para usar herramientas de base de datos
+      - "127.0.0.1:${PUERTO_DB:-5432}:5432"
+    volumes:
+      - db-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    logging: *logging
+
+  backend:
+    build:
+      context: ./backend
+      target: dev
+    environment:
+      PORT: 3000
+      DATABASE_URL: postgres://${POSTGRES_USER:-vestuario}:${POSTGRES_PASSWORD:-vestuario}@db:5432/${POSTGRES_DB:-vestuario}
+      TZ: ${TZ:-Europe/Madrid}
+      # Detección de cambios por sondeo (tsx usa chokidar); necesaria con el código en Windows
+      CHOKIDAR_USEPOLLING: ${RECARGA_POLLING:-false}
+    volumes:
+      - ./backend:/app
+      # node_modules del contenedor (Linux), no el del equipo
+      - /app/node_modules
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    logging: *logging
+
+  frontend:
+    build:
+      context: ./frontend
+      target: dev
+    environment:
+      API_PROXY_TARGET: http://backend:3000
+      VITE_USE_POLLING: ${RECARGA_POLLING:-false}
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "127.0.0.1:5173:5173"
+    depends_on:
+      - backend
+    logging: *logging
+
+volumes:
+  db-data:

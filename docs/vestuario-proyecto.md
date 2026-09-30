@@ -50,7 +50,7 @@ Este documento recoge todas las decisiones funcionales, técnicas y de organizac
 - **Sencillez:** cada pantalla resuelve una tarea concreta en pocos toques desde el móvil.
 - **Móvil primero:** se usa en el campo, al borde del terreno de juego. Aplicación web instalable (PWA), sin tiendas de aplicaciones.
 - **Coste cero:** software libre, autoalojado en un servidor propio. Sin suscripciones a servicios en la nube.
-- **Tres capas separadas:** base de datos, backend y frontend independientes, cada una en su contenedor.
+- **Proyectos independientes:** un único repositorio con tres proyectos independientes (frontend, backend con su base de datos, y proxy), cada uno con sus dependencias y su contenedor.
 - **Iterativo:** se construye en ciclos cortos, cada uno termina con algo usable.
 
 **Fuera de alcance por ahora**
@@ -199,21 +199,30 @@ Los permisos se aplican **siempre en el backend**. El frontend solo oculta lo qu
 
 ## 4. Arquitectura
 
-Tres capas separadas que solo se comunican por interfaces bien definidas:
+Un único repositorio con **tres proyectos independientes**, sin workspaces ni herramientas de monorepo. Cada proyecto tiene sus propias dependencias, lockfile, scripts, Dockerfile y README, se desarrolla, prueba y construye por separado, y ninguno importa código de otro. Solo se comunican por interfaces bien definidas: HTTP con contrato OpenAPI y SQL.
+
+| Proyecto | Carpeta | Contenido |
+|---|---|---|
+| Frontend | `frontend/` | PWA en React + Vite. Solo produce estáticos. |
+| Backend | `backend/` | API en Node + Hono, **incluida la base de datos**: esquema, migraciones y seed. |
+| Proxy | `proxy/` | nginx: sirve los estáticos del frontend, redirige `/api` al backend, HTTPS, cabeceras de seguridad y límites. |
+
+En la raíz quedan solo lo que une a los tres proyectos: los ficheros de Docker Compose, `.env.example`, `scripts/` y `docs/`.
 
 ```
 Móvil / PC (Tailscale)
         │ HTTPS
         ▼
-┌─────────────────────────── Docker Compose ───────────────────────────┐
-│  frontend (Caddy)  ──/api──▶  backend (Node)  ──SQL──▶  db (PostgreSQL) │
-│  sirve la PWA               API REST JSON             volumen de datos  │
-└────────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────── Docker Compose ─────────────────────────────────┐
+│  proxy (nginx)  ──/api──▶  backend (Node)  ──SQL──▶  db (PostgreSQL)              │
+│  estáticos de la PWA       API REST JSON            volumen de datos              │
+└───────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### 4.1 Base de datos
 
 - **PostgreSQL** (versión estable actual), imagen oficial de Docker.
+- Forma parte del proyecto `backend/`: el esquema, las migraciones y el seed viven en él.
 - Datos en un volumen de Docker. Sin puertos publicados fuera de la red interna.
 - Esquema gestionado exclusivamente mediante **migraciones versionadas** en el repositorio.
 
@@ -222,7 +231,7 @@ Móvil / PC (Tailscale)
 - **Node.js LTS** con **TypeScript**.
 - **Hono** como framework HTTP.
 - **Drizzle ORM** para el esquema y las consultas tipadas; **drizzle-kit** para las migraciones.
-- **Zod** para validar toda entrada. El contrato de la API se publica como **OpenAPI**, generado a partir de las validaciones.
+- **Zod** para validar toda entrada. El contrato de la API se publica como **OpenAPI**, generado a partir de las validaciones y exportado a `backend/openapi.json`, de donde lo toma el frontend.
 - **Better Auth** para autenticación: email y contraseña, sesiones por cookie segura (`HttpOnly`, `Secure`, `SameSite=Lax`). Configurado para generar identificadores UUID (por defecto genera texto no UUID), de modo que todas las claves `→ user` del modelo sean `uuid`.
 - Zona horaria de la aplicación `Europe/Madrid` (variable `TZ`): "hoy" y todas las fechas `date` se calculan en esa zona, no en UTC.
 - Subidas de archivos procesadas en streaming (por ejemplo, con `busboy`), sin cargarlas enteras en memoria: el `parseBody()` de Hono las carga completas.
@@ -235,10 +244,21 @@ Móvil / PC (Tailscale)
 - **React** con **TypeScript** y **Vite**.
 - **PWA** mediante `vite-plugin-pwa`: manifest, iconos, service worker. Instalable en móvil desde el navegador.
 - **TanStack Query** para las llamadas a la API y la caché de datos; **React Router** para la navegación.
-- Cliente de la API **generado desde el contrato OpenAPI** (el frontend no conoce la base de datos).
+- Cliente de la API **generado desde el contrato OpenAPI** (`backend/openapi.json`). El frontend no importa código del backend ni conoce la base de datos.
 - Estilos con **variables CSS** para todos los colores y tokens de diseño desde el primer día, para permitir la personalización por club.
 - Navegación inferior por pestañas, pensada para una mano.
-- En producción se compila a estáticos servidos por **Caddy**, que además redirige `/api` al backend (mismo origen, sin CORS).
+- En producción se compila a estáticos que sirve el proxy. En desarrollo, el servidor de Vite redirige `/api` al backend. En ambos casos la app y la API comparten origen, sin CORS.
+
+### 4.4 Proxy
+
+- **nginx** en su imagen sin privilegios (`nginx-unprivileged`, escucha en un puerto alto sin root).
+- Su imagen se construye con los estáticos compilados del frontend.
+- Sirve la PWA con redirección de rutas a `index.html`, compresión y caché: larga para los recursos con hash, sin caché para `index.html` y el service worker.
+- Redirige `/api` al backend, conservando las cabeceras `Range` para los vídeos y la IP real del cliente (`X-Forwarded-For`, `X-Forwarded-Proto`).
+- `client_max_body_size` acorde al límite de subida de vídeo (por defecto nginx admite solo 1 MB).
+- HTTPS con los certificados montados como volumen: de Tailscale en la fase inicial y de Let's Encrypt (certbot) en el ciclo 10.
+- Cabeceras de seguridad y limitación de peticiones (`limit_req`) para el login y las invitaciones.
+- Configuración parametrizada por variables de entorno mediante las plantillas de la imagen oficial (`/etc/nginx/templates`).
 
 ---
 
@@ -250,11 +270,11 @@ Móvil / PC (Tailscale)
 |---|---|---|---|
 | `db` | postgres | Ninguno | Volumen `db-data` |
 | `backend` | Node (build propio, multi-stage, con ffmpeg para miniaturas y recodificación de vídeo) | Ninguno | Volumen `uploads` (escudos, fotos y vídeos) |
-| `frontend` | Caddy con los estáticos compilados | Solo este, hacia el host | Volumen de datos de Caddy |
+| `proxy` | nginx (build propio con los estáticos del frontend) | Solo este, hacia el host | Certificados montados en solo lectura |
 
-- `docker-compose.dev.yml` (local): PostgreSQL en contenedor; backend y frontend con recarga en caliente (Vite dev server con proxy a `/api`).
-- `docker-compose.yml` (servidor): los tres servicios compilados, con `restart: unless-stopped` y healthchecks.
-- Caddy y backend configurados con un tamaño máximo de subida acorde al límite de vídeo; los vídeos se sirven con soporte de peticiones parciales (`Range`) para poder avanzar en la reproducción.
+- `docker-compose.dev.yml` (local): PostgreSQL en contenedor; backend y frontend con recarga en caliente (Vite dev server con proxy a `/api`). Sin nginx.
+- `docker-compose.yml` (servidor): `db`, `backend` y `proxy` compilados, con `restart: unless-stopped` y healthchecks. El frontend no es un servicio en ejecución: su compilación va dentro de la imagen del proxy.
+- nginx y backend configurados con un tamaño máximo de subida acorde al límite de vídeo; los vídeos se sirven con soporte de peticiones parciales (`Range`) para poder avanzar en la reproducción.
 - Vigilar el espacio en disco del volumen `uploads`: los vídeos son lo que más crece. Aviso automático si el espacio libre baja de un umbral (ciclo 8).
 - Rotación de logs de los contenedores desde el primer día (`logging.options`: `max-size` y `max-file`), porque el driver `json-file` de Docker no rota por defecto.
 - Configuración mediante `.env` por entorno, con un `.env.example` documentado. Ningún secreto en el repositorio.
@@ -272,8 +292,9 @@ Cada entorno es un clon del repositorio con su `.env`, su nombre de proyecto de 
 
 ### 5.3 Acceso
 
-- **Fase inicial:** Tailscale instalado en el servidor (fuera de Docker) y en los dispositivos del entrenador. Acceso solo desde la red privada, con HTTPS mediante certificado de Tailscale (necesario para instalar la PWA).
-- **Fase final (ciclo 10):** servidor separado y bastionado, red aislada, cortafuegos, dominio (DuckDNS), apertura de puertos 80/443 en el router hacia Caddy y certificados de Let's Encrypt.
+- **Fase inicial:** Tailscale instalado en el servidor (fuera de Docker) y en los dispositivos del entrenador. Acceso solo desde la red privada, con HTTPS mediante certificado de Tailscale (necesario para instalar la PWA). El certificado se genera en el servidor con `tailscale cert`, se monta en el contenedor de nginx y un cron lo renueva y recarga nginx, porque caduca a los 90 días.
+- Si en el servidor ya hay otro nginx ocupando los puertos 80/443, el proxy de cada entorno escucha en su propio puerto (p. ej. 8443 pruebas y 9443 producción).
+- **Fase final (ciclo 10):** servidor separado y bastionado, red aislada, cortafuegos, dominio (DuckDNS), apertura de puertos 80/443 en el router hacia nginx y certificados de Let's Encrypt obtenidos y renovados con certbot.
 
 ### 5.4 Despliegue y copias de seguridad
 
@@ -597,7 +618,7 @@ Una issue está terminada cuando: cumple sus criterios de aceptación en el ento
 
 | Ciclo | Objetivo | Versión |
 |---|---|---|
-| 1 · Base y plantilla | Tres capas funcionando, login, clubes y equipos por categoría, selector de equipo, plantilla, despliegue y CI | v0.1.0 |
+| 1 · Base y plantilla | Tres proyectos funcionando, login, clubes y equipos por categoría, selector de equipo, plantilla, despliegue y CI | v0.1.0 |
 | 2 · Entrenos | Pasar lista, historial y porcentaje de asistencia | v0.2.0 |
 | 3 · Convocatorias | Partidos, convocados y mensaje de WhatsApp | v0.3.0 |
 | 4 · Multas | Catálogo, registro, cobro, deudas y caja. Paridad con el MVP | v1.0.0 |
@@ -630,7 +651,7 @@ Una issue está terminada cuando: cumple sus criterios de aceptación en el ento
 
 | Título | Descripción |
 |---|---|
-| Ciclo 1 · Base y plantilla | Tres capas funcionando, login, clubes y equipos por categoría, selector de equipo, plantilla, despliegue y CI (v0.1.0) |
+| Ciclo 1 · Base y plantilla | Tres proyectos funcionando, login, clubes y equipos por categoría, selector de equipo, plantilla, despliegue y CI (v0.1.0) |
 | Ciclo 2 · Entrenos | Pasar lista, historial y porcentaje de asistencia (v0.2.0) |
 | Ciclo 3 · Convocatorias | Partidos, convocados y mensaje de WhatsApp (v0.3.0) |
 | Ciclo 4 · Multas | Catálogo, registro, cobro, deudas y caja. Paridad con el MVP (v1.0.0) |
@@ -663,16 +684,18 @@ Dejar el repositorio preparado para el flujo de trabajo definido en la sección 
 - [ ] Documento de proyecto guardado en `docs/`
 
 #### GH-2
-**Título:** Estructura del monorepo y Docker Compose
+**Título:** Estructura del repositorio y Docker Compose
 **Etiquetas:** feature, infra
 
-Estructura base con las tres capas separadas, cada una con su carpeta, dependencias y Dockerfile.
+Tres proyectos independientes en el mismo repositorio, sin workspaces ni herramientas de monorepo (sección 4). Cada uno tiene sus dependencias, lockfile, scripts, Dockerfile y README, y se puede desarrollar y construir por separado. Todo con software libre y gratuito.
 
 **Criterios de aceptación**
-- [ ] Carpetas `frontend/`, `backend/` y `db/`
-- [ ] `docker-compose.dev.yml`: PostgreSQL + backend y frontend con recarga en caliente; el frontend redirige `/api` al backend
-- [ ] `docker-compose.yml`: `db`, `backend` y `frontend` (Caddy) compilados, con `restart: unless-stopped` y healthchecks
-- [ ] En `docker-compose.yml` solo `frontend` publica puerto; `db` y `backend` solo en la red interna
+- [ ] Proyectos `frontend/` (React + Vite), `backend/` (Node + Hono, con la base de datos) y `proxy/` (nginx), cada uno con su Dockerfile, `.dockerignore` y README; ninguno importa código de otro
+- [ ] Esqueleto mínimo para que la cadena funcione de extremo a extremo: el backend responde `GET /api/health` y el frontend muestra una página que lo consulta (el desarrollo real queda para GH-4 y GH-9)
+- [ ] `docker-compose.dev.yml`: PostgreSQL, y backend y frontend con recarga en caliente (código montado); el servidor de Vite redirige `/api` al backend
+- [ ] `docker-compose.yml`: `db` (PostgreSQL), `backend` y `proxy` (nginx con los estáticos del frontend compilados dentro de su imagen), con `restart: unless-stopped` y healthchecks
+- [ ] nginx: redirección de rutas de la PWA a `index.html`, `/api` hacia el backend, compresión, caché de estáticos y `client_max_body_size` configurable
+- [ ] En `docker-compose.yml` solo `proxy` publica puerto; `db` y `backend` solo en la red interna
 - [ ] Volúmenes `db-data` y `uploads`
 - [ ] Rotación de logs en todos los servicios (`max-size`, `max-file`)
 - [ ] `.env.example` documentado; ningún secreto en el repositorio
@@ -704,7 +727,8 @@ Esqueleto del backend. Depende de GH-2.
 - [ ] Conexión a PostgreSQL con pool
 - [ ] `GET /api/health` devuelve el estado de la API y de la base de datos
 - [ ] Validación con Zod y formato de error común `{ error: { codigo, mensaje, detalles? } }`
-- [ ] Contrato OpenAPI generado y visible en desarrollo
+- [ ] Contrato OpenAPI generado y visible en desarrollo, y exportado a `backend/openapi.json` con un script
+- [ ] Sustituye el esqueleto de `GET /api/health` de GH-2 por la versión con comprobación de la base de datos
 - [ ] Logs de peticiones
 - [ ] Vitest configurado con base de datos de test en contenedor
 
@@ -774,7 +798,7 @@ Depende de GH-2 y GH-4.
 - [ ] React + TypeScript + Vite, React Router y TanStack Query
 - [ ] `vite-plugin-pwa`: manifest, iconos y service worker; instalable en Android e iOS
 - [ ] Todos los colores y tokens como variables CSS (preparado para el ciclo 5); modo claro y oscuro
-- [ ] Cliente de API generado desde el contrato OpenAPI, con script para regenerarlo
+- [ ] Cliente de API generado desde `backend/openapi.json`, con script para regenerarlo (sin importar código del backend)
 - [ ] Layout móvil con navegación inferior y área segura (`safe-area-inset`)
 - [ ] Componentes base: botón, campo, hoja inferior, confirmación, aviso (toast), estado vacío
 
@@ -813,10 +837,12 @@ Depende de GH-8 y GH-10.
 GitHub Actions para validar cada pull request a `develop` y `main`. Depende de GH-2.
 
 **Criterios de aceptación**
+- [ ] Un trabajo por proyecto (`frontend`, `backend`, `proxy`) que solo se ejecuta si cambian sus archivos (filtro por rutas)
 - [ ] Lint y comprobación de tipos en frontend y backend
 - [ ] Tests del backend contra PostgreSQL como servicio del workflow
-- [ ] Build de las tres imágenes Docker
-- [ ] Comprobación de que no hay migraciones pendientes de generar
+- [ ] Comprobación de que no hay migraciones pendientes de generar y de que `backend/openapi.json` está actualizado
+- [ ] Build de las imágenes Docker de `backend` y `proxy` (esta incluye la compilación del frontend) y validación de la configuración de nginx (`nginx -t`)
+- [ ] Prueba de humo: `docker compose up` completo y `GET /api/health` a través del proxy
 - [ ] Estado visible en el pull request
 
 #### GH-13
@@ -828,7 +854,8 @@ Entornos de pruebas y producción en el servidor. Depende de GH-1 y GH-2.
 **Criterios de aceptación**
 - [ ] Docker y Tailscale instalados en el servidor; documentado en `docs/servidor.md`
 - [ ] Clones en `/opt/vestuario/pruebas` y `/opt/vestuario/pro`, cada uno con su `.env`, puerto y proyecto de Compose
-- [ ] HTTPS con certificado de Tailscale; la PWA se instala desde el móvil. Documentado cómo obtiene Caddy (en Docker) el certificado: montando el socket de `tailscaled` o con `tailscale cert` y los certificados montados como volumen, con su renovación
+- [ ] HTTPS con certificado de Tailscale; la PWA se instala desde el móvil. Certificado generado con `tailscale cert`, montado en solo lectura en el contenedor de nginx y renovado por un cron que recarga nginx (caduca a los 90 días)
+- [ ] Puerto propio de cada entorno, compatible con otro nginx que ya ocupe 80/443 en el servidor
 - [ ] `scripts/deploy.sh` para `pruebas` (último develop) y `pro <tag>` (con copia de seguridad previa y registro de despliegues), funcionando en el servidor
 - [ ] Copia de seguridad antes de cada despliegue a producción verificada
 - [ ] `pg_dump` diario de producción con rotación de 14 días (provisional hasta el ciclo 8)
@@ -1170,7 +1197,7 @@ Servicio común de medios para los ejercicios. Depende de GH-28 y GH-38.
 **Criterios de aceptación**
 - [ ] Subida multipart en streaming (p. ej. `busboy`), sin cargar el archivo entero en memoria
 - [ ] Tipos permitidos comprobando el contenido real: fotos JPEG, PNG, WebP (y HEIC convertido si es viable: los binarios precompilados de `sharp` no incluyen HEIC); vídeos MP4, WebM y MOV
-- [ ] Límites configurables por `.env` para foto y vídeo; Caddy configurado con el mismo límite
+- [ ] Límites configurables por `.env` para foto y vídeo; `client_max_body_size` de nginx configurado con el mismo límite y tiempos de espera suficientes para subidas lentas desde el móvil
 - [ ] Fotos: eliminación de metadatos EXIF (incluida la ubicación), redimensionado y miniatura
 - [ ] Vídeos: miniatura y duración extraídas con ffmpeg. Los MP4 H.264 y WebM se guardan tal cual; los MOV o HEVC (iPhone) se recodifican a MP4 H.264 en segundo plano, con estado "procesando" visible
 - [ ] La subida del escudo de GH-28 pasa a usar este servicio común
@@ -1398,18 +1425,18 @@ Depende de GH-55.
 Depende de GH-56.
 
 **Criterios de aceptación**
-- [ ] Caddy con certificado de Let's Encrypt y renovación automática
+- [ ] nginx con certificado de Let's Encrypt obtenido con certbot (desafío HTTP-01 por el puerto 80) y renovación automática que recarga nginx
 - [ ] Redirección HTTP → HTTPS y HSTS
 - [ ] Cabeceras: Content-Security-Policy, X-Content-Type-Options, Referrer-Policy, Permissions-Policy
 - [ ] Calificación A o superior en una prueba externa de TLS
 
 #### GH-58
 **Título:** Endurecimiento de la aplicación para internet
-**Etiquetas:** feature, backend, seguridad
+**Etiquetas:** feature, backend, infra, seguridad
 
 **Criterios de aceptación**
-- [ ] Limitación de peticiones global y específica para login e invitaciones
-- [ ] Bloqueo de IPs abusivas (CrowdSec o fail2ban) a partir de los logs de Caddy
+- [ ] Limitación de peticiones en nginx (`limit_req`), global y específica para login e invitaciones
+- [ ] Bloqueo de IPs abusivas (CrowdSec o fail2ban) a partir de los logs de nginx
 - [ ] Revisión de dependencias con vulnerabilidades conocidas
 - [ ] Revisión de la configuración de cookies y CSRF para acceso público
 

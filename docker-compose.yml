@@ -1,0 +1,81 @@
+# Servidor (pruebas y producción): los servicios compilados.
+# Cada entorno usa su propio nombre de proyecto, que separa contenedores y volúmenes:
+#   docker compose -p vestuario-pruebas up -d --build
+# Solo el proxy publica un puerto; db y backend quedan en la red interna.
+
+name: vestuario
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+services:
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-vestuario}
+      POSTGRES_USER: ${POSTGRES_USER:-vestuario}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en .env}
+      TZ: ${TZ:-Europe/Madrid}
+    volumes:
+      # Desde PostgreSQL 18 el volumen se monta en /var/lib/postgresql (no en .../data)
+      - db-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    logging: *logging
+
+  backend:
+    build:
+      context: ./backend
+      target: runtime
+    restart: unless-stopped
+    environment:
+      PORT: 3000
+      DATABASE_URL: postgres://${POSTGRES_USER:-vestuario}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-vestuario}
+      TZ: ${TZ:-Europe/Madrid}
+    volumes:
+      - uploads:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    logging: *logging
+
+  proxy:
+    build:
+      context: ./proxy
+      additional_contexts:
+        frontend: ./frontend
+    restart: unless-stopped
+    environment:
+      BACKEND_URL: http://backend:3000
+      MAX_SUBIDA: ${MAX_SUBIDA:-200m}
+      TZ: ${TZ:-Europe/Madrid}
+    ports:
+      - "${PUERTO:-8080}:8080"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/nginx-health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging: *logging
+
+volumes:
+  db-data:
+  uploads:
