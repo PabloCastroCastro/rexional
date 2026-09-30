@@ -18,13 +18,13 @@ Todas las decisiones funcionales, técnicas y de organización, además del back
 
 ## Arquitectura
 
-Tres capas independientes, cada una en su contenedor y orquestadas con Docker Compose:
+Un repositorio con tres proyectos independientes, cada uno con sus dependencias y su contenedor, orquestados con Docker Compose:
 
-| Capa | Tecnología |
-|---|---|
-| Frontend | React + TypeScript + Vite, PWA, servida por Caddy |
-| Backend | Node.js LTS + TypeScript, Hono, Drizzle ORM, Zod, Better Auth |
-| Base de datos | PostgreSQL |
+| Proyecto | Carpeta | Tecnología |
+|---|---|---|
+| Frontend | `frontend/` | React + TypeScript + Vite, PWA |
+| Backend | `backend/` | Node.js LTS + TypeScript, Hono, Drizzle ORM, Zod, Better Auth y PostgreSQL |
+| Proxy | `proxy/` | nginx: sirve la PWA y redirige `/api` al backend |
 
 El acceso se hace inicialmente por Tailscale. La exposición pública a internet está prevista para el ciclo 10.
 
