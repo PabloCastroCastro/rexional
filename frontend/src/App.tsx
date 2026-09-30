@@ -28,3 +28,5 @@ const textoEstado: Record<EstadoApi, string> = {
   ok: 'disponible',
   error: 'no responde',
 }
+
+const sinUsar = "prueba"
