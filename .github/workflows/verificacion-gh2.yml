@@ -29,8 +29,9 @@ jobs:
       - name: Solo el proxy publica puerto
         run: |
           docker compose ps --format '{{.Service}} {{.Publishers}}'
-          test -z "$(docker compose port backend 3000 2>/dev/null)"
-          test -z "$(docker compose port db 5432 2>/dev/null)"
+          publicados=$(docker compose ps --format json | jq -rs '.[] | .Service as $s | .Publishers[] | select(.PublishedPort != 0) | $s' | sort -u | tr '\n' ' ')
+          echo "servicios con puertos publicados: $publicados"
+          test "$publicados" = "proxy "
 
       - name: API a través del proxy
         run: curl -fsS http://localhost:8080/api/health | tee /dev/stderr | grep -q '"estado":"ok"'
