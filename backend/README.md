@@ -11,6 +11,8 @@ Es un proyecto independiente: tiene sus propias dependencias y no importa códig
 | `npm run dev` | Arranca con recarga en caliente (`tsx watch`) |
 | `npm run build` | Compila TypeScript a `dist/` |
 | `npm start` | Arranca la versión compilada |
+| `npm run lint` | Lint y formato con Biome; falla también con avisos |
+| `npm run format` | Aplica el formato y las correcciones seguras de Biome |
 | `npm run typecheck` | Comprueba los tipos sin compilar |
 
 ## Variables de entorno

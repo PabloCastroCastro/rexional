@@ -238,6 +238,7 @@ Móvil / PC (Tailscale)
 - Permisos en un middleware que resuelve el rol efectivo del usuario en el equipo de la ruta y comprueba el rol requerido. El rol efectivo es el de su membresía en el equipo, o admin si es administrador del club del equipo. Las rutas `/clubes/:cid/...` comprueban que es administrador del club. Para el rol jugador, la capa de servicio filtra por su ficha.
 - Al arrancar aplica las migraciones pendientes.
 - Tests con **Vitest** contra una base PostgreSQL real en contenedor.
+- Lint y formato con **Biome** (`npm run lint`, `npm run format`).
 
 ### 4.3 Frontend
 
@@ -247,6 +248,7 @@ Móvil / PC (Tailscale)
 - Cliente de la API **generado desde el contrato OpenAPI** (`backend/openapi.json`). El frontend no importa código del backend ni conoce la base de datos.
 - Estilos con **variables CSS** para todos los colores y tokens de diseño desde el primer día, para permitir la personalización por club.
 - Navegación inferior por pestañas, pensada para una mano.
+- Lint y formato con **Biome**, igual que el backend.
 - En producción se compila a estáticos que sirve el proxy. En desarrollo, el servidor de Vite redirige `/api` al backend. En ambos casos la app y la API comparten origen, sin CORS.
 
 ### 4.4 Proxy
@@ -714,6 +716,7 @@ Primeras tablas con Drizzle y sistema de migraciones. Depende de GH-2.
 - [ ] Índice único parcial de dorsal por equipo entre jugadores activos
 - [ ] Nombre de equipo único por club y temporada
 - [ ] Migraciones versionadas generadas con drizzle-kit y aplicadas automáticamente al arrancar el backend
+- [ ] Script `npm run db:check` que falla si el esquema de Drizzle tiene cambios sin migración generada (lo ejecuta la CI, GH-12)
 - [ ] Seed de datos de ejemplo para desarrollo y pruebas: un club con dos equipos de categorías distintas, un segundo club con un equipo, un usuario administrador del primer club, un entrenador con membresía en un solo equipo y jugadores
 
 #### GH-4
@@ -727,10 +730,10 @@ Esqueleto del backend. Depende de GH-2.
 - [ ] Conexión a PostgreSQL con pool
 - [ ] `GET /api/health` devuelve el estado de la API y de la base de datos
 - [ ] Validación con Zod y formato de error común `{ error: { codigo, mensaje, detalles? } }`
-- [ ] Contrato OpenAPI generado y visible en desarrollo, y exportado a `backend/openapi.json` con un script
+- [ ] Contrato OpenAPI generado y visible en desarrollo, y exportado a `backend/openapi.json` con un script; `npm run openapi:check` falla si el archivo está desactualizado (lo ejecuta la CI, GH-12)
 - [ ] Sustituye el esqueleto de `GET /api/health` de GH-2 por la versión con comprobación de la base de datos
 - [ ] Logs de peticiones
-- [ ] Vitest configurado con base de datos de test en contenedor
+- [ ] Vitest configurado con base de datos de test en contenedor; `npm test` usa `DATABASE_URL` (en la CI, PostgreSQL como servicio del workflow)
 
 #### GH-5
 **Título:** Autenticación del entrenador

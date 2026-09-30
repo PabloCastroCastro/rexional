@@ -40,6 +40,30 @@ Tipos: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `ci`, `build`. El ám
 - La descripción incluye `Closes #<n>` para cerrar la issue al mergear.
 - Rellena la plantilla y sus comprobaciones.
 
+## Integración continua
+
+Cada pull request a `develop` o `main`, y cada push a esas ramas, ejecuta el workflow `CI` (`.github/workflows/ci.yml`). Solo se ejecutan los trabajos de los proyectos con cambios:
+
+| Trabajo | Se ejecuta si cambia | Qué comprueba |
+|---|---|---|
+| Backend | `backend/` | Lint y formato, tipos, compilación, tests contra PostgreSQL, migraciones, contrato OpenAPI e imagen Docker |
+| Frontend | `frontend/` | Lint y formato, tipos, compilación y tests |
+| Proxy | `proxy/` o `frontend/` | Imagen Docker (compila el frontend) y `nginx -t` |
+| Prueba de humo | cualquiera de los anteriores o `docker-compose.yml` | `docker compose up` completo y la API a través de nginx |
+| Resultado de la CI | siempre | Falla si algún trabajo ha fallado. Es la comprobación que se exige para mergear |
+
+Los trabajos llaman a estos scripts de npm. Los marcados como opcionales solo se ejecutan si el proyecto los define, así que una comprobación nueva se activa en cuanto se añade su script:
+
+| Script | Proyecto | Obligatorio |
+|---|---|---|
+| `lint` (Biome; la CI usa `biome ci`) | backend, frontend | Sí |
+| `typecheck`, `build` | backend, frontend | Sí |
+| `test` | backend, frontend | No (backend a partir de GH-4) |
+| `db:check`: falla si hay cambios de esquema sin migración | backend | No (a partir de GH-3) |
+| `openapi:check`: falla si `openapi.json` está desactualizado | backend | No (a partir de GH-4) |
+
+Antes de subir cambios, ejecuta `npm run format` y `npm run lint` en el proyecto que hayas tocado.
+
 ## Versiones
 
 Versionado semántico con tags `vMAYOR.MENOR.PARCHE` y release en GitHub con notas generadas.
