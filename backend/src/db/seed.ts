@@ -1,4 +1,5 @@
 import { hashPassword } from 'better-auth/crypto'
+import { config } from '../config.js'
 import { db, pool } from './cliente.js'
 import { migrar } from './migrar.js'
 import {
@@ -19,13 +20,11 @@ import {
 //   docker compose -f docker-compose.dev.yml exec backend npm run db:seed
 //   docker compose exec backend node dist/db/seed.js       (entorno de pruebas del servidor)
 
-const ENTORNOS_PERMITIDOS = ['desarrollo', 'pruebas']
 const CONTRASENA = 'vestuario-dev'
 
-const entorno = process.env.ENTORNO
-if (!entorno || !ENTORNOS_PERMITIDOS.includes(entorno)) {
+if (config.entorno !== 'desarrollo' && config.entorno !== 'pruebas') {
   console.error(
-    `El seed solo se ejecuta con ENTORNO=desarrollo o pruebas (ENTORNO=${entorno ?? 'sin definir'})`,
+    `El seed solo se ejecuta con ENTORNO=desarrollo o pruebas (ENTORNO=${config.entorno})`,
   )
   process.exit(1)
 }

@@ -249,6 +249,9 @@ Móvil / PC (Tailscale)
 - Al arrancar aplica las migraciones pendientes.
 - Tests con **Vitest** contra una base PostgreSQL real en contenedor.
 - Lint y formato con **Biome** (`npm run lint`, `npm run format`).
+- Configuración por variables de entorno validada con Zod al arrancar; el backend no arranca si falta alguna.
+- Logs con **pino**: JSON de una línea en el servidor, legibles en desarrollo.
+- Documentación interactiva de la API con **Scalar** en `/api/docs`, salvo en producción.
 
 ### 4.3 Frontend
 

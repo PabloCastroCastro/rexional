@@ -83,6 +83,7 @@ docker compose -f docker-compose.dev.yml up --build
 |---|---|
 | Aplicación (Vite, con recarga en caliente) | http://localhost:5173 |
 | API | http://localhost:3000/api/health (también a través de http://localhost:5173/api) |
+| Documentación de la API | http://localhost:3000/api/docs |
 | PostgreSQL | `localhost:5432`, usuario, contraseña y base de datos `vestuario` |
 
 El código de `backend/` y `frontend/` se monta en los contenedores, así que los cambios se aplican al guardar. **En Windows**, con el repositorio en `C:\`, los cambios no llegan como eventos a los contenedores y la recarga no se produce: pon `RECARGA_POLLING=true` en un `.env` (copia de `.env.example`). Si clonas el repositorio dentro de WSL no hace falta.
@@ -97,6 +98,12 @@ El backend aplica las migraciones de la base de datos al arrancar. Para cargar d
 
 ```
 docker compose -f docker-compose.dev.yml exec backend npm run db:seed
+```
+
+Los tests del backend se ejecutan en su contenedor, contra una base de datos de test aparte:
+
+```
+docker compose -f docker-compose.dev.yml exec backend npm test
 ```
 
 Para trabajar en un solo proyecto sin Docker, sigue el README de su carpeta.

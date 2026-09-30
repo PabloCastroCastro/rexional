@@ -1,0 +1,114 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "API de Vestuario",
+    "version": "0.1.0",
+    "description": "API REST de Vestuario. Todas las rutas cuelgan de /api. Errores con el formato { error: { codigo, mensaje, detalles? } }."
+  },
+  "components": {
+    "schemas": {
+      "Salud": {
+        "type": "object",
+        "properties": {
+          "estado": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "error"
+            ],
+            "description": "ok solo si todos los componentes funcionan"
+          },
+          "api": {
+            "type": "string",
+            "enum": [
+              "ok"
+            ]
+          },
+          "baseDeDatos": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "error"
+            ]
+          }
+        },
+        "required": [
+          "estado",
+          "api",
+          "baseDeDatos"
+        ]
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "codigo": {
+                "type": "string",
+                "example": "validacion"
+              },
+              "mensaje": {
+                "type": "string",
+                "example": "Los datos enviados no son válidos"
+              },
+              "detalles": {}
+            },
+            "required": [
+              "codigo",
+              "mensaje"
+            ]
+          }
+        },
+        "required": [
+          "error"
+        ]
+      }
+    },
+    "parameters": {}
+  },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "tags": [
+          "Salud"
+        ],
+        "summary": "Estado de la API y de la base de datos",
+        "description": "Lo usa el healthcheck de Docker: responde 503 si la base de datos no está disponible.",
+        "responses": {
+          "200": {
+            "description": "Todo funciona",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Salud"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error inesperado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "La base de datos no responde",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Salud"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "webhooks": {}
+}
