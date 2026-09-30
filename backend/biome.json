@@ -1,7 +1,15 @@
 {
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
   "files": {
-    "includes": ["**", "!**/dist", "!**/coverage", "!**/uploads", "!**/.db-check-*", "!**/drizzle"]
+    "includes": [
+      "**",
+      "!**/dist",
+      "!**/coverage",
+      "!**/uploads",
+      "!**/.db-check-*",
+      "!**/drizzle",
+      "!openapi.json"
+    ]
   },
   "formatter": {
     "indentStyle": "space",

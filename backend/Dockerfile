@@ -19,7 +19,7 @@ EXPOSE 3000
 CMD ["npm", "run", "dev"]
 
 FROM deps AS build
-COPY --chown=node:node tsconfig.json ./
+COPY --chown=node:node tsconfig.json tsconfig.build.json ./
 COPY --chown=node:node src ./src
 RUN npm run build
 

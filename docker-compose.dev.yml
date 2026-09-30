@@ -38,6 +38,8 @@ services:
       PORT: 3000
       DATABASE_URL: postgres://${POSTGRES_USER:-vestuario}:${POSTGRES_PASSWORD:-vestuario}@db:5432/${POSTGRES_DB:-vestuario}
       ENTORNO: desarrollo
+      # Base de datos de los tests (npm test), en el mismo PostgreSQL; se crea sola
+      TEST_DATABASE_URL: postgres://${POSTGRES_USER:-vestuario}:${POSTGRES_PASSWORD:-vestuario}@db:5432/${POSTGRES_DB:-vestuario}_test
       TZ: ${TZ:-Europe/Madrid}
       # Detección de cambios por sondeo (tsx usa chokidar); necesaria con el código en Windows
       CHOKIDAR_USEPOLLING: ${RECARGA_POLLING:-false}
