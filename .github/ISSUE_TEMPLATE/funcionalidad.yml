@@ -1,0 +1,30 @@
+name: Funcionalidad
+description: Nueva funcionalidad o mejora
+labels: ["feature"]
+body:
+  - type: textarea
+    id: descripcion
+    attributes:
+      label: Descripción
+      description: Qué se quiere conseguir y para quién. Indica las dependencias con otras issues (`Depende de #n`).
+    validations:
+      required: true
+  - type: textarea
+    id: criterios
+    attributes:
+      label: Criterios de aceptación
+      description: Condiciones comprobables en el entorno de pruebas para dar la issue por terminada.
+      value: |
+        - [ ]
+    validations:
+      required: true
+  - type: checkboxes
+    id: capas
+    attributes:
+      label: Capas afectadas
+      description: Marca también las etiquetas correspondientes.
+      options:
+        - label: Base de datos (requiere migración)
+        - label: Backend
+        - label: Frontend
+        - label: Infraestructura (Docker, despliegue, CI)

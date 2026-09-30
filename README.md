@@ -51,7 +51,7 @@ El avance de cada ciclo se sigue en los [milestones](https://github.com/PabloCas
 - Commits con [Conventional Commits](https://www.conventionalcommits.org/es/) y referencia a la issue, por ejemplo `feat(jugadores): alta de jugadores GH-8`.
 - Todo cambio entra por pull request con `Closes #<n>`.
 
-El detalle está en la sección 9 del documento de proyecto.
+El detalle está en la [guía de contribución](CONTRIBUTING.md).
 
 ## Desarrollo local
 
