@@ -42,6 +42,8 @@ services:
       # produccion salvo que el .env diga otra cosa; el seed solo se permite en desarrollo y pruebas
       ENTORNO: ${ENTORNO:-produccion}
       LOG_LEVEL: ${LOG_LEVEL:-info}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Define BETTER_AUTH_SECRET en .env}
+      URL_PUBLICA: ${URL_PUBLICA:?Define URL_PUBLICA en .env}
       TZ: ${TZ:-Europe/Madrid}
     volumes:
       - uploads:/app/uploads

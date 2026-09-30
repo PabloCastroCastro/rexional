@@ -10,6 +10,8 @@ Object.assign(process.env, {
   TZ: 'Europe/Madrid',
   DATABASE_URL: 'postgres://sin-conexion@localhost:5432/vestuario',
   LOG_LEVEL: 'silent',
+  BETTER_AUTH_SECRET: 'contrato-openapi-sin-sesiones-0123456789',
+  URL_PUBLICA: 'http://localhost',
 })
 
 const { crearApp, infoOpenApi } = await import('../app.js')

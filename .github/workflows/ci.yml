@@ -154,6 +154,8 @@ jobs:
     timeout-minutes: 20
     env:
       POSTGRES_PASSWORD: ci
+      BETTER_AUTH_SECRET: ci-prueba-de-humo-0123456789abcdefghij
+      URL_PUBLICA: http://localhost:8080
     steps:
       - uses: actions/checkout@v7
 

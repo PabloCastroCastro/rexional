@@ -242,7 +242,7 @@ Móvil / PC (Tailscale)
 - **Hono** como framework HTTP.
 - **Drizzle ORM** para el esquema y las consultas tipadas; **drizzle-kit** para las migraciones.
 - **Zod** para validar toda entrada. El contrato de la API se publica como **OpenAPI**, generado a partir de las validaciones y exportado a `backend/openapi.json`, de donde lo toma el frontend.
-- **Better Auth** para autenticación: email y contraseña, sesiones por cookie segura (`HttpOnly`, `Secure`, `SameSite=Lax`). Configurado para generar identificadores UUID (por defecto genera texto no UUID), de modo que todas las claves `→ user` del modelo sean `uuid`.
+- **Better Auth** para autenticación: email y contraseña, sin registro público, sesiones de 30 días renovadas con el uso en cookie segura (`HttpOnly`, `Secure`, `SameSite=Lax`), 5 intentos de inicio de sesión por minuto y por IP, y solo peticiones desde `URL_PUBLICA`. Configurado para generar identificadores UUID (por defecto genera texto no UUID), de modo que todas las claves `→ user` del modelo sean `uuid`.
 - Zona horaria de la aplicación `Europe/Madrid` (variable `TZ`): "hoy" y todas las fechas `date` se calculan en esa zona, no en UTC.
 - Subidas de archivos procesadas en streaming (por ejemplo, con `busboy`), sin cargarlas enteras en memoria: el `parseBody()` de Hono las carga completas.
 - Permisos en un middleware que resuelve el rol efectivo del usuario en la plantilla de la ruta y comprueba el rol requerido. El rol efectivo es el de su membresía en la plantilla, o admin si es administrador del club de la plantilla. Las rutas `/clubes/:cid/...` comprueban que es administrador del club (o, para la biblioteca de ejercicios, su rol en las plantillas del club). Para el rol jugador, la capa de servicio filtra por su ficha.

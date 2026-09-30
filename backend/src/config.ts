@@ -19,6 +19,15 @@ const esquema = z.object({
   DB_TIMEOUT_CONEXION_MS: z.coerce.number().int().min(100).default(5000),
   // Todas las fechas de la aplicación se calculan en esta zona horaria (sección 4.2)
   TZ: z.literal('Europe/Madrid', { error: 'Debe ser Europe/Madrid' }),
+  // Clave con la que se firman las cookies de sesión; distinta en cada entorno
+  BETTER_AUTH_SECRET: z
+    .string()
+    .min(32, 'Debe tener al menos 32 caracteres (genérala con: openssl rand -base64 32)'),
+  // Dirección desde la que se usa la aplicación, p. ej. https://servidor.tailnet.ts.net:8443
+  URL_PUBLICA: z.url({
+    protocol: /^https?$/,
+    error: 'Debe ser una URL http(s), p. ej. https://servidor.tailnet.ts.net:8443',
+  }),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
 })
 
@@ -27,6 +36,8 @@ export type Config = {
   puerto: number
   baseDeDatos: { url: string; poolMax: number; timeoutConexionMs: number }
   zonaHoraria: string
+  secretoAuth: string
+  urlPublica: string
   nivelLog: z.infer<typeof esquema>['LOG_LEVEL']
 }
 
@@ -59,6 +70,9 @@ export function leerConfig(env: Record<string, string | undefined>): Config {
       timeoutConexionMs: e.DB_TIMEOUT_CONEXION_MS,
     },
     zonaHoraria: e.TZ,
+    secretoAuth: e.BETTER_AUTH_SECRET,
+    // Sin barra final: es el origen que se compara con la cabecera Origin
+    urlPublica: e.URL_PUBLICA.replace(/\/+$/, ''),
     nivelLog: e.LOG_LEVEL,
   }
 }
