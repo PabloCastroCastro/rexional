@@ -47,7 +47,7 @@ jobs:
           asset=$(curl -fsS http://localhost:8080/ | grep -o '/assets/index-[^"]*\.js' | head -1)
           echo "asset: $asset"
           curl -sSI "http://localhost:8080$asset" | tee /dev/stderr | grep -qi '^cache-control: max-age=31536000'
-          curl -sSI -H 'Accept-Encoding: gzip' "http://localhost:8080$asset" | grep -qi '^content-encoding: gzip'
+          curl -sS -o /dev/null -D - -H 'Accept-Encoding: gzip' "http://localhost:8080$asset" | grep -qi '^content-encoding: gzip'
           curl -sSI "http://localhost:8080$asset" | grep -qi '^x-content-type-options: nosniff'
           curl -sSI "http://localhost:8080$asset" | grep -qi '^server: nginx$'
 
