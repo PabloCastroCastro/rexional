@@ -93,6 +93,12 @@ Si cambian las dependencias de un proyecto, reconstruye y renueva sus `node_modu
 docker compose -f docker-compose.dev.yml up --build --renew-anon-volumes
 ```
 
+El backend aplica las migraciones de la base de datos al arrancar. Para cargar datos de ejemplo (dos clubes con dos temporadas, jugadores y usuarios con contraseña `vestuario-dev`; ver el README del backend):
+
+```
+docker compose -f docker-compose.dev.yml exec backend npm run db:seed
+```
+
 Para trabajar en un solo proyecto sin Docker, sigue el README de su carpeta.
 
 ## Probar la versión de servidor en local

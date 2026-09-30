@@ -37,6 +37,7 @@ services:
     environment:
       PORT: 3000
       DATABASE_URL: postgres://${POSTGRES_USER:-vestuario}:${POSTGRES_PASSWORD:-vestuario}@db:5432/${POSTGRES_DB:-vestuario}
+      ENTORNO: desarrollo
       TZ: ${TZ:-Europe/Madrid}
       # Detección de cambios por sondeo (tsx usa chokidar); necesaria con el código en Windows
       CHOKIDAR_USEPOLLING: ${RECARGA_POLLING:-false}

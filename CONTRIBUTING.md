@@ -83,7 +83,7 @@ Para publicar una versión se mergea `develop` en `main` mediante pull request, 
 
 ## Migraciones de base de datos
 
-- Cada cambio de esquema es una migración generada con drizzle-kit dentro de la issue que lo necesita (etiqueta `db`).
+- Cada cambio de esquema es una migración generada con drizzle-kit (`npm run db:generate -- --name <descripcion>` en `backend/`) dentro de la issue que lo necesita (etiqueta `db`). Se revisa el SQL generado y se sube junto con el cambio del esquema; la CI falla si falta (`db:check`).
 - Nunca se edita una migración ya desplegada: los cambios se hacen con una migración nueva.
 - Se prueba primero en el entorno de pruebas.
 - El despliegue a producción hace copia de seguridad antes de migrar. El backend aplica las migraciones pendientes al arrancar.

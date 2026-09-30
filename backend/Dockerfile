@@ -34,6 +34,8 @@ ENV NODE_ENV=production
 COPY package.json ./
 COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
+# Migraciones que el backend aplica al arrancar
+COPY drizzle ./drizzle
 # Directorio del volumen de subidas, propiedad del usuario sin privilegios
 RUN mkdir -p /app/uploads && chown node:node /app/uploads
 USER node

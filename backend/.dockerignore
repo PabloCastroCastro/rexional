@@ -2,6 +2,7 @@ node_modules
 dist
 coverage
 uploads
+.db-check-*
 .env
 .env.*
 *.log
