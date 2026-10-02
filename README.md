@@ -114,6 +114,8 @@ docker compose -f docker-compose.dev.yml exec backend npm test
 
 Para trabajar en un solo proyecto sin Docker, sigue el README de su carpeta.
 
+> **Windows**: si el Control de aplicaciones de Windows (Smart App Control) bloquea los binarios nativos de `node_modules` ("An Application Control policy has blocked this file"), las herramientas que los usan (Vitest, Vite, Biome) fallan fuera de Docker. Dentro de los contenedores funcionan con normalidad: ejecuta allí los tests y las comprobaciones (`docker compose -f docker-compose.dev.yml exec backend npm test`).
+
 ## Probar la versión de servidor en local
 
 ```
