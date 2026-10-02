@@ -1,0 +1,34 @@
+.campo {
+  display: grid;
+  gap: var(--espacio-1);
+}
+
+.etiqueta {
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
+}
+
+.entrada {
+  min-height: var(--altura-tactil);
+  padding: 0 var(--espacio-3);
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-m);
+  /* 16px como mínimo: con menos, iOS hace zoom al enfocar el campo */
+  font-size: max(16px, var(--texto-base));
+}
+
+.entrada[aria-invalid="true"] {
+  border-color: var(--color-peligro);
+}
+
+.ayuda {
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
+}
+
+.error {
+  color: var(--color-peligro);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
+}

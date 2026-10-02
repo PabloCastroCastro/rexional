@@ -1,0 +1,66 @@
+.boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--espacio-2);
+  min-height: var(--altura-tactil);
+  padding: 0 var(--espacio-4);
+  border: 1px solid transparent;
+  border-radius: var(--radio-m);
+  font-weight: var(--peso-medio);
+  cursor: pointer;
+  transition:
+    background-color var(--duracion) var(--curva),
+    filter var(--duracion) var(--curva);
+}
+
+.boton:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.boton:not(:disabled):active {
+  filter: brightness(0.92);
+}
+
+.primario {
+  background: var(--color-primario);
+  color: var(--color-sobre-primario);
+}
+
+.secundario {
+  background: var(--color-superficie);
+  color: var(--color-texto);
+  border-color: var(--color-borde);
+}
+
+.peligro {
+  background: var(--color-peligro);
+  color: var(--color-sobre-peligro);
+}
+
+.texto {
+  background: transparent;
+  color: var(--color-acento);
+  padding: 0 var(--espacio-2);
+}
+
+.anchoCompleto {
+  width: 100%;
+}
+
+.girando {
+  animation: girar 0.9s linear infinite;
+}
+
+@keyframes girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .girando {
+    animation-duration: 3s;
+  }
+}

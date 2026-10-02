@@ -36,6 +36,8 @@ jobs:
               - '.github/workflows/ci.yml'
             frontend:
               - 'frontend/**'
+              # El cliente de la API se genera del contrato del backend
+              - 'backend/openapi.json'
               - '.github/workflows/ci.yml'
             proxy:
               - 'proxy/**'
@@ -127,6 +129,8 @@ jobs:
         run: npm run build
       - name: Tests
         run: npm run test --if-present
+      - name: Cliente de la API al día con backend/openapi.json
+        run: npm run api:check --if-present
 
   proxy:
     name: Proxy
