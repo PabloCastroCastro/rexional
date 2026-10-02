@@ -607,7 +607,7 @@ Pasar lista y convocar se guardan como lista completa en una sola petición.
 - Planificación (ciclo 7): biblioteca de ejercicios con galería de fotos y vídeos, editor de sesión con ejercicios ordenables, modelos de sesión y modo campo. Accesible desde la pestaña Entrenos.
 - Partidos: lista próximos/pasados, formulario de partido, selección de convocados, mensaje para copiar/compartir.
 - Multas: totales, formulario rápido, deuda por jugador, listado, catálogo editable.
-- Configuración (ciclo 5): datos de la plantilla; identidad del club (escudo y colores con vista previa); plantillas y administradores del club; asistente de temporada nueva.
+- Configuración: datos de la plantilla, plantillas y administradores del club y nombre del club (ciclo 1); escudo y colores con vista previa y asistente de temporada nueva (ciclo 5).
 - Partido jugado (ciclo 6): resultado, titulares, registro de eventos por minuto.
 - Estadísticas (ciclo 6): tablas de la temporada de la plantilla y trayectoria de cada jugador.
 - Miembros e invitaciones (ciclo 9).
@@ -906,6 +906,22 @@ Entornos de pruebas y producción en el servidor. Depende de GH-1 y GH-2.
 - [ ] `pg_dump` diario de producción con rotación de 14 días (provisional hasta el ciclo 8)
 - [ ] Primer despliegue de `v0.1.0` en producción
 
+#### GH-70
+**Título:** Configuración de la plantilla y del club
+**Etiquetas:** feature, backend, frontend
+
+Configuración básica, adelantada del ciclo 5 (la identidad visual del club sigue en GH-30). Depende de GH-7 y GH-10.
+
+**Criterios de aceptación**
+- [ ] `PATCH /api/clubes/:cid` (solo administradores del club): nombre del club
+- [ ] Pantalla Más → Configuración
+- [ ] Datos de la plantilla activa (entrenador y admin): nombre y categoría
+- [ ] Plantillas del club (solo administradores del club): listado por temporada; crear, también la de la temporada siguiente enlazada con su anterior; renombrar; borrar con confirmación escribiendo su nombre
+- [ ] Administradores del club (solo administradores del club): listar, añadir por email y retirar, con un mensaje claro si se intenta retirar al último
+- [ ] Nombre del club (solo administradores del club)
+- [ ] Los controles que el usuario no puede usar no se muestran
+- [ ] Tests
+
 ---
 
 ### Milestone: Ciclo 2 · Entrenos
@@ -1120,16 +1136,14 @@ Depende de GH-27.
 - [ ] Sin parpadeo de colores por defecto al abrir la app
 
 #### GH-30
-**Título:** Pantalla de configuración de la plantilla y del club
+**Título:** Identidad visual del club en la configuración
 **Etiquetas:** feature, frontend
 
-Depende de GH-28 y GH-29.
+Completa la configuración de GH-70 con el escudo y los colores. Depende de GH-28, GH-29 y GH-70.
 
 **Criterios de aceptación**
-- [ ] Datos de la plantilla (entrenador y admin): editar nombre y categoría
-- [ ] Identidad del club (solo administradores del club): nombre del club, subir y cambiar escudo con vista previa, selectores de color con vista previa en vivo antes de guardar y restablecer colores por defecto
+- [ ] Identidad del club (solo administradores del club): subir y cambiar el escudo con vista previa, selectores de color con vista previa en vivo antes de guardar y restablecer los colores por defecto
 - [ ] Aviso de que el escudo y los colores se aplican a todas las plantillas del club
-- [ ] Plantillas del club (solo administradores del club): listado por temporada con su categoría, crear plantilla y borrar plantilla con confirmación escribiendo su nombre
 
 #### GH-63
 **Título:** Cambio de temporada
