@@ -34,3 +34,10 @@
 .datos dd[data-estado="error"] {
   color: var(--color-peligro);
 }
+
+.secundario {
+  display: block;
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-normal);
+}

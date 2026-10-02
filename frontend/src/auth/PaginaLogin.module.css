@@ -1,0 +1,66 @@
+.login {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: var(--espacio-4);
+  min-height: 100dvh;
+  padding: calc(env(safe-area-inset-top, 0px) + var(--espacio-6)) var(--espacio-4)
+    calc(env(safe-area-inset-bottom, 0px) + var(--espacio-6));
+}
+
+.logo {
+  border-radius: var(--radio-l);
+  box-shadow: var(--sombra-1);
+}
+
+.formulario {
+  display: grid;
+  gap: var(--espacio-4);
+  width: 100%;
+  max-width: 22rem;
+  padding: var(--espacio-5);
+  border-radius: var(--radio-l);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra-1);
+}
+
+.contrasena {
+  position: relative;
+}
+
+/* Botón de mostrar la contraseña dentro del campo, a la altura de la entrada */
+.contrasena input {
+  padding-right: calc(var(--altura-tactil) + var(--espacio-1));
+}
+
+.ver {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  display: grid;
+  place-items: center;
+  width: var(--altura-tactil);
+  height: var(--altura-tactil);
+  border: 0;
+  background: transparent;
+  color: var(--color-texto-suave);
+  cursor: pointer;
+}
+
+.error,
+.aviso {
+  padding: var(--espacio-3);
+  border-radius: var(--radio-m);
+  font-size: var(--texto-sm);
+}
+
+.error {
+  background: color-mix(in srgb, var(--color-peligro) 12%, transparent);
+  color: var(--color-peligro);
+  font-weight: var(--peso-medio);
+}
+
+.aviso {
+  background: color-mix(in srgb, var(--color-informacion) 12%, transparent);
+  color: var(--color-informacion);
+}
