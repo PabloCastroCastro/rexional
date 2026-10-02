@@ -1,0 +1,24 @@
+.pagina {
+  display: grid;
+  gap: var(--espacio-5);
+  width: 100%;
+  max-width: var(--ancho-contenido);
+  margin: 0 auto;
+  padding: calc(env(safe-area-inset-top, 0px) + var(--espacio-5)) var(--espacio-4)
+    calc(env(safe-area-inset-bottom, 0px) + var(--espacio-6));
+}
+
+.cabecera {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+}
+
+.logo {
+  border-radius: var(--radio-m);
+}
+
+.usuario {
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
+}

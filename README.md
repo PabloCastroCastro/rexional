@@ -101,7 +101,7 @@ El backend aplica las migraciones de la base de datos al arrancar. Para cargar d
 docker compose -f docker-compose.dev.yml exec backend npm run db:seed
 ```
 
-Los datos de ejemplo incluyen usuarios para iniciar sesión. Para crear otro usuario con su club:
+Para entrar en la aplicación (http://localhost:5173) con los datos de ejemplo: `admin@rexional.test` / `vestuario-dev`. Los datos de ejemplo incluyen más usuarios (ver el README del backend). Para crear otro usuario con su club:
 
 ```
 docker compose -f docker-compose.dev.yml exec backend npm run crear-admin

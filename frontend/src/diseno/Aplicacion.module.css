@@ -21,8 +21,40 @@
   border-radius: var(--radio-s);
 }
 
-.titulo {
-  font-size: var(--texto-lg);
+/* Botón con el club y la plantilla activa: abre el cambio de plantilla */
+.plantilla {
+  display: grid;
+  justify-items: start;
+  min-width: 0;
+  min-height: var(--altura-tactil);
+  padding: var(--espacio-1) var(--espacio-2);
+  margin-left: calc(-1 * var(--espacio-2));
+  border: 0;
+  border-radius: var(--radio-m);
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.plantilla:active {
+  background: rgb(255 255 255 / 12%);
+}
+
+.club {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: var(--texto-xs);
+  opacity: 0.85;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nombre {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-1);
+  font-size: var(--texto-base);
   font-weight: var(--peso-fuerte);
 }
 

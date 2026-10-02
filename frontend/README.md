@@ -15,6 +15,8 @@ src/
   rutas.tsx         rutas (React Router)
   proveedores.tsx   TanStack Query, avisos y confirmaciones
   api/              cliente de la API: esquema.ts (generado) y cliente.ts
+  auth/             sesión, login y protección de rutas
+  plantillas/       plantilla activa, selector y nueva plantilla
   componentes/      componentes base
   diseno/           estructura común: cabecera y navegación inferior
   paginas/          una página por sección
@@ -59,6 +61,22 @@ test/               tests con Vitest y Testing Library
 | `EstadoVacio` | Pantalla sin datos que invita a actuar |
 
 En desarrollo, **http://localhost:5173/componentes** muestra todos los componentes y colores para probarlos en claro y oscuro. Esta página no existe en la versión compilada.
+
+## Sesión y plantilla activa
+
+| Ruta | Pantalla |
+|---|---|
+| `/login` | Login. Es la única ruta sin sesión: cualquier otra lleva aquí y, al entrar, devuelve a donde se estaba |
+| `/` | Entra en la última plantilla usada o, si solo hay una, en esa; si no, va al selector |
+| `/plantillas` | Selector de plantilla, agrupado por club y temporada; los administradores del club pueden crear plantillas |
+| `/p/:plantillaId/<sección>` | Las secciones de la plantilla activa: `plantilla`, `entrenos`, `partidos`, `multas` y `mas` |
+
+- **La plantilla activa va en la URL**: el botón Atrás y los enlaces llevan siempre a la plantilla correcta, y se pueden tener dos pestañas con plantillas distintas. La última usada se guarda en el navegador (por usuario).
+- **Cambiar de plantilla**: tocando la cabecera, desde cualquier pantalla; se mantiene la sección.
+- **Nueva plantilla**: nombre, categoría (lista sugerida o libre), temporada (anterior, actual o siguiente; desde julio cuenta la siguiente) y plantilla anterior, que se propone sola si hay una con el mismo nombre en la temporada previa.
+- **Sesión caducada**: si la API responde 401, la app vuelve al login avisando y, al entrar, devuelve a la misma pantalla.
+- `src/auth/sesion.ts` usa directamente las tres rutas de Better Auth (entrar, salir y sesión actual), sin su cliente.
+- `usePlantillaActiva()` da la plantilla de la URL, con su club y el rol del usuario.
 
 ## API
 
