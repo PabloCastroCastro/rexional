@@ -1,0 +1,36 @@
+.mas {
+  display: grid;
+  gap: var(--espacio-4);
+}
+
+.nota {
+  color: var(--color-texto-suave);
+}
+
+.datos {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--espacio-2) var(--espacio-4);
+  margin: 0;
+  padding: var(--espacio-4);
+  border-radius: var(--radio-m);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra-1);
+}
+
+.datos dt {
+  color: var(--color-texto-suave);
+}
+
+.datos dd {
+  margin: 0;
+  font-weight: var(--peso-medio);
+}
+
+.datos dd[data-estado="ok"] {
+  color: var(--color-exito);
+}
+
+.datos dd[data-estado="error"] {
+  color: var(--color-peligro);
+}

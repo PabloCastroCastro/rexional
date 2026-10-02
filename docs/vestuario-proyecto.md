@@ -258,8 +258,9 @@ Móvil / PC (Tailscale)
 - **React** con **TypeScript** y **Vite**.
 - **PWA** mediante `vite-plugin-pwa`: manifest, iconos, service worker. Instalable en móvil desde el navegador.
 - **TanStack Query** para las llamadas a la API y la caché de datos; **React Router** para la navegación.
-- Cliente de la API **generado desde el contrato OpenAPI** (`backend/openapi.json`). El frontend no importa código del backend ni conoce la base de datos.
-- Estilos con **variables CSS** para todos los colores y tokens de diseño desde el primer día, para permitir la personalización por club.
+- Cliente de la API **generado desde el contrato OpenAPI** (`backend/openapi.json`) con **openapi-typescript** y **openapi-fetch**. El frontend no importa código del backend ni conoce la base de datos.
+- Estilos con **variables CSS** para todos los colores y tokens de diseño desde el primer día, para permitir la personalización por club, y **CSS Modules** por componente. Modo claro y oscuro según el sistema. Iconos de **Lucide**.
+- El service worker guarda la aplicación, pero nunca las respuestas de la API. Las versiones nuevas no se activan solas: se avisa y el usuario decide cuándo actualizar.
 - Navegación inferior por pestañas, pensada para una mano.
 - Lint y formato con **Biome**, igual que el backend.
 - En producción se compila a estáticos que sirve el proxy. En desarrollo, el servidor de Vite redirige `/api` al backend. En ambos casos la app y la API comparten origen, sin CORS.

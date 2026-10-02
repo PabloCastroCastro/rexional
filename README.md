@@ -84,6 +84,7 @@ docker compose -f docker-compose.dev.yml up --build
 | Aplicación (Vite, con recarga en caliente) | http://localhost:5173 |
 | API | http://localhost:3000/api/health (también a través de http://localhost:5173/api) |
 | Documentación de la API | http://localhost:3000/api/docs |
+| Catálogo de componentes del frontend | http://localhost:5173/componentes |
 | PostgreSQL | `localhost:5432`, usuario, contraseña y base de datos `vestuario` |
 
 El código de `backend/` y `frontend/` se monta en los contenedores, así que los cambios se aplican al guardar. **En Windows**, con el repositorio en `C:\`, los cambios no llegan como eventos a los contenedores y la recarga no se produce: pon `RECARGA_POLLING=true` en un `.env` (copia de `.env.example`). Si clonas el repositorio dentro de WSL no hace falta.

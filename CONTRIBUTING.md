@@ -47,7 +47,7 @@ Cada pull request a `develop` o `main`, y cada push a esas ramas, ejecuta el wor
 | Trabajo | Se ejecuta si cambia | Qué comprueba |
 |---|---|---|
 | Backend | `backend/` | Lint y formato, tipos, compilación, tests contra PostgreSQL, migraciones, contrato OpenAPI e imagen Docker |
-| Frontend | `frontend/` | Lint y formato, tipos, compilación y tests |
+| Frontend | `frontend/` o `backend/openapi.json` | Lint y formato, tipos, compilación, tests y cliente de la API al día con el contrato |
 | Proxy | `proxy/` o `frontend/` | Imagen Docker (compila el frontend) y `nginx -t` |
 | Prueba de humo | cualquiera de los anteriores o `docker-compose.yml` | `docker compose up` completo y la API a través de nginx |
 | Resultado de la CI | siempre | Falla si algún trabajo ha fallado. Es la comprobación que se exige para mergear |
@@ -58,9 +58,10 @@ Los trabajos llaman a estos scripts de npm. Los marcados como opcionales solo se
 |---|---|---|
 | `lint` (Biome; la CI usa `biome ci`) | backend, frontend | Sí |
 | `typecheck`, `build` | backend, frontend | Sí |
-| `test` | backend, frontend | No (backend a partir de GH-4) |
+| `test` | backend, frontend | No (backend a partir de GH-4, frontend a partir de GH-9) |
 | `db:check`: falla si hay cambios de esquema sin migración | backend | No (a partir de GH-3) |
 | `openapi:check`: falla si `openapi.json` está desactualizado | backend | No (a partir de GH-4) |
+| `api:check`: falla si el cliente generado no coincide con `backend/openapi.json` | frontend | No (a partir de GH-9) |
 
 Antes de subir cambios, ejecuta `npm run format` y `npm run lint` en el proyecto que hayas tocado.
 
