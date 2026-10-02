@@ -76,8 +76,8 @@ Este documento recoge todas las decisiones funcionales, técnicas y de organizac
 - **Jugador:** la persona, que pertenece al club y es permanente. Su participación en cada temporada es una **ficha** en una plantilla, con su dorsal, su posición y si está activo. Así un jugador puede ser el 7 del Alevín una temporada y el 10 del Infantil la siguiente, conservando todo su historial.
   - Un jugador tiene como máximo una ficha por temporada. Convocar a jugadores de otra plantilla queda fuera de alcance por ahora.
 - **Cuerpo técnico por temporada:** los roles (entrenador, delegado…) se asignan en cada plantilla, así que pueden cambiar de una temporada a otra.
-- **Cambio de temporada:** las plantillas de una temporada nueva se crean a partir de las de la anterior, copiando jugadores (con la opción de moverlos de categoría o no continuar), cuerpo técnico y catálogo de multas.
-- El sistema gestiona varios clubes. Los **administradores del club** crean, editan y borran sus plantillas, hacen el cambio de temporada, gestionan la identidad del club y tienen rol admin en todas sus plantillas.
+- **Cambio de temporada:** cada plantilla de la temporada nueva se crea por separado, indicando su temporada y su plantilla anterior, con la opción de copiar de ella los jugadores y el cuerpo técnico. Los jugadores que cambian de categoría se añaden a su nueva plantilla desde la lista de jugadores del club. El catálogo de multas se copia de la plantilla anterior; las multas no: **la caja empieza de cero cada temporada**.
+- El sistema gestiona varios clubes. Los **administradores del club** crean, editan y borran sus plantillas (también las de una temporada nueva), gestionan la identidad del club y tienen rol admin en todas sus plantillas.
 - Un usuario puede tener acceso a una o varias plantillas, de uno o varios clubes, con un rol en cada una.
 - Tras iniciar sesión, si el usuario tiene acceso a más de una plantilla, elige la **plantilla activa** en un selector agrupado por club y temporada, con la temporada más reciente primero. Puede cambiarla desde cualquier pantalla y la aplicación recuerda la última usada.
 - Todas las funcionalidades trabajan siempre sobre la plantilla activa.
@@ -114,6 +114,7 @@ Este documento recoge todas las decisiones funcionales, técnicas y de organizac
 - El motivo y el importe se **copian** en la multa: cambiar el catálogo no altera multas pasadas.
 - Marcar una multa como cobrada (guarda la fecha de pago; una multa está cobrada si y solo si tiene fecha de pago) o deshacerlo. Saldar de una vez todas las multas pendientes de un jugador.
 - Resumen: total pendiente de cobro, total en caja (cobrado) y deuda por jugador ordenada de mayor a menor.
+- Las multas y la caja son de cada plantilla, así que **se reinician cada temporada**. Las pendientes de una temporada anterior siguen en su plantilla y se pueden consultar y cobrar.
 
 ### 2.6 Personalización visual (ciclo posterior al MVP)
 
@@ -177,7 +178,7 @@ Roles por plantilla: **admin**, **entrenador**, **delegado** y **jugador**. Un m
 Además, a nivel de club existe el **administrador del club**. Quien crea un club pasa a ser su administrador. Un administrador del club:
 
 - Tiene rol **admin en todas las plantillas del club**, de cualquier temporada, aunque no tenga membresía en ellas. Su rol efectivo en una plantilla es el mayor entre su membresía en esa plantilla y admin.
-- Crea, edita y borra las plantillas del club y hace el cambio de temporada.
+- Crea, edita y borra las plantillas del club, incluidas las de una temporada nueva.
 - Gestiona la identidad del club (nombre, escudo y colores).
 - Nombra o retira a otros administradores del club. Un club nunca puede quedarse sin administradores.
 
@@ -192,7 +193,7 @@ Además, a nivel de club existe el **administrador del club**. Quien crea un clu
 | Gestionar biblioteca de ejercicios, medios y planificación | Sí | Sí | No | No |
 | Editar datos de la plantilla (nombre, categoría) | Sí | Sí | No | No |
 | Invitar, cambiar roles y revocar accesos | Sí | No | No | No |
-| Crear y borrar plantillas, cambio de temporada; identidad del club (escudo, colores); administradores del club | Solo administrador del club | No | No | No |
+| Crear y borrar plantillas; identidad del club (escudo, colores); administradores del club | Solo administrador del club | No | No | No |
 
 La biblioteca de ejercicios es del club: la consulta cualquier miembro de una plantilla del club y la gestiona quien sea entrenador o admin en alguna de ellas.
 
@@ -543,21 +544,21 @@ La participación de un jugador en una plantilla (una temporada).
 
 ## 7. API
 
-Prefijo `/api`. JSON. Todas las rutas de datos cuelgan de la plantilla (o del club: identidad, plantillas, jugadores del club y biblioteca de ejercicios) para facilitar la comprobación de permisos. Errores con formato común `{ error: { codigo, mensaje, detalles? } }`.
+Prefijo `/api`. JSON. Todas las rutas de la plantilla cuelgan de `/plantillas`, también crearla (el club va en el cuerpo). Bajo `/clubes` queda lo que es del club: identidad, administradores, jugadores del club y biblioteca de ejercicios para facilitar la comprobación de permisos. Errores con formato común `{ error: { codigo, mensaje, detalles? } }`.
 
 | Módulo | Método y ruta | Rol mínimo |
 |---|---|---|
 | Salud | `GET /health` | Público |
 | Auth | `/auth/*` (login, logout, sesión) — Better Auth | Público |
-| Clubes | `POST /clubes` (el creador pasa a ser administrador) | Autenticado |
+| Clubes | `GET /clubes` (los míos: los que administro, aunque no tengan plantillas, y aquellos en los que tengo un rol) | Autenticado |
+| | `POST /clubes` (el creador pasa a ser administrador) | Autenticado |
 | | `GET /clubes/:cid` (datos e identidad visual) | Miembro de alguna plantilla del club |
 | | `PATCH /clubes/:cid` (nombre, colores) · `PUT /clubes/:cid/escudo` (multipart) | Administrador del club |
-| | `POST /clubes/:cid/plantillas` (con plantilla anterior opcional) | Administrador del club |
-| | `POST /clubes/:cid/temporadas` (cambio de temporada: crea las plantillas nuevas a partir de las anteriores) | Administrador del club |
 | | `GET /clubes/:cid/jugadores?q=` (jugadores del club, para añadirlos a una plantilla) | Delegado en alguna plantilla del club |
 | | `GET /clubes/:cid/jugadores/:jid` (ficha y trayectoria por temporadas) | Delegado en alguna plantilla del club (jugador: solo la suya) |
-| | `GET/POST/DELETE /clubes/:cid/admins` | Administrador del club |
-| Plantillas | `GET /plantillas` (las mías, con su club, temporada y mi rol efectivo) | Autenticado |
+| | `GET/POST /clubes/:cid/admins` · `DELETE /clubes/:cid/admins/:uid` (nunca el último) | Administrador del club |
+| Plantillas | `GET /plantillas?club=` (las mías con su club y mi rol efectivo, por club y temporada; el administrador del club ve todas las de su club) | Autenticado |
+| | `POST /plantillas` (`clubId`, nombre, categoría, temporada y plantilla anterior opcional) | Administrador del club indicado |
 | | `GET /plantillas/:id` · `PATCH /plantillas/:id` (nombre, categoría) | Miembro · Entrenador |
 | | `DELETE /plantillas/:id` (con confirmación del nombre; borra también sus datos) | Administrador del club |
 | Jugadores | `GET /plantillas/:id/jugadores?activos=` (fichas con los datos del jugador) | Miembro (jugador: asistencia y deuda solo suyas) |
@@ -606,7 +607,7 @@ Pasar lista y convocar se guardan como lista completa en una sola petición.
 - Planificación (ciclo 7): biblioteca de ejercicios con galería de fotos y vídeos, editor de sesión con ejercicios ordenables, modelos de sesión y modo campo. Accesible desde la pestaña Entrenos.
 - Partidos: lista próximos/pasados, formulario de partido, selección de convocados, mensaje para copiar/compartir.
 - Multas: totales, formulario rápido, deuda por jugador, listado, catálogo editable.
-- Configuración (ciclo 5): datos de la plantilla; identidad del club (escudo y colores con vista previa); plantillas y administradores del club; cambio de temporada.
+- Configuración (ciclo 5): datos de la plantilla; identidad del club (escudo y colores con vista previa); plantillas y administradores del club; asistente de temporada nueva.
 - Partido jugado (ciclo 6): resultado, titulares, registro de eventos por minuto.
 - Estadísticas (ciclo 6): tablas de la temporada de la plantilla y trayectoria de cada jugador.
 - Miembros e invitaciones (ciclo 9).
@@ -808,9 +809,10 @@ Depende de GH-6.
 **Criterios de aceptación**
 - [ ] `POST /api/clubes` crea el club y, en la misma transacción, hace a su creador administrador del club
 - [ ] `GET /api/clubes/:cid` para cualquier miembro de una plantilla del club
-- [ ] `POST /api/clubes/:cid/plantillas` (administrador del club) crea una plantilla con nombre, categoría, temporada y plantilla anterior opcional
+- [ ] `GET /api/clubes`: los clubes del usuario (los que administra, aunque no tengan plantillas, y aquellos en los que tiene un rol)
+- [ ] `POST /api/plantillas` (administrador del club indicado en `clubId`) crea una plantilla con nombre, categoría, temporada y plantilla anterior opcional, del mismo club y de una temporada anterior
 - [ ] `GET/POST/DELETE /api/clubes/:cid/admins`: añadir un usuario existente como administrador del club y retirarlo; un club nunca queda sin administradores
-- [ ] `GET /api/plantillas` devuelve las plantillas del usuario agrupables por club y temporada, con los datos del club y su rol efectivo en cada una
+- [ ] `GET /api/plantillas?club=` devuelve las plantillas del usuario (todas las de los clubes que administra) ordenadas por club y temporada, con los datos del club y su rol efectivo en cada una
 - [ ] `GET /api/plantillas/:id` y `PATCH /api/plantillas/:id` (nombre y categoría; la temporada no se modifica)
 - [ ] `DELETE /api/plantillas/:id` solo para administradores del club, exigiendo el nombre de la plantilla como confirmación; borra en cascada sus datos (los jugadores siguen en el club)
 - [ ] Tests
@@ -1019,7 +1021,7 @@ Depende de GH-7.
 **Criterios de aceptación**
 - [ ] Tablas `motivos_multa` (con `tipo_evento` nullable) y `multas` (de la plantilla, con FK compuesta `(plantilla_id, jugador_id)` a `fichas`) (con `evento_id` nullable para el ciclo 6) según la sección 6
 - [ ] Una multa está cobrada si y solo si tiene `fecha_pago`; sin campo `pagada` redundante
-- [ ] Al crear una plantilla se crea su catálogo en la misma transacción, copiado de la plantilla anterior si la hay o con los valores por defecto; migración de datos para las plantillas existentes
+- [ ] Al crear una plantilla se crea su catálogo en la misma transacción, copiado de la plantilla anterior si la hay o con los valores por defecto; las multas no se copian (la caja empieza de cero cada temporada); migración de datos para las plantillas existentes
 - [ ] Seed con multas de ejemplo
 
 #### GH-23
@@ -1133,16 +1135,15 @@ Depende de GH-28 y GH-29.
 **Título:** Cambio de temporada
 **Etiquetas:** feature, backend, frontend
 
-Crear las plantillas de una temporada nueva a partir de las de la anterior (sección 2.1). Depende de GH-7, GH-8 y GH-22.
+Crear las plantillas de una temporada nueva a partir de las de la anterior (sección 2.1). Cada plantilla se crea con `POST /api/plantillas`; no hay una operación propia de cambio de temporada. Depende de GH-7, GH-8 y GH-22.
 
 **Criterios de aceptación**
-- [ ] `POST /api/clubes/:cid/temporadas` (solo administradores del club): por cada plantilla elegida de la temporada anterior crea la de la temporada nueva, enlazada con `plantilla_anterior_id`, todo en una transacción
-- [ ] Cada plantilla nueva puede cambiar de nombre y categoría (p. ej. Alevín → Infantil)
-- [ ] Jugadores: se copian sus fichas (dorsal y posición); cada jugador se puede mover a otra plantilla nueva o marcar como que no continúa
-- [ ] Cuerpo técnico: se copian las membresías, con opción de quitar o cambiar a cada persona
-- [ ] Catálogo de multas copiado de la plantilla anterior
+- [ ] `POST /api/plantillas` admite `copiar: { jugadores, cuerpoTecnico }` junto con `plantillaAnteriorId`: copia las fichas activas (dorsal y posición) y las membresías de la plantilla anterior en la misma transacción. Los jugadores que ya tengan ficha en otra plantilla de la temporada se omiten y se indican en la respuesta
+- [ ] Cada plantilla nueva puede cambiar de nombre y categoría respecto a la anterior (p. ej. Alevín → Infantil)
+- [ ] Los jugadores que cambian de categoría se añaden a su nueva plantilla desde los jugadores del club (GH-8)
+- [ ] El catálogo de multas se copia siempre de la plantilla anterior; las multas no (la caja empieza de cero cada temporada)
 - [ ] Las multas pendientes de la temporada anterior siguen en su plantilla y se pueden consultar y cobrar
-- [ ] Asistente en el frontend (solo administradores del club) con un resumen antes de confirmar
+- [ ] Asistente en el frontend (solo administradores del club): elegir qué plantillas de la temporada anterior continúan, con qué nombre y categoría, y qué copiar, con un resumen antes de confirmar
 - [ ] La temporada anterior sigue consultable; el selector muestra primero la nueva
 - [ ] Tests
 

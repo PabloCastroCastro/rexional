@@ -1,6 +1,6 @@
 import type { Hook } from '@hono/zod-openapi'
 import { z } from '@hono/zod-openapi'
-import type { Context, Env, ErrorHandler, MiddlewareHandler, NotFoundHandler } from 'hono'
+import type { Context, ErrorHandler, MiddlewareHandler, NotFoundHandler } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import type { ContentfulStatusCode } from 'hono/utils/http-status'
 import { logger } from './logger.js'
@@ -70,7 +70,8 @@ export const rutaNoEncontrada: NotFoundHandler = (c) =>
   c.json(cuerpoError('no_encontrado', `No existe la ruta ${c.req.method} ${c.req.path}`), 404)
 
 // Errores de validación de Zod: 400 con los campos que fallan
-export const validacionFallida: Hook<unknown, Env, string, unknown> = (resultado, c: Context) => {
+// biome-ignore lint/suspicious/noExplicitAny: el mismo hook sirve para rutas con cualquier contexto
+export const validacionFallida: Hook<any, any, any, any> = (resultado, c: Context) => {
   if (!resultado.success) {
     const detalles = resultado.error.issues.map((i) => ({
       campo: i.path.join('.'),
