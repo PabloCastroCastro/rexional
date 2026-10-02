@@ -5,6 +5,8 @@ import { config } from './config.js'
 import { comprobarBaseDeDatos } from './db/cliente.js'
 import { manejarError, rutaNoEncontrada, soloMismoOrigen, validacionFallida } from './errores.js'
 import { registrarPeticiones } from './peticiones.js'
+import { rutasClubes } from './rutas/clubes.js'
+import { rutasPlantillas } from './rutas/plantillas.js'
 import { rutasSalud } from './rutas/salud.js'
 
 export const infoOpenApi = {
@@ -42,6 +44,8 @@ export function crearApp(dependencias: Partial<Dependencias> = {}) {
   app.on(['GET', 'POST'], '/auth/*', (c) => auth.handler(c.req.raw))
 
   app.route('/', rutasSalud(d.comprobarBaseDeDatos))
+  app.route('/', rutasClubes())
+  app.route('/', rutasPlantillas())
 
   if (d.documentacion) {
     app.doc31('/openapi.json', infoOpenApi)

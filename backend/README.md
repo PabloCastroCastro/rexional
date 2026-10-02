@@ -51,9 +51,14 @@ src/
   errores.ts      formato de error común y ErrorApi
   permisos.ts     sesión, club, plantilla y rol de cada petición
   peticiones.ts   log de cada petición
-  rutas/          una carpeta de rutas por módulo (salud.ts)
+  validacion.ts   validaciones compartidas (temporada, textos) y restricciones de PostgreSQL
+  rutas/          un archivo por módulo: salud, clubes y plantillas
 ```
 
+- **Módulos**:
+  - `/api/clubes`: mis clubes, crear club, datos del club y sus administradores (nunca se queda sin ninguno).
+  - `/api/plantillas`: mis plantillas (o las de un club con `?club=`), crear (con `clubId` en el cuerpo), ver, editar nombre y categoría, y borrar confirmando el nombre.
+  - La referencia completa está en `/api/docs`.
 - **Rutas** con `@hono/zod-openapi`: el esquema de Zod valida la petición y a la vez genera el contrato OpenAPI.
 - **Errores** con el formato `{ error: { codigo, mensaje, detalles? } }`:
   - validación → 400 `validacion`, con los campos que fallan en `detalles` y los mensajes de Zod en español;
