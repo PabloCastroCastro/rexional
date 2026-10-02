@@ -49,6 +49,7 @@ src/
   app.ts          crearApp(): middleware, errores, rutas y documentación
   config.ts       configuración validada
   errores.ts      formato de error común y ErrorApi
+  permisos.ts     sesión, club, plantilla y rol de cada petición
   peticiones.ts   log de cada petición
   rutas/          una carpeta de rutas por módulo (salud.ts)
 ```
@@ -62,6 +63,30 @@ src/
 - **`GET /api/health`**: 200 si la API y la base de datos funcionan; 503 si PostgreSQL no responde, lo que marca el contenedor como no sano.
 - **Documentación** interactiva en `/api/docs` (Scalar) y contrato en `/api/openapi.json`, salvo con `ENTORNO=produccion`. Tras cambiar la API, actualiza el contrato versionado con `npm run openapi`.
 - **Logs** con pino: JSON de una línea en pruebas y producción, legibles en desarrollo. Cada petición registra método, ruta, estado y duración, sin cuerpos, cabeceras ni parámetros; los healthchecks solo con `LOG_LEVEL=debug`.
+
+## Permisos
+
+`src/permisos.ts` aplica la matriz de la sección 3 del documento de proyecto. Cada ruta declara lo que necesita:
+
+```ts
+app.get('/plantillas/:id/jugadores', requireRol('jugador'), (c) => ... c.var.rol, c.var.plantilla ...)
+app.post('/plantillas/:id/jugadores', requireRol('delegado'), ...)
+app.post('/clubes/:cid/plantillas', requireAdminClub(), ...)
+app.get('/clubes/:cid/ejercicios', requireRolEnClub('jugador'), ...)
+```
+
+| Helper | Para | Deja en `c.var` |
+|---|---|---|
+| `requireSesion()` | Rutas que solo exigen sesión | `usuario`, `sesion` |
+| `requireRol(minimo)` | `/plantillas/:id/...` | además `plantilla` (id, club, nombre, temporada), `rol`, `esAdminClub` y `jugadorId` |
+| `requireAdminClub()` | `/clubes/:cid/...` solo para administradores del club | `club`, `rol` (`admin`), `esAdminClub`, `jugadorId` |
+| `requireRolEnClub(minimo)` | `/clubes/:cid/...` para quien tenga un rol en alguna plantilla del club | `club`, `rol`, `esAdminClub`, `jugadorId` |
+
+- Jerarquía: admin > entrenador > delegado > jugador.
+- **Rol efectivo en una plantilla**: el de su membresía, o admin si administra el club (el mayor). Un rol en una plantilla no da acceso a otras plantillas del club ni a otras temporadas; solo el administrador del club accede a todas.
+- **Rol en el club** (`requireRolEnClub`): el más alto en cualquier plantilla del club, de cualquier temporada.
+- `jugadorId` es el jugador del club vinculado al usuario, para que las rutas filtren los datos del rol jugador (sección 3).
+- Respuestas: **401** sin sesión, **404** si la plantilla o el club no existen o el identificador no es válido, **403** `sin_permiso` si no hay acceso o el rol no alcanza el mínimo.
 
 ## Autenticación
 
@@ -105,6 +130,7 @@ En Docker la base es `vestuario_test`, en el mismo PostgreSQL de desarrollo. Fue
 - `test/api.test.ts`: salud, documentación y formato de errores.
 - `test/auth.test.ts`: inicio de sesión (cookie, 401, origen, límite de intentos), sesión actual, caducada y cerrada, rutas desactivadas y `crearAdministrador`.
 - `test/config.test.ts`: validación de la configuración.
+- `test/permisos.test.ts`: matriz de permisos con usuarios y sesiones reales: cada rol contra cada mínimo, administradores del club, temporadas, otros clubes, 401 y 404.
 - `test/restricciones.test.ts`: reglas del modelo que garantiza la base de datos; cada caso en una transacción que se deshace.
 
 ## Base de datos
