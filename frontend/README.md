@@ -16,6 +16,7 @@ src/
   proveedores.tsx   TanStack Query, avisos y confirmaciones
   api/              cliente de la API: esquema.ts (generado) y cliente.ts
   auth/             sesión, login y protección de rutas
+  configuracion/    configuración de la plantilla y del club
   plantillas/       plantilla activa, selector y nueva plantilla
   componentes/      componentes base
   diseno/           estructura común: cabecera y navegación inferior
@@ -70,6 +71,7 @@ En desarrollo, **http://localhost:5173/componentes** muestra todos los component
 | `/` | Entra en la última plantilla usada o, si solo hay una, en esa; si no, va al selector |
 | `/plantillas` | Selector de plantilla, agrupado por club y temporada; los administradores del club pueden crear plantillas |
 | `/p/:plantillaId/<sección>` | Las secciones de la plantilla activa: `plantilla`, `entrenos`, `partidos`, `multas` y `mas` |
+| `/p/:plantillaId/mas/configuracion` | Configuración: la ven el entrenador, el admin de la plantilla y los administradores del club |
 
 - **La plantilla activa va en la URL**: el botón Atrás y los enlaces llevan siempre a la plantilla correcta, y se pueden tener dos pestañas con plantillas distintas. La última usada se guarda en el navegador (por usuario).
 - **Cambiar de plantilla**: tocando la cabecera, desde cualquier pantalla; se mantiene la sección.
@@ -77,6 +79,19 @@ En desarrollo, **http://localhost:5173/componentes** muestra todos los component
 - **Sesión caducada**: si la API responde 401, la app vuelve al login avisando y, al entrar, devuelve a la misma pantalla.
 - `src/auth/sesion.ts` usa directamente las tres rutas de Better Auth (entrar, salir y sesión actual), sin su cliente.
 - `usePlantillaActiva()` da la plantilla de la URL, con su club y el rol del usuario.
+
+## Configuración
+
+Más → Configuración muestra, según el rol:
+
+| Bloque | Quién | Qué permite |
+|---|---|---|
+| Esta plantilla | Entrenador y admin | Nombre y categoría (la temporada no se cambia) |
+| Club | Administradores del club | Nombre del club |
+| Plantillas del club | Administradores del club | Todas, por temporada: nueva plantilla, editar y borrar escribiendo su nombre (si es la activa, se vuelve al selector) |
+| Administradores del club | Administradores del club | Ver, añadir por email (usuarios existentes) y retirar con confirmación; nunca el último |
+
+El escudo y los colores del club llegan en el ciclo 5 (GH-30).
 
 ## API
 
@@ -87,7 +102,7 @@ const salud = useQuery({ queryKey: ['salud'], queryFn: () => datos(api.GET('/api
 ```
 
 - `api` es un cliente de [openapi-fetch](https://openapi-ts.dev/openapi-fetch/) tipado con `src/api/esquema.ts`: una ruta, un parámetro o un campo que no existan no compilan.
-- `datos()` devuelve los datos o lanza un `ErrorApi` con el `codigo`, el `mensaje` y los `detalles` del formato de error común.
+- `datos()` devuelve los datos o lanza un `ErrorApi` con el `codigo`, el `mensaje` y los `detalles` del formato de error común. `enviar()` hace lo mismo para respuestas sin datos (204), y `erroresPorCampo()` convierte los errores de validación en `{ campo: mensaje }`.
 - Cuando cambie la API, regenera el cliente con `npm run api:generar` y súbelo junto con el cambio; la imagen del proxy compila el frontend sin el backend, así que el archivo generado se versiona.
 
 El proyecto usa **TypeScript 5.9**: el generador (`openapi-typescript`) necesita la API de compilador de TypeScript 5, que la versión 7 nativa ya no tiene.

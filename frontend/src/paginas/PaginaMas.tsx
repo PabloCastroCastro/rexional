@@ -1,10 +1,11 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { LogOut } from 'lucide-react'
+import { ChevronRight, LogOut, Settings } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { api, datos } from '../api/cliente'
 import { cerrarSesion, useSesion } from '../auth/sesion'
 import { Boton } from '../componentes/Boton'
+import { puedeConfigurar } from '../configuracion/PaginaConfiguracion'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
 import estilos from './PaginaMas.module.css'
 
@@ -66,10 +67,15 @@ export function PaginaMas() {
         <dd>{__VERSION__}</dd>
       </dl>
 
-      <p className={estilos.nota}>
-        La configuración de la plantilla y del club llega con la próxima versión; las estadísticas,
-        en el ciclo 6.
-      </p>
+      {puedeConfigurar(plantilla) && (
+        <Link to={`/p/${plantilla.id}/mas/configuracion`} className={estilos.enlace}>
+          <Settings aria-hidden size={20} />
+          <span>Configuración</span>
+          <ChevronRight aria-hidden size={20} />
+        </Link>
+      )}
+
+      <p className={estilos.nota}>Las estadísticas llegarán en el ciclo 6.</p>
 
       <Boton
         variante="secundario"

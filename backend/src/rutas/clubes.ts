@@ -152,6 +152,42 @@ export const rutasClubes = () =>
     )
     .openapi(
       createRoute({
+        method: 'patch',
+        path: '/clubes/{cid}',
+        tags: ['Clubes'],
+        summary: 'Cambiar el nombre del club',
+        description:
+          'Solo los administradores del club. El escudo y los colores llegan en el ciclo 5.',
+        middleware: [requireAdminClub()] as const,
+        request: {
+          params: ParamClub,
+          body: {
+            content: {
+              'application/json': {
+                schema: z.object({ nombre: EsquemaTexto('El nombre') }).strict(),
+              },
+            },
+          },
+        },
+        responses: {
+          200: json(EsquemaClub, 'Club actualizado'),
+          400: json(EsquemaError, 'Datos no válidos'),
+          ...errores,
+        },
+      }),
+      async (c) => {
+        const { nombre } = c.req.valid('json')
+        const [club] = await db
+          .update(clubes)
+          .set({ nombre })
+          .where(eq(clubes.id, c.var.club.id))
+          .returning(columnasClub)
+        if (!club) throw new ErrorApi(404, 'no_encontrado', 'No existe el club')
+        return c.json({ ...club, esAdmin: true }, 200)
+      },
+    )
+    .openapi(
+      createRoute({
         method: 'get',
         path: '/clubes/{cid}/admins',
         tags: ['Clubes'],

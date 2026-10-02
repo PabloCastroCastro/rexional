@@ -41,3 +41,21 @@
   font-size: var(--texto-sm);
   font-weight: var(--peso-normal);
 }
+
+.enlace {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  min-height: calc(var(--altura-tactil) + var(--espacio-3));
+  padding: 0 var(--espacio-4);
+  border-radius: var(--radio-m);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra-1);
+  color: var(--color-texto);
+  font-weight: var(--peso-medio);
+  text-decoration: none;
+}
+
+.enlace span {
+  flex: 1;
+}

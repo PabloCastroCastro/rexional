@@ -1,6 +1,7 @@
 import { createBrowserRouter, Navigate } from 'react-router'
 import { PaginaLogin } from './auth/PaginaLogin'
 import { RequiereSesion } from './auth/RequiereSesion'
+import { PaginaConfiguracion } from './configuracion/PaginaConfiguracion'
 import { Aplicacion } from './diseno/Aplicacion'
 import { PaginaComponentes } from './paginas/PaginaComponentes'
 import { PaginaMas } from './paginas/PaginaMas'
@@ -45,6 +46,7 @@ export const rutas = [
               { path: 'partidos', element: <PaginaPartidos /> },
               { path: 'multas', element: <PaginaMultas /> },
               { path: 'mas', element: <PaginaMas /> },
+              { path: 'mas/configuracion', element: <PaginaConfiguracion /> },
               { path: '*', element: <PaginaNoEncontrada /> },
             ],
           },

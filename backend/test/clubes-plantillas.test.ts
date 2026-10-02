@@ -91,6 +91,21 @@ describe('clubes', () => {
     expect(await (await pedir('GET', '/clubes', 'ajeno')).json()).toEqual([])
   })
 
+  it('solo los administradores cambian el nombre del club', async () => {
+    const res = await pedir('PATCH', `/clubes/${ids.club}`, 'admin', {
+      nombre: ' CD Prueba Renombrado ',
+    })
+    expect(res.status).toBe(200)
+    expect((await res.json()).nombre).toBe('CD Prueba Renombrado')
+    expect((await pedir('PATCH', `/clubes/${ids.club}`, 'ajeno', { nombre: 'X' })).status).toBe(403)
+    expect((await pedir('PATCH', `/clubes/${ids.club}`, 'admin', { nombre: '' })).status).toBe(400)
+    // Solo el nombre: los colores llegan con su propia validación en el ciclo 5
+    expect(
+      (await pedir('PATCH', `/clubes/${ids.club}`, 'admin', { colorPrincipal: '#000000' })).status,
+    ).toBe(400)
+    await pedir('PATCH', `/clubes/${ids.club}`, 'admin', { nombre: 'CD Prueba' })
+  })
+
   it('el detalle del club es para quien tiene acceso', async () => {
     expect((await pedir('GET', `/clubes/${ids.club}`, 'admin')).status).toBe(200)
     expect((await pedir('GET', `/clubes/${ids.club}`, 'ajeno')).status).toBe(403)
