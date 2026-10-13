@@ -1,7 +1,14 @@
 import { and, eq, sql } from 'drizzle-orm'
 import { afterAll, describe, expect, it } from 'vitest'
 import { db, pool } from '../src/db/cliente.js'
-import { clubes, fichas, jugadores, plantillas } from '../src/db/schema/index.js'
+import {
+  asistencias,
+  clubes,
+  entrenos,
+  fichas,
+  jugadores,
+  plantillas,
+} from '../src/db/schema/index.js'
 
 // Reglas del modelo que garantiza la propia base de datos (sección 6). Cada caso se ejecuta en una
 // transacción que se deshace, así que no deja datos.
@@ -305,5 +312,120 @@ describe('borrados en cascada', () => {
       expect(await tx.$count(jugadores, eq(jugadores.clubId, b.club.id))).toBe(0)
       expect(await tx.$count(fichas, eq(fichas.clubId, b.club.id))).toBe(0)
       expect(await tx.$count(jugadores, eq(jugadores.clubId, b.otroClub.id))).toBe(1)
+    }))
+})
+
+describe('entrenos y asistencias', () => {
+  // Un entreno del Senior 2026-27, en el que Ana tiene ficha y Berta no
+  async function conEntreno(tx: Tx) {
+    const b = await base(tx)
+    const [entreno] = await tx
+      .insert(entrenos)
+      .values({ plantillaId: b.senior26.id, fecha: '2026-10-13' })
+      .returning()
+    if (!entreno) throw new Error('Sin entreno')
+    return { ...b, entreno }
+  }
+
+  it('rechaza dos entrenos de la plantilla en la misma fecha, pero no en otra plantilla', () =>
+    enTransaccion(async (tx) => {
+      const b = await conEntreno(tx)
+      await tx.insert(entrenos).values({ plantillaId: b.senior25.id, fecha: '2026-10-13' })
+      const r = await restriccionViolada(
+        tx.insert(entrenos).values({ plantillaId: b.senior26.id, fecha: '2026-10-13' }),
+      )
+      expect(r).toBe('entrenos_fecha_unica')
+    }))
+
+  it('acepta la asistencia de un jugador con ficha en la plantilla del entreno', () =>
+    enTransaccion(async (tx) => {
+      const b = await conEntreno(tx)
+      await tx.insert(asistencias).values({
+        entrenoId: b.entreno.id,
+        jugadorId: b.ana.id,
+        plantillaId: b.senior26.id,
+        estado: 'justificada',
+        motivo: 'Trabajo',
+      })
+      const r = await restriccionViolada(
+        tx.insert(asistencias).values({
+          entrenoId: b.entreno.id,
+          jugadorId: b.ana.id,
+          plantillaId: b.senior26.id,
+          estado: 'asiste',
+        }),
+      )
+      expect(r).toBe('asistencias_entreno_id_jugador_id_pk')
+    }))
+
+  it('rechaza a un jugador sin ficha en la plantilla del entreno', () =>
+    enTransaccion(async (tx) => {
+      const b = await conEntreno(tx)
+      const r = await restriccionViolada(
+        tx.insert(asistencias).values({
+          entrenoId: b.entreno.id,
+          jugadorId: b.berta.id,
+          plantillaId: b.senior26.id,
+          estado: 'asiste',
+        }),
+      )
+      expect(r).toBe('asistencias_ficha_fk')
+    }))
+
+  it('rechaza declarar otra plantilla, aunque el jugador tenga ficha en ella', () =>
+    enTransaccion(async (tx) => {
+      const b = await conEntreno(tx)
+      const r = await restriccionViolada(
+        tx.insert(asistencias).values({
+          entrenoId: b.entreno.id,
+          jugadorId: b.ana.id,
+          plantillaId: b.senior25.id,
+          estado: 'asiste',
+        }),
+      )
+      expect(r).toBe('asistencias_entreno_fk')
+    }))
+
+  it.each([
+    ['asiste', 'Trabajo'],
+    ['falta', 'Trabajo'],
+    ['justificada', '   '],
+  ] as const)('rechaza el estado %s con motivo "%s"', (estado, motivo) =>
+    enTransaccion(async (tx) => {
+      const b = await conEntreno(tx)
+      const r = await restriccionViolada(
+        tx.insert(asistencias).values({
+          entrenoId: b.entreno.id,
+          jugadorId: b.ana.id,
+          plantillaId: b.senior26.id,
+          estado,
+          motivo,
+        }),
+      )
+      expect(r).toBe('asistencias_motivo_justificada')
+    }),
+  )
+
+  it('al borrar un entreno o su plantilla se van sus asistencias', () =>
+    enTransaccion(async (tx) => {
+      const b = await conEntreno(tx)
+      const asistencia = {
+        entrenoId: b.entreno.id,
+        jugadorId: b.ana.id,
+        plantillaId: b.senior26.id,
+        estado: 'asiste' as const,
+      }
+      await tx.insert(asistencias).values(asistencia)
+      await tx.delete(entrenos).where(eq(entrenos.id, b.entreno.id))
+      expect(await tx.$count(asistencias, eq(asistencias.plantillaId, b.senior26.id))).toBe(0)
+
+      const [otro] = await tx
+        .insert(entrenos)
+        .values({ plantillaId: b.senior26.id, fecha: '2026-10-15' })
+        .returning()
+      await tx.insert(asistencias).values({ ...asistencia, entrenoId: otro?.id ?? '' })
+      await tx.delete(plantillas).where(eq(plantillas.id, b.senior26.id))
+      expect(await tx.$count(entrenos, eq(entrenos.plantillaId, b.senior26.id))).toBe(0)
+      expect(await tx.$count(asistencias, eq(asistencias.plantillaId, b.senior26.id))).toBe(0)
     }))
 })
