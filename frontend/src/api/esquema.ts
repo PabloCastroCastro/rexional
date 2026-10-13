@@ -852,6 +852,408 @@ export interface paths {
         };
         trace?: never;
     };
+    "/api/plantillas/{id}/jugadores": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Jugadores de la plantilla
+         * @description Fichas de la plantilla con los datos del jugador, ordenadas por dorsal (sin dorsal al final) y nombre. Por defecto, los activos; con `activos=false`, las bajas.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    activos?: "true" | "false";
+                };
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Jugadores */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["JugadorPlantilla"][];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Añadir un jugador a la plantilla
+         * @description Delegado o superior. Con `nombre`, da de alta un jugador nuevo en el club; con `jugadorId`, crea la ficha de un jugador que ya es del club. Un jugador tiene como máximo una ficha por temporada.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        nombre: string;
+                        dorsal?: number | null;
+                        /** @enum {string|null} */
+                        posicion?: "portero" | "defensa" | "centrocampista" | "delantero" | null;
+                    } | {
+                        /** Format: uuid */
+                        jugadorId: string;
+                        dorsal?: number | null;
+                        /** @enum {string|null} */
+                        posicion?: "portero" | "defensa" | "centrocampista" | "delantero" | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Jugador añadido */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["JugadorPlantilla"];
+                    };
+                };
+                /** @description Datos no válidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Dorsal en uso o el jugador ya tiene ficha en la temporada */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plantillas/{id}/jugadores/{jid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Editar un jugador de la plantilla
+         * @description Delegado o superior. El nombre es del jugador y cambia en todas sus temporadas; dorsal, posición y `activo` son de su ficha en esta plantilla. `activo: false` da de baja y `activo: true` reactiva.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    jid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @description Del jugador: cambia en todas sus temporadas */
+                        nombre?: string;
+                        dorsal?: number | null;
+                        /** @enum {string|null} */
+                        posicion?: "portero" | "defensa" | "centrocampista" | "delantero" | null;
+                        /** @description false da de baja; true reactiva */
+                        activo?: boolean;
+                    };
+                };
+            };
+            responses: {
+                /** @description Jugador actualizado */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["JugadorPlantilla"];
+                    };
+                };
+                /** @description Datos no válidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Dorsal en uso */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/api/clubes/{cid}/jugadores": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Buscar jugadores del club
+         * @description Para añadirlos a una plantilla. Delegado o superior en alguna plantilla del club. Busca por nombre sin distinguir mayúsculas; ordenados por nombre, como máximo 20.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    q?: string;
+                };
+                header?: never;
+                path: {
+                    cid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Jugadores del club */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["JugadorClub"][];
+                    };
+                };
+                /** @description Datos no válidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/clubes/{cid}/jugadores/{jid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Un jugador del club y su trayectoria
+         * @description Sus fichas por temporada, la más reciente primero. Delegado o superior en alguna plantilla del club; un jugador solo puede ver la suya.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    cid: string;
+                    jid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Jugador */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TrayectoriaJugador"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -924,6 +1326,43 @@ export interface components {
              */
             rol: "admin" | "entrenador" | "delegado" | "jugador";
             esAdminClub: boolean;
+        };
+        JugadorPlantilla: {
+            /** Format: uuid */
+            jugadorId: string;
+            /** @example Brais Méndez */
+            nombre: string;
+            /** @example 7 */
+            dorsal: number | null;
+            /** @enum {string|null} */
+            posicion: "portero" | "defensa" | "centrocampista" | "delantero" | null;
+            /** @description false si está de baja en la plantilla */
+            activo: boolean;
+        };
+        JugadorClub: {
+            /** Format: uuid */
+            id: string;
+            nombre: string;
+            /** @description Temporadas en las que tiene ficha, la más reciente primero */
+            temporadas: string[];
+        };
+        TrayectoriaJugador: {
+            /** Format: uuid */
+            id: string;
+            nombre: string;
+            fichas: {
+                /** Format: uuid */
+                plantillaId: string;
+                /** @example Juvenil A */
+                plantilla: string;
+                categoria: string;
+                /** @example 2026-27 */
+                temporada: string;
+                dorsal: number | null;
+                /** @enum {string|null} */
+                posicion: "portero" | "defensa" | "centrocampista" | "delantero" | null;
+                activo: boolean;
+            }[];
         };
     };
     responses: never;

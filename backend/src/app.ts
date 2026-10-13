@@ -6,6 +6,7 @@ import { comprobarBaseDeDatos } from './db/cliente.js'
 import { manejarError, rutaNoEncontrada, soloMismoOrigen, validacionFallida } from './errores.js'
 import { registrarPeticiones } from './peticiones.js'
 import { rutasClubes } from './rutas/clubes.js'
+import { rutasJugadoresClub, rutasJugadoresPlantilla } from './rutas/jugadores.js'
 import { rutasPlantillas } from './rutas/plantillas.js'
 import { rutasSalud } from './rutas/salud.js'
 
@@ -46,6 +47,8 @@ export function crearApp(dependencias: Partial<Dependencias> = {}) {
   app.route('/', rutasSalud(d.comprobarBaseDeDatos))
   app.route('/', rutasClubes())
   app.route('/', rutasPlantillas())
+  app.route('/', rutasJugadoresPlantilla())
+  app.route('/', rutasJugadoresClub())
 
   if (d.documentacion) {
     app.doc31('/openapi.json', infoOpenApi)
