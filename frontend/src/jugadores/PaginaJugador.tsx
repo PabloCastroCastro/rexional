@@ -1,0 +1,139 @@
+import { ChevronLeft, Pencil, RotateCcw, UserMinus } from 'lucide-react'
+import { useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router'
+import { Boton } from '../componentes/Boton'
+import { Cargando } from '../componentes/Cargando'
+import { EstadoVacio } from '../componentes/EstadoVacio'
+import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
+import { useBajaYReactivacion } from './acciones'
+import { type JugadorPlantilla, POSICIONES, puedeGestionarJugadores, useTrayectoria } from './datos'
+import { FormularioJugador, type ModoFormulario } from './FormularioJugador'
+import estilos from './Jugadores.module.css'
+import { Dorsal } from './PaginaPlantilla'
+
+// Un jugador de la plantilla: su ficha en ella, con editar y dar de baja o reactivar, y su
+// trayectoria en el club por temporadas
+export function PaginaJugador() {
+  const plantilla = usePlantillaActiva()
+  const { jugadorId = '' } = useParams()
+  const navegar = useNavigate()
+  const trayectoria = useTrayectoria(plantilla.clubId, jugadorId)
+  const [formulario, setFormulario] = useState<ModoFormulario | null>(null)
+  const lista = `/p/${plantilla.id}/plantilla`
+  const { darDeBaja, reactivar, pendiente } = useBajaYReactivacion({
+    alDarDeBaja: () => navegar(lista),
+    alDorsalOcupado: (j, mensaje) =>
+      setFormulario({ tipo: 'editar', jugador: j, reactivar: true, errorDorsal: mensaje }),
+  })
+
+  const fichaActual = trayectoria.data?.fichas.find((f) => f.plantillaId === plantilla.id)
+  const volver = (
+    <Link
+      to={fichaActual?.activo === false ? `${lista}?ver=bajas` : lista}
+      className={estilos.volver}
+    >
+      <ChevronLeft aria-hidden size={20} />
+      Plantilla
+    </Link>
+  )
+
+  if (trayectoria.isPending) return <Cargando />
+  const ficha = fichaActual
+  if (!trayectoria.data || !ficha) {
+    return (
+      <div className={estilos.pagina}>
+        {volver}
+        <EstadoVacio
+          titulo="Este jugador no está en la plantilla"
+          descripcion={trayectoria.error?.message}
+        />
+      </div>
+    )
+  }
+
+  const jugador: JugadorPlantilla = {
+    jugadorId: trayectoria.data.id,
+    nombre: trayectoria.data.nombre,
+    dorsal: ficha.dorsal,
+    posicion: ficha.posicion,
+    activo: ficha.activo,
+  }
+  const gestiona = puedeGestionarJugadores(plantilla)
+
+  return (
+    <div className={estilos.pagina}>
+      {volver}
+
+      <div className={estilos.ficha}>
+        <Dorsal dorsal={jugador.dorsal} />
+        <div className={estilos.texto}>
+          <h1>{jugador.nombre}</h1>
+          <span className={estilos.secundario}>
+            {jugador.posicion ? POSICIONES[jugador.posicion] : 'Sin posición'}
+            {!jugador.activo && ' · De baja'}
+          </span>
+        </div>
+      </div>
+
+      {gestiona && (
+        <div className={estilos.acciones}>
+          <Boton
+            variante="secundario"
+            icono={<Pencil aria-hidden size={18} />}
+            onClick={() => setFormulario({ tipo: 'editar', jugador })}
+          >
+            Editar
+          </Boton>
+          {jugador.activo ? (
+            <Boton
+              variante="peligro"
+              icono={<UserMinus aria-hidden size={18} />}
+              cargando={pendiente}
+              onClick={() => darDeBaja(jugador)}
+            >
+              Dar de baja
+            </Boton>
+          ) : (
+            <Boton
+              icono={<RotateCcw aria-hidden size={18} />}
+              cargando={pendiente}
+              onClick={() => reactivar(jugador)}
+            >
+              Reactivar
+            </Boton>
+          )}
+        </div>
+      )}
+
+      <section className={estilos.seccion} aria-labelledby="trayectoria">
+        <h2 id="trayectoria">Temporadas en el club</h2>
+        <ul className={estilos.lista}>
+          {trayectoria.data.fichas.map((f) => (
+            <li key={f.plantillaId}>
+              <div className={estilos.fila}>
+                <span className={estilos.temporada}>{f.temporada}</span>
+                <span className={estilos.texto}>
+                  <strong>
+                    {f.plantilla}
+                    {f.plantillaId === plantilla.id && ' (esta plantilla)'}
+                  </strong>
+                  <span className={estilos.secundario}>
+                    {[
+                      f.dorsal === null ? 'Sin dorsal' : `Dorsal ${f.dorsal}`,
+                      f.posicion ? POSICIONES[f.posicion] : null,
+                      f.activo ? null : 'de baja',
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </span>
+                </span>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <FormularioJugador modo={formulario} alCerrar={() => setFormulario(null)} />
+    </div>
+  )
+}
