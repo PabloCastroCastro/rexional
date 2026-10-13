@@ -223,6 +223,145 @@
           "rol",
           "esAdminClub"
         ]
+      },
+      "JugadorPlantilla": {
+        "type": "object",
+        "properties": {
+          "jugadorId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string",
+            "example": "Brais Méndez"
+          },
+          "dorsal": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "example": 7
+          },
+          "posicion": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "portero",
+              "defensa",
+              "centrocampista",
+              "delantero",
+              null
+            ]
+          },
+          "activo": {
+            "type": "boolean",
+            "description": "false si está de baja en la plantilla"
+          }
+        },
+        "required": [
+          "jugadorId",
+          "nombre",
+          "dorsal",
+          "posicion",
+          "activo"
+        ]
+      },
+      "JugadorClub": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "temporadas": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Temporadas en las que tiene ficha, la más reciente primero"
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "temporadas"
+        ]
+      },
+      "TrayectoriaJugador": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "fichas": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "plantillaId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "plantilla": {
+                  "type": "string",
+                  "example": "Juvenil A"
+                },
+                "categoria": {
+                  "type": "string"
+                },
+                "temporada": {
+                  "type": "string",
+                  "example": "2026-27"
+                },
+                "dorsal": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "posicion": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "enum": [
+                    "portero",
+                    "defensa",
+                    "centrocampista",
+                    "delantero",
+                    null
+                  ]
+                },
+                "activo": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "plantillaId",
+                "plantilla",
+                "categoria",
+                "temporada",
+                "dorsal",
+                "posicion",
+                "activo"
+              ]
+            }
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "fichas"
+        ]
       }
     },
     "parameters": {}
@@ -1120,6 +1259,534 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/jugadores": {
+      "get": {
+        "tags": [
+          "Jugadores"
+        ],
+        "summary": "Jugadores de la plantilla",
+        "description": "Fichas de la plantilla con los datos del jugador, ordenadas por dorsal (sin dorsal al final) y nombre. Por defecto, los activos; con `activos=false`, las bajas.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ],
+              "default": "true"
+            },
+            "required": false,
+            "name": "activos",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Jugadores",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/JugadorPlantilla"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Jugadores"
+        ],
+        "summary": "Añadir un jugador a la plantilla",
+        "description": "Delegado o superior. Con `nombre`, da de alta un jugador nuevo en el club; con `jugadorId`, crea la ficha de un jugador que ya es del club. Un jugador tiene como máximo una ficha por temporada.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "nombre": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 80
+                      },
+                      "dorsal": {
+                        "type": [
+                          "integer",
+                          "null"
+                        ],
+                        "minimum": 0,
+                        "maximum": 99
+                      },
+                      "posicion": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "enum": [
+                          "portero",
+                          "defensa",
+                          "centrocampista",
+                          "delantero",
+                          null
+                        ]
+                      }
+                    },
+                    "required": [
+                      "nombre"
+                    ],
+                    "additionalProperties": false,
+                    "title": "Jugador nuevo en el club"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "jugadorId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "dorsal": {
+                        "type": [
+                          "integer",
+                          "null"
+                        ],
+                        "minimum": 0,
+                        "maximum": 99
+                      },
+                      "posicion": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "enum": [
+                          "portero",
+                          "defensa",
+                          "centrocampista",
+                          "delantero",
+                          null
+                        ]
+                      }
+                    },
+                    "required": [
+                      "jugadorId"
+                    ],
+                    "additionalProperties": false,
+                    "title": "Jugador existente del club"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Jugador añadido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JugadorPlantilla"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Dorsal en uso o el jugador ya tiene ficha en la temporada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/jugadores/{jid}": {
+      "patch": {
+        "tags": [
+          "Jugadores"
+        ],
+        "summary": "Editar un jugador de la plantilla",
+        "description": "Delegado o superior. El nombre es del jugador y cambia en todas sus temporadas; dorsal, posición y `activo` son de su ficha en esta plantilla. `activo: false` da de baja y `activo: true` reactiva.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "jid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nombre": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80,
+                    "description": "Del jugador: cambia en todas sus temporadas"
+                  },
+                  "dorsal": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 99
+                  },
+                  "posicion": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "portero",
+                      "defensa",
+                      "centrocampista",
+                      "delantero",
+                      null
+                    ]
+                  },
+                  "activo": {
+                    "type": "boolean",
+                    "description": "false da de baja; true reactiva"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Jugador actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JugadorPlantilla"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Dorsal en uso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/clubes/{cid}/jugadores": {
+      "get": {
+        "tags": [
+          "Jugadores"
+        ],
+        "summary": "Buscar jugadores del club",
+        "description": "Para añadirlos a una plantilla. Delegado o superior en alguna plantilla del club. Busca por nombre sin distinguir mayúsculas; ordenados por nombre, como máximo 20.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "cid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "required": false,
+            "name": "q",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Jugadores del club",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/JugadorClub"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/clubes/{cid}/jugadores/{jid}": {
+      "get": {
+        "tags": [
+          "Jugadores"
+        ],
+        "summary": "Un jugador del club y su trayectoria",
+        "description": "Sus fichas por temporada, la más reciente primero. Delegado o superior en alguna plantilla del club; un jugador solo puede ver la suya.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "cid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "jid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Jugador",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrayectoriaJugador"
                 }
               }
             }
