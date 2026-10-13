@@ -15,7 +15,7 @@ import { EsquemaTexto, EsquemaUuid, restriccionViolada } from '../validacion.js'
 // Jugadores del club y sus fichas en cada plantilla (secciones 2.2 y 7). El jugador es del club y
 // permanente; la ficha es su participación en una plantilla, con dorsal, posición y baja lógica.
 
-const EsquemaPosicion = z.enum(posicion.enumValues)
+export const EsquemaPosicion = z.enum(posicion.enumValues)
 
 const EsquemaDorsal = z
   .int('El dorsal debe ser un número entero')
@@ -79,7 +79,7 @@ const ParamJugador = { jid: EsquemaUuid.openapi({ param: { name: 'jid', in: 'pat
 const MAXIMO_BUSQUEDA = 20
 
 // Orden alfabético en español (tildes y mayúsculas); la colación de la base ordena como C
-const porNombre = sql`${jugadores.nombre} collate "es-x-icu"`
+export const porNombre = sql`${jugadores.nombre} collate "es-x-icu"`
 
 const columnasJugadorPlantilla = {
   jugadorId: jugadores.id,

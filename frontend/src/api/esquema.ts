@@ -1254,6 +1254,310 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/plantillas/{id}/entrenos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Historial de entrenos
+         * @description Entrenos de la plantilla, el más reciente primero, con el recuento de cada estado. Los recuentos no identifican a nadie: los ve cualquier miembro.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Entrenos */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ResumenEntreno"][];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plantillas/{id}/entrenos/{fecha}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Asistencia de un día
+         * @description Los jugadores activos y los de baja con asistencia registrada ese día, con su estado. Si aún no se ha pasado lista, `existe` es false y los estados están vacíos. El rol jugador solo recibe su fila.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    fecha: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Entreno */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Entreno"];
+                    };
+                };
+                /** @description Fecha no válida */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plantillas/{id}/entrenos/{fecha}/asistencias": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Pasar lista
+         * @description Delegado o superior. Guarda la lista completa del día: quien no aparece queda sin registrar. Crea el entreno con la primera asistencia y lo borra si la lista llega vacía. No admite fechas futuras.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    fecha: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        asistencias: {
+                            /** Format: uuid */
+                            jugadorId: string;
+                            /** @enum {string} */
+                            estado: "asiste" | "justificada" | "falta";
+                            motivo?: string | null;
+                        }[];
+                    };
+                };
+            };
+            responses: {
+                /** @description Asistencia guardada */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Entreno"];
+                    };
+                };
+                /** @description Datos no válidos, fecha futura o jugador sin ficha */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plantillas/{id}/asistencia/resumen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Asistencia por jugador
+         * @description Asistencias, justificadas, faltas y porcentaje de cada jugador de la plantilla (también de las bajas). El porcentaje es asistencias / entrenos con estado registrado, y null si no tiene ninguno. El rol jugador solo recibe el suyo.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Asistencia */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AsistenciaJugador"][];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1363,6 +1667,42 @@ export interface components {
                 posicion: "portero" | "defensa" | "centrocampista" | "delantero" | null;
                 activo: boolean;
             }[];
+        };
+        ResumenEntreno: components["schemas"]["RecuentosAsistencia"] & {
+            /** @example 2026-10-13 */
+            fecha: string;
+        };
+        RecuentosAsistencia: {
+            asiste: number;
+            justificada: number;
+            falta: number;
+        };
+        Entreno: {
+            /** @example 2026-10-13 */
+            fecha: string;
+            /** @description false si ese día aún no se ha pasado lista */
+            existe: boolean;
+            recuentos: components["schemas"]["RecuentosAsistencia"];
+            jugadores: {
+                /** Format: uuid */
+                jugadorId: string;
+                nombre: string;
+                dorsal: number | null;
+                /** @enum {string|null} */
+                posicion: "portero" | "defensa" | "centrocampista" | "delantero" | null;
+                activo: boolean;
+                /** @enum {string|null} */
+                estado: "asiste" | "justificada" | "falta" | null;
+                motivo: string | null;
+            }[];
+        };
+        AsistenciaJugador: components["schemas"]["RecuentosAsistencia"] & {
+            /** Format: uuid */
+            jugadorId: string;
+            nombre: string;
+            activo: boolean;
+            /** @description Asistencias / entrenos con estado registrado, de 0 a 100 */
+            porcentaje: number | null;
         };
     };
     responses: never;

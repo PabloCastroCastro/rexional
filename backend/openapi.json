@@ -362,6 +362,165 @@
           "nombre",
           "fichas"
         ]
+      },
+      "ResumenEntreno": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/RecuentosAsistencia"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "fecha": {
+                "type": "string",
+                "example": "2026-10-13"
+              }
+            },
+            "required": [
+              "fecha"
+            ]
+          }
+        ]
+      },
+      "RecuentosAsistencia": {
+        "type": "object",
+        "properties": {
+          "asiste": {
+            "type": "integer"
+          },
+          "justificada": {
+            "type": "integer"
+          },
+          "falta": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "asiste",
+          "justificada",
+          "falta"
+        ]
+      },
+      "Entreno": {
+        "type": "object",
+        "properties": {
+          "fecha": {
+            "type": "string",
+            "example": "2026-10-13"
+          },
+          "existe": {
+            "type": "boolean",
+            "description": "false si ese día aún no se ha pasado lista"
+          },
+          "recuentos": {
+            "$ref": "#/components/schemas/RecuentosAsistencia"
+          },
+          "jugadores": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "jugadorId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "nombre": {
+                  "type": "string"
+                },
+                "dorsal": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "posicion": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "enum": [
+                    "portero",
+                    "defensa",
+                    "centrocampista",
+                    "delantero",
+                    null
+                  ]
+                },
+                "activo": {
+                  "type": "boolean"
+                },
+                "estado": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "enum": [
+                    "asiste",
+                    "justificada",
+                    "falta",
+                    null
+                  ]
+                },
+                "motivo": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "jugadorId",
+                "nombre",
+                "dorsal",
+                "posicion",
+                "activo",
+                "estado",
+                "motivo"
+              ]
+            }
+          }
+        },
+        "required": [
+          "fecha",
+          "existe",
+          "recuentos",
+          "jugadores"
+        ]
+      },
+      "AsistenciaJugador": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/RecuentosAsistencia"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "jugadorId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "nombre": {
+                "type": "string"
+              },
+              "activo": {
+                "type": "boolean"
+              },
+              "porcentaje": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "description": "Asistencias / entrenos con estado registrado, de 0 a 100"
+              }
+            },
+            "required": [
+              "jugadorId",
+              "nombre",
+              "activo",
+              "porcentaje"
+            ]
+          }
+        ]
       }
     },
     "parameters": {}
@@ -1787,6 +1946,346 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/TrayectoriaJugador"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/entrenos": {
+      "get": {
+        "tags": [
+          "Entrenos"
+        ],
+        "summary": "Historial de entrenos",
+        "description": "Entrenos de la plantilla, el más reciente primero, con el recuento de cada estado. Los recuentos no identifican a nadie: los ve cualquier miembro.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Entrenos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ResumenEntreno"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/entrenos/{fecha}": {
+      "get": {
+        "tags": [
+          "Entrenos"
+        ],
+        "summary": "Asistencia de un día",
+        "description": "Los jugadores activos y los de baja con asistencia registrada ese día, con su estado. Si aún no se ha pasado lista, `existe` es false y los estados están vacíos. El rol jugador solo recibe su fila.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2026-10-13"
+            },
+            "required": true,
+            "name": "fecha",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Entreno",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Entreno"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Fecha no válida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/entrenos/{fecha}/asistencias": {
+      "put": {
+        "tags": [
+          "Entrenos"
+        ],
+        "summary": "Pasar lista",
+        "description": "Delegado o superior. Guarda la lista completa del día: quien no aparece queda sin registrar. Crea el entreno con la primera asistencia y lo borra si la lista llega vacía. No admite fechas futuras.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2026-10-13"
+            },
+            "required": true,
+            "name": "fecha",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "asistencias": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "jugadorId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "estado": {
+                          "type": "string",
+                          "enum": [
+                            "asiste",
+                            "justificada",
+                            "falta"
+                          ]
+                        },
+                        "motivo": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "maxLength": 200
+                        }
+                      },
+                      "required": [
+                        "jugadorId",
+                        "estado"
+                      ]
+                    },
+                    "maxItems": 200
+                  }
+                },
+                "required": [
+                  "asistencias"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Asistencia guardada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Entreno"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos, fecha futura o jugador sin ficha",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/asistencia/resumen": {
+      "get": {
+        "tags": [
+          "Entrenos"
+        ],
+        "summary": "Asistencia por jugador",
+        "description": "Asistencias, justificadas, faltas y porcentaje de cada jugador de la plantilla (también de las bajas). El porcentaje es asistencias / entrenos con estado registrado, y null si no tiene ninguno. El rol jugador solo recibe el suyo.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Asistencia",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AsistenciaJugador"
+                  }
                 }
               }
             }
