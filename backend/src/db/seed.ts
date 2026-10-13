@@ -5,7 +5,9 @@ import { migrar } from './migrar.js'
 import {
   account,
   adminsClub,
+  asistencias,
   clubes,
+  entrenos,
   fichas,
   jugadores,
   membresias,
@@ -38,6 +40,7 @@ const CUENTA = 2
 const CLUB = 3
 const PLANTILLA = 4
 const JUGADOR = 5
+const ENTRENO = 6
 
 type Posicion = 'portero' | 'defensa' | 'centrocampista' | 'delantero'
 
@@ -151,6 +154,38 @@ const listaFichas: [number, number, number | null, Posicion, boolean][] = [
 
 const plantillaPorNumero = new Map(listaPlantillas.map((p) => [p.n, p]))
 
+// Entrenos de martes y jueves de septiembre y principios de octubre de 2026 en las plantillas de
+// 2026-27, con asistencia variada pero siempre la misma: [plantilla, número, fecha]
+const PLANTILLAS_CON_ENTRENOS = [3, 4, 5]
+const fechasEntreno: string[] = []
+for (let dia = new Date(Date.UTC(2026, 8, 1)); dia < new Date(Date.UTC(2026, 9, 9)); ) {
+  if (dia.getUTCDay() === 2 || dia.getUTCDay() === 4)
+    fechasEntreno.push(dia.toISOString().slice(0, 10))
+  dia = new Date(dia.getTime() + 86_400_000)
+}
+const listaEntrenos = PLANTILLAS_CON_ENTRENOS.flatMap((plantilla) =>
+  fechasEntreno.map((fecha, i) => ({ plantilla, n: plantilla * 100 + i, i, fecha })),
+)
+
+const MOTIVOS = ['Trabajo', 'Lesión', null, 'Estudios']
+
+// Estado de cada jugador activo en cada entreno: casi siempre asiste, a veces justifica o falta
+const listaAsistencias = listaEntrenos.flatMap((e) =>
+  listaFichas
+    .filter(([plantilla, , , , activo]) => plantilla === e.plantilla && activo)
+    .map(([, jugador]) => {
+      const v = (e.i * 7 + jugador * 13) % 20
+      const estado = v < 15 ? 'asiste' : v < 17 ? 'justificada' : 'falta'
+      return {
+        entrenoId: sid(ENTRENO, e.n),
+        jugadorId: sid(JUGADOR, jugador),
+        plantillaId: sid(PLANTILLA, e.plantilla),
+        estado: estado as 'asiste' | 'justificada' | 'falta',
+        motivo: estado === 'justificada' ? MOTIVOS[(e.i + jugador) % MOTIVOS.length] : null,
+      }
+    }),
+)
+
 await migrar()
 
 const hash = await hashPassword(CONTRASENA)
@@ -254,11 +289,25 @@ await db.transaction(async (tx) => {
       }),
     )
     .onConflictDoNothing()
+
+  await tx
+    .insert(entrenos)
+    .values(
+      listaEntrenos.map((e) => ({
+        id: sid(ENTRENO, e.n),
+        plantillaId: sid(PLANTILLA, e.plantilla),
+        fecha: e.fecha,
+      })),
+    )
+    .onConflictDoNothing()
+
+  await tx.insert(asistencias).values(listaAsistencias).onConflictDoNothing()
 })
 
 console.log(
   `Seed aplicado: ${usuarios.length} usuarios (contraseña "${CONTRASENA}"), ${listaClubes.length} clubes, ` +
-    `${listaPlantillas.length} plantillas, ${listaJugadores.length} jugadores y ${listaFichas.length} fichas`,
+    `${listaPlantillas.length} plantillas, ${listaJugadores.length} jugadores, ${listaFichas.length} fichas, ` +
+    `${listaEntrenos.length} entrenos y ${listaAsistencias.length} asistencias`,
 )
 
 await pool.end()

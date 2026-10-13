@@ -318,7 +318,7 @@ Cada entorno es un clon del repositorio con su `.env`, su nombre de proyecto de 
 - `scripts/deploy.sh pruebas` actualiza a lo último de `develop` y reconstruye.
 - `scripts/deploy.sh pro vX.Y.Z` despliega ese tag, **haciendo antes copia de seguridad** (`pg_dump` comprimido).
 - Registro de cada despliegue en `/opt/vestuario/deploys.log`.
-- Desde el ciclo 1 (primer despliegue con datos reales): `pg_dump` diario de producción con rotación simple (últimos 14 días).
+- Desde el primer despliegue con datos reales (ciclo 4): `pg_dump` diario de producción con rotación simple (últimos 14 días).
 - Ciclo 8: copias diarias automáticas de base de datos y medios (fotos y vídeos) con rotación y copia fuera del servidor, y procedimiento de restauración probado.
 
 ---
@@ -399,21 +399,25 @@ La participación de un jugador en una plantilla (una temporada).
 |---|---|---|
 | id | uuid | PK |
 | plantilla_id | uuid → plantillas | cascade |
-| fecha | date | nullable solo si `es_modelo`. Única por plantilla entre los que no son modelo (índice único parcial `WHERE NOT es_modelo`) |
+| fecha | date | En `Europe/Madrid`. Única por plantilla. Desde el ciclo 7, nullable solo si `es_modelo` y única entre los que no son modelo (índice único parcial `WHERE NOT es_modelo`) |
 | hora | time | opcional (ciclo 7) |
 | duracion_prevista | smallint | minutos, opcional (ciclo 7) |
 | objetivo | text | opcional (ciclo 7) |
 | es_modelo | boolean | por defecto false. Sesión guardada como modelo, sin fecha (ciclo 7). Los modelos no cuentan en el historial ni en el porcentaje de asistencia |
 | nombre_modelo | text | obligatorio si `es_modelo` (ciclo 7) |
 | notas | text | opcional |
+| created_at | timestamptz | |
+
+Las columnas marcadas como ciclo 7 se añaden con su propia migración en GH-38.
 
 ### asistencias
 | Campo | Tipo | Notas |
 |---|---|---|
 | entreno_id | uuid → entrenos | PK compuesta, cascade |
-| jugador_id | uuid → jugadores | PK compuesta, cascade. Con ficha en la plantilla del entreno (validado en el servicio) |
+| jugador_id | uuid | PK compuesta |
+| plantilla_id | uuid | Garantiza que el jugador tiene ficha en la plantilla del entreno, con las FK compuestas `(entreno_id, plantilla_id) → entrenos` y `(plantilla_id, jugador_id) → fichas`, ambas cascade |
 | estado | enum `asiste, justificada, falta` | |
-| motivo | text | opcional, para justificadas |
+| motivo | text | opcional, solo con `justificada` y nunca vacío |
 
 ### partidos
 | Campo | Tipo | Notas |
@@ -656,10 +660,10 @@ Una issue está terminada cuando: cumple sus criterios de aceptación en el ento
 
 | Ciclo | Objetivo | Versión |
 |---|---|---|
-| 1 · Base y plantilla | Tres proyectos funcionando, login, clubes, plantillas por temporada, selector de plantilla, jugadores, despliegue y CI | v0.1.0 |
+| 1 · Base y plantilla | Tres proyectos funcionando, login, clubes, plantillas por temporada, selector de plantilla, jugadores y CI | v0.1.0 |
 | 2 · Entrenos | Pasar lista, historial y porcentaje de asistencia | v0.2.0 |
 | 3 · Convocatorias | Partidos, convocados y mensaje de WhatsApp | v0.3.0 |
-| 4 · Multas | Catálogo, registro, cobro, deudas y caja. Paridad con el MVP | v1.0.0 |
+| 4 · Multas | Catálogo, registro, cobro, deudas y caja. Paridad con el MVP y primer despliegue en el servidor | v1.0.0 |
 | 5 · Personalización y temporadas | Escudo y colores por club, y cambio de temporada | v1.1.0 |
 | 6 · Estadísticas | Resultado, participaciones, eventos, estadísticas de temporada y trayectoria de cada jugador | v1.2.0 |
 | 7 · Planificación de entrenos | Biblioteca de ejercicios con fotos y vídeos, y sesiones planificadas | v1.3.0 |
@@ -689,10 +693,10 @@ Una issue está terminada cuando: cumple sus criterios de aceptación en el ento
 
 | Título | Descripción |
 |---|---|
-| Ciclo 1 · Base y plantilla | Tres proyectos funcionando, login, clubes, plantillas por temporada, selector de plantilla, jugadores, despliegue y CI (v0.1.0) |
+| Ciclo 1 · Base y plantilla | Tres proyectos funcionando, login, clubes, plantillas por temporada, selector de plantilla, jugadores y CI (v0.1.0) |
 | Ciclo 2 · Entrenos | Pasar lista, historial y porcentaje de asistencia (v0.2.0) |
 | Ciclo 3 · Convocatorias | Partidos, convocados y mensaje de WhatsApp (v0.3.0) |
-| Ciclo 4 · Multas | Catálogo, registro, cobro, deudas y caja. Paridad con el MVP (v1.0.0) |
+| Ciclo 4 · Multas | Catálogo, registro, cobro, deudas y caja. Paridad con el MVP y primer despliegue en el servidor (v1.0.0) |
 | Ciclo 5 · Personalización y temporadas | Escudo y colores por club, y cambio de temporada (v1.1.0) |
 | Ciclo 6 · Estadísticas | Resultado, participaciones, eventos, estadísticas de temporada y trayectoria de cada jugador (v1.2.0) |
 | Ciclo 7 · Planificación de entrenos | Biblioteca de ejercicios con fotos y vídeos, y sesiones planificadas (v1.3.0) |
@@ -890,22 +894,6 @@ GitHub Actions para validar cada pull request a `develop` y `main`. Depende de G
 - [ ] Prueba de humo: `docker compose up` completo y `GET /api/health` a través del proxy
 - [ ] Estado visible en el pull request
 
-#### GH-13
-**Título:** Despliegue en el servidor con Tailscale
-**Etiquetas:** feature, infra
-
-Entornos de pruebas y producción en el servidor. Depende de GH-1 y GH-2.
-
-**Criterios de aceptación**
-- [ ] Docker y Tailscale instalados en el servidor; documentado en `docs/servidor.md`
-- [ ] Clones en `/opt/vestuario/pruebas` y `/opt/vestuario/pro`, cada uno con su `.env`, puerto y proyecto de Compose
-- [ ] HTTPS con certificado de Tailscale; la PWA se instala desde el móvil. Certificado generado con `tailscale cert`, montado en solo lectura en el contenedor de nginx y renovado por un cron que recarga nginx (caduca a los 90 días)
-- [ ] Puerto propio de cada entorno, compatible con otro nginx que ya ocupe 80/443 en el servidor
-- [ ] `scripts/deploy.sh` para `pruebas` (último develop) y `pro <tag>` (con copia de seguridad previa y registro de despliegues), funcionando en el servidor
-- [ ] Copia de seguridad antes de cada despliegue a producción verificada
-- [ ] `pg_dump` diario de producción con rotación de 14 días (provisional hasta el ciclo 8)
-- [ ] Primer despliegue de `v0.1.0` en producción
-
 #### GH-70
 **Título:** Configuración de la plantilla y del club
 **Etiquetas:** feature, backend, frontend
@@ -933,8 +921,10 @@ Configuración básica, adelantada del ciclo 5 (la identidad visual del club sig
 Depende de GH-3.
 
 **Criterios de aceptación**
-- [ ] Tablas `entrenos` (fecha única por plantilla) y `asistencias` con enum `asiste, justificada, falta` y motivo opcional
+- [ ] Tablas `entrenos` (fecha única por plantilla; sin las columnas del ciclo 7) y `asistencias` con enum `asiste, justificada, falta` y motivo opcional solo para justificadas
+- [ ] La base de datos garantiza que el jugador tiene ficha en la plantilla del entreno (`plantilla_id` y FK compuestas)
 - [ ] Migración y actualización del seed con entrenos de ejemplo
+- [ ] Tests de las restricciones
 
 #### GH-15
 **Título:** API de entrenos y asistencia
@@ -1080,6 +1070,22 @@ Depende de GH-11, GH-23 y GH-24.
 - [ ] Listado de multas con cobrar/deshacer y borrar
 - [ ] Catálogo editable
 - [ ] Deuda pendiente visible en la plantilla
+
+#### GH-13
+**Título:** Despliegue en el servidor con Tailscale
+**Etiquetas:** feature, infra
+
+Entornos de pruebas y producción en el servidor. Depende de GH-1 y GH-2. Se aplazó del ciclo 1 al 4: el primer despliegue es el del MVP completo. El servidor es una Raspberry Pi (ARM64) que ya aloja otra aplicación con Docker.
+
+**Criterios de aceptación**
+- [ ] Docker y Tailscale instalados en el servidor; documentado en `docs/servidor.md`
+- [ ] Clones en `/opt/vestuario/pruebas` y `/opt/vestuario/pro`, cada uno con su `.env`, puerto y proyecto de Compose
+- [ ] HTTPS con certificado de Tailscale; la PWA se instala desde el móvil. Certificado generado con `tailscale cert`, montado en solo lectura en el contenedor de nginx y renovado por un cron que recarga nginx (caduca a los 90 días)
+- [ ] Puerto propio de cada entorno, compatible con otro nginx que ya ocupe 80/443 en el servidor
+- [ ] `scripts/deploy.sh` para `pruebas` (último develop) y `pro <tag>` (con copia de seguridad previa y registro de despliegues), funcionando en el servidor
+- [ ] Copia de seguridad antes de cada despliegue a producción verificada
+- [ ] `pg_dump` diario de producción con rotación de 14 días (provisional hasta el ciclo 8)
+- [ ] Entorno de pruebas desplegado con el último `develop` y producción lista para recibir `v1.0.0` (GH-26)
 
 #### GH-26
 **Título:** Revisión de paridad con el MVP y release v1.0.0
