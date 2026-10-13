@@ -1,17 +1,7 @@
-import { CalendarDays, ClipboardCheck, Coins, Users } from 'lucide-react'
+import { CalendarDays, ClipboardCheck, Coins } from 'lucide-react'
 import { EstadoVacio } from '../componentes/EstadoVacio'
 
 // Secciones provisionales: cada una se construye en su ciclo (ver el documento de proyecto)
-
-export function PaginaPlantilla() {
-  return (
-    <EstadoVacio
-      icono={<Users size={32} />}
-      titulo="Plantilla"
-      descripcion="Aquí verás los jugadores de la plantilla, con su dorsal, posición, asistencia y multas pendientes."
-    />
-  )
-}
 
 export function PaginaEntrenos() {
   return (

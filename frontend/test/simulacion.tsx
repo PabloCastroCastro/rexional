@@ -85,6 +85,8 @@ export function conDatos({
   manejadores['GET /api/auth/get-session'] = sesionActiva
   manejadores['GET /api/plantillas'] = () => json(plantillas)
   manejadores['GET /api/clubes'] = () => json([{ ...clubRexional, esAdmin: administra }])
+  // Plantillas sin jugadores, salvo que la prueba diga otra cosa
+  for (const p of plantillas) manejadores[`GET /api/plantillas/${p.id}/jugadores`] = () => json([])
 }
 
 export function abrir(ruta: string) {
