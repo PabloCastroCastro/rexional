@@ -3,7 +3,9 @@ import { PaginaLogin } from './auth/PaginaLogin'
 import { RequiereSesion } from './auth/RequiereSesion'
 import { PaginaConfiguracion } from './configuracion/PaginaConfiguracion'
 import { Aplicacion } from './diseno/Aplicacion'
+import { PaginaHistorial } from './entrenos/PaginaHistorial'
 import { PaginaPasarLista } from './entrenos/PaginaPasarLista'
+import { SeccionEntrenos } from './entrenos/SeccionEntrenos'
 import { PaginaJugador } from './jugadores/PaginaJugador'
 import { PaginaPlantilla } from './jugadores/PaginaPlantilla'
 import { PaginaComponentes } from './paginas/PaginaComponentes'
@@ -46,7 +48,14 @@ export const rutas = [
               { index: true, element: <Navigate to="jugadores" replace /> },
               { path: 'jugadores', element: <PaginaPlantilla /> },
               { path: 'jugadores/:jugadorId', element: <PaginaJugador /> },
-              { path: 'entrenos', element: <PaginaPasarLista /> },
+              {
+                path: 'entrenos',
+                element: <SeccionEntrenos />,
+                children: [
+                  { index: true, element: <PaginaPasarLista /> },
+                  { path: 'historial', element: <PaginaHistorial /> },
+                ],
+              },
               { path: 'partidos', element: <PaginaPartidos /> },
               { path: 'multas', element: <PaginaMultas /> },
               { path: 'mas', element: <PaginaMas /> },
