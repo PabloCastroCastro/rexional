@@ -1,17 +1,7 @@
-import { CalendarDays, ClipboardCheck, Coins } from 'lucide-react'
+import { CalendarDays, Coins } from 'lucide-react'
 import { EstadoVacio } from '../componentes/EstadoVacio'
 
 // Secciones provisionales: cada una se construye en su ciclo (ver el documento de proyecto)
-
-export function PaginaEntrenos() {
-  return (
-    <EstadoVacio
-      icono={<ClipboardCheck size={32} />}
-      titulo="Entrenos"
-      descripcion="Pasar lista en cada entreno y consultar el historial de asistencia. Llega en el ciclo 2."
-    />
-  )
-}
 
 export function PaginaPartidos() {
   return (
