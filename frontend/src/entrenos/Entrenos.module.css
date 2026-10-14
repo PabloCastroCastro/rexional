@@ -1,0 +1,226 @@
+.pagina {
+  display: grid;
+  gap: var(--espacio-4);
+}
+
+/* Selector de fecha: ‹ fecha › */
+.fecha {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--espacio-2);
+  padding: var(--espacio-1);
+  border-radius: var(--radio-l);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra-1);
+}
+
+.flecha {
+  display: grid;
+  place-items: center;
+  width: var(--altura-tactil);
+  height: var(--altura-tactil);
+  border: 0;
+  border-radius: var(--radio-completo);
+  background: transparent;
+  color: var(--color-acento);
+  cursor: pointer;
+}
+
+.flecha:disabled {
+  color: var(--color-texto-suave);
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+/* El texto de la fecha; el input nativo queda encima, invisible, para abrir el calendario */
+.dia {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: var(--altura-tactil);
+  font-weight: var(--peso-medio);
+  text-transform: capitalize;
+}
+
+.dia input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.dia:focus-within {
+  outline: 2px solid var(--color-foco);
+  outline-offset: 2px;
+  border-radius: var(--radio-m);
+}
+
+.barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-2);
+}
+
+.recuentos {
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
+}
+
+.guardado {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-1);
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
+}
+
+.guardado[data-estado="guardado"] {
+  color: var(--color-exito);
+}
+
+.guardado[data-estado="error"] {
+  color: var(--color-peligro);
+  font-weight: var(--peso-medio);
+}
+
+.reintentar {
+  min-height: var(--altura-tactil);
+  padding: 0 var(--espacio-2);
+  border: 0;
+  background: transparent;
+  color: var(--color-acento);
+  font-weight: var(--peso-medio);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.girando {
+  animation: girar 1s linear infinite;
+}
+
+@keyframes girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .girando {
+    animation: none;
+  }
+}
+
+.lista {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-radius: var(--radio-l);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra-1);
+  overflow: hidden;
+}
+
+.lista li {
+  display: grid;
+  gap: var(--espacio-2);
+  padding: var(--espacio-2) var(--espacio-3);
+}
+
+.lista li + li {
+  border-top: 1px solid var(--color-borde);
+}
+
+.fila {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  min-height: var(--altura-tactil);
+}
+
+.nombre {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-weight: var(--peso-medio);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.baja {
+  color: var(--color-texto-suave);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-normal);
+  text-transform: uppercase;
+}
+
+.secundario {
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
+}
+
+/* Tres estados, grandes y a la derecha: se pulsan con el pulgar */
+.estados {
+  display: flex;
+  flex: none;
+  gap: var(--espacio-1);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.estados button {
+  --color-estado: var(--color-texto-suave);
+  display: grid;
+  place-items: center;
+  width: var(--altura-tactil);
+  height: var(--altura-tactil);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-m);
+  background: var(--color-superficie);
+  color: var(--color-estado);
+  cursor: pointer;
+  transition:
+    background-color var(--duracion) var(--curva),
+    color var(--duracion) var(--curva);
+}
+
+.estados .asiste {
+  --color-estado: var(--color-exito);
+}
+
+.estados .justificada {
+  --color-estado: var(--color-aviso);
+}
+
+.estados .falta {
+  --color-estado: var(--color-peligro);
+}
+
+.estados button[aria-pressed="true"] {
+  border-color: var(--color-estado);
+  background: var(--color-estado);
+  color: var(--color-superficie);
+}
+
+.motivo {
+  min-height: var(--altura-tactil);
+  margin-left: calc(2.5rem + var(--espacio-3));
+  padding: 0 var(--espacio-3);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-m);
+  background: var(--color-superficie);
+  font-size: max(16px, var(--texto-base));
+}
+
+.error {
+  padding: var(--espacio-3);
+  border-radius: var(--radio-m);
+  background: color-mix(in srgb, var(--color-peligro) 12%, transparent);
+  color: var(--color-peligro);
+  font-size: var(--texto-sm);
+}
