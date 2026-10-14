@@ -91,7 +91,7 @@ const esperarGuardado = () =>
 describe('fecha', () => {
   it('abre el día de hoy y no deja pasar al día siguiente', async () => {
     conEntrenos({ [HOY]: [IKER], [AYER]: [BRAIS] })
-    const router = abrir('/p/p1/entrenos')
+    const router = abrir('/plantillas/p1/entrenos')
     expect(await screen.findByText(/Hoy · miércoles, 14 oct/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Día siguiente' })).toBeDisabled()
 
@@ -102,12 +102,12 @@ describe('fecha', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Día siguiente' }))
     expect(await screen.findByText(/Hoy/)).toBeInTheDocument()
-    expect(ruta(router)).toBe('/p/p1/entrenos')
+    expect(ruta(router)).toBe('/plantillas/p1/entrenos')
   })
 
   it('una fecha futura en la URL abre hoy', async () => {
     conEntrenos({ [HOY]: [IKER] })
-    abrir('/p/p1/entrenos?fecha=2026-10-20')
+    abrir('/plantillas/p1/entrenos?fecha=2026-10-20')
     expect(await screen.findByText(/Hoy · miércoles/)).toBeInTheDocument()
   })
 })
@@ -115,7 +115,7 @@ describe('fecha', () => {
 describe('pasar lista', () => {
   it('marca, desmarca y guarda la lista completa automáticamente', async () => {
     conEntrenos({ [HOY]: [IKER, BRAIS, ZOE] })
-    abrir('/p/p1/entrenos')
+    abrir('/plantillas/p1/entrenos')
     await screen.findByText('Íker')
     expect(screen.getByText(/0 asisten · 0 justificadas · 0 faltan · 3 sin marcar/)).toBeVisible()
 
@@ -140,7 +140,7 @@ describe('pasar lista', () => {
 
   it('el motivo de una justificada se guarda con ella', async () => {
     conEntrenos({ [HOY]: [IKER] })
-    abrir('/p/p1/entrenos')
+    abrir('/plantillas/p1/entrenos')
     await screen.findByText('Íker')
     expect(screen.queryByLabelText('Motivo de Íker')).not.toBeInTheDocument()
     await pulsar('Íker', 'Justificada')
@@ -153,7 +153,7 @@ describe('pasar lista', () => {
 
   it('marca el resto como asiste', async () => {
     conEntrenos({ [HOY]: [IKER, BRAIS, ZOE] })
-    abrir('/p/p1/entrenos')
+    abrir('/plantillas/p1/entrenos')
     await screen.findByText('Íker')
     await pulsar('Brais', 'Falta')
     await userEvent.click(screen.getByRole('button', { name: 'Marcar el resto como asiste (2)' }))
@@ -173,7 +173,7 @@ describe('pasar lista', () => {
         jugador('j9', 'Hugo', 10, { activo: false, estado: 'asiste' }),
       ],
     })
-    abrir('/p/p1/entrenos')
+    abrir('/plantillas/p1/entrenos')
     await screen.findByText('Íker')
     expect(within(fila('Íker')).getByRole('button', { name: 'Justificada' })).toHaveAttribute(
       'aria-pressed',
@@ -191,7 +191,7 @@ describe('pasar lista', () => {
       fallar
         ? json({ error: { codigo: 'error_interno', mensaje: 'Error' } }, 500)
         : (guardar?.(peticion) ?? json(null))
-    abrir('/p/p1/entrenos')
+    abrir('/plantillas/p1/entrenos')
     await screen.findByText('Íker')
     await pulsar('Íker', 'Asiste')
 
@@ -220,7 +220,7 @@ describe('sin permiso para pasar lista', () => {
         recuentos: { asiste: 9, justificada: 1, falta: 2 },
         jugadores: [],
       })
-    abrir('/p/p1/entrenos')
+    abrir('/plantillas/p1/entrenos')
     expect(await screen.findByText('9 asisten · 1 justificada · 2 faltan')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Asiste' })).not.toBeInTheDocument()
     expect(screen.getByText('Pasar lista es cosa del cuerpo técnico.')).toBeInTheDocument()

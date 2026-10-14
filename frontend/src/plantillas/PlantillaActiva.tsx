@@ -8,10 +8,11 @@ import { guardarUltimaPlantilla, type Plantilla, usePlantillas } from './datos'
 
 const Contexto = createContext<Plantilla | null>(null)
 
-// Plantilla activa (la de la URL /p/:plantillaId/...), con su club y el rol del usuario
+// Plantilla activa (la de la URL /plantillas/:plantillaId/...), con su club y el rol del usuario
 export function usePlantillaActiva() {
   const plantilla = useContext(Contexto)
-  if (!plantilla) throw new Error('usePlantillaActiva solo funciona dentro de /p/:plantillaId')
+  if (!plantilla)
+    throw new Error('usePlantillaActiva solo funciona dentro de /plantillas/:plantillaId')
   return plantilla
 }
 

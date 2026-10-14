@@ -14,7 +14,7 @@ import { Inicio } from './plantillas/Inicio'
 import { PaginaElegirPlantilla } from './plantillas/PaginaElegirPlantilla'
 import { PlantillaActiva } from './plantillas/PlantillaActiva'
 
-// /login es la única ruta sin sesión. La plantilla activa va en la URL: /p/:plantillaId/<sección>
+// /login es la única ruta sin sesión. La plantilla activa va en la URL: /plantillas/:plantillaId/<sección>
 export const rutas = [
   { path: '/login', element: <PaginaLogin /> },
   // Catálogo de componentes: solo en desarrollo, no existe en la versión compilada
@@ -37,15 +37,15 @@ export const rutas = [
       { index: true, element: <Inicio /> },
       { path: 'plantillas', element: <PaginaElegirPlantilla /> },
       {
-        path: 'p/:plantillaId',
+        path: 'plantillas/:plantillaId',
         element: <PlantillaActiva />,
         children: [
           {
             element: <Aplicacion />,
             children: [
-              { index: true, element: <Navigate to="plantilla" replace /> },
-              { path: 'plantilla', element: <PaginaPlantilla /> },
-              { path: 'plantilla/:jugadorId', element: <PaginaJugador /> },
+              { index: true, element: <Navigate to="jugadores" replace /> },
+              { path: 'jugadores', element: <PaginaPlantilla /> },
+              { path: 'jugadores/:jugadorId', element: <PaginaJugador /> },
               { path: 'entrenos', element: <PaginaPasarLista /> },
               { path: 'partidos', element: <PaginaPartidos /> },
               { path: 'multas', element: <PaginaMultas /> },

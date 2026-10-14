@@ -19,7 +19,7 @@ export function PaginaJugador() {
   const navegar = useNavigate()
   const trayectoria = useTrayectoria(plantilla.clubId, jugadorId)
   const [formulario, setFormulario] = useState<ModoFormulario | null>(null)
-  const lista = `/p/${plantilla.id}/plantilla`
+  const lista = `/plantillas/${plantilla.id}/jugadores`
   const { darDeBaja, reactivar, pendiente } = useBajaYReactivacion({
     alDarDeBaja: () => navegar(lista),
     alDorsalOcupado: (j, mensaje) =>

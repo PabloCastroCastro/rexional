@@ -21,7 +21,7 @@ export function PaginaConfiguracion() {
 
   return (
     <div className={estilos.pagina}>
-      <Link to={`/p/${plantilla.id}/mas`} className={estilos.volver}>
+      <Link to={`/plantillas/${plantilla.id}/mas`} className={estilos.volver}>
         <ChevronLeft aria-hidden size={20} />
         Más
       </Link>

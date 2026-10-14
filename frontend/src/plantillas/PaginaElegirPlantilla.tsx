@@ -22,7 +22,7 @@ export function PaginaElegirPlantilla() {
           {sesion.data && <p className={estilos.usuario}>{sesion.data.user.name}</p>}
         </div>
       </header>
-      <SelectorPlantilla alElegir={(id) => navegar(`/p/${id}/plantilla`)} />
+      <SelectorPlantilla alElegir={(id) => navegar(`/plantillas/${id}/jugadores`)} />
     </main>
   )
 }

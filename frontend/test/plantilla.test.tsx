@@ -57,7 +57,7 @@ const filas = (lista: HTMLElement) =>
 describe('lista de la plantilla', () => {
   it('muestra los jugadores con dorsal y posición, en el orden de la API', async () => {
     conJugadores([BRAIS, ZOE, HUGO])
-    abrir('/p/p1/plantilla')
+    abrir('/plantillas/p1/jugadores')
     const lista = await screen.findByRole('list', { name: 'Jugadores' })
     expect(filas(lista)).toEqual([
       expect.stringMatching(/Dorsal 7.*Brais.*Delantero/),
@@ -65,13 +65,13 @@ describe('lista de la plantilla', () => {
     ])
     expect(within(lista).getByRole('link', { name: /Brais/ })).toHaveAttribute(
       'href',
-      '/p/p1/plantilla/j1',
+      '/plantillas/p1/jugadores/j1',
     )
   })
 
   it('el estado vacío invita a añadir el primer jugador', async () => {
     conJugadores([])
-    abrir('/p/p1/plantilla')
+    abrir('/plantillas/p1/jugadores')
     expect(await screen.findByText('Todavía no hay jugadores')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Añadir el primer jugador' }))
     expect(screen.getByRole('dialog', { name: 'Añadir jugador' })).toBeInTheDocument()
@@ -82,7 +82,7 @@ describe('lista de la plantilla', () => {
       [BRAIS],
       plantilla('p1', 'Senior', '2026-27', { rol: 'jugador', esAdminClub: false }),
     )
-    abrir('/p/p1/plantilla')
+    abrir('/plantillas/p1/jugadores')
     const lista = await screen.findByRole('list', { name: 'Jugadores' })
     expect(within(lista).queryByRole('link')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Añadir' })).not.toBeInTheDocument()
@@ -93,7 +93,7 @@ describe('lista de la plantilla', () => {
 
   it('el estado vacío del rol jugador no invita a añadir', async () => {
     conJugadores([], plantilla('p1', 'Senior', '2026-27', { rol: 'jugador', esAdminClub: false }))
-    abrir('/p/p1/plantilla')
+    abrir('/plantillas/p1/jugadores')
     expect(await screen.findByText('Todavía no hay jugadores')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Añadir/ })).not.toBeInTheDocument()
   })
@@ -104,7 +104,7 @@ describe('alta de jugadores', () => {
     conJugadores([BRAIS])
     manejadores['POST /api/plantillas/p1/jugadores'] = async (peticion) =>
       json({ jugadorId: 'j4', activo: true, ...(await peticion.json()) }, 201)
-    abrir('/p/p1/plantilla')
+    abrir('/plantillas/p1/jugadores')
     await userEvent.click(await screen.findByRole('button', { name: 'Añadir' }))
     const hoja = screen.getByRole('dialog', { name: 'Añadir jugador' })
     await userEvent.type(within(hoja).getByLabelText(/Nombre/), ' Íker ')
@@ -122,7 +122,7 @@ describe('alta de jugadores', () => {
     conJugadores([BRAIS])
     manejadores['POST /api/plantillas/p1/jugadores'] = () =>
       error409('dorsal_en_uso', 'El dorsal 7 ya lo lleva Brais', 'dorsal')
-    abrir('/p/p1/plantilla')
+    abrir('/plantillas/p1/jugadores')
     await userEvent.click(await screen.findByRole('button', { name: 'Añadir' }))
     const hoja = screen.getByRole('dialog', { name: 'Añadir jugador' })
     await userEvent.type(within(hoja).getByLabelText(/Nombre/), 'Bruno')
@@ -142,7 +142,7 @@ describe('alta de jugadores', () => {
       ])
     manejadores['POST /api/plantillas/p1/jugadores'] = () =>
       json({ jugadorId: 'j8', nombre: 'Brais', dorsal: 9, posicion: null, activo: true }, 201)
-    abrir('/p/p1/plantilla')
+    abrir('/plantillas/p1/jugadores')
     await userEvent.click(await screen.findByRole('button', { name: 'Añadir el primer jugador' }))
     const hoja = screen.getByRole('dialog', { name: 'Añadir jugador' })
     await userEvent.click(within(hoja).getByRole('button', { name: 'Ya es del club' }))
@@ -170,7 +170,7 @@ describe('alta de jugadores', () => {
   it('sin elegir a nadie del club no se envía nada', async () => {
     conJugadores([])
     manejadores['GET /api/clubes/c1/jugadores'] = () => json([])
-    abrir('/p/p1/plantilla')
+    abrir('/plantillas/p1/jugadores')
     await userEvent.click(await screen.findByRole('button', { name: 'Añadir el primer jugador' }))
     const hoja = screen.getByRole('dialog', { name: 'Añadir jugador' })
     await userEvent.click(within(hoja).getByRole('button', { name: 'Ya es del club' }))
@@ -209,7 +209,7 @@ describe('ficha del jugador', () => {
   it('muestra su trayectoria por temporadas', async () => {
     conJugadores([BRAIS])
     manejadores['GET /api/clubes/c1/jugadores/j1'] = () => json(trayectoria)
-    abrir('/p/p1/plantilla/j1')
+    abrir('/plantillas/p1/jugadores/j1')
     expect(await screen.findByRole('heading', { name: 'Brais' })).toBeInTheDocument()
     const seccion = screen.getByRole('region', { name: 'Temporadas en el club' })
     expect(filas(within(seccion).getByRole('list'))).toEqual([
@@ -223,7 +223,7 @@ describe('ficha del jugador', () => {
     manejadores['GET /api/clubes/c1/jugadores/j1'] = () => json(trayectoria)
     manejadores['PATCH /api/plantillas/p1/jugadores/j1'] = async (peticion) =>
       json({ ...BRAIS, ...(await peticion.json()) })
-    abrir('/p/p1/plantilla/j1')
+    abrir('/plantillas/p1/jugadores/j1')
     await userEvent.click(await screen.findByRole('button', { name: 'Editar' }))
     const hoja = screen.getByRole('dialog', { name: 'Editar a Brais' })
     expect(within(hoja).getByText(/cambia en todas sus temporadas/)).toBeInTheDocument()
@@ -241,7 +241,7 @@ describe('ficha del jugador', () => {
     conJugadores([BRAIS])
     manejadores['GET /api/clubes/c1/jugadores/j1'] = () => json(trayectoria)
     manejadores['PATCH /api/plantillas/p1/jugadores/j1'] = () => json({ ...BRAIS, activo: false })
-    const router = abrir('/p/p1/plantilla/j1')
+    const router = abrir('/plantillas/p1/jugadores/j1')
     await userEvent.click(await screen.findByRole('button', { name: 'Dar de baja' }))
 
     const confirmacion = screen.getByRole('alertdialog', { name: '¿Dar de baja a Brais?' })
@@ -254,7 +254,7 @@ describe('ficha del jugador', () => {
     )
     expect(await screen.findByText('Brais dado de baja')).toBeInTheDocument()
     expect(enviado('PATCH /api/plantillas/p1/jugadores/j1')).toEqual([{ activo: false }])
-    await waitFor(() => expect(ruta(router)).toBe('/p/p1/plantilla'))
+    await waitFor(() => expect(ruta(router)).toBe('/plantillas/p1/jugadores'))
   })
 })
 
@@ -262,7 +262,7 @@ describe('bajas', () => {
   it('reactiva un jugador desde la vista de bajas', async () => {
     conJugadores([BRAIS, HUGO])
     manejadores['PATCH /api/plantillas/p1/jugadores/j3'] = () => json({ ...HUGO, activo: true })
-    abrir('/p/p1/plantilla')
+    abrir('/plantillas/p1/jugadores')
     await userEvent.click(await screen.findByRole('button', { name: 'Bajas' }))
     const lista = await screen.findByRole('list', { name: 'Bajas' })
     expect(filas(lista)).toEqual([expect.stringMatching(/Hugo/)])
@@ -280,7 +280,7 @@ describe('bajas', () => {
         ? error409('dorsal_en_uso', 'El dorsal 10 ya lo lleva Zoe', 'dorsal')
         : json({ ...HUGO, ...cuerpo })
     }
-    abrir('/p/p1/plantilla?ver=bajas')
+    abrir('/plantillas/p1/jugadores?ver=bajas')
     const lista = await screen.findByRole('list', { name: 'Bajas' })
     await userEvent.click(within(lista).getByRole('button', { name: 'Reactivar a Hugo' }))
 

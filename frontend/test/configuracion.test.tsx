@@ -33,7 +33,7 @@ const enviado = (clave: string) => peticiones.filter((p) => p.clave === clave).m
 describe('acceso a la configuración', () => {
   it('el entrenador ve Configuración en Más, con los datos de su plantilla pero no los del club', async () => {
     conClub([plantilla('p1', 'Senior', '2026-27', { rol: 'entrenador', esAdminClub: false })])
-    abrir('/p/p1/mas')
+    abrir('/plantillas/p1/mas')
     await userEvent.click(await screen.findByRole('link', { name: 'Configuración' }))
     expect(await screen.findByRole('heading', { name: 'Esta plantilla' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Plantillas del club' })).not.toBeInTheDocument()
@@ -44,14 +44,14 @@ describe('acceso a la configuración', () => {
 
   it.each(['delegado', 'jugador'] as const)('el %s no ve Configuración', async (rol) => {
     conClub([plantilla('p1', 'Senior', '2026-27', { rol, esAdminClub: false })])
-    abrir('/p/p1/mas')
+    abrir('/plantillas/p1/mas')
     expect(await screen.findByText('Ana Administradora')).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Configuración' })).not.toBeInTheDocument()
   })
 
   it('el administrador del club ve todos los bloques', async () => {
     conClub([senior26])
-    abrir('/p/p1/mas/configuracion')
+    abrir('/plantillas/p1/mas/configuracion')
     for (const titulo of [
       'Esta plantilla',
       'Club',
@@ -72,7 +72,7 @@ describe('datos de la plantilla', () => {
       actual = { ...actual, ...(await peticion.json()) }
       return json(actual)
     }
-    abrir('/p/p1/mas/configuracion')
+    abrir('/plantillas/p1/mas/configuracion')
     const bloque = await screen.findByRole('region', { name: 'Esta plantilla' })
     const guardar = within(bloque).getByRole('button', { name: 'Guardar' })
     expect(guardar).toBeDisabled()
@@ -103,7 +103,7 @@ describe('datos de la plantilla', () => {
         },
         409,
       )
-    abrir('/p/p1/mas/configuracion')
+    abrir('/plantillas/p1/mas/configuracion')
     const bloque = await screen.findByRole('region', { name: 'Esta plantilla' })
     const nombre = within(bloque).getByLabelText(/Nombre/)
     await userEvent.clear(nombre)
@@ -120,7 +120,7 @@ describe('club', () => {
     conClub([senior26])
     manejadores['PATCH /api/clubes/c1'] = async (peticion) =>
       json({ ...clubRexional, ...(await peticion.json()), esAdmin: true })
-    abrir('/p/p1/mas/configuracion')
+    abrir('/plantillas/p1/mas/configuracion')
     const bloque = await screen.findByRole('region', { name: 'Club' })
     const campo = within(bloque).getByLabelText(/Nombre del club/)
     await userEvent.clear(campo)
@@ -134,7 +134,7 @@ describe('club', () => {
 describe('plantillas del club', () => {
   it('lista todas por temporada, la más reciente primero', async () => {
     conClub([juvenil26, senior26, senior25])
-    abrir('/p/p1/mas/configuracion')
+    abrir('/plantillas/p1/mas/configuracion')
     const bloque = await screen.findByRole('region', { name: 'Plantillas del club' })
     expect(
       within(bloque)
@@ -148,7 +148,7 @@ describe('plantillas del club', () => {
     conClub([juvenil26, senior26])
     manejadores['PATCH /api/plantillas/p2'] = async (peticion) =>
       json({ ...juvenil26, ...(await peticion.json()) })
-    abrir('/p/p1/mas/configuracion')
+    abrir('/plantillas/p1/mas/configuracion')
     await userEvent.click(await screen.findByRole('button', { name: 'Editar Juvenil 2026-27' }))
     const hoja = screen.getByRole('dialog', { name: 'Editar Juvenil 2026-27' })
     const categoria = within(hoja).getByLabelText(/Categoría/)
@@ -170,7 +170,7 @@ describe('plantillas del club', () => {
       plantillas = [senior26]
       return new Response(null, { status: 204 })
     }
-    abrir('/p/p1/mas/configuracion')
+    abrir('/plantillas/p1/mas/configuracion')
     await userEvent.click(await screen.findByRole('button', { name: 'Borrar Juvenil 2026-27' }))
     const hoja = screen.getByRole('dialog', { name: 'Borrar Juvenil 2026-27' })
     const borrar = within(hoja).getByRole('button', { name: 'Borrar plantilla' })
@@ -194,7 +194,7 @@ describe('plantillas del club', () => {
       plantillas = [juvenil26]
       return new Response(null, { status: 204 })
     }
-    const router = abrir('/p/p1/mas/configuracion')
+    const router = abrir('/plantillas/p1/mas/configuracion')
     await userEvent.click(await screen.findByRole('button', { name: 'Borrar Senior 2026-27' }))
     const hoja = screen.getByRole('dialog', { name: 'Borrar Senior 2026-27' })
     await userEvent.type(within(hoja).getByLabelText('Escribe Senior para confirmar'), 'Senior')
@@ -207,7 +207,7 @@ describe('plantillas del club', () => {
 describe('administradores del club', () => {
   it('lista los administradores marcando al usuario actual', async () => {
     conClub([senior26])
-    abrir('/p/p1/mas/configuracion')
+    abrir('/plantillas/p1/mas/configuracion')
     const bloque = await screen.findByRole('region', { name: 'Administradores del club' })
     expect(await within(bloque).findByText(`${USUARIO.name} (tú)`)).toBeInTheDocument()
     expect(within(bloque).getByText('berta@rexional.test')).toBeInTheDocument()
@@ -230,7 +230,7 @@ describe('administradores del club', () => {
       }
       return json({ usuarioId: 'u7', nombre: 'Carlos', email }, 201)
     }
-    abrir('/p/p1/mas/configuracion')
+    abrir('/plantillas/p1/mas/configuracion')
     await userEvent.click(await screen.findByRole('button', { name: 'Añadir administrador' }))
     const hoja = screen.getByRole('dialog', { name: 'Añadir administrador' })
     await userEvent.type(within(hoja).getByLabelText(/Email/), 'nadie@prueba.test')
@@ -257,7 +257,7 @@ describe('administradores del club', () => {
         },
         409,
       )
-    abrir('/p/p1/mas/configuracion')
+    abrir('/plantillas/p1/mas/configuracion')
     const bloque = await screen.findByRole('region', { name: 'Administradores del club' })
     expect(await within(bloque).findByText(/añade otro antes de retirarte/)).toBeInTheDocument()
 
@@ -273,7 +273,7 @@ describe('administradores del club', () => {
 
   it('cancelar la confirmación no retira a nadie', async () => {
     conClub([senior26])
-    abrir('/p/p1/mas/configuracion')
+    abrir('/plantillas/p1/mas/configuracion')
     const bloque = await screen.findByRole('region', { name: 'Administradores del club' })
     await userEvent.click(
       await within(bloque).findByRole('button', { name: 'Retirar a Berta Bouzas' }),

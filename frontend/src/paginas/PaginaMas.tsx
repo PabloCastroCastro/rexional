@@ -68,7 +68,7 @@ export function PaginaMas() {
       </dl>
 
       {puedeConfigurar(plantilla) && (
-        <Link to={`/p/${plantilla.id}/mas/configuracion`} className={estilos.enlace}>
+        <Link to={`/plantillas/${plantilla.id}/mas/configuracion`} className={estilos.enlace}>
           <Settings aria-hidden size={20} />
           <span>Configuración</span>
           <ChevronRight aria-hidden size={20} />
