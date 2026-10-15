@@ -75,6 +75,8 @@ En desarrollo, **http://localhost:5173/componentes** muestra todos los component
 | `/plantillas/:plantillaId/entrenos?fecha=AAAA-MM-DD&entreno=id` | Entrenos de un día (hoy por defecto) y sus sesiones: crear, cancelar y pasar lista |
 | `/plantillas/:plantillaId/entrenos/horario` | Horario semanal de entrenos de la plantilla |
 | `/plantillas/:plantillaId/entrenos/historial` | Próximos entrenos e historial |
+| `/plantillas/:plantillaId/partidos?ver=pasados` | Próximos partidos (o pasados) con su convocatoria |
+| `/plantillas/:plantillaId/partidos/:partidoId` | Ficha del partido: datos, editar, borrar y convocatoria |
 | `/plantillas/:plantillaId/mas/configuracion` | Configuración: la ven el entrenador, el admin de la plantilla y los administradores del club |
 
 - **La plantilla activa va en la URL**: el botón Atrás y los enlaces llevan siempre a la plantilla correcta, y se pueden tener dos pestañas con plantillas distintas. La última usada se guarda en el navegador (por usuario).
