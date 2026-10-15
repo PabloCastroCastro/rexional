@@ -176,7 +176,13 @@ describe('requireRol en /plantillas/:id', () => {
       rol: 'jugador',
       esAdminClub: false,
       jugadorId: ids.jugador,
-      plantilla: { id: ids.senior26, clubId: ids.clubA, nombre: 'Senior', temporada: '2026-27' },
+      plantilla: {
+        id: ids.senior26,
+        clubId: ids.clubA,
+        nombre: 'Senior',
+        temporada: '2026-27',
+        multasActivas: true,
+      },
     })
   })
 

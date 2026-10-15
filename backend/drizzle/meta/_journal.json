@@ -43,6 +43,13 @@
       "when": 1792055320082,
       "tag": "0005_multas",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792074772488,
+      "tag": "0006_multas_opcionales",
+      "breakpoints": true
     }
   ]
 }

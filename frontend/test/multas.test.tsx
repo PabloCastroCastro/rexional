@@ -324,3 +324,58 @@ describe('plantilla y rol jugador', () => {
     expect(screen.queryByRole('button', { name: /Editar|Añadir motivo/ })).not.toBeInTheDocument()
   })
 })
+
+describe('multas desactivadas en la plantilla', () => {
+  const sinMultas = (extra = {}) =>
+    plantilla('p1', 'Alevín', '2026-27', { multasActivas: false, ...extra })
+
+  it('no se ve la pestaña ni la deuda, y la sección invita a activarlas', async () => {
+    conMultas(sinMultas())
+    abrir('/plantillas/p1/jugadores')
+    const navegacion = await screen.findByRole('navigation', { name: 'Secciones' })
+    expect(
+      within(navegacion)
+        .getAllByRole('link')
+        .map((a) => a.textContent),
+    ).toEqual(['Plantilla', 'Entrenos', 'Partidos', 'Más'])
+    await screen.findByRole('list', { name: 'Jugadores' })
+    expect(screen.queryByText(/multas pendientes/)).not.toBeInTheDocument()
+    const pedidas = peticiones.map((p) => p.clave)
+    expect(pedidas).not.toContain('GET /api/plantillas/p1/multas/resumen')
+    expect(pedidas).not.toContain('GET /api/plantillas/p1/multas')
+  })
+
+  it('si se entra en la dirección de multas, se explica y se enlaza a Configuración', async () => {
+    conMultas(sinMultas())
+    abrir('/plantillas/p1/multas')
+    expect(await screen.findByText('Esta plantilla no usa multas')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Activarlas en Configuración' })).toHaveAttribute(
+      'href',
+      '/plantillas/p1/mas/configuracion',
+    )
+  })
+
+  it('el delegado no tiene el enlace a Configuración', async () => {
+    conMultas(sinMultas({ rol: 'delegado', esAdminClub: false }))
+    abrir('/plantillas/p1/multas')
+    expect(await screen.findByText('Esta plantilla no usa multas')).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Configuración/ })).not.toBeInTheDocument()
+  })
+
+  it('se desactivan desde Configuración', async () => {
+    conMultas()
+    manejadores['GET /api/clubes/c1/admins'] = () => json([])
+    manejadores['PATCH /api/plantillas/p1'] = async (peticion) =>
+      json({ ...senior26, ...(await peticion.json()) })
+    abrir('/plantillas/p1/mas/configuracion')
+    const bloque = await screen.findByRole('region', { name: 'Esta plantilla' })
+    const interruptor = within(bloque).getByRole('checkbox', { name: /Multas en esta plantilla/ })
+    expect(interruptor).toBeChecked()
+    await userEvent.click(interruptor)
+    await userEvent.click(within(bloque).getByRole('button', { name: 'Guardar' }))
+    expect(await screen.findByText('Plantilla guardada')).toBeInTheDocument()
+    expect(enviado('PATCH /api/plantillas/p1')).toEqual([
+      { nombre: 'Senior', categoria: 'sénior', multasActivas: false },
+    ])
+  })
+})

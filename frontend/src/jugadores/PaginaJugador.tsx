@@ -29,7 +29,11 @@ export function PaginaJugador() {
   const trayectoria = useTrayectoria(plantilla.clubId, jugadorId)
   const resumen = useResumenAsistencia(plantilla.id)
   const asistencia = resumen.data?.find((r) => r.jugadorId === jugadorId)
-  const multasPendientes = useMultas(plantilla.id, { jugador: jugadorId, estado: 'pendientes' })
+  const multasPendientes = useMultas(
+    plantilla.id,
+    { jugador: jugadorId, estado: 'pendientes' },
+    plantilla.multasActivas,
+  )
   const deuda = (multasPendientes.data ?? []).reduce((total, m) => total + m.importeCentimos, 0)
   const [formulario, setFormulario] = useState<ModoFormulario | null>(null)
   const lista = `/plantillas/${plantilla.id}/jugadores`
@@ -137,7 +141,7 @@ export function PaginaJugador() {
         </section>
       )}
 
-      {multasPendientes.data && (
+      {plantilla.multasActivas && multasPendientes.data && (
         <section className={estilos.seccion} aria-labelledby="multas">
           <h2 id="multas">Multas en esta plantilla</h2>
           <p className={estilos.asistencia}>

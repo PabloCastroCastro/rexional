@@ -199,6 +199,10 @@
             ],
             "format": "uuid"
           },
+          "multasActivas": {
+            "type": "boolean",
+            "description": "false si la plantilla no usa multas (no se ven ni se pueden poner)"
+          },
           "rol": {
             "type": "string",
             "enum": [
@@ -220,6 +224,7 @@
           "categoria",
           "temporada",
           "plantillaAnteriorId",
+          "multasActivas",
           "rol",
           "esAdminClub"
         ]
@@ -1780,8 +1785,8 @@
         "tags": [
           "Plantillas"
         ],
-        "summary": "Cambiar el nombre o la categoría",
-        "description": "Entrenador o superior. La temporada no se modifica.",
+        "summary": "Cambiar el nombre, la categoría o si usa multas",
+        "description": "Entrenador o superior. La temporada no se modifica. Desactivar las multas las oculta y bloquea sin borrar nada: al reactivarlas vuelven como estaban.",
         "parameters": [
           {
             "schema": {
@@ -1808,6 +1813,9 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 80
+                  },
+                  "multasActivas": {
+                    "type": "boolean"
                   }
                 },
                 "additionalProperties": false
@@ -4125,7 +4133,7 @@
             }
           },
           "409": {
-            "description": "Ya hay un motivo activo con esa descripción",
+            "description": "Ya hay un motivo activo con esa descripción, o las multas están desactivadas",
             "content": {
               "application/json": {
                 "schema": {
@@ -4254,7 +4262,7 @@
             }
           },
           "409": {
-            "description": "Ya hay un motivo activo con esa descripción",
+            "description": "Ya hay un motivo activo con esa descripción, o las multas están desactivadas",
             "content": {
               "application/json": {
                 "schema": {
@@ -4502,6 +4510,16 @@
                 }
               }
             }
+          },
+          "409": {
+            "description": "Las multas están desactivadas en la plantilla",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -4620,6 +4638,16 @@
                 }
               }
             }
+          },
+          "409": {
+            "description": "Las multas están desactivadas en la plantilla",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       },
@@ -4675,6 +4703,16 @@
           },
           "404": {
             "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Las multas están desactivadas en la plantilla",
             "content": {
               "application/json": {
                 "schema": {
@@ -4774,6 +4812,16 @@
           },
           "404": {
             "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Las multas están desactivadas en la plantilla",
             "content": {
               "application/json": {
                 "schema": {

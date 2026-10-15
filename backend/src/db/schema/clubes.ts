@@ -88,6 +88,8 @@ export const plantillas = pgTable(
         onDelete: 'set null',
       },
     ),
+    // Las multas no aplican en todas las plantillas (p. ej. en alevines): se pueden desactivar
+    multasActivas: boolean('multas_activas').notNull().default(true),
     creadoPor: creadoPor(),
     createdAt: creadoEn(),
   },

@@ -410,3 +410,70 @@ describe('multas', () => {
     }
   })
 })
+
+describe('multas desactivadas en la plantilla', () => {
+  const base = () => `/plantillas/${ids.senior}`
+
+  it('solo entrenador o superior las desactiva, y la plantilla lo indica', async () => {
+    expect((await pedir('PATCH', base(), 'delegado', { multasActivas: false })).status).toBe(403)
+    const res = await pedir('PATCH', base(), 'admin', { multasActivas: false })
+    expect(res.status).toBe(200)
+    expect(await res.json()).toMatchObject({ multasActivas: false })
+    const lista = await (await pedir('GET', '/plantillas', 'delegado')).json()
+    expect(lista.find((p: { id: string }) => p.id === ids.senior)).toMatchObject({
+      multasActivas: false,
+    })
+  })
+
+  it('con las multas desactivadas no se cambia nada, pero lo que hay se puede consultar', async () => {
+    const [motivo] = await listar()
+    const [multa] = await (await pedir('GET', `${base()}/multas`, 'delegado')).json()
+    for (const [metodo, ruta, cuerpo] of [
+      ['POST', `${base()}/multas`, { jugadorId: ids.brais, motivo: 'X', importeCentimos: 100 }],
+      ['PATCH', `${base()}/multas/${multa?.id}`, { fechaPago: '2026-10-14' }],
+      ['DELETE', `${base()}/multas/${multa?.id}`, undefined],
+      ['POST', `${base()}/jugadores/${ids.brais}/saldar`, undefined],
+      ['POST', catalogo(), { descripcion: 'Nuevo', importeCentimos: 100 }],
+      ['PATCH', `${catalogo()}/${motivo?.id}`, { importeCentimos: 900 }],
+    ] as const) {
+      const res = await pedir(metodo, ruta, 'delegado', cuerpo)
+      expect(res.status).toBe(409)
+      expect((await res.json()).error.codigo).toBe('multas_desactivadas')
+    }
+    for (const ruta of [`${base()}/multas`, `${base()}/multas/resumen`, catalogo()]) {
+      expect((await pedir('GET', ruta, 'delegado')).status).toBe(200)
+    }
+  })
+
+  it('al reactivarlas vuelven como estaban', async () => {
+    const antes = await (await pedir('GET', `${base()}/multas`, 'delegado')).json()
+    await pedir('PATCH', base(), 'admin', { multasActivas: true })
+    const despues = await (await pedir('GET', `${base()}/multas`, 'delegado')).json()
+    expect(despues).toEqual(antes)
+    const res = await pedir('POST', `${base()}/multas`, 'delegado', {
+      jugadorId: ids.brais,
+      motivo: 'Otra vez activas',
+      importeCentimos: 100,
+    })
+    expect(res.status).toBe(201)
+  })
+
+  it('la plantilla de la temporada siguiente toma el valor de la anterior', async () => {
+    await pedir('PATCH', `/plantillas/${ids.juvenil}`, 'admin', { multasActivas: false })
+    const res = await pedir('POST', '/plantillas', 'admin', {
+      clubId: clubesCreados[0],
+      nombre: 'Juvenil',
+      categoria: 'juvenil',
+      temporada: '2027-28',
+      plantillaAnteriorId: ids.juvenil,
+    })
+    expect(await res.json()).toMatchObject({ multasActivas: false })
+    const nueva = await pedir('POST', '/plantillas', 'admin', {
+      clubId: clubesCreados[0],
+      nombre: 'Alevín',
+      categoria: 'alevín',
+      temporada: '2026-27',
+    })
+    expect(await nueva.json()).toMatchObject({ multasActivas: true })
+  })
+})

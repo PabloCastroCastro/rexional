@@ -20,6 +20,9 @@ export const EsquemaPlantilla = z
     categoria: z.string().openapi({ example: 'sénior' }),
     temporada: z.string().openapi({ example: '2026-27' }),
     plantillaAnteriorId: z.uuid().nullable(),
+    multasActivas: z.boolean().openapi({
+      description: 'false si la plantilla no usa multas (no se ven ni se pueden poner)',
+    }),
     rol: z.enum(ROLES).openapi({ description: 'Rol efectivo del usuario en la plantilla' }),
     esAdminClub: z.boolean(),
   })
@@ -55,6 +58,7 @@ const columnasPlantilla = {
   categoria: plantillas.categoria,
   temporada: plantillas.temporada,
   plantillaAnteriorId: plantillas.plantillaAnteriorId,
+  multasActivas: plantillas.multasActivas,
 }
 
 const plantillaDuplicada = (nombre: string, temporada: string) =>
@@ -187,9 +191,14 @@ export const rutasPlantillas = () =>
           )
         }
 
+        let multasActivas = true
         if (datos.plantillaAnteriorId) {
           const [anterior] = await db
-            .select({ clubId: plantillas.clubId, temporada: plantillas.temporada })
+            .select({
+              clubId: plantillas.clubId,
+              temporada: plantillas.temporada,
+              multasActivas: plantillas.multasActivas,
+            })
             .from(plantillas)
             .where(eq(plantillas.id, datos.plantillaAnteriorId))
           if (
@@ -203,6 +212,8 @@ export const rutasPlantillas = () =>
               'La plantilla anterior debe ser del mismo club y de una temporada anterior',
             )
           }
+          // Si la anterior no usaba multas, la nueva tampoco (los alevines siguen sin multas)
+          multasActivas = anterior.multasActivas
         }
 
         try {
@@ -213,6 +224,7 @@ export const rutasPlantillas = () =>
               .values({
                 ...datos,
                 plantillaAnteriorId: datos.plantillaAnteriorId ?? null,
+                multasActivas,
                 creadoPor: usuarioId,
               })
               .returning(columnasPlantilla)
@@ -253,8 +265,9 @@ export const rutasPlantillas = () =>
         method: 'patch',
         path: '/plantillas/{id}',
         tags: ['Plantillas'],
-        summary: 'Cambiar el nombre o la categoría',
-        description: 'Entrenador o superior. La temporada no se modifica.',
+        summary: 'Cambiar el nombre, la categoría o si usa multas',
+        description:
+          'Entrenador o superior. La temporada no se modifica. Desactivar las multas las oculta y bloquea sin borrar nada: al reactivarlas vuelven como estaban.',
         middleware: [requireRol('entrenador')] as const,
         request: {
           params: ParamPlantilla,
@@ -265,10 +278,11 @@ export const rutasPlantillas = () =>
                   .object({
                     nombre: EsquemaTexto('El nombre').optional(),
                     categoria: EsquemaTexto('La categoría').optional(),
+                    multasActivas: z.boolean().optional(),
                   })
                   .strict()
-                  .refine((d) => d.nombre !== undefined || d.categoria !== undefined, {
-                    message: 'Indica el nombre o la categoría',
+                  .refine((d) => Object.values(d).some((v) => v !== undefined), {
+                    message: 'Indica el nombre, la categoría o si usa multas',
                   }),
               },
             },

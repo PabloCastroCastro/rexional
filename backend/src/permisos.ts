@@ -51,7 +51,13 @@ export type EnvSesion = { Variables: VariablesSesion }
 
 export type EnvPlantilla = {
   Variables: VariablesAcceso & {
-    plantilla: { id: string; clubId: string; nombre: string; temporada: string }
+    plantilla: {
+      id: string
+      clubId: string
+      nombre: string
+      temporada: string
+      multasActivas: boolean
+    }
   }
 }
 
@@ -105,6 +111,7 @@ export const requireRol =
         clubId: plantillas.clubId,
         nombre: plantillas.nombre,
         temporada: plantillas.temporada,
+        multasActivas: plantillas.multasActivas,
         rolMembresia: membresias.rol,
         adminClub: adminsClub.usuarioId,
         jugadorId: jugadores.id,
@@ -136,6 +143,7 @@ export const requireRol =
       clubId: fila.clubId,
       nombre: fila.nombre,
       temporada: fila.temporada,
+      multasActivas: fila.multasActivas,
     })
     c.set('rol', rolEfectivo)
     c.set('esAdminClub', esAdminClub)

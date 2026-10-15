@@ -1,0 +1,1 @@
+ALTER TABLE "plantillas" ADD COLUMN "multas_activas" boolean DEFAULT true NOT NULL;

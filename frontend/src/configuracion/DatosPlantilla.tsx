@@ -8,7 +8,7 @@ import { Campo } from '../componentes/Campo'
 import { CATEGORIAS, CLAVE_PLANTILLAS } from '../plantillas/datos'
 import estilos from './Configuracion.module.css'
 
-type PlantillaEditable = { id: string; nombre: string; categoria: string }
+type PlantillaEditable = { id: string; nombre: string; categoria: string; multasActivas: boolean }
 
 // Nombre y categoría de una plantilla. Se usa para la plantilla activa y para editar cualquier
 // plantilla del club desde la lista.
@@ -25,6 +25,7 @@ export function DatosPlantilla({
   const { avisar } = useAvisos()
   const [nombre, setNombre] = useState(plantilla.nombre)
   const [categoria, setCategoria] = useState(plantilla.categoria)
+  const [multasActivas, setMultasActivas] = useState(plantilla.multasActivas)
   const [errores, setErrores] = useState<Record<string, string>>({})
   const idCategorias = useId()
 
@@ -32,15 +33,16 @@ export function DatosPlantilla({
   useEffect(() => {
     setNombre(plantilla.nombre)
     setCategoria(plantilla.categoria)
+    setMultasActivas(plantilla.multasActivas)
     setErrores({})
-  }, [plantilla.nombre, plantilla.categoria])
+  }, [plantilla.nombre, plantilla.categoria, plantilla.multasActivas])
 
   const guardar = useMutation({
     mutationFn: () =>
       datos(
         api.PATCH('/api/plantillas/{id}', {
           params: { path: { id: plantilla.id } },
-          body: { nombre: nombre.trim(), categoria: categoria.trim() },
+          body: { nombre: nombre.trim(), categoria: categoria.trim(), multasActivas },
         }),
       ),
     onSuccess: async () => {
@@ -59,7 +61,10 @@ export function DatosPlantilla({
     },
   })
 
-  const hayCambios = nombre.trim() !== plantilla.nombre || categoria.trim() !== plantilla.categoria
+  const hayCambios =
+    nombre.trim() !== plantilla.nombre ||
+    categoria.trim() !== plantilla.categoria ||
+    multasActivas !== plantilla.multasActivas
 
   function enviar(e: FormEvent) {
     e.preventDefault()
@@ -97,6 +102,19 @@ export function DatosPlantilla({
           <option key={c} value={c} />
         ))}
       </datalist>
+      <label className={estilos.interruptor}>
+        <input
+          type="checkbox"
+          checked={multasActivas}
+          onChange={(e) => setMultasActivas(e.target.checked)}
+        />
+        <span>
+          Multas en esta plantilla
+          <span className={estilos.descripcion}>
+            Desactívalas si no aplican (p. ej. en alevines): se ocultan sin borrar nada.
+          </span>
+        </span>
+      </label>
       <div className={estilos.acciones}>
         {alCancelar && (
           <Boton variante="secundario" onClick={alCancelar}>

@@ -119,6 +119,7 @@ Este documento recoge todas las decisiones funcionales, técnicas y de organizac
 - El motivo y el importe se **copian** en la multa: cambiar el catálogo no altera multas pasadas.
 - Marcar una multa como cobrada (guarda la fecha de pago; una multa está cobrada si y solo si tiene fecha de pago) o deshacerlo. Saldar de una vez todas las multas pendientes de un jugador.
 - Resumen: total pendiente de cobro, total en caja (cobrado) y deuda por jugador ordenada de mayor a menor.
+- **Multas opcionales por plantilla**: el entrenador o superior las desactiva cuando no aplican (por ejemplo, en alevines). Desactivadas, no se ven la pestaña Multas ni las deudas y la API no deja cambiar nada; lo que hubiera se conserva y vuelve al reactivarlas. Una plantilla nueva toma el valor de su plantilla anterior.
 - Las multas y la caja son de cada plantilla, así que **se reinician cada temporada**. Las pendientes de una temporada anterior siguen en su plantilla y se pueden consultar y cobrar.
 
 ### 2.6 Personalización visual (ciclo posterior al MVP)
@@ -362,6 +363,7 @@ Una categoría del club en una temporada. Es la unidad de trabajo.
 | temporada | text | formato `AAAA-AA` (`2026-27`), con el segundo año consecutivo al primero. No se modifica |
 | plantilla_anterior_id | uuid → plantillas | nullable, set null. La misma plantilla en la temporada anterior; del mismo club y de una temporada anterior (validado en el servicio) |
 | creado_por | uuid → user | |
+| multas_activas | boolean | por defecto true; false si la plantilla no usa multas |
 | created_at | timestamptz | |
 
 ### membresias
@@ -1252,6 +1254,35 @@ Crear las plantillas de una temporada nueva a partir de las de la anterior (secc
 - [ ] Las multas pendientes de la temporada anterior siguen en su plantilla y se pueden consultar y cobrar
 - [ ] Asistente en el frontend (solo administradores del club): elegir qué plantillas de la temporada anterior continúan, con qué nombre y categoría, y qué copiar, con un resumen antes de confirmar
 - [ ] La temporada anterior sigue consultable; el selector muestra primero la nueva
+- [ ] Tests
+
+#### GH-101
+**Título:** Multas opcionales por plantilla
+**Etiquetas:** feature, db, backend, frontend
+
+Las multas no tienen sentido en todas las plantillas (por ejemplo, en los alevines). Cada plantilla puede desactivarlas: entonces no se ven en la app y no se pueden poner. Depende de GH-22, GH-24, GH-25 y GH-70.
+
+**Criterios de aceptación**
+- [ ] Columna `multas_activas` en `plantillas` (por defecto true), con migración; una plantilla nueva toma el valor de su plantilla anterior si la tiene
+- [ ] `PATCH /api/plantillas/:id` admite `multasActivas` (entrenador o superior) y las respuestas de plantillas lo incluyen
+- [ ] Con las multas desactivadas, la API rechaza poner, editar, cobrar, borrar y saldar multas, y editar el catálogo (409 `multas_desactivadas`); las multas y el catálogo existentes se conservan y vuelven a verse al reactivarlas
+- [ ] Interruptor «Multas» en Configuración › Esta plantilla
+- [ ] Con las multas desactivadas no se ven la pestaña Multas ni la deuda en la plantilla y en la ficha del jugador
+- [ ] Tests
+
+#### GH-102
+**Título:** Hora de fin de los entrenos
+**Etiquetas:** feature, db, backend, frontend
+
+Saber cuándo termina cada entreno: hora de fin opcional, junto a la de inicio. Depende de GH-81 y GH-82.
+
+**Criterios de aceptación**
+- [ ] Columna `hora_fin` en `entrenos` (opcional, posterior a `hora` si las dos están), con migración
+- [ ] Horario semanal: cada sesión puede llevar hora de fin (`{ dia, hora, horaFin? }`), que pasa a los entrenos que crea
+- [ ] Entrenos sueltos con hora de fin opcional al crearlos
+- [ ] `PATCH /api/plantillas/:id/entrenos/:eid` para cambiar la hora y la hora de fin de un entreno (delegado o superior)
+- [ ] Las respuestas de entrenos incluyen `horaFin`; en pasar lista, el historial y los próximos se muestra «20:00–21:30»
+- [ ] En el documento, `hora_fin` sustituye a `duracion_prevista` del ciclo 7 (la duración se calcula)
 - [ ] Tests
 
 ---

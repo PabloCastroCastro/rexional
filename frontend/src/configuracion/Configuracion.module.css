@@ -133,3 +133,29 @@
   color: var(--color-texto);
   font-size: var(--texto-sm);
 }
+
+.interruptor {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espacio-3);
+  min-height: var(--altura-tactil);
+  cursor: pointer;
+}
+
+.interruptor input {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-top: 2px;
+  accent-color: var(--color-primario);
+}
+
+.interruptor > span {
+  display: grid;
+  gap: var(--espacio-1);
+  font-weight: var(--peso-medio);
+}
+
+.interruptor .descripcion {
+  font-weight: var(--peso-normal);
+}
