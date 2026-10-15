@@ -12,7 +12,9 @@ import { PaginaPlantilla } from './jugadores/PaginaPlantilla'
 import { PaginaComponentes } from './paginas/PaginaComponentes'
 import { PaginaMas } from './paginas/PaginaMas'
 import { PaginaNoEncontrada } from './paginas/PaginaNoEncontrada'
-import { PaginaMultas, PaginaPartidos } from './paginas/Secciones'
+import { PaginaMultas } from './paginas/Secciones'
+import { PaginaPartido } from './partidos/PaginaPartido'
+import { PaginaPartidos } from './partidos/PaginaPartidos'
 import { Inicio } from './plantillas/Inicio'
 import { PaginaElegirPlantilla } from './plantillas/PaginaElegirPlantilla'
 import { PlantillaActiva } from './plantillas/PlantillaActiva'
@@ -59,6 +61,7 @@ export const rutas = [
                 ],
               },
               { path: 'partidos', element: <PaginaPartidos /> },
+              { path: 'partidos/:partidoId', element: <PaginaPartido /> },
               { path: 'multas', element: <PaginaMultas /> },
               { path: 'mas', element: <PaginaMas /> },
               { path: 'mas/configuracion', element: <PaginaConfiguracion /> },
