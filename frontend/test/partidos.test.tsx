@@ -75,6 +75,7 @@ const detalle = (r: ResumenPartido, convocados: string[] = []): Partido => {
       minutos: null,
     })),
     eventos: [],
+    acta: null,
   }
 }
 

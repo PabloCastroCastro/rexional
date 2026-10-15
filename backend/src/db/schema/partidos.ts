@@ -3,18 +3,22 @@ import {
   type AnyPgColumn,
   boolean,
   check,
+  customType,
   date,
   foreignKey,
   index,
+  integer,
   pgEnum,
   pgTable,
   primaryKey,
   smallint,
   text,
   time,
+  timestamp,
   unique,
   uuid,
 } from 'drizzle-orm/pg-core'
+import { user } from './auth.js'
 import { fichas, plantillas } from './clubes.js'
 import { creadoEn, id } from './comun.js'
 
@@ -155,5 +159,28 @@ export const eventosPartido = pgTable(
     index('eventos_partido_jugador_idx').on(t.jugadorId),
     check('eventos_partido_jugador', sql`${t.jugadorId} IS NOT NULL OR ${t.tipo} = 'gol_propia'`),
     check('eventos_partido_minuto_valido', sql`${t.minuto} BETWEEN 0 AND 150`),
+  ],
+)
+
+// Contenido binario (el PDF del acta)
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({ dataType: () => 'bytea' })
+
+// La ficha del partido en PDF que publica la federación, una por partido. Se guarda en la base de
+// datos (pesa unos 50 KB, como mucho 2 MB): así entra en las copias de seguridad
+export const actasPartido = pgTable(
+  'actas_partido',
+  {
+    partidoId: uuid('partido_id')
+      .primaryKey()
+      .references(() => partidos.id, { onDelete: 'cascade' }),
+    pdf: bytea('pdf').notNull(),
+    nombreArchivo: text('nombre_archivo').notNull(),
+    tamano: integer('tamano').notNull(),
+    subidaPor: uuid('subida_por').references(() => user.id, { onDelete: 'set null' }),
+    subidaEn: timestamp('subida_en', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    check('actas_partido_tamano', sql`${t.tamano} BETWEEN 1 AND 2097152`),
+    check('actas_partido_nombre_no_vacio', sql`btrim(${t.nombreArchivo}) <> ''`),
   ],
 )

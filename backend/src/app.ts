@@ -5,6 +5,7 @@ import { config } from './config.js'
 import { comprobarBaseDeDatos } from './db/cliente.js'
 import { manejarError, rutaNoEncontrada, soloMismoOrigen, validacionFallida } from './errores.js'
 import { registrarPeticiones } from './peticiones.js'
+import { rutasActas } from './rutas/actas.js'
 import { rutasClubes } from './rutas/clubes.js'
 import { rutasEntrenos } from './rutas/entrenos.js'
 import { rutasEstadisticas, rutasEstadisticasClub } from './rutas/estadisticas.js'
@@ -57,6 +58,7 @@ export function crearApp(dependencias: Partial<Dependencias> = {}) {
   app.route('/', rutasPartidos())
   app.route('/', rutasEstadisticas())
   app.route('/', rutasEstadisticasClub())
+  app.route('/', rutasActas())
   app.route('/', rutasMultas())
   app.route('/', rutasMultasJugadores())
 

@@ -50,6 +50,7 @@ const PARTIDO: Partido = {
   golesFavor: null,
   golesContra: null,
   eventos: [],
+  acta: null,
   jugadores: [
     jugador('j1', 'Íker', 1, true),
     jugador('j2', 'Brais', 7, true),

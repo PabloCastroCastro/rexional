@@ -148,6 +148,7 @@ Este documento recoge todas las decisiones funcionales, técnicas y de organizac
 - **Minutos jugados** sobre 90: un titular juega hasta que sale o le expulsan; quien entra, desde su minuto; un suplente que no entra, 0. Los minutos del descuento no suman.
 - Un partido pasa a **jugado** al poner el resultado; también se puede **aplazar**. No se saca de la convocatoria a quien tiene estadísticas en el partido.
 - Las estadísticas acumuladas solo cuentan los partidos jugados.
+- **Acta del partido**: se sube al partido la ficha en PDF de la Federación Gallega (como mucho 2 MB) y se queda guardada para descargarla. La app la lee (resultado, titulares, suplentes, cambios, goles, tarjetas, competición, jornada y estadio): las columnas de cada equipo por la posición del texto y, por el color de los iconos, quién entra y quién sale y si la tarjeta es amarilla o roja. Nuestro equipo es el local o el visitante según el partido (si no se sabe, por el nombre del club). Los nombres del acta se emparejan con la plantilla sin tildes ni mayúsculas, con el dorsal de apoyo. El entrenador revisa lo leído (elige los jugadores sin emparejar y el tipo de las tarjetas que no se han podido leer) y al confirmar se registra con la fuente `acta`: la convocatoria pasa a ser la del acta y competición, lugar y hora se rellenan si estaban vacíos. Volver a confirmar sustituye lo importado y conserva lo registrado a mano.
 
 ### 2.8 Planificación de entrenamientos (ciclo posterior)
 
@@ -487,6 +488,16 @@ Horario semanal de entrenos de una plantilla (uno por plantilla).
 | origen | enum `manual, acta, federacion` | fuente del dato; por defecto manual |
 | created_at | timestamptz | |
 
+### actas_partido
+| Campo | Tipo | Notas |
+|---|---|---|
+| partido_id | uuid → partidos | PK (un acta por partido), cascade |
+| pdf | bytea | el PDF tal como se subió; en la base de datos para que entre en las copias |
+| nombre_archivo | text | no vacío |
+| tamano | integer | bytes, entre 1 y 2 MB |
+| subida_por | uuid → user | set null |
+| subida_en | timestamptz | |
+
 ### motivos_multa
 | Campo | Tipo | Notas |
 |---|---|---|
@@ -618,6 +629,9 @@ Prefijo `/api`. JSON. Todas las rutas de la plantilla cuelgan de `/plantillas`, 
 | | `POST /plantillas/:id/partidos/:pid/eventos` · `DELETE .../eventos/:evid` (los eventos se leen en el detalle del partido) | Delegado |
 | | `GET /plantillas/:id/estadisticas` (resultados del equipo y acumulados por jugador) | Miembro (jugador: solo suyas) |
 | | `GET /clubes/:cid/jugadores/:jid/estadisticas` (trayectoria por temporadas y totales) | Miembro del club (jugador: solo la suya) |
+| Actas | `POST /plantillas/:id/partidos/:pid/acta` (PDF en `multipart/form-data`; devuelve lo leído sin registrar) · `GET .../acta/lectura` · `DELETE .../acta` | Delegado |
+| | `GET /plantillas/:id/partidos/:pid/acta` (descarga del PDF) | Miembro |
+| | `POST /plantillas/:id/partidos/:pid/acta/confirmar` (con las correcciones de la revisión; registra con la fuente `acta`) | Delegado |
 | Multas | `GET /plantillas/:id/motivos-multa?inactivos=` · `POST /plantillas/:id/motivos-multa` · `PATCH /plantillas/:id/motivos-multa/:mid` (editar, desactivar o reactivar; no se borran) | Miembro / Delegado |
 | | `GET /plantillas/:id/multas?jugador=&estado=pendientes|cobradas` · `POST /plantillas/:id/multas` (del catálogo o libre) · `PATCH/DELETE /plantillas/:id/multas/:mid` (`fechaPago` cobra; `null` deshace) | Miembro (jugador: suyas) / Delegado |
 | | `POST /plantillas/:id/jugadores/:jid/saldar` | Delegado |

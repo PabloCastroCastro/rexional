@@ -57,3 +57,41 @@ export function sugerencias(partidos: ResumenPartido[]) {
     .sort((a, b) => b.fecha.localeCompare(a.fecha))
   return { competiciones, campoEnCasa: enCasa[0]?.lugar ?? null }
 }
+
+export type ActaLeida = components['schemas']['ActaLeida']
+export type LecturaActa = NonNullable<components['schemas']['LecturaActa']>
+
+// Lo leído del acta guardada, para revisarlo antes de registrarlo
+export const useActa = (plantillaId: string, partidoId: string) =>
+  useQuery({
+    queryKey: [...CLAVE_PARTIDOS, plantillaId, 'acta', partidoId],
+    queryFn: () =>
+      datos(
+        api.GET('/api/plantillas/{id}/partidos/{pid}/acta/lectura', {
+          params: { path: { id: plantillaId, pid: partidoId } },
+        }),
+      ),
+  })
+
+// Sube la ficha del partido en PDF (sustituye a la anterior) y devuelve lo leído
+export const subirActa = (plantillaId: string, partidoId: string, archivo: File) =>
+  datos(
+    api.POST('/api/plantillas/{id}/partidos/{pid}/acta', {
+      params: { path: { id: plantillaId, pid: partidoId } },
+      // El contrato lo describe como binario (string): se envía el archivo en un formulario
+      body: { archivo: archivo.name },
+      bodySerializer: () => {
+        const formulario = new FormData()
+        formulario.append('archivo', archivo)
+        return formulario
+      },
+    }),
+  )
+
+// Dirección del PDF del acta, para abrirlo o descargarlo
+export const urlActa = (plantillaId: string, partidoId: string) =>
+  `/api/plantillas/${plantillaId}/partidos/${partidoId}/acta`
+
+// "7–1" si el partido se ha jugado
+export const textoResultado = (p: { golesFavor: number | null; golesContra: number | null }) =>
+  p.golesFavor === null || p.golesContra === null ? null : `${p.golesFavor}–${p.golesContra}`
