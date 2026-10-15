@@ -1,4 +1,4 @@
-import { eq, inArray } from 'drizzle-orm'
+import { and, eq, inArray } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { crearApp } from '../src/app.js'
 import { db, pool } from '../src/db/cliente.js'
@@ -8,6 +8,8 @@ import {
   fichas,
   jugadores,
   membresias,
+  motivosMulta,
+  multas,
   plantillas,
   user,
 } from '../src/db/schema/index.js'
@@ -373,5 +375,84 @@ describe('ver, editar y borrar una plantilla', () => {
       .from(plantillas)
       .where(eq(plantillas.id, ids.senior26 ?? ''))
     expect(siguiente?.plantillaAnteriorId).toBeNull()
+  })
+})
+
+describe('catálogo de multas al crear plantillas', () => {
+  // En un club aparte, para no cambiar las plantillas de las pruebas anteriores
+  const catalogo = async (plantillaId: string) =>
+    (
+      await db
+        .select({
+          descripcion: motivosMulta.descripcion,
+          importeCentimos: motivosMulta.importeCentimos,
+          tipoTarjeta: motivosMulta.tipoTarjeta,
+        })
+        .from(motivosMulta)
+        .where(eq(motivosMulta.plantillaId, plantillaId))
+    ).sort((a, b) => a.descripcion.localeCompare(b.descripcion))
+
+  it('sin plantilla anterior se crea el catálogo por defecto', async () => {
+    const club = await crearClub('admin', 'CD Catálogo')
+    ids.clubCatalogo = club.id
+    const res = await crearPlantilla('admin', {
+      clubId: club.id,
+      nombre: 'Senior',
+      temporada: '2025-26',
+    })
+    ids.catalogo25 = (await res.json()).id
+    expect(await catalogo(ids.catalogo25 ?? '')).toEqual([
+      { descripcion: 'Faltar sin avisar', importeCentimos: 500, tipoTarjeta: null },
+      { descripcion: 'Llegar tarde al entreno', importeCentimos: 200, tipoTarjeta: null },
+      { descripcion: 'Olvidar la equipación', importeCentimos: 300, tipoTarjeta: null },
+      {
+        descripcion: 'Tarjeta amarilla por protestar',
+        importeCentimos: 500,
+        tipoTarjeta: 'amarilla',
+      },
+      { descripcion: 'Tarjeta roja', importeCentimos: 1000, tipoTarjeta: 'roja' },
+    ])
+  })
+
+  it('con plantilla anterior se copian sus motivos activos, no sus multas', async () => {
+    const anterior = ids.catalogo25 ?? ''
+    await db
+      .update(motivosMulta)
+      .set({ importeCentimos: 300 })
+      .where(
+        and(
+          eq(motivosMulta.plantillaId, anterior),
+          eq(motivosMulta.descripcion, 'Llegar tarde al entreno'),
+        ),
+      )
+    await db
+      .update(motivosMulta)
+      .set({ activo: false })
+      .where(
+        and(eq(motivosMulta.plantillaId, anterior), eq(motivosMulta.descripcion, 'Tarjeta roja')),
+      )
+    await db
+      .insert(motivosMulta)
+      .values({ plantillaId: anterior, descripcion: 'Móvil en el vestuario', importeCentimos: 100 })
+
+    const res = await crearPlantilla('admin', {
+      clubId: ids.clubCatalogo,
+      nombre: 'Senior',
+      temporada: '2026-27',
+      plantillaAnteriorId: anterior,
+    })
+    const nueva = (await res.json()).id
+    expect(await catalogo(nueva)).toEqual([
+      { descripcion: 'Faltar sin avisar', importeCentimos: 500, tipoTarjeta: null },
+      { descripcion: 'Llegar tarde al entreno', importeCentimos: 300, tipoTarjeta: null },
+      { descripcion: 'Móvil en el vestuario', importeCentimos: 100, tipoTarjeta: null },
+      { descripcion: 'Olvidar la equipación', importeCentimos: 300, tipoTarjeta: null },
+      {
+        descripcion: 'Tarjeta amarilla por protestar',
+        importeCentimos: 500,
+        tipoTarjeta: 'amarilla',
+      },
+    ])
+    expect(await db.$count(multas, eq(multas.plantillaId, nueva))).toBe(0)
   })
 })

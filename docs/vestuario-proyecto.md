@@ -484,10 +484,11 @@ Horario semanal de entrenos de una plantilla (uno por plantilla).
 |---|---|---|
 | id | uuid | PK |
 | plantilla_id | uuid → plantillas | cascade |
-| descripcion | text | |
-| importe | numeric(8,2) | ≥ 0 |
-| tipo_evento | enum `amarilla, roja` | nullable; tarjeta que propone este motivo (ciclo 6) |
-| activo | boolean | por defecto true |
+| descripcion | text | no vacía; única entre los motivos activos de la plantilla, sin distinguir mayúsculas |
+| importe_centimos | integer | ≥ 0. Los importes van en céntimos enteros: las sumas son exactas |
+| tipo_tarjeta | enum `amarilla, roja` | nullable; tarjeta que propone este motivo (ciclo 6) |
+| activo | boolean | por defecto true. Los motivos no se borran: se desactivan |
+| created_at | timestamptz | |
 
 ### multas
 | Campo | Tipo | Notas |
@@ -495,13 +496,13 @@ Horario semanal de entrenos de una plantilla (uno por plantilla).
 | id | uuid | PK |
 | plantilla_id | uuid → plantillas | cascade. La caja es de cada plantilla y temporada |
 | jugador_id | uuid → jugadores | cascade. FK compuesta `(plantilla_id, jugador_id) → fichas`: solo jugadores de la plantilla |
-| motivo_id | uuid → motivos_multa | nullable, set null |
-| motivo | text | copia del texto |
-| importe | numeric(8,2) | > 0, copia del importe |
+| motivo_id | uuid | nullable (null si es «otro» con texto libre). FK compuesta `(motivo_id, plantilla_id) → motivos_multa`: el motivo es del catálogo de la misma plantilla |
+| motivo | text | copia del texto; no vacío |
+| importe_centimos | integer | > 0, copia del importe |
 | fecha | date | |
-| fecha_pago | date | nullable; la multa está cobrada si y solo si tiene fecha de pago |
-| evento_id | uuid → eventos_partido | nullable (multa originada por tarjeta, ciclo 6) |
-| creada_por | uuid → user | |
+| fecha_pago | date | nullable; la multa está cobrada si y solo si tiene fecha de pago; no anterior a `fecha` |
+| evento_id | uuid → eventos_partido | nullable (multa originada por tarjeta; se añade con su migración en el ciclo 6) |
+| creada_por | uuid → user | set null |
 | created_at | timestamptz | |
 
 ### ejercicios (ciclo 7)
@@ -1110,10 +1111,11 @@ Depende de GH-20.
 Depende de GH-7.
 
 **Criterios de aceptación**
-- [ ] Tablas `motivos_multa` (con `tipo_evento` nullable) y `multas` (de la plantilla, con FK compuesta `(plantilla_id, jugador_id)` a `fichas`) (con `evento_id` nullable para el ciclo 6) según la sección 6
+- [ ] Tablas `motivos_multa` (con `tipo_tarjeta` nullable) y `multas` (de la plantilla, con FK compuestas `(plantilla_id, jugador_id)` a `fichas` y `(motivo_id, plantilla_id)` a `motivos_multa`) según la sección 6, con los importes en céntimos enteros; `evento_id` llega con su migración en el ciclo 6
 - [ ] Una multa está cobrada si y solo si tiene `fecha_pago`; sin campo `pagada` redundante
 - [ ] Al crear una plantilla se crea su catálogo en la misma transacción, copiado de la plantilla anterior si la hay o con los valores por defecto; las multas no se copian (la caja empieza de cero cada temporada); migración de datos para las plantillas existentes
 - [ ] Seed con multas de ejemplo
+- [ ] Tests de las restricciones y del catálogo al crear plantillas
 
 #### GH-23
 **Título:** API de catálogo de multas

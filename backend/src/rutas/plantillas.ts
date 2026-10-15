@@ -1,5 +1,6 @@
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
 import { and, asc, desc, eq, isNotNull, or } from 'drizzle-orm'
+import { crearCatalogo } from '../catalogoMultas.js'
 import { db } from '../db/cliente.js'
 import { adminsClub, clubes, membresias, plantillas } from '../db/schema/index.js'
 import { ErrorApi, EsquemaError, validacionFallida } from '../errores.js'
@@ -141,7 +142,7 @@ export const rutasPlantillas = () =>
         tags: ['Plantillas'],
         summary: 'Crear una plantilla',
         description:
-          'Solo los administradores del club. Para la temporada siguiente, indica la plantilla anterior (del mismo club y de una temporada anterior).',
+          'Solo los administradores del club. Para la temporada siguiente, indica la plantilla anterior (del mismo club y de una temporada anterior): su catálogo de multas se copia; si no hay anterior, se crea el catálogo por defecto.',
         middleware: [requireSesion()] as const,
         request: {
           body: {
@@ -205,15 +206,20 @@ export const rutasPlantillas = () =>
         }
 
         try {
-          const [plantilla] = await db
-            .insert(plantillas)
-            .values({
-              ...datos,
-              plantillaAnteriorId: datos.plantillaAnteriorId ?? null,
-              creadoPor: usuarioId,
-            })
-            .returning(columnasPlantilla)
-          if (!plantilla) throw new Error('No se pudo crear la plantilla')
+          // La plantilla y su catálogo de multas, en la misma transacción
+          const plantilla = await db.transaction(async (tx) => {
+            const [creada] = await tx
+              .insert(plantillas)
+              .values({
+                ...datos,
+                plantillaAnteriorId: datos.plantillaAnteriorId ?? null,
+                creadoPor: usuarioId,
+              })
+              .returning(columnasPlantilla)
+            if (!creada) throw new Error('No se pudo crear la plantilla')
+            await crearCatalogo(tx, creada.id, creada.plantillaAnteriorId)
+            return creada
+          })
           return c.json({ ...plantilla, rol: 'admin' as const, esAdminClub: true }, 201)
         } catch (error) {
           if (restriccionViolada(error) === 'plantillas_nombre_unico') {
