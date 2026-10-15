@@ -16,5 +16,7 @@ FROM nginxinc/nginx-unprivileged:1.30-alpine
 ENV BACKEND_URL=http://backend:3000 \
     MAX_SUBIDA=200m
 COPY templates/ /etc/nginx/templates/
+# HTTPS en 8443 si hay certificado montado (el servidor); sin él, solo HTTP en 8080
+COPY --chmod=755 docker-entrypoint.d/40-https.sh /docker-entrypoint.d/40-https.sh
 COPY --from=estaticos /app/dist /usr/share/nginx/html
-EXPOSE 8080
+EXPOSE 8080 8443

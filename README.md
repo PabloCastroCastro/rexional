@@ -62,9 +62,11 @@ frontend/                PWA (React + Vite)
 backend/                 API (Node + Hono) y base de datos (PostgreSQL)
 proxy/                   nginx: sirve la PWA y redirige /api al backend
 docker-compose.dev.yml   desarrollo local
-docker-compose.yml       servidor (pruebas y producción)
+docker-compose.yml       servidor (pruebas y producción) y versión de servidor en local
+docker-compose.servidor.yml  solo en el servidor: certificado HTTPS de Tailscale
+scripts/                 despliegue, copias de seguridad y certificado del servidor
 .env.example             configuración de Compose
-docs/                    documento de proyecto
+docs/                    documento de proyecto y guía del servidor (servidor.md)
 ```
 
 Cada proyecto es independiente: tiene sus propias dependencias, su Dockerfile y su README, y no importa código de los demás.
@@ -125,3 +127,7 @@ docker compose up --build
 ```
 
 La aplicación queda en http://localhost:8080, servida por nginx.
+
+## Servidor
+
+Pruebas y producción corren en una Raspberry Pi accesible por Tailscale, con HTTPS. Instalación, despliegues (`scripts/deploy.sh`), copias de seguridad y certificado: [docs/servidor.md](docs/servidor.md).
