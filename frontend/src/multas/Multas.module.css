@@ -1,0 +1,304 @@
+.pagina {
+  display: grid;
+  /* La columna no crece más que la pantalla aunque una fila sea ancha */
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--espacio-4);
+}
+
+/* Pestañas de la sección: Caja | Multas | Catálogo */
+.pestanas {
+  display: grid;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
+  gap: var(--espacio-1);
+  padding: var(--espacio-1);
+  border-radius: var(--radio-m);
+  background: var(--color-superficie-alterna);
+}
+
+.pestanas a {
+  display: grid;
+  place-items: center;
+  min-height: calc(var(--altura-tactil) - var(--espacio-2));
+  border-radius: var(--radio-s);
+  color: var(--color-texto-suave);
+  font-weight: var(--peso-medio);
+  text-decoration: none;
+}
+
+.pestanas a.activa {
+  background: var(--color-superficie);
+  color: var(--color-texto);
+  box-shadow: var(--sombra-1);
+}
+
+/* Control segmentado: Pendientes | Cobradas | Todas */
+.segmentos {
+  display: grid;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
+  gap: var(--espacio-1);
+  margin: 0;
+  padding: var(--espacio-1);
+  border: 0;
+  border-radius: var(--radio-m);
+  background: var(--color-superficie-alterna);
+}
+
+.segmentos button {
+  min-height: calc(var(--altura-tactil) - var(--espacio-2));
+  border: 0;
+  border-radius: var(--radio-s);
+  background: transparent;
+  color: var(--color-texto-suave);
+  font-weight: var(--peso-medio);
+  cursor: pointer;
+}
+
+.segmentos button[aria-pressed="true"] {
+  background: var(--color-superficie);
+  color: var(--color-texto);
+  box-shadow: var(--sombra-1);
+}
+
+.seccion {
+  display: grid;
+  gap: var(--espacio-3);
+}
+
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+}
+
+.filtros > div {
+  flex: 1;
+  min-width: 12rem;
+}
+
+.interruptor {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  min-height: var(--altura-tactil);
+  cursor: pointer;
+}
+
+.interruptor input {
+  width: 1.25rem;
+  height: 1.25rem;
+  accent-color: var(--color-primario);
+}
+
+.lista {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-radius: var(--radio-l);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra-1);
+  overflow: hidden;
+}
+
+.lista li + li {
+  border-top: 1px solid var(--color-borde);
+}
+
+.fila {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  min-height: calc(var(--altura-tactil) + var(--espacio-3));
+  padding: var(--espacio-2) var(--espacio-3) var(--espacio-2) var(--espacio-4);
+}
+
+.enlaceFila {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--espacio-3);
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.texto {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+
+.texto > * {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.texto strong {
+  font-weight: var(--peso-medio);
+}
+
+.secundario {
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
+}
+
+.importe {
+  flex: none;
+  font-weight: var(--peso-fuerte);
+  font-variant-numeric: tabular-nums;
+}
+
+.fila[data-cobrada="true"] .importe,
+.fila[data-activo="false"] {
+  color: var(--color-texto-suave);
+}
+
+.fila[data-cobrada="true"] .importe {
+  text-decoration: line-through;
+}
+
+.botonesFila {
+  display: flex;
+  flex: none;
+  gap: var(--espacio-1);
+}
+
+.iconoAccion {
+  display: grid;
+  place-items: center;
+  width: var(--altura-tactil);
+  height: var(--altura-tactil);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-m);
+  background: var(--color-superficie);
+  color: var(--color-texto-suave);
+  cursor: pointer;
+}
+
+.iconoAccion:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.cobrar {
+  color: var(--color-exito);
+}
+
+.peligro {
+  color: var(--color-peligro);
+}
+
+/* Muestra del color de la tarjeta en el catálogo */
+.tarjeta {
+  flex: none;
+  width: 0.875rem;
+  height: 1.125rem;
+  border-radius: 2px;
+}
+
+.tarjeta[data-tarjeta="amarilla"] {
+  background: #f2c230;
+}
+
+.tarjeta[data-tarjeta="roja"] {
+  background: #d22f2f;
+}
+
+/* Formularios */
+.formulario {
+  display: grid;
+  gap: var(--espacio-4);
+}
+
+.columnas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  align-items: start;
+  gap: var(--espacio-3);
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--espacio-2);
+}
+
+.puesta {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espacio-2);
+  padding: var(--espacio-3);
+  border-radius: var(--radio-m);
+  background: color-mix(in srgb, var(--color-exito) 12%, transparent);
+}
+
+.puesta svg {
+  flex: none;
+  color: var(--color-exito);
+}
+
+.error {
+  padding: var(--espacio-3);
+  border-radius: var(--radio-m);
+  background: color-mix(in srgb, var(--color-peligro) 12%, transparent);
+  color: var(--color-peligro);
+  font-size: var(--texto-sm);
+}
+
+/* Deuda pendiente en la plantilla */
+.deuda {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+  padding: 1px var(--espacio-2);
+  border: 1px solid var(--color-aviso);
+  border-radius: var(--radio-completo);
+  color: var(--color-aviso);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Totales de la caja */
+.totales {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--espacio-3);
+}
+
+.total {
+  display: grid;
+  gap: var(--espacio-1);
+  padding: var(--espacio-4);
+  border-radius: var(--radio-l);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra-1);
+}
+
+.total span {
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
+}
+
+.total strong {
+  font-size: var(--texto-2xl);
+  font-weight: var(--peso-fuerte);
+  font-variant-numeric: tabular-nums;
+}
+
+.total[data-tipo="pendiente"] strong {
+  color: var(--color-aviso);
+}
+
+.total[data-tipo="caja"] strong {
+  color: var(--color-exito);
+}

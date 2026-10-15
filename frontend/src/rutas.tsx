@@ -9,10 +9,12 @@ import { PaginaPasarLista } from './entrenos/PaginaPasarLista'
 import { SeccionEntrenos } from './entrenos/SeccionEntrenos'
 import { PaginaJugador } from './jugadores/PaginaJugador'
 import { PaginaPlantilla } from './jugadores/PaginaPlantilla'
+import { PaginaCatalogo } from './multas/PaginaCatalogo'
+import { PaginaListaMultas } from './multas/PaginaListaMultas'
+import { IndiceMultas, SeccionMultas } from './multas/SeccionMultas'
 import { PaginaComponentes } from './paginas/PaginaComponentes'
 import { PaginaMas } from './paginas/PaginaMas'
 import { PaginaNoEncontrada } from './paginas/PaginaNoEncontrada'
-import { PaginaMultas } from './paginas/Secciones'
 import { PaginaConvocatoria } from './partidos/PaginaConvocatoria'
 import { PaginaPartido } from './partidos/PaginaPartido'
 import { PaginaPartidos } from './partidos/PaginaPartidos'
@@ -64,7 +66,15 @@ export const rutas = [
               { path: 'partidos', element: <PaginaPartidos /> },
               { path: 'partidos/:partidoId', element: <PaginaPartido /> },
               { path: 'partidos/:partidoId/convocatoria', element: <PaginaConvocatoria /> },
-              { path: 'multas', element: <PaginaMultas /> },
+              {
+                path: 'multas',
+                element: <SeccionMultas />,
+                children: [
+                  { index: true, element: <IndiceMultas /> },
+                  { path: 'lista', element: <PaginaListaMultas /> },
+                  { path: 'catalogo', element: <PaginaCatalogo /> },
+                ],
+              },
               { path: 'mas', element: <PaginaMas /> },
               { path: 'mas/configuracion', element: <PaginaConfiguracion /> },
               { path: '*', element: <PaginaNoEncontrada /> },

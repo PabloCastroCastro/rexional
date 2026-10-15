@@ -6,6 +6,7 @@ import { Cargando } from '../componentes/Cargando'
 import { EstadoVacio } from '../componentes/EstadoVacio'
 import { useResumenAsistencia } from '../entrenos/datos'
 import { Porcentaje } from '../entrenos/Porcentaje'
+import { euros, useMultas } from '../multas/datos'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
 import { useBajaYReactivacion } from './acciones'
 import {
@@ -28,6 +29,8 @@ export function PaginaJugador() {
   const trayectoria = useTrayectoria(plantilla.clubId, jugadorId)
   const resumen = useResumenAsistencia(plantilla.id)
   const asistencia = resumen.data?.find((r) => r.jugadorId === jugadorId)
+  const multasPendientes = useMultas(plantilla.id, { jugador: jugadorId, estado: 'pendientes' })
+  const deuda = (multasPendientes.data ?? []).reduce((total, m) => total + m.importeCentimos, 0)
   const [formulario, setFormulario] = useState<ModoFormulario | null>(null)
   const lista = `/plantillas/${plantilla.id}/jugadores`
   const { darDeBaja, reactivar, pendiente } = useBajaYReactivacion({
@@ -130,6 +133,24 @@ export function PaginaJugador() {
                     `${asistencia.falta} ${asistencia.falta === 1 ? 'falta' : 'faltas'}`,
                   ].join(' · ')}
             </span>
+          </p>
+        </section>
+      )}
+
+      {multasPendientes.data && (
+        <section className={estilos.seccion} aria-labelledby="multas">
+          <h2 id="multas">Multas en esta plantilla</h2>
+          <p className={estilos.asistencia}>
+            <span className={estilos.secundario}>
+              {multasPendientes.data.length === 0
+                ? 'Nada pendiente'
+                : `${euros(deuda)} pendientes · ${multasPendientes.data.length} ${
+                    multasPendientes.data.length === 1 ? 'multa' : 'multas'
+                  }`}
+            </span>
+            <Link to={`/plantillas/${plantilla.id}/multas/lista?jugador=${jugadorId}&estado=todas`}>
+              Ver sus multas
+            </Link>
           </p>
         </section>
       )}
