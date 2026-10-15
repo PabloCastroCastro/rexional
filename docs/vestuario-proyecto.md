@@ -626,7 +626,7 @@ Prefijo `/api`. JSON. Todas las rutas de la plantilla cuelgan de `/plantillas`, 
 | | `GET /plantillas/:id/partidos/:pid/mensaje` (texto para WhatsApp y enlace `wa.me`) | Miembro |
 | Estadísticas | `PUT/DELETE /plantillas/:id/partidos/:pid/resultado` (jugado / vuelve a programado) | Delegado |
 | | `PUT /plantillas/:id/partidos/:pid/participaciones` (titulares y suplentes; recalcula minutos) | Delegado |
-| | `POST /plantillas/:id/partidos/:pid/eventos` · `DELETE .../eventos/:evid` (los eventos se leen en el detalle del partido) | Delegado |
+| | `POST /plantillas/:id/partidos/:pid/eventos` · `POST .../eventos/lote` (varios a la vez, todo o nada: un cambio, un gol con su asistencia) · `DELETE .../eventos/:evid` (los eventos se leen en el detalle del partido) | Delegado |
 | | `GET /plantillas/:id/estadisticas` (resultados del equipo y acumulados por jugador) | Miembro (jugador: solo suyas) |
 | | `GET /clubes/:cid/jugadores/:jid/estadisticas` (trayectoria por temporadas y totales) | Miembro del club (jugador: solo la suya) |
 | Actas | `POST /plantillas/:id/partidos/:pid/acta` (PDF en `multipart/form-data`; devuelve lo leído sin registrar) · `GET .../acta/lectura` · `DELETE .../acta` | Delegado |

@@ -1019,6 +1019,42 @@
           "whatsapp"
         ]
       },
+      "NuevoEvento": {
+        "type": "object",
+        "properties": {
+          "jugadorId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "gol",
+              "asistencia",
+              "amarilla",
+              "roja",
+              "entra",
+              "sale",
+              "gol_propia"
+            ]
+          },
+          "minuto": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 150
+          }
+        },
+        "required": [
+          "tipo"
+        ],
+        "additionalProperties": false
+      },
       "EstadisticasPlantilla": {
         "type": "object",
         "properties": {
@@ -4982,38 +5018,109 @@
           "content": {
             "application/json": {
               "schema": {
+                "$ref": "#/components/schemas/NuevoEvento"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Evento registrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Partido"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos o que no cuadran con el partido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/partidos/{pid}/eventos/lote": {
+      "post": {
+        "tags": [
+          "Estadísticas"
+        ],
+        "summary": "Registrar varios eventos a la vez",
+        "description": "Delegado o superior. Todo o nada: para un cambio (entra y sale) o un gol con su asistencia. Si uno no cuadra con el partido, no se guarda ninguno.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "pid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
                 "type": "object",
                 "properties": {
-                  "jugadorId": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
-                    "format": "uuid"
-                  },
-                  "tipo": {
-                    "type": "string",
-                    "enum": [
-                      "gol",
-                      "asistencia",
-                      "amarilla",
-                      "roja",
-                      "entra",
-                      "sale",
-                      "gol_propia"
-                    ]
-                  },
-                  "minuto": {
-                    "type": [
-                      "integer",
-                      "null"
-                    ],
-                    "minimum": 0,
-                    "maximum": 150
+                  "eventos": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/NuevoEvento"
+                    },
+                    "minItems": 1,
+                    "maxItems": 10
                   }
                 },
                 "required": [
-                  "tipo"
+                  "eventos"
                 ],
                 "additionalProperties": false
               }
@@ -5022,7 +5129,7 @@
         },
         "responses": {
           "201": {
-            "description": "Evento registrado",
+            "description": "Eventos registrados",
             "content": {
               "application/json": {
                 "schema": {

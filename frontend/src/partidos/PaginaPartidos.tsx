@@ -7,7 +7,7 @@ import { EstadoVacio } from '../componentes/EstadoVacio'
 import { textoFecha } from '../entrenos/datos'
 import { puedeGestionarJugadores } from '../jugadores/datos'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
-import { type ResumenPartido, textoLocal, usePartidos } from './datos'
+import { type ResumenPartido, textoLocal, textoResultado, usePartidos } from './datos'
 import { FormularioPartido } from './FormularioPartido'
 import estilos from './Partidos.module.css'
 
@@ -107,6 +107,11 @@ function TarjetaPartido({ partido: p }: { partido: ResumenPartido }) {
           {p.local === false ? 'en ' : 'vs '}
           {p.rival}
         </strong>
+        {p.estado !== 'programado' && (
+          <span className={estilos.resultadoLista} data-estado={p.estado}>
+            {p.estado === 'jugado' ? textoResultado(p) : 'Aplazado'}
+          </span>
+        )}
         <span className={estilos.detalles}>
           {lugar && <span className={estilos.etiqueta}>{lugar}</span>}
           {p.competicion && <span>{p.competicion}</span>}
