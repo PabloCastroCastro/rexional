@@ -1,4 +1,4 @@
-import { and, eq, inArray } from 'drizzle-orm'
+import { and, eq, inArray, like } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { crearApp } from '../src/app.js'
 import { db, pool } from '../src/db/cliente.js'
@@ -333,6 +333,24 @@ describe('jugadores del club', () => {
     expect(lista.find((j: { nombre: string }) => j.nombre === 'Zoe').temporadas).toEqual([
       '2026-27',
     ])
+  })
+
+  it('devuelve todos los jugadores del club, sin cortar la lista', async () => {
+    // GH-80: la búsqueda se cortaba en 20 jugadores sin avisar
+    await db
+      .insert(jugadores)
+      .values(
+        Array.from({ length: 25 }, (_, i) => ({ clubId: ids.club ?? '', nombre: `Relleno ${i}` })),
+      )
+    const lista = await (await pedir('GET', `/clubes/${ids.club}/jugadores`, 'delegado')).json()
+    expect(lista).toHaveLength(30)
+    const filtrada = await (
+      await pedir('GET', `/clubes/${ids.club}/jugadores?q=relleno`, 'delegado')
+    ).json()
+    expect(filtrada).toHaveLength(25)
+    await db
+      .delete(jugadores)
+      .where(and(eq(jugadores.clubId, ids.club ?? ''), like(jugadores.nombre, 'Relleno %')))
   })
 
   it('los comodines de la búsqueda se tratan como texto', async () => {
