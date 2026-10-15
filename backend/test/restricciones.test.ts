@@ -6,11 +6,13 @@ import {
   clubes,
   convocados,
   entrenos,
+  eventosPartido,
   fichas,
   horarios,
   jugadores,
   motivosMulta,
   multas,
+  participaciones,
   partidos,
   plantillas,
 } from '../src/db/schema/index.js'
@@ -719,4 +721,139 @@ describe('hora de fin de los entrenos', () => {
       expect(r).toBe('entrenos_hora_fin_posterior')
     }),
   )
+})
+
+describe('estadísticas de partido', () => {
+  // Un partido jugado del Senior 2026-27 con Ana convocada; Berta no tiene ficha
+  async function conJugado(tx: Tx) {
+    const b = await base(tx)
+    const [partido] = await tx
+      .insert(partidos)
+      .values({
+        plantillaId: b.senior26.id,
+        rival: 'Rival',
+        fecha: '2026-10-11',
+        estado: 'jugado',
+        golesFavor: 7,
+        golesContra: 1,
+      })
+      .returning()
+    if (!partido) throw new Error('Sin partido')
+    await tx
+      .insert(convocados)
+      .values({ partidoId: partido.id, jugadorId: b.ana.id, plantillaId: b.senior26.id })
+    return { ...b, partido }
+  }
+
+  it.each([
+    [{ estado: 'jugado' }, 'partidos_resultado_si_jugado'],
+    [{ estado: 'jugado', golesFavor: 2 }, 'partidos_resultado_si_jugado'],
+    [{ golesFavor: 1, golesContra: 0 }, 'partidos_resultado_si_jugado'],
+    [{ estado: 'aplazado', golesFavor: 0, golesContra: 0 }, 'partidos_resultado_si_jugado'],
+    [{ estado: 'jugado', golesFavor: -1, golesContra: 0 }, 'partidos_goles_no_negativos'],
+  ] as const)('rechaza el partido %o', (cambios, restriccion) =>
+    enTransaccion(async (tx) => {
+      const b = await base(tx)
+      const r = await restriccionViolada(
+        tx
+          .insert(partidos)
+          .values({ plantillaId: b.senior26.id, rival: 'Rival', fecha: '2026-10-18', ...cambios }),
+      )
+      expect(r).toBe(restriccion)
+    }),
+  )
+
+  it('un partido nuevo está programado y sin resultado', () =>
+    enTransaccion(async (tx) => {
+      const b = await base(tx)
+      const [partido] = await tx
+        .insert(partidos)
+        .values({ plantillaId: b.senior26.id, rival: 'Rival', fecha: '2026-10-18' })
+        .returning()
+      expect(partido).toMatchObject({ estado: 'programado', golesFavor: null, golesContra: null })
+    }))
+
+  it('acepta la participación y los eventos de un convocado', () =>
+    enTransaccion(async (tx) => {
+      const b = await conJugado(tx)
+      await tx
+        .insert(participaciones)
+        .values({ partidoId: b.partido.id, jugadorId: b.ana.id, titular: true, minutos: 90 })
+      const [gol] = await tx
+        .insert(eventosPartido)
+        .values({ partidoId: b.partido.id, jugadorId: b.ana.id, tipo: 'gol', minuto: 40 })
+        .returning()
+      expect(gol?.origen).toBe('manual')
+      // Gol en propia puerta del rival: sin jugador
+      await tx.insert(eventosPartido).values({ partidoId: b.partido.id, tipo: 'gol_propia' })
+    }))
+
+  it('rechaza la participación de un jugador no convocado', () =>
+    enTransaccion(async (tx) => {
+      const b = await conJugado(tx)
+      const r = await restriccionViolada(
+        tx
+          .insert(participaciones)
+          .values({ partidoId: b.partido.id, jugadorId: b.berta.id, titular: true }),
+      )
+      expect(r).toBe('participaciones_convocado_fk')
+    }))
+
+  it('rechaza el evento de un jugador no convocado', () =>
+    enTransaccion(async (tx) => {
+      const b = await conJugado(tx)
+      const r = await restriccionViolada(
+        tx
+          .insert(eventosPartido)
+          .values({ partidoId: b.partido.id, jugadorId: b.berta.id, tipo: 'gol' }),
+      )
+      expect(r).toBe('eventos_partido_convocado_fk')
+    }))
+
+  it.each([
+    [{ tipo: 'gol', conJugador: false }, 'eventos_partido_jugador'],
+    [{ tipo: 'amarilla', conJugador: true, minuto: 151 }, 'eventos_partido_minuto_valido'],
+    [{ tipo: 'sale', conJugador: true, minuto: -1 }, 'eventos_partido_minuto_valido'],
+  ] as const)('rechaza el evento %o', ({ conJugador, ...evento }, restriccion) =>
+    enTransaccion(async (tx) => {
+      const b = await conJugado(tx)
+      const r = await restriccionViolada(
+        tx.insert(eventosPartido).values({
+          partidoId: b.partido.id,
+          jugadorId: conJugador ? b.ana.id : null,
+          ...evento,
+        }),
+      )
+      expect(r).toBe(restriccion)
+    }),
+  )
+
+  it('rechaza minutos jugados fuera de rango', () =>
+    enTransaccion(async (tx) => {
+      const b = await conJugado(tx)
+      const r = await restriccionViolada(
+        tx
+          .insert(participaciones)
+          .values({ partidoId: b.partido.id, jugadorId: b.ana.id, titular: false, minutos: -5 }),
+      )
+      expect(r).toBe('participaciones_minutos_validos')
+    }))
+
+  it('al quitar al convocado o borrar el partido se van sus estadísticas', () =>
+    enTransaccion(async (tx) => {
+      const b = await conJugado(tx)
+      await tx
+        .insert(participaciones)
+        .values({ partidoId: b.partido.id, jugadorId: b.ana.id, titular: true, minutos: 90 })
+      await tx
+        .insert(eventosPartido)
+        .values({ partidoId: b.partido.id, jugadorId: b.ana.id, tipo: 'gol', minuto: 40 })
+      await tx.delete(convocados).where(eq(convocados.partidoId, b.partido.id))
+      expect(await tx.$count(participaciones)).toBe(0)
+      expect(await tx.$count(eventosPartido, eq(eventosPartido.partidoId, b.partido.id))).toBe(0)
+
+      await tx.insert(eventosPartido).values({ partidoId: b.partido.id, tipo: 'gol_propia' })
+      await tx.delete(partidos).where(eq(partidos.id, b.partido.id))
+      expect(await tx.$count(eventosPartido, eq(eventosPartido.partidoId, b.partido.id))).toBe(0)
+    }))
 })
