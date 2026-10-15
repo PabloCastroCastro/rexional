@@ -1,5 +1,15 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { ChevronLeft, Clock, MapPin, Pencil, Trash2, Trophy, Users } from 'lucide-react'
+import {
+  ChevronLeft,
+  Clock,
+  MapPin,
+  MessageCircle,
+  Pencil,
+  Trash2,
+  Trophy,
+  UserCheck,
+  Users,
+} from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { api, enviar } from '../api/cliente'
@@ -14,6 +24,7 @@ import { Dorsal } from '../jugadores/PaginaPlantilla'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
 import { CLAVE_PARTIDOS, type Partido, textoLocal, usePartido } from './datos'
 import { FormularioPartido } from './FormularioPartido'
+import { Mensaje } from './Mensaje'
 import estilos from './Partidos.module.css'
 
 // Ficha de un partido: sus datos, editar y borrar, y la convocatoria
@@ -45,6 +56,7 @@ export function PaginaPartido() {
   const p = partido.data
   const gestiona = puedeGestionarJugadores(plantilla)
   const convocados = p.jugadores.filter((j) => j.convocado)
+  const noConvocados = p.jugadores.filter((j) => !j.convocado)
   const lugar = textoLocal(p.local)
 
   return (
@@ -105,7 +117,7 @@ export function PaginaPartido() {
         {convocados.length === 0 ? (
           <p className={estilos.secundario}>Todavía no hay convocatoria.</p>
         ) : (
-          <ul className={estilos.convocados}>
+          <ul className={estilos.convocados} aria-label="Convocados">
             {convocados.map((j) => (
               <li key={j.jugadorId}>
                 <Dorsal dorsal={j.dorsal} />
@@ -117,6 +129,33 @@ export function PaginaPartido() {
             ))}
           </ul>
         )}
+        {convocados.length > 0 && noConvocados.length > 0 && (
+          <details className={estilos.noConvocados}>
+            <summary>No convocados ({noConvocados.length})</summary>
+            <ul className={estilos.convocados} aria-label="No convocados">
+              {noConvocados.map((j) => (
+                <li key={j.jugadorId}>
+                  <Dorsal dorsal={j.dorsal} />
+                  <span>{nombreCompleto(j)}</span>
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
+        {gestiona && (
+          <Link to="convocatoria" className={estilos.enlaceBoton}>
+            <UserCheck aria-hidden size={18} />
+            {convocados.length === 0 ? 'Convocar' : 'Editar convocatoria'}
+          </Link>
+        )}
+      </section>
+
+      <section className={estilos.seccion} aria-labelledby="mensaje">
+        <h2 id="mensaje">
+          <MessageCircle aria-hidden size={20} />
+          Mensaje para WhatsApp
+        </h2>
+        <Mensaje plantillaId={plantilla.id} partidoId={p.id} conAcciones={gestiona} />
       </section>
 
       <FormularioPartido abierta={editando} partido={p} alCerrar={() => setEditando(false)} />

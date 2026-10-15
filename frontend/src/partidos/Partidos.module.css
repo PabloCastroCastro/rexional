@@ -238,3 +238,135 @@
   color: var(--color-peligro);
   font-size: var(--texto-sm);
 }
+
+.enlaceBoton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--espacio-2);
+  min-height: var(--altura-tactil);
+  padding: 0 var(--espacio-4);
+  border-radius: var(--radio-m);
+  background: var(--color-primario);
+  color: var(--color-sobre-primario);
+  font-weight: var(--peso-medio);
+  text-decoration: none;
+  justify-self: start;
+}
+
+.noConvocados summary {
+  min-height: var(--altura-tactil);
+  padding: var(--espacio-2) 0;
+  color: var(--color-texto-suave);
+  font-weight: var(--peso-medio);
+  cursor: pointer;
+}
+
+.noConvocados .convocados {
+  opacity: 0.75;
+}
+
+/* Vista previa del mensaje, tal cual se enviará */
+.mensaje {
+  margin: 0;
+  padding: var(--espacio-4);
+  border-radius: var(--radio-l);
+  background: color-mix(in srgb, var(--color-exito) 10%, var(--color-superficie));
+  font-family: var(--fuente);
+  font-size: var(--texto-sm);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Elegir convocados */
+.barraConvocatoria {
+  position: sticky;
+  top: var(--altura-cabecera);
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  padding: var(--espacio-2) var(--espacio-3);
+  border-radius: var(--radio-m);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra-1);
+}
+
+.barraConvocatoria p {
+  flex: 1;
+}
+
+.seleccion {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-radius: var(--radio-l);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra-1);
+  overflow: hidden;
+}
+
+.seleccion li + li {
+  border-top: 1px solid var(--color-borde);
+}
+
+.seleccion label {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  min-height: calc(var(--altura-tactil) + var(--espacio-3));
+  padding: var(--espacio-2) var(--espacio-4);
+  cursor: pointer;
+}
+
+/* La casilla nativa queda accesible pero invisible; se ve la propia, más grande */
+.seleccion input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.casilla {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 2px solid var(--color-borde);
+  border-radius: var(--radio-s);
+  color: var(--color-sobre-primario);
+}
+
+.seleccion li[data-convocado="true"] .casilla {
+  border-color: var(--color-primario);
+  background: var(--color-primario);
+}
+
+.seleccion li[data-convocado="false"] label {
+  opacity: 0.6;
+}
+
+.seleccion input:focus-visible + .casilla {
+  outline: 3px solid var(--color-foco);
+  outline-offset: 2px;
+}
+
+.nombre {
+  overflow: hidden;
+  font-weight: var(--peso-medio);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pieFijo {
+  position: sticky;
+  bottom: calc(var(--altura-navegacion) + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--espacio-2);
+  padding: var(--espacio-3) 0;
+  background: var(--color-fondo);
+}

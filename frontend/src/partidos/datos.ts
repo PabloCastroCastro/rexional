@@ -31,6 +31,18 @@ export const usePartido = (plantillaId: string, partidoId: string) =>
       ),
   })
 
+// Texto de la convocatoria para WhatsApp y su enlace wa.me
+export const useMensaje = (plantillaId: string, partidoId: string) =>
+  useQuery({
+    queryKey: [...CLAVE_PARTIDOS, plantillaId, 'mensaje', partidoId],
+    queryFn: () =>
+      datos(
+        api.GET('/api/plantillas/{id}/partidos/{pid}/mensaje', {
+          params: { path: { id: plantillaId, pid: partidoId } },
+        }),
+      ),
+  })
+
 // "Casa", "Fuera" o nada si no se sabe
 export const textoLocal = (local: boolean | null) =>
   local === true ? 'Casa' : local === false ? 'Fuera' : null
