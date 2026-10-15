@@ -23,7 +23,7 @@ import { Cargando } from '../componentes/Cargando'
 import { useConfirmacion } from '../componentes/Confirmacion'
 import { EstadoVacio } from '../componentes/EstadoVacio'
 import { HojaInferior } from '../componentes/HojaInferior'
-import { puedeGestionarJugadores } from '../jugadores/datos'
+import { nombreCompleto, puedeGestionarJugadores } from '../jugadores/datos'
 import { Dorsal } from '../jugadores/PaginaPlantilla'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
 import {
@@ -407,11 +407,11 @@ function Lista({ entreno }: { entreno: Entreno }) {
               <div className={estilos.fila}>
                 <Dorsal dorsal={j.dorsal} />
                 <span className={estilos.nombre}>
-                  {j.nombre}
+                  {nombreCompleto(j)}
                   {!j.activo && <span className={estilos.baja}> baja</span>}
                 </span>
                 <fieldset className={estilos.estados}>
-                  <legend className="solo-lectores">Asistencia de {j.nombre}</legend>
+                  <legend className="solo-lectores">Asistencia de {nombreCompleto(j)}</legend>
                   {ESTADOS.map(({ estado, texto, icono: Icono }) => (
                     <button
                       key={estado}
@@ -430,7 +430,7 @@ function Lista({ entreno }: { entreno: Entreno }) {
               {marca.estado === 'justificada' && (
                 <input
                   className={estilos.motivo}
-                  aria-label={`Motivo de ${j.nombre}`}
+                  aria-label={`Motivo de ${nombreCompleto(j)}`}
                   placeholder="Motivo (opcional)"
                   maxLength={200}
                   value={marca.motivo}
@@ -522,7 +522,7 @@ function SoloLectura({ entreno }: { entreno: Entreno }) {
             <li key={j.jugadorId}>
               <div className={estilos.fila}>
                 <Dorsal dorsal={j.dorsal} />
-                <span className={estilos.nombre}>{j.nombre}</span>
+                <span className={estilos.nombre}>{nombreCompleto(j)}</span>
                 <span className={estilos.secundario}>
                   {j.estado ? textos[j.estado] : 'Sin registrar'}
                   {j.motivo && ` · ${j.motivo}`}

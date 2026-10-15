@@ -53,6 +53,10 @@ export const useBuscarJugadores = (clubId: string, q: string, activa: boolean) =
     placeholderData: keepPreviousData,
   })
 
+// "Brais Iglesias", o solo el nombre si no tiene apellidos
+export const nombreCompleto = (j: { nombre: string; apellidos?: string | null }) =>
+  j.apellidos ? `${j.nombre} ${j.apellidos}` : j.nombre
+
 // Gestionar jugadores: delegado o superior (sección 3)
 export const puedeGestionarJugadores = (plantilla: { rol: string; esAdminClub: boolean }) =>
   plantilla.esAdminClub || plantilla.rol !== 'jugador'

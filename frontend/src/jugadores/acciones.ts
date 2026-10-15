@@ -3,7 +3,7 @@ import { api, datos, ErrorApi } from '../api/cliente'
 import { useAvisos } from '../componentes/Avisos'
 import { useConfirmacion } from '../componentes/Confirmacion'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
-import { CLAVE_JUGADORES, type JugadorPlantilla } from './datos'
+import { CLAVE_JUGADORES, type JugadorPlantilla, nombreCompleto } from './datos'
 
 // Baja (con confirmación) y reactivación de un jugador en la plantilla activa. Si al reactivar su
 // dorsal ya lo lleva otro, se avisa con alDorsalOcupado para que elija otro.
@@ -30,9 +30,9 @@ export function useBajaYReactivacion({
     onSuccess: async (jugador) => {
       await cliente.invalidateQueries({ queryKey: CLAVE_JUGADORES })
       if (jugador.activo) {
-        avisar({ tipo: 'exito', mensaje: `${jugador.nombre} vuelve a la plantilla` })
+        avisar({ tipo: 'exito', mensaje: `${nombreCompleto(jugador)} vuelve a la plantilla` })
       } else {
-        avisar({ tipo: 'exito', mensaje: `${jugador.nombre} dado de baja` })
+        avisar({ tipo: 'exito', mensaje: `${nombreCompleto(jugador)} dado de baja` })
         alDarDeBaja?.()
       }
     },
@@ -52,7 +52,7 @@ export function useBajaYReactivacion({
     pendiente: cambiar.isPending,
     darDeBaja: async (jugador: JugadorPlantilla) => {
       const confirmado = await confirmar({
-        titulo: `¿Dar de baja a ${jugador.nombre}?`,
+        titulo: `¿Dar de baja a ${nombreCompleto(jugador)}?`,
         mensaje:
           'Deja de aparecer en la plantilla, pero se conserva su historial. Puedes reactivarlo desde las bajas.',
         textoConfirmar: 'Dar de baja',

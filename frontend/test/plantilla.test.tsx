@@ -16,6 +16,7 @@ import {
 const BRAIS: JugadorPlantilla = {
   jugadorId: 'j1',
   nombre: 'Brais',
+  apellidos: null,
   dorsal: 7,
   posicion: 'delantero',
   activo: true,
@@ -23,6 +24,7 @@ const BRAIS: JugadorPlantilla = {
 const ZOE: JugadorPlantilla = {
   jugadorId: 'j2',
   nombre: 'Zoe',
+  apellidos: null,
   dorsal: null,
   posicion: null,
   activo: true,
@@ -30,6 +32,7 @@ const ZOE: JugadorPlantilla = {
 const HUGO: JugadorPlantilla = {
   jugadorId: 'j3',
   nombre: 'Hugo',
+  apellidos: null,
   dorsal: 10,
   posicion: 'defensa',
   activo: false,
@@ -114,7 +117,28 @@ describe('alta de jugadores', () => {
 
     expect(await screen.findByText('Íker añadido a la plantilla')).toBeInTheDocument()
     expect(enviado('POST /api/plantillas/p1/jugadores')).toEqual([
-      { nombre: 'Íker', dorsal: 1, posicion: 'portero' },
+      { nombre: 'Íker', apellidos: null, dorsal: 1, posicion: 'portero' },
+    ])
+  })
+
+  it('nombre y apellidos van por separado y la lista muestra el nombre completo', async () => {
+    conJugadores([{ ...BRAIS, apellidos: 'Iglesias' }])
+    manejadores['POST /api/plantillas/p1/jugadores'] = async (peticion) =>
+      json({ jugadorId: 'j5', activo: true, ...(await peticion.json()) }, 201)
+    abrir('/plantillas/p1/jugadores')
+    const lista = await screen.findByRole('list', { name: 'Jugadores' })
+    expect(within(lista).getByText('Brais Iglesias')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Añadir' }))
+    const hoja = screen.getByRole('dialog', { name: 'Añadir jugador' })
+    await userEvent.type(within(hoja).getByLabelText(/Nombre/), 'Xoán')
+    await userEvent.type(within(hoja).getByLabelText(/Apellidos/), ' Rodríguez Pazos ')
+    await userEvent.click(within(hoja).getByRole('button', { name: 'Añadir' }))
+    expect(
+      await screen.findByText('Xoán Rodríguez Pazos añadido a la plantilla'),
+    ).toBeInTheDocument()
+    expect(enviado('POST /api/plantillas/p1/jugadores')).toEqual([
+      { nombre: 'Xoán', apellidos: 'Rodríguez Pazos', dorsal: null, posicion: null },
     ])
   })
 
@@ -184,6 +208,7 @@ describe('ficha del jugador', () => {
   const trayectoria = {
     id: 'j1',
     nombre: 'Brais',
+    apellidos: null,
     fichas: [
       {
         plantillaId: 'p1',
@@ -226,7 +251,7 @@ describe('ficha del jugador', () => {
     abrir('/plantillas/p1/jugadores/j1')
     await userEvent.click(await screen.findByRole('button', { name: 'Editar' }))
     const hoja = screen.getByRole('dialog', { name: 'Editar a Brais' })
-    expect(within(hoja).getByText(/cambia en todas sus temporadas/)).toBeInTheDocument()
+    expect(within(hoja).getByText(/cambian en todas sus temporadas/)).toBeInTheDocument()
     await userEvent.type(within(hoja).getByLabelText(/Nombre/), ' Méndez')
     await userEvent.clear(within(hoja).getByLabelText(/Dorsal/))
     await userEvent.click(within(hoja).getByRole('button', { name: 'Guardar' }))

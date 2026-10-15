@@ -61,6 +61,7 @@ const resumen = (
   return {
     jugadorId,
     nombre,
+    apellidos: null,
     activo: true,
     asiste,
     justificada,
@@ -72,6 +73,7 @@ const resumen = (
 const ficha = (jugadorId: string, nombre: string, dorsal: number): JugadorPlantilla => ({
   jugadorId,
   nombre,
+  apellidos: null,
   dorsal,
   posicion: null,
   activo: true,

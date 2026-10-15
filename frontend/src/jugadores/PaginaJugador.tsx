@@ -8,7 +8,13 @@ import { useResumenAsistencia } from '../entrenos/datos'
 import { Porcentaje } from '../entrenos/Porcentaje'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
 import { useBajaYReactivacion } from './acciones'
-import { type JugadorPlantilla, POSICIONES, puedeGestionarJugadores, useTrayectoria } from './datos'
+import {
+  type JugadorPlantilla,
+  nombreCompleto,
+  POSICIONES,
+  puedeGestionarJugadores,
+  useTrayectoria,
+} from './datos'
 import { FormularioJugador, type ModoFormulario } from './FormularioJugador'
 import estilos from './Jugadores.module.css'
 import { Dorsal } from './PaginaPlantilla'
@@ -58,6 +64,7 @@ export function PaginaJugador() {
   const jugador: JugadorPlantilla = {
     jugadorId: trayectoria.data.id,
     nombre: trayectoria.data.nombre,
+    apellidos: trayectoria.data.apellidos,
     dorsal: ficha.dorsal,
     posicion: ficha.posicion,
     activo: ficha.activo,
@@ -71,7 +78,7 @@ export function PaginaJugador() {
       <div className={estilos.ficha}>
         <Dorsal dorsal={jugador.dorsal} />
         <div className={estilos.texto}>
-          <h1>{jugador.nombre}</h1>
+          <h1>{nombreCompleto(jugador)}</h1>
           <span className={estilos.secundario}>
             {jugador.posicion ? POSICIONES[jugador.posicion] : 'Sin posición'}
             {!jugador.activo && ' · De baja'}

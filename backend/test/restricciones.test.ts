@@ -284,6 +284,16 @@ describe('valores', () => {
       expect(r).toBe('jugadores_nombre_no_vacio')
     }))
 
+  it('admite jugadores sin apellidos, pero no con apellidos vacíos', () =>
+    enTransaccion(async (tx) => {
+      const b = await base(tx)
+      await tx.insert(jugadores).values({ clubId: b.club.id, nombre: 'Sin apellidos' })
+      const r = await restriccionViolada(
+        tx.insert(jugadores).values({ clubId: b.club.id, nombre: 'Ana', apellidos: '  ' }),
+      )
+      expect(r).toBe('jugadores_apellidos_no_vacios')
+    }))
+
   it('genera identificadores UUID v7', () =>
     enTransaccion(async (tx) => {
       const b = await base(tx)
