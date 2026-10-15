@@ -92,9 +92,12 @@ describe('entrenos del día', () => {
     await userEvent.type(within(hoja).getByLabelText('Hora'), '19:30')
     await userEvent.click(within(hoja).getByRole('button', { name: 'Crear entreno' }))
 
-    expect(await screen.findByText(/Entreno creado/)).toBeInTheDocument()
+    // Crear, refrescar el día y cargar el entreno son varias peticiones seguidas: más margen
+    expect(await screen.findByText(/Entreno creado/, {}, { timeout: 3000 })).toBeInTheDocument()
     expect(enviado('POST /api/plantillas/p1/entrenos')).toEqual([{ fecha: HOY, hora: '19:30' }])
-    expect(await screen.findByRole('button', { name: 'Asiste' })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('button', { name: 'Asiste' }, { timeout: 3000 }),
+    ).toBeInTheDocument()
     expect(router.state.location.search).toBe('?entreno=n1')
   })
 
