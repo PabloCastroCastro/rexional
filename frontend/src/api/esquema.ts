@@ -773,8 +773,8 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Cambiar el nombre o la categoría
-         * @description Entrenador o superior. La temporada no se modifica.
+         * Cambiar el nombre, la categoría o si usa multas
+         * @description Entrenador o superior. La temporada no se modifica. Desactivar las multas las oculta y bloquea sin borrar nada: al reactivarlas vuelven como estaban.
          */
         patch: {
             parameters: {
@@ -790,6 +790,7 @@ export interface paths {
                     "application/json": {
                         nombre?: string;
                         categoria?: string;
+                        multasActivas?: boolean;
                     };
                 };
             };
@@ -2523,7 +2524,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description Ya hay un motivo activo con esa descripción */
+                /** @description Ya hay un motivo activo con esa descripción, o las multas están desactivadas */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -2628,7 +2629,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description Ya hay un motivo activo con esa descripción */
+                /** @description Ya hay un motivo activo con esa descripción, o las multas están desactivadas */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -2801,6 +2802,15 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
+                /** @description Las multas están desactivadas en la plantilla */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
             };
         };
         delete?: never;
@@ -2862,6 +2872,15 @@ export interface paths {
                 };
                 /** @description No existe */
                 404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Las multas están desactivadas en la plantilla */
+                409: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -2949,6 +2968,15 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
+                /** @description Las multas están desactivadas en la plantilla */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
             };
         };
         trace?: never;
@@ -3023,6 +3051,15 @@ export interface paths {
                 };
                 /** @description No existe */
                 404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Las multas están desactivadas en la plantilla */
+                409: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -3172,6 +3209,8 @@ export interface components {
             temporada: string;
             /** Format: uuid */
             plantillaAnteriorId: string | null;
+            /** @description false si la plantilla no usa multas (no se ven ni se pueden poner) */
+            multasActivas: boolean;
             /**
              * @description Rol efectivo del usuario en la plantilla
              * @enum {string}

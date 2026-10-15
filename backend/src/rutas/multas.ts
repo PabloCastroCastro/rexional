@@ -1,5 +1,6 @@
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
 import { and, asc, count, desc, eq, isNotNull, isNull, lte, type SQL, sql } from 'drizzle-orm'
+import type { MiddlewareHandler } from 'hono'
 import { db } from '../db/cliente.js'
 import { fichas, jugadores, motivosMulta, multas, tipoTarjeta } from '../db/schema/index.js'
 import { ErrorApi, EsquemaError, validacionFallida } from '../errores.js'
@@ -57,6 +58,21 @@ const columnasMotivo = {
   activo: motivosMulta.activo,
   multas: count(multas.id),
 }
+
+// Con las multas desactivadas en la plantilla no se cambia nada: lo que hay se conserva y se puede
+// consultar, y vuelve a usarse al reactivarlas
+const sinMultas: MiddlewareHandler<EnvPlantilla> = async (c, next) => {
+  if (!c.var.plantilla.multasActivas) {
+    throw new ErrorApi(
+      409,
+      'multas_desactivadas',
+      'Las multas están desactivadas en esta plantilla: actívalas en Configuración para usarlas',
+    )
+  }
+  await next()
+}
+
+const desactivadas = json(EsquemaError, 'Las multas están desactivadas en la plantilla')
 
 const motivoNoEncontrado = () =>
   new ErrorApi(404, 'no_encontrado', 'No existe ese motivo en el catálogo de la plantilla')
@@ -126,7 +142,7 @@ export const rutasMultas = () =>
         tags: ['Multas'],
         summary: 'Añadir un motivo al catálogo',
         description: 'Delegado o superior. El importe va en céntimos.',
-        middleware: [requireRol('delegado')] as const,
+        middleware: [requireRol('delegado'), sinMultas] as const,
         request: {
           params: ParamPlantilla,
           body: { content: { 'application/json': { schema: CuerpoMotivo.strict() } } },
@@ -134,7 +150,10 @@ export const rutasMultas = () =>
         responses: {
           201: json(EsquemaMotivo, 'Motivo creado'),
           400: json(EsquemaError, 'Datos no válidos'),
-          409: json(EsquemaError, 'Ya hay un motivo activo con esa descripción'),
+          409: json(
+            EsquemaError,
+            'Ya hay un motivo activo con esa descripción, o las multas están desactivadas',
+          ),
           ...errores,
         },
       }),
@@ -163,7 +182,7 @@ export const rutasMultas = () =>
         summary: 'Editar, desactivar o reactivar un motivo',
         description:
           'Delegado o superior. `activo: false` lo desactiva y `true` lo reactiva; `tipoTarjeta: null` quita la tarjeta. Las multas ya puestas conservan su motivo e importe.',
-        middleware: [requireRol('delegado')] as const,
+        middleware: [requireRol('delegado'), sinMultas] as const,
         request: {
           params: ParamMotivo,
           body: {
@@ -182,7 +201,10 @@ export const rutasMultas = () =>
         responses: {
           200: json(EsquemaMotivo, 'Motivo actualizado'),
           400: json(EsquemaError, 'Datos no válidos'),
-          409: json(EsquemaError, 'Ya hay un motivo activo con esa descripción'),
+          409: json(
+            EsquemaError,
+            'Ya hay un motivo activo con esa descripción, o las multas están desactivadas',
+          ),
           ...errores,
         },
       }),
@@ -387,7 +409,7 @@ export const rutasMultasJugadores = () =>
         summary: 'Poner una multa',
         description:
           'Delegado o superior. Con `motivoId`, copia la descripción y el importe del motivo activo del catálogo (el importe se puede cambiar); con `motivo`, texto libre e importe obligatorio. La fecha, por defecto, es hoy.',
-        middleware: [requireRol('delegado')] as const,
+        middleware: [requireRol('delegado'), sinMultas] as const,
         request: {
           params: ParamPlantilla,
           body: {
@@ -397,6 +419,7 @@ export const rutasMultasJugadores = () =>
           },
         },
         responses: {
+          409: desactivadas,
           201: json(EsquemaMulta, 'Multa puesta'),
           400: json(EsquemaError, 'Datos no válidos, motivo no válido o jugador sin ficha'),
           ...errores,
@@ -466,7 +489,7 @@ export const rutasMultasJugadores = () =>
         summary: 'Editar, cobrar o deshacer el cobro de una multa',
         description:
           'Delegado o superior. `fechaPago` con una fecha la cobra y `fechaPago: null` deshace el cobro; la fecha de cobro no puede ser anterior a la de la multa.',
-        middleware: [requireRol('delegado')] as const,
+        middleware: [requireRol('delegado'), sinMultas] as const,
         request: {
           params: ParamMulta,
           body: {
@@ -488,6 +511,7 @@ export const rutasMultasJugadores = () =>
           },
         },
         responses: {
+          409: desactivadas,
           200: json(EsquemaMulta, 'Multa actualizada'),
           400: json(EsquemaError, 'Datos no válidos'),
           ...errores,
@@ -517,9 +541,9 @@ export const rutasMultasJugadores = () =>
         tags: ['Multas'],
         summary: 'Borrar una multa',
         description: 'Delegado o superior.',
-        middleware: [requireRol('delegado')] as const,
+        middleware: [requireRol('delegado'), sinMultas] as const,
         request: { params: ParamMulta },
-        responses: { 204: { description: 'Multa borrada' }, ...errores },
+        responses: { 204: { description: 'Multa borrada' }, 409: desactivadas, ...errores },
       }),
       async (c) => {
         const { mid } = c.req.valid('param')
@@ -539,7 +563,7 @@ export const rutasMultasJugadores = () =>
         summary: 'Saldar las multas de un jugador',
         description:
           'Delegado o superior. Cobra de una vez todas sus multas pendientes en la plantilla, con la fecha indicada o la de hoy.',
-        middleware: [requireRol('delegado')] as const,
+        middleware: [requireRol('delegado'), sinMultas] as const,
         request: {
           params: ParamPlantilla.extend({
             jid: EsquemaUuid.openapi({ param: { name: 'jid', in: 'path' } }),
@@ -552,6 +576,7 @@ export const rutasMultasJugadores = () =>
           },
         },
         responses: {
+          409: desactivadas,
           200: json(
             z.object({ cobradas: z.int(), importeCentimos: z.int() }).openapi('MultasSaldadas'),
             'Multas cobradas',

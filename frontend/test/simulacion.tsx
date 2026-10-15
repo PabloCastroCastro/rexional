@@ -65,6 +65,7 @@ export const plantilla = (
   categoria: nombre === 'Juvenil' ? 'juvenil' : 'sénior',
   temporada,
   plantillaAnteriorId: null,
+  multasActivas: true,
   rol: 'admin',
   esAdminClub: true,
   club: clubRexional,
