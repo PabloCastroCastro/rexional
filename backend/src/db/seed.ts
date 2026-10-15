@@ -11,12 +11,14 @@ import {
   clubes,
   convocados,
   entrenos,
+  eventosPartido,
   fichas,
   horarios,
   jugadores,
   membresias,
   motivosMulta,
   multas,
+  participaciones,
   partidos,
   plantillas,
   user,
@@ -51,6 +53,7 @@ const ENTRENO = 6
 const PARTIDO = 7
 const MOTIVO = 8
 const MULTA = 9
+const EVENTO = 10
 
 type Posicion = 'portero' | 'defensa' | 'centrocampista' | 'delantero'
 
@@ -164,7 +167,7 @@ const listaFichas: [number, number, number | null, Posicion, boolean][] = [
 
 const plantillaPorNumero = new Map(listaPlantillas.map((p) => [p.n, p]))
 
-// Horario de las plantillas de 2026-27: martes y jueves a las 20:00, del 1 de septiembre de 2026 al
+// Horario de las plantillas de 2026-27: martes y jueves de 20:00 a 21:30, del 1 de septiembre de 2026 al
 // 15 de junio de 2027, con sus entrenos. Hay asistencia, variada pero siempre la misma, hasta el 8 de
 // octubre; desde ahí quedan sin pasar lista: [plantilla, número, fecha]
 const PLANTILLAS_CON_ENTRENOS = [3, 4, 5]
@@ -172,8 +175,8 @@ const HORARIO = {
   desde: '2026-09-01',
   hasta: '2027-06-15',
   sesiones: [
-    { dia: 2, hora: '20:00' },
-    { dia: 4, hora: '20:00' },
+    { dia: 2, hora: '20:00', horaFin: '21:30' },
+    { dia: 4, hora: '20:00', horaFin: '21:30' },
   ],
 }
 const ULTIMO_CON_ASISTENCIA = '2026-10-08'
@@ -299,6 +302,72 @@ const listaConvocados = conConvocatoria.flatMap((p) => {
       plantillaId: sid(PLANTILLA, p.plantilla),
     }))
 })
+
+// Estadísticas de los partidos jugados: resultado, los primeros convocados de titulares y el resto
+// de suplentes, hasta tres cambios, goles con su asistencia y una amarilla. Marcan y dan asistencias
+// titulares que no se cambian, así que siempre están en el campo.
+const estadisticas = listaPartidos
+  .filter((p) => p.fecha <= ULTIMO_JUGADO)
+  .map((p) => {
+    const partidoId = sid(PARTIDO, p.n)
+    const convocadosPartido = listaConvocados
+      .filter((c) => c.partidoId === partidoId)
+      .map((c) => c.jugadorId)
+    // Once titulares, o menos si así quedan al menos dos suplentes (pero nunca menos de siete)
+    const enCampo = Math.min(11, Math.max(7, convocadosPartido.length - 2))
+    const titulares = convocadosPartido.slice(0, enCampo)
+    const suplentes = convocadosPartido.slice(enCampo)
+    const cambios = suplentes.slice(0, 3).map((entra, k) => ({
+      entra,
+      sale: titulares[titulares.length - 1 - k] as string,
+      minuto: 60 + k * 10,
+    }))
+    const fijos = titulares.slice(1, Math.max(2, titulares.length - 3))
+    const del = (k: number) => fijos[k % fijos.length] as string
+    const golesFavor = (p.i * 3 + p.plantilla) % 4
+    const golesContra = (p.i + 1) % 3
+    let n = p.n * 100
+    const evento = (
+      jugadorId: string,
+      tipo: 'gol' | 'asistencia' | 'amarilla' | 'entra' | 'sale',
+      minuto: number,
+    ) => ({
+      id: sid(EVENTO, n++),
+      partidoId,
+      jugadorId,
+      tipo,
+      minuto,
+    })
+    const eventos = [
+      ...cambios.flatMap((c) => [
+        evento(c.entra, 'entra', c.minuto),
+        evento(c.sale, 'sale', c.minuto),
+      ]),
+      ...Array.from({ length: golesFavor }, (_, g) => [
+        evento(del(p.i + g * 2), 'gol', 12 + g * 21 + p.i),
+        evento(del(p.i + g * 2 + 1), 'asistencia', 12 + g * 21 + p.i),
+      ]).flat(),
+      evento(del(p.i + 3), 'amarilla', 30 + p.i * 4),
+    ]
+    const minutos = (jugadorId: string, titular: boolean) => {
+      const sale = cambios.find((c) => c.sale === jugadorId)
+      const entra = cambios.find((c) => c.entra === jugadorId)
+      if (titular) return sale ? sale.minuto : 90
+      return entra ? 90 - entra.minuto : 0
+    }
+    return {
+      partidoId,
+      golesFavor,
+      golesContra,
+      participaciones: convocadosPartido.map((jugadorId, k) => ({
+        partidoId,
+        jugadorId,
+        titular: k < enCampo,
+        minutos: minutos(jugadorId, k < enCampo),
+      })),
+      eventos,
+    }
+  })
 
 // Catálogo de multas: el de por defecto en todas las plantillas y un motivo más en el Senior 2026-27
 const listaMotivos = listaPlantillas.flatMap((p) => [
@@ -451,6 +520,7 @@ await db.transaction(async (tx) => {
         plantillaId: sid(PLANTILLA, e.plantilla),
         fecha: e.fecha,
         hora: '20:00',
+        horaFin: '21:30',
         deHorario: true,
       })),
     )
@@ -475,6 +545,22 @@ await db.transaction(async (tx) => {
     .onConflictDoNothing()
 
   await tx.insert(convocados).values(listaConvocados).onConflictDoNothing()
+
+  // El resultado solo se pone en los partidos que siguen sin jugar: no pisa lo registrado a mano
+  for (const e of estadisticas) {
+    await tx
+      .update(partidos)
+      .set({ estado: 'jugado', golesFavor: e.golesFavor, golesContra: e.golesContra })
+      .where(and(eq(partidos.id, e.partidoId), eq(partidos.estado, 'programado')))
+  }
+  await tx
+    .insert(participaciones)
+    .values(estadisticas.flatMap((e) => e.participaciones))
+    .onConflictDoNothing()
+  await tx
+    .insert(eventosPartido)
+    .values(estadisticas.flatMap((e) => e.eventos))
+    .onConflictDoNothing()
 
   await tx
     .insert(motivosMulta)
@@ -533,7 +619,8 @@ console.log(
   `Seed aplicado: ${usuarios.length} usuarios (contraseña "${CONTRASENA}"), ${listaClubes.length} clubes, ` +
     `${listaPlantillas.length} plantillas, ${listaJugadores.length} jugadores, ${listaFichas.length} fichas, ` +
     `${listaEntrenos.length} entrenos, ${listaAsistencias.length} asistencias, ` +
-    `${listaPartidos.length} partidos, ${listaConvocados.length} convocados y ${listaMultas.length} multas`,
+    `${listaPartidos.length} partidos (${estadisticas.length} jugados), ${listaConvocados.length} convocados, ` +
+    `${estadisticas.flatMap((e) => e.eventos).length} eventos de partido y ${listaMultas.length} multas`,
 )
 
 await pool.end()

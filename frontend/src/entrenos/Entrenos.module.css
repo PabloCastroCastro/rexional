@@ -150,6 +150,8 @@
   display: flex;
   align-items: center;
   gap: var(--espacio-3);
+  /* Sin esto, un nombre largo ensancha la fila y saca los botones */
+  min-width: 0;
   min-height: var(--altura-tactil);
 }
 
@@ -285,12 +287,31 @@
   display: flex;
   align-items: center;
   gap: var(--espacio-3);
+  min-width: 0;
+  padding-block: var(--espacio-1);
   min-height: var(--altura-tactil);
   color: inherit;
   text-decoration: none;
 }
 
-.entreno .nombre::first-letter {
+/* La fecha y, debajo, las horas */
+.entreno .nombre {
+  display: grid;
+}
+
+.entreno .nombre > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.horas {
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-normal);
+  font-variant-numeric: tabular-nums;
+}
+
+.entreno .nombre > :first-child::first-letter {
   text-transform: uppercase;
 }
 
@@ -460,4 +481,13 @@
   color: var(--color-aviso);
   font-size: var(--texto-sm);
   font-weight: var(--peso-medio);
+}
+
+/* Horario: inicio y fin de cada día, en una fila */
+.franja {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: var(--espacio-3);
+  grid-column: 1 / -1;
 }

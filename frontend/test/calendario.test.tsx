@@ -23,6 +23,7 @@ const resumen = (
   id,
   fecha,
   hora,
+  horaFin: null,
   deHorario: false,
   asiste: 0,
   justificada: 0,
@@ -34,6 +35,7 @@ const detalle = (r: ResumenEntreno): Entreno => ({
   id: r.id,
   fecha: r.fecha,
   hora: r.hora,
+  horaFin: r.horaFin,
   deHorario: r.deHorario,
   recuentos: { asiste: r.asiste, justificada: r.justificada, falta: r.falta },
   jugadores: [
@@ -64,12 +66,16 @@ function conCalendario(inicial: ResumenEntreno[], p = senior26) {
     return json(entrenos.filter((e) => e.fecha >= desde && e.fecha <= hasta))
   }
   manejadores['POST /api/plantillas/p1/entrenos'] = async (peticion) => {
-    const { fecha, hora } = (await peticion.json()) as { fecha: string; hora: string | null }
+    const { fecha, hora, horaFin } = (await peticion.json()) as {
+      fecha: string
+      hora: string | null
+      horaFin: string | null
+    }
     if (entrenos.some((e) => e.fecha === fecha && e.hora === hora)) {
       const mensaje = `Ya hay un entreno el ${fecha} a las ${hora}`
       return json({ error: { codigo: 'entreno_duplicado', mensaje } }, 409)
     }
-    const nuevo = resumen(`n${siguiente++}`, fecha, hora)
+    const nuevo = resumen(`n${siguiente++}`, fecha, hora, { horaFin })
     entrenos = [...entrenos, nuevo].sort((a, b) => (a.hora ?? '').localeCompare(b.hora ?? ''))
     manejadores[`GET /api/plantillas/p1/entrenos/${nuevo.id}`] = () => json(detalle(nuevo))
     return json(nuevo, 201)
@@ -79,6 +85,12 @@ function conCalendario(inicial: ResumenEntreno[], p = senior26) {
     manejadores[`DELETE /api/plantillas/p1/entrenos/${e.id}`] = () => {
       entrenos = entrenos.filter((x) => x.id !== e.id)
       return new Response(null, { status: 204 })
+    }
+    manejadores[`PATCH /api/plantillas/p1/entrenos/${e.id}`] = async (peticion) => {
+      const horas = (await peticion.json()) as { hora: string | null; horaFin: string | null }
+      const cambiado = { ...e, ...horas, deHorario: false }
+      entrenos = entrenos.map((x) => (x.id === e.id ? cambiado : x))
+      return json(cambiado)
     }
   }
 }
@@ -90,10 +102,13 @@ describe('entrenos del día', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Crear entreno' }))
     const hoja = screen.getByRole('dialog', { name: 'Crear entreno' })
     await userEvent.type(within(hoja).getByLabelText('Hora'), '19:30')
+    await userEvent.type(within(hoja).getByLabelText('Hora de fin'), '21:00')
     await userEvent.click(within(hoja).getByRole('button', { name: 'Crear entreno' }))
 
-    expect(await screen.findByText(/Entreno creado/)).toBeInTheDocument()
-    expect(enviado('POST /api/plantillas/p1/entrenos')).toEqual([{ fecha: HOY, hora: '19:30' }])
+    expect(await screen.findByText(/Entreno creado: .* · 19:30–21:00/)).toBeInTheDocument()
+    expect(enviado('POST /api/plantillas/p1/entrenos')).toEqual([
+      { fecha: HOY, hora: '19:30', horaFin: '21:00' },
+    ])
     expect(await screen.findByRole('button', { name: 'Asiste' })).toBeInTheDocument()
     expect(router.state.location.search).toBe('?entreno=n1')
   })
@@ -119,6 +134,31 @@ describe('entrenos del día', () => {
     await userEvent.type(within(hoja).getByLabelText('Hora'), '18:00')
     await userEvent.click(within(hoja).getByRole('button', { name: 'Crear entreno' }))
     expect(await within(hoja).findByText(/Ya hay un entreno/)).toBeInTheDocument()
+  })
+
+  it('se cambia la hora de un entreno; el fin ha de ser posterior al inicio', async () => {
+    conCalendario([resumen('e1', HOY, '20:00', { horaFin: '21:30', deHorario: true })])
+    abrir('/plantillas/p1/entrenos')
+    await userEvent.click(await screen.findByRole('button', { name: 'Cambiar hora' }))
+    const hoja = screen.getByRole('dialog', { name: 'Cambiar la hora' })
+    expect(within(hoja).getByLabelText('Hora')).toHaveValue('20:00')
+    expect(within(hoja).getByLabelText('Hora de fin')).toHaveValue('21:30')
+
+    await userEvent.clear(within(hoja).getByLabelText('Hora de fin'))
+    await userEvent.type(within(hoja).getByLabelText('Hora de fin'), '19:00')
+    await userEvent.click(within(hoja).getByRole('button', { name: 'Guardar' }))
+    expect(
+      within(hoja).getByText('La hora de fin debe ser posterior a la de inicio'),
+    ).toBeInTheDocument()
+    expect(enviado('PATCH /api/plantillas/p1/entrenos/e1')).toEqual([])
+
+    await userEvent.clear(within(hoja).getByLabelText('Hora'))
+    await userEvent.type(within(hoja).getByLabelText('Hora'), '18:30')
+    await userEvent.click(within(hoja).getByRole('button', { name: 'Guardar' }))
+    expect(await screen.findByText(/Hora cambiada: .* · 18:30–19:00/)).toBeInTheDocument()
+    expect(enviado('PATCH /api/plantillas/p1/entrenos/e1')).toEqual([
+      { hora: '18:30', horaFin: '19:00' },
+    ])
   })
 
   it('cancelar un entreno con asistencia pide confirmación y avisa', async () => {
@@ -149,6 +189,7 @@ describe('entrenos del día', () => {
     expect(await screen.findByText('Pasar lista es cosa del cuerpo técnico.')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Añadir sesión' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Cancelar entreno' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Cambiar hora' })).not.toBeInTheDocument()
   })
 })
 
@@ -175,7 +216,15 @@ describe('horario', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'martes' }))
     await userEvent.click(screen.getByRole('button', { name: 'jueves' }))
-    expect(screen.getByLabelText('Hora del martes')).toHaveValue('20:00')
+    expect(screen.getByLabelText('Inicio del martes')).toHaveValue('20:00')
+    // Fin antes que el inicio: no se guarda
+    await userEvent.type(screen.getByLabelText('Fin del martes'), '19:00')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar horario' }))
+    expect(screen.getByText('La hora de fin debe ser posterior a la de inicio')).toBeInTheDocument()
+    expect(enviado('PUT /api/plantillas/p1/horario')).toEqual([])
+    await userEvent.clear(screen.getByLabelText('Fin del martes'))
+    await userEvent.type(screen.getByLabelText('Fin del martes'), '21:30')
+    await userEvent.type(screen.getByLabelText('Fin del jueves'), '21:30')
 
     // «Hasta» elegido: del miércoles 14 al jueves 29 de octubre hay dos martes y tres jueves
     const hasta = screen.getByLabelText('Hasta')
@@ -183,7 +232,7 @@ describe('horario', () => {
     await userEvent.type(hasta, '2026-10-29')
     expect(
       screen.getByText(
-        /Se crearán 5 entrenos: los martes y jueves a las 20:00, del 14 de octubre al 29 de octubre/,
+        /Se crearán 5 entrenos: los martes y jueves de 20:00 a 21:30, del 14 de octubre al 29 de octubre/,
       ),
     ).toBeInTheDocument()
 
@@ -194,8 +243,8 @@ describe('horario', () => {
         desde: HOY,
         hasta: '2026-10-29',
         sesiones: [
-          { dia: 2, hora: '20:00' },
-          { dia: 4, hora: '20:00' },
+          { dia: 2, hora: '20:00', horaFin: '21:30' },
+          { dia: 4, hora: '20:00', horaFin: '21:30' },
         ],
       },
     ])
@@ -235,8 +284,8 @@ describe('horario', () => {
         desde: '2026-09-01',
         hasta: '2027-06-15',
         sesiones: [
-          { dia: 2, hora: '20:00' },
-          { dia: 4, hora: '20:00' },
+          { dia: 2, hora: '20:00', horaFin: '21:30' },
+          { dia: 4, hora: '18:00' },
         ],
       },
       plantilla('p1', 'Senior', '2026-27', { rol: 'jugador', esAdminClub: false }),
@@ -244,7 +293,7 @@ describe('horario', () => {
     abrir('/plantillas/p1/entrenos/horario')
     expect(
       await screen.findByText(
-        /Entrenos los martes y jueves a las 20:00, del 1 de septiembre al 15 de junio/,
+        /Entrenos los martes de 20:00 a 21:30 y jueves a las 18:00, del 1 de septiembre al 15 de junio/,
       ),
     ).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Guardar horario' })).not.toBeInTheDocument()
@@ -257,7 +306,7 @@ describe('historial', () => {
       resumen('f2', '2026-10-20', '20:00'),
       resumen('f1', MANANA, '20:00'),
       resumen('p2', '2026-10-13', '20:00'),
-      resumen('p1', '2026-10-08', '20:00', { asiste: 9, falta: 1 }),
+      resumen('p1', '2026-10-08', '20:00', { asiste: 9, falta: 1, horaFin: '21:30' }),
     ])
     abrir('/plantillas/p1/entrenos/historial')
     const proximos = await screen.findByRole('region', { name: 'Próximos' })
@@ -266,8 +315,8 @@ describe('historial', () => {
         .getAllByRole('link')
         .map((a) => a.textContent),
     ).toEqual([
-      expect.stringMatching(/jueves, 15 oct · 20:00/),
-      expect.stringMatching(/martes, 20 oct · 20:00/),
+      expect.stringMatching(/jueves, 15 oct20:00/),
+      expect.stringMatching(/martes, 20 oct20:00/),
     ])
     const octubre = screen.getByRole('region', { name: 'octubre de 2026' })
     expect(
@@ -276,7 +325,7 @@ describe('historial', () => {
         .map((a) => a.textContent),
     ).toEqual([
       expect.stringMatching(/Ayer.*Sin pasar lista/),
-      expect.stringMatching(/jueves, 8 oct · 20:00.*9 asisten/),
+      expect.stringMatching(/jueves, 8 oct20:00–21:30.*9 asisten/),
     ])
   })
 })

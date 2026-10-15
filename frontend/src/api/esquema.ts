@@ -773,8 +773,8 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Cambiar el nombre o la categoría
-         * @description Entrenador o superior. La temporada no se modifica.
+         * Cambiar el nombre, la categoría o si usa multas
+         * @description Entrenador o superior. La temporada no se modifica. Desactivar las multas las oculta y bloquea sin borrar nada: al reactivarlas vuelven como estaban.
          */
         patch: {
             parameters: {
@@ -790,6 +790,7 @@ export interface paths {
                     "application/json": {
                         nombre?: string;
                         categoria?: string;
+                        multasActivas?: boolean;
                     };
                 };
             };
@@ -1547,6 +1548,8 @@ export interface paths {
                         fecha: string;
                         /** @example 20:00 */
                         hora?: string | null;
+                        /** @example 20:00 */
+                        horaFin?: string | null;
                     };
                 };
             };
@@ -1730,7 +1733,87 @@ export interface paths {
         };
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Cambiar la hora de un entreno
+         * @description Delegado o superior. Hora de inicio y de fin (null las quita). Un entreno del horario que se cambia a mano pasa a ser suelto: al cambiar el horario ya no se rehace.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    eid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @example 20:00 */
+                        hora: string | null;
+                        /** @example 20:00 */
+                        horaFin?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Entreno actualizado */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ResumenEntreno"];
+                    };
+                };
+                /** @description Datos no válidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Ya hay un entreno ese día a esa hora */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
         trace?: never;
     };
     "/api/plantillas/{id}/entrenos/{eid}/asistencias": {
@@ -1980,6 +2063,11 @@ export interface paths {
                         horaCitacion?: string | null;
                         lugar?: string | null;
                         local?: boolean | null;
+                        /**
+                         * @description Programado o aplazado; un partido jugado se marca con su resultado
+                         * @enum {string}
+                         */
+                        estado?: "programado" | "aplazado";
                     };
                 };
             };
@@ -2156,7 +2244,7 @@ export interface paths {
         head?: never;
         /**
          * Editar un partido
-         * @description Delegado o superior. Los campos opcionales se quitan con null.
+         * @description Delegado o superior. Los campos opcionales se quitan con null. Pasar un partido jugado a programado o aplazado quita el resultado; sus estadísticas se conservan.
          */
         patch: {
             parameters: {
@@ -2181,6 +2269,11 @@ export interface paths {
                         horaCitacion?: string | null;
                         lugar?: string | null;
                         local?: boolean | null;
+                        /**
+                         * @description Programado o aplazado; un partido jugado se marca con su resultado
+                         * @enum {string}
+                         */
+                        estado?: "programado" | "aplazado";
                     };
                 };
             };
@@ -2244,7 +2337,7 @@ export interface paths {
         get?: never;
         /**
          * Convocar
-         * @description Delegado o superior. Guarda la lista completa de convocados. Cada jugador nuevo en la convocatoria debe tener ficha activa en la plantilla; quien ya estaba convocado puede seguir aunque haya causado baja.
+         * @description Delegado o superior. Guarda la lista completa de convocados. Cada jugador nuevo en la convocatoria debe tener ficha activa en la plantilla; quien ya estaba convocado puede seguir aunque haya causado baja. No se puede quitar a quien tiene estadísticas en el partido.
          */
         put: {
             parameters: {
@@ -2302,6 +2395,15 @@ export interface paths {
                 };
                 /** @description No existe */
                 404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Se quita a un jugador con estadísticas en el partido */
+                409: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -2381,6 +2483,973 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plantillas/{id}/partidos/{pid}/resultado": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Poner el resultado
+         * @description Delegado o superior. Marca el partido como jugado. Los goles registrados no pueden pasar del resultado.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    pid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        golesFavor: number;
+                        golesContra: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description Resultado guardado */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Partido"];
+                    };
+                };
+                /** @description Datos no válidos o que no cuadran con los goles registrados */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /**
+         * Quitar el resultado
+         * @description Delegado o superior. El partido vuelve a programado; titulares, suplentes y eventos se conservan.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    pid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Resultado quitado */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Partido"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plantillas/{id}/partidos/{pid}/participaciones": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Titulares y suplentes
+         * @description Delegado o superior. Lista completa, entre los convocados; como mucho 11 titulares. Los minutos jugados se calculan con los cambios.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    pid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        titulares: string[];
+                        suplentes: string[];
+                    };
+                };
+            };
+            responses: {
+                /** @description Titulares y suplentes guardados */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Partido"];
+                    };
+                };
+                /** @description Datos no válidos o que no cuadran con los eventos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plantillas/{id}/partidos/{pid}/eventos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Registrar un evento
+         * @description Delegado o superior. Gol, asistencia, tarjeta, cambio (entra o sale, con minuto) o gol en propia puerta (sin jugador: del rival a nuestro favor). Solo de convocados.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    pid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["NuevoEvento"];
+                };
+            };
+            responses: {
+                /** @description Evento registrado */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Partido"];
+                    };
+                };
+                /** @description Datos no válidos o que no cuadran con el partido */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plantillas/{id}/partidos/{pid}/eventos/lote": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Registrar varios eventos a la vez
+         * @description Delegado o superior. Todo o nada: para un cambio (entra y sale) o un gol con su asistencia. Si uno no cuadra con el partido, no se guarda ninguno.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    pid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        eventos: components["schemas"]["NuevoEvento"][];
+                    };
+                };
+            };
+            responses: {
+                /** @description Eventos registrados */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Partido"];
+                    };
+                };
+                /** @description Datos no válidos o que no cuadran con el partido */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plantillas/{id}/partidos/{pid}/eventos/{evid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Borrar un evento
+         * @description Delegado o superior. También los importados del acta. No se puede dejar el partido incoherente (por ejemplo, borrar la entrada de quien después sale).
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    pid: string;
+                    evid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Evento borrado */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Partido"];
+                    };
+                };
+                /** @description El partido no cuadraría sin el evento */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plantillas/{id}/estadisticas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Estadísticas de la temporada
+         * @description Resultados del equipo y, por jugador, partidos, titularidades, minutos, goles, asistencias y tarjetas en los partidos jugados de la plantilla. El rol jugador solo ve su fila.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Estadísticas */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["EstadisticasPlantilla"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/clubes/{cid}/jugadores/{jid}/estadisticas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Trayectoria de un jugador
+         * @description Sus estadísticas en cada temporada (plantilla con ficha) y los totales en el club, en los partidos jugados. El rol jugador solo ve la suya.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    cid: string;
+                    jid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Trayectoria */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TrayectoriaEstadisticas"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plantillas/{id}/partidos/{pid}/acta": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Descargar el acta
+         * @description El PDF tal como se subió. Cualquier miembro.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    pid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description PDF del acta */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/pdf": string;
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Subir el acta
+         * @description Delegado o superior. La ficha del partido en PDF (como mucho 2 MB), en el campo `archivo`. Sustituye a la anterior y devuelve lo leído, sin registrar nada todavía.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    pid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "multipart/form-data": {
+                        /** Format: binary */
+                        archivo?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Acta guardada y leída */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ActaLeida"];
+                    };
+                };
+                /** @description No es un PDF */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Pasa de 2 MB */
+                413: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        /**
+         * Quitar el acta
+         * @description Delegado o superior. Borra el PDF; lo que se registró con él se conserva (se borra evento a evento).
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    pid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Acta quitada */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plantillas/{id}/partidos/{pid}/acta/lectura": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Leer el acta guardada
+         * @description Delegado o superior. Lo mismo que devuelve la subida, para volver a la revisión.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    pid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Acta leída */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ActaLeida"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plantillas/{id}/partidos/{pid}/acta/confirmar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Registrar el acta
+         * @description Delegado o superior. Con las correcciones de la revisión, registra el acta con la fuente «acta»: la convocatoria pasa a ser la del acta (se conserva a quien tiene estadísticas a mano), se guardan resultado, titulares, cambios, goles y tarjetas, y competición, lugar y hora se rellenan si estaban vacíos. Volver a confirmar sustituye lo importado antes.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    pid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @description El jugador de cada nombre del acta; null para no contarlo */
+                        jugadores?: {
+                            nombre: string;
+                            /** Format: uuid */
+                            jugadorId: string | null;
+                        }[];
+                        /** @description Tipo de las tarjetas, por su posición en la lectura */
+                        tarjetas?: {
+                            indice: number;
+                            /** @enum {string} */
+                            tipo: "amarilla" | "roja";
+                        }[];
+                    };
+                };
+            };
+            responses: {
+                /** @description Acta registrada */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Partido"];
+                    };
+                };
+                /** @description El acta no se puede leer o lo leído no cuadra */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -2523,7 +3592,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description Ya hay un motivo activo con esa descripción */
+                /** @description Ya hay un motivo activo con esa descripción, o las multas están desactivadas */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -2628,7 +3697,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description Ya hay un motivo activo con esa descripción */
+                /** @description Ya hay un motivo activo con esa descripción, o las multas están desactivadas */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -2801,6 +3870,15 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
+                /** @description Las multas están desactivadas en la plantilla */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
             };
         };
         delete?: never;
@@ -2862,6 +3940,15 @@ export interface paths {
                 };
                 /** @description No existe */
                 404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Las multas están desactivadas en la plantilla */
+                409: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -2949,6 +4036,15 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
+                /** @description Las multas están desactivadas en la plantilla */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
             };
         };
         trace?: never;
@@ -3023,6 +4119,15 @@ export interface paths {
                 };
                 /** @description No existe */
                 404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Las multas están desactivadas en la plantilla */
+                409: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -3172,6 +4277,8 @@ export interface components {
             temporada: string;
             /** Format: uuid */
             plantillaAnteriorId: string | null;
+            /** @description false si la plantilla no usa multas (no se ven ni se pueden poner) */
+            multasActivas: boolean;
             /**
              * @description Rol efectivo del usuario en la plantilla
              * @enum {string}
@@ -3233,6 +4340,8 @@ export interface components {
             dia: number;
             /** @example 20:00 */
             hora: string;
+            /** @example 20:00 */
+            horaFin?: string | null;
         };
         ResumenEntreno: components["schemas"]["RecuentosAsistencia"] & {
             /** Format: uuid */
@@ -3241,6 +4350,8 @@ export interface components {
             fecha: string;
             /** @example 20:00 */
             hora: string | null;
+            /** @example 21:30 */
+            horaFin: string | null;
             /** @description true si lo creó el horario; false si es suelto */
             deHorario: boolean;
         };
@@ -3256,6 +4367,8 @@ export interface components {
             fecha: string;
             /** @example 20:00 */
             hora: string | null;
+            /** @example 21:30 */
+            horaFin: string | null;
             /** @description true si lo creó el horario; false si es suelto */
             deHorario: boolean;
             recuentos: components["schemas"]["RecuentosAsistencia"];
@@ -3298,6 +4411,15 @@ export interface components {
             lugar: string | null;
             /** @description true en casa, false fuera, null sin decidir */
             local: boolean | null;
+            /** @enum {string} */
+            estado: "programado" | "jugado" | "aplazado";
+            /**
+             * @description Solo en los jugados
+             * @example 7
+             */
+            golesFavor: number | null;
+            /** @example 1 */
+            golesContra: number | null;
             convocados: number;
         };
         Partido: {
@@ -3316,7 +4438,24 @@ export interface components {
             lugar: string | null;
             /** @description true en casa, false fuera, null sin decidir */
             local: boolean | null;
+            /** @enum {string} */
+            estado: "programado" | "jugado" | "aplazado";
+            /**
+             * @description Solo en los jugados
+             * @example 7
+             */
+            golesFavor: number | null;
+            /** @example 1 */
+            golesContra: number | null;
             jugadores: components["schemas"]["JugadorConvocatoria"][];
+            /** @description Por minuto */
+            eventos: components["schemas"]["EventoPartido"][];
+            /** @description La ficha del partido en PDF, si se ha subido */
+            acta: {
+                nombreArchivo: string;
+                tamano: number;
+                subidaEn: string;
+            } | null;
         };
         JugadorConvocatoria: {
             /** Format: uuid */
@@ -3328,11 +4467,157 @@ export interface components {
             posicion: "portero" | "defensa" | "centrocampista" | "delantero" | null;
             activo: boolean;
             convocado: boolean;
+            /** @description true titular, false suplente; null si no se ha registrado */
+            titular: boolean | null;
+            /** @description Minutos jugados, calculados */
+            minutos: number | null;
+        };
+        EventoPartido: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: uuid
+             * @description null solo en un gol en propia puerta del rival
+             */
+            jugadorId: string | null;
+            /** @enum {string} */
+            tipo: "gol" | "asistencia" | "amarilla" | "roja" | "entra" | "sale" | "gol_propia";
+            minuto: number | null;
+            /** @enum {string} */
+            origen: "manual" | "acta" | "federacion";
         };
         MensajeConvocatoria: {
             texto: string;
             /** @example https://wa.me/?text=… */
             whatsapp: string;
+        };
+        NuevoEvento: {
+            /** Format: uuid */
+            jugadorId?: string | null;
+            /** @enum {string} */
+            tipo: "gol" | "asistencia" | "amarilla" | "roja" | "entra" | "sale" | "gol_propia";
+            minuto?: number | null;
+        };
+        EstadisticasPlantilla: {
+            equipo: {
+                jugados: number;
+                ganados: number;
+                empatados: number;
+                perdidos: number;
+                golesFavor: number;
+                golesContra: number;
+            };
+            jugadores: components["schemas"]["EstadisticasJugador"][];
+        };
+        EstadisticasJugador: {
+            /** Format: uuid */
+            jugadorId: string;
+            nombre: string;
+            apellidos: string | null;
+            dorsal: number | null;
+            activo: boolean;
+            /** @description Partidos jugados (con algún minuto) */
+            partidos: number;
+            titularidades: number;
+            minutos: number;
+            goles: number;
+            asistencias: number;
+            amarillas: number;
+            rojas: number;
+            /** @description Goles en propia puerta */
+            golesPropia: number;
+        };
+        TrayectoriaEstadisticas: {
+            /** Format: uuid */
+            jugadorId: string;
+            nombre: string;
+            apellidos: string | null;
+            temporadas: {
+                /** Format: uuid */
+                plantillaId: string;
+                plantilla: string;
+                temporada: string;
+                dorsal: number | null;
+                /** @description Partidos jugados (con algún minuto) */
+                partidos: number;
+                titularidades: number;
+                minutos: number;
+                goles: number;
+                asistencias: number;
+                amarillas: number;
+                rojas: number;
+                /** @description Goles en propia puerta */
+                golesPropia: number;
+            }[];
+            totales: {
+                /** @description Partidos jugados (con algún minuto) */
+                partidos: number;
+                titularidades: number;
+                minutos: number;
+                goles: number;
+                asistencias: number;
+                amarillas: number;
+                rojas: number;
+                /** @description Goles en propia puerta */
+                golesPropia: number;
+            };
+        };
+        ActaLeida: {
+            acta: {
+                nombreArchivo: string;
+                tamano: number;
+                subidaEn: string;
+            };
+            lectura: components["schemas"]["LecturaActa"];
+            /** @description Por qué no se ha podido leer */
+            error: string | null;
+        };
+        LecturaActa: {
+            /** @enum {string} */
+            equipo: "local" | "visitante";
+            nombreEquipo: string;
+            rival: string;
+            competicion: string | null;
+            jornada: number | null;
+            fecha: string | null;
+            hora: string | null;
+            estadio: string | null;
+            ciudad: string | null;
+            golesFavor: number;
+            golesContra: number;
+            titulares: components["schemas"]["JugadorActa"][];
+            suplentes: components["schemas"]["JugadorActa"][];
+            cambios: {
+                entra: components["schemas"]["JugadorActa"];
+                sale: components["schemas"]["JugadorActa"];
+                minuto: number | null;
+            }[];
+            goles: components["schemas"]["GolActa"][];
+            golesEnContra: components["schemas"]["GolActa"][];
+            tarjetas: (components["schemas"]["JugadorActa"] & {
+                minuto: number | null;
+                /** @enum {string|null} */
+                tipo: "amarilla" | "roja" | null;
+            })[];
+            avisos: string[];
+        } | null;
+        JugadorActa: {
+            dorsal: number | null;
+            /** @example CASTRO CASTRO, PABLO */
+            nombre: string;
+            /**
+             * Format: uuid
+             * @description null si no se ha emparejado
+             */
+            jugadorId: string | null;
+        };
+        GolActa: {
+            nombre: string;
+            /** Format: uuid */
+            jugadorId: string | null;
+            minuto: number | null;
+            /** @description A favor: gol en propia puerta del rival. En contra: de uno de los nuestros */
+            enPropia: boolean;
         };
         MotivoMulta: {
             /** Format: uuid */

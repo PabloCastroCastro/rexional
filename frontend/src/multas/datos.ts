@@ -55,11 +55,21 @@ export const useResumenMultas = (plantillaId: string, activa = true) =>
 
 // Deuda pendiente de cada jugador: la del resumen para quien gestiona; el rol jugador solo tiene
 // sus multas, así que la calcula con ellas
-export function useDeudas(plantilla: { id: string; rol: string; esAdminClub: boolean }) {
+export function useDeudas(plantilla: {
+  id: string
+  rol: string
+  esAdminClub: boolean
+  multasActivas: boolean
+}) {
   const gestiona = puedeGestionarJugadores(plantilla)
-  const resumen = useResumenMultas(plantilla.id, gestiona)
-  const propias = useMultas(plantilla.id, { estado: 'pendientes' }, !gestiona)
+  const resumen = useResumenMultas(plantilla.id, gestiona && plantilla.multasActivas)
+  const propias = useMultas(
+    plantilla.id,
+    { estado: 'pendientes' },
+    !gestiona && plantilla.multasActivas,
+  )
   const deudas = new Map<string, number>()
+  if (!plantilla.multasActivas) return deudas
   if (gestiona) {
     for (const d of resumen.data?.deudas ?? []) deudas.set(d.jugadorId, d.pendienteCentimos)
   } else {

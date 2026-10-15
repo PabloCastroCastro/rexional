@@ -34,6 +34,7 @@ const datosEntreno = {
   id: z.uuid(),
   fecha: z.string().openapi({ example: '2026-10-13' }),
   hora: z.string().nullable().openapi({ example: '20:00' }),
+  horaFin: z.string().nullable().openapi({ example: '21:30' }),
   deHorario: z.boolean().openapi({ description: 'true si lo creó el horario; false si es suelto' }),
 }
 
@@ -65,6 +66,11 @@ const EsquemaSesion = z
       .min(1, 'El día va de 1 (lunes) a 7 (domingo)')
       .max(7, 'El día va de 1 (lunes) a 7 (domingo)'),
     hora: EsquemaHora,
+    horaFin: EsquemaHora.nullish(),
+  })
+  .refine((s) => !s.horaFin || s.horaFin > s.hora, {
+    path: ['horaFin'],
+    message: 'La hora de fin debe ser posterior a la de inicio',
   })
   .openapi('SesionHorario')
 
@@ -110,13 +116,15 @@ const diaSemana = (fecha: string) => new Date(`${fecha}T00:00:00Z`).getUTCDay() 
 const recuento = (estado: Estado) =>
   sql<number>`(count(${asistencias.estado}) filter (where ${asistencias.estado} = ${estado}))::int`
 
-// La hora sin segundos ("20:00")
+// Las horas sin segundos ("20:00")
 const horaEntreno = sql<string | null>`to_char(${entrenos.hora}, 'HH24:MI')`
+const horaFinEntreno = sql<string | null>`to_char(${entrenos.horaFin}, 'HH24:MI')`
 
 const columnasEntreno = {
   id: entrenos.id,
   fecha: entrenos.fecha,
   hora: horaEntreno,
+  horaFin: horaFinEntreno,
   deHorario: entrenos.deHorario,
 }
 
@@ -176,6 +184,25 @@ async function detalleEntreno(plantillaId: string, entrenoId: string) {
   return { ...entreno, recuentos, jugadores: filas }
 }
 
+// La hora de fin necesita la de inicio y es posterior a ella
+function validarHoras(h: { hora?: string | null; horaFin?: string | null }, ctx: z.RefinementCtx) {
+  if (!h.horaFin) return
+  if (!h.hora) {
+    ctx.addIssue({ code: 'custom', path: ['horaFin'], message: 'Indica también la hora de inicio' })
+  } else if (h.horaFin <= h.hora) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['horaFin'],
+      message: 'La hora de fin debe ser posterior a la de inicio',
+    })
+  }
+}
+
+const horaFinNoValida = () => {
+  const mensaje = 'La hora de fin debe ser posterior a la de inicio'
+  return new ErrorApi(400, 'validacion', mensaje, [{ campo: 'horaFin', mensaje }])
+}
+
 const entrenoDuplicado = (fecha: string, hora: string | null) =>
   new ErrorApi(
     409,
@@ -211,10 +238,11 @@ const CuerpoHorario = z
 // Fechas y horas que crea un horario a partir de un día: cada fecha de [inicio, hasta] cuyo día de la
 // semana tiene sesión
 function sesionesDelHorario(horario: { hasta: string; sesiones: SesionHorario[] }, inicio: string) {
-  const resultado: { fecha: string; hora: string }[] = []
+  const resultado: { fecha: string; hora: string; horaFin: string | null }[] = []
   for (let fecha = inicio; fecha <= horario.hasta; fecha = sumarDias(fecha, 1)) {
     for (const s of horario.sesiones)
-      if (s.dia === diaSemana(fecha)) resultado.push({ fecha, hora: s.hora })
+      if (s.dia === diaSemana(fecha))
+        resultado.push({ fecha, hora: s.hora, horaFin: s.horaFin ?? null })
   }
   return resultado
 }
@@ -429,7 +457,14 @@ export const rutasEntrenos = () =>
           body: {
             content: {
               'application/json': {
-                schema: z.object({ fecha: EsquemaFecha, hora: EsquemaHora.nullish() }).strict(),
+                schema: z
+                  .object({
+                    fecha: EsquemaFecha,
+                    hora: EsquemaHora.nullish(),
+                    horaFin: EsquemaHora.nullish(),
+                  })
+                  .strict()
+                  .superRefine(validarHoras),
               },
             },
           },
@@ -442,11 +477,11 @@ export const rutasEntrenos = () =>
         },
       }),
       async (c) => {
-        const { fecha, hora = null } = c.req.valid('json')
+        const { fecha, hora = null, horaFin = null } = c.req.valid('json')
         try {
           const [creado] = await db
             .insert(entrenos)
-            .values({ plantillaId: c.var.plantilla.id, fecha, hora })
+            .values({ plantillaId: c.var.plantilla.id, fecha, hora, horaFin })
             .returning({ id: entrenos.id })
           if (!creado) throw new Error('No se pudo crear el entreno')
           const entreno = await buscarEntreno(c.var.plantilla.id, creado.id)
@@ -475,6 +510,66 @@ export const rutasEntrenos = () =>
         const { eid } = c.req.valid('param')
         const entreno = await detalleEntreno(c.var.plantilla.id, eid)
         return c.json({ ...entreno, jugadores: visibles(entreno.jugadores, c.var) }, 200)
+      },
+    )
+    .openapi(
+      createRoute({
+        method: 'patch',
+        path: '/plantillas/{id}/entrenos/{eid}',
+        tags: ['Entrenos'],
+        summary: 'Cambiar la hora de un entreno',
+        description:
+          'Delegado o superior. Hora de inicio y de fin (null las quita). Un entreno del horario que se cambia a mano pasa a ser suelto: al cambiar el horario ya no se rehace.',
+        middleware: [requireRol('delegado')] as const,
+        request: {
+          params: ParamEntreno,
+          body: {
+            content: {
+              'application/json': {
+                schema: z
+                  .object({ hora: EsquemaHora.nullable(), horaFin: EsquemaHora.nullish() })
+                  .strict()
+                  .superRefine(validarHoras),
+              },
+            },
+          },
+        },
+        responses: {
+          200: json(EsquemaResumenEntreno, 'Entreno actualizado'),
+          400: json(EsquemaError, 'Datos no válidos'),
+          409: json(EsquemaError, 'Ya hay un entreno ese día a esa hora'),
+          ...errores,
+        },
+      }),
+      async (c) => {
+        const { eid } = c.req.valid('param')
+        const { hora, horaFin = null } = c.req.valid('json')
+        const plantillaId = c.var.plantilla.id
+        const actual = await buscarEntreno(plantillaId, eid)
+        try {
+          await db
+            .update(entrenos)
+            .set({ hora, horaFin, deHorario: false })
+            .where(and(eq(entrenos.id, eid), eq(entrenos.plantillaId, plantillaId)))
+        } catch (error) {
+          const restriccion = restriccionViolada(error)
+          if (restriccion === 'entrenos_fecha_hora_unica')
+            throw entrenoDuplicado(actual.fecha, hora)
+          if (restriccion === 'entrenos_hora_fin_posterior') throw horaFinNoValida()
+          throw error
+        }
+        const [resumen] = await db
+          .select({
+            ...columnasEntreno,
+            asiste: recuento('asiste'),
+            justificada: recuento('justificada'),
+            falta: recuento('falta'),
+          })
+          .from(entrenos)
+          .leftJoin(asistencias, eq(asistencias.entrenoId, entrenos.id))
+          .where(eq(entrenos.id, eid))
+          .groupBy(entrenos.id)
+        return c.json(resumen, 200)
       },
     )
     .openapi(

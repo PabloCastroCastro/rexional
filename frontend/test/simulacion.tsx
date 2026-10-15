@@ -30,7 +30,14 @@ beforeEach(() => {
         : new Request(new URL(String(entrada), 'http://localhost:3000'), opciones)
     const clave = `${peticion.method} ${new URL(peticion.url).pathname}`
     const texto = await peticion.clone().text()
-    peticiones.push({ clave, cuerpo: texto ? JSON.parse(texto) : undefined })
+    // Los formularios (subida de archivos) se guardan como texto
+    let cuerpo: unknown
+    try {
+      cuerpo = texto ? JSON.parse(texto) : undefined
+    } catch {
+      cuerpo = texto
+    }
+    peticiones.push({ clave, cuerpo })
     const manejador = manejadores[clave]
     return manejador
       ? manejador(peticion)
@@ -65,6 +72,7 @@ export const plantilla = (
   categoria: nombre === 'Juvenil' ? 'juvenil' : 'sénior',
   temporada,
   plantillaAnteriorId: null,
+  multasActivas: true,
   rol: 'admin',
   esAdminClub: true,
   club: clubRexional,

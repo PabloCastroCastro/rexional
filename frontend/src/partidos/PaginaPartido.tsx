@@ -22,8 +22,10 @@ import { hoy, textoFecha } from '../entrenos/datos'
 import { nombreCompleto, puedeGestionarJugadores } from '../jugadores/datos'
 import { Dorsal } from '../jugadores/PaginaPlantilla'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
+import { SeccionActa } from './Acta'
 import { CLAVE_PARTIDOS, type Partido, textoLocal, usePartido } from './datos'
 import { FormularioPartido } from './FormularioPartido'
+import { SeccionPartido } from './Jugado'
 import { Mensaje } from './Mensaje'
 import estilos from './Partidos.module.css'
 
@@ -64,7 +66,10 @@ export function PaginaPartido() {
       {volver}
 
       <header className={estilos.ficha}>
-        <span className={estilos.cuando}>{textoFecha(p.fecha)}</span>
+        <span className={estilos.cuando}>
+          {textoFecha(p.fecha)}
+          {p.estado === 'aplazado' && ' · Aplazado'}
+        </span>
         <h1>
           {p.local === false ? 'en ' : 'vs '}
           {p.rival}
@@ -108,6 +113,8 @@ export function PaginaPartido() {
         </div>
       )}
 
+      <SeccionPartido partido={p} />
+
       <section className={estilos.seccion} aria-labelledby="convocatoria">
         <h2 id="convocatoria">
           <Users aria-hidden size={20} />
@@ -124,6 +131,13 @@ export function PaginaPartido() {
                 <span>
                   {nombreCompleto(j)}
                   {!j.activo && <span className={estilos.secundario}> · baja</span>}
+                  {j.titular !== null && (
+                    <span className={estilos.secundario}>
+                      {' · '}
+                      {j.titular ? 'Titular' : 'Suplente'}
+                      {j.minutos !== null && ` · ${j.minutos}'`}
+                    </span>
+                  )}
                 </span>
               </li>
             ))}
@@ -149,6 +163,8 @@ export function PaginaPartido() {
           </Link>
         )}
       </section>
+
+      <SeccionActa partido={p} />
 
       <section className={estilos.seccion} aria-labelledby="mensaje">
         <h2 id="mensaje">

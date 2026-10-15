@@ -94,8 +94,9 @@ Este documento recoge todas las decisiones funcionales, técnicas y de organizac
 ### 2.3 Entrenamientos y asistencia
 
 - **Calendario de entrenos.** Los entrenos se planifican antes de pasar lista:
-  - **Horario semanal** de la plantilla: días de la semana con su hora, y fechas desde y hasta que se eligen (por ejemplo, hasta el 25 de mayo o el 15 de junio; por defecto, el 30 de junio de la temporada). Al guardarlo se crean los entrenos de esas fechas. Al cambiarlo, se rehacen los entrenos futuros que aún no tienen asistencia; los que la tienen, los pasados y los sueltos no se tocan.
+  - **Horario semanal** de la plantilla: días de la semana con su hora de inicio y, opcionalmente, de fin, y fechas desde y hasta que se eligen (por ejemplo, hasta el 25 de mayo o el 15 de junio; por defecto, el 30 de junio de la temporada). Al guardarlo se crean los entrenos de esas fechas. Al cambiarlo, se rehacen los entrenos futuros que aún no tienen asistencia; los que la tienen, los pasados y los sueltos no se tocan.
   - **Entrenos sueltos**: un día sin entreno o una segunda sesión el mismo día (doble sesión), a otra hora.
+  - **Cambiar la hora** de inicio y de fin de un entreno concreto. Si era del horario, pasa a ser suelto: al cambiar el horario ya no se rehace.
   - **Cancelar** un entreno, con confirmación si ya tiene asistencia.
   - Lo gestionan el delegado y los roles superiores (los segundos entrenadores y preparadores físicos se dan de alta como delegados).
 - Pasar lista de un entreno del calendario (por defecto, el de hoy, en la zona horaria `Europe/Madrid`), nunca de uno futuro. Un día sin entreno invita a crearlo.
@@ -119,6 +120,7 @@ Este documento recoge todas las decisiones funcionales, técnicas y de organizac
 - El motivo y el importe se **copian** en la multa: cambiar el catálogo no altera multas pasadas.
 - Marcar una multa como cobrada (guarda la fecha de pago; una multa está cobrada si y solo si tiene fecha de pago) o deshacerlo. Saldar de una vez todas las multas pendientes de un jugador.
 - Resumen: total pendiente de cobro, total en caja (cobrado) y deuda por jugador ordenada de mayor a menor.
+- **Multas opcionales por plantilla**: el entrenador o superior las desactiva cuando no aplican (por ejemplo, en alevines). Desactivadas, no se ven la pestaña Multas ni las deudas y la API no deja cambiar nada; lo que hubiera se conserva y vuelve al reactivarlas. Una plantilla nueva toma el valor de su plantilla anterior.
 - Las multas y la caja son de cada plantilla, así que **se reinician cada temporada**. Las pendientes de una temporada anterior siguen en su plantilla y se pueden consultar y cobrar.
 
 ### 2.6 Personalización visual (ciclo posterior al MVP)
@@ -142,6 +144,11 @@ Este documento recoge todas las decisiones funcionales, técnicas y de organizac
 - Solo se almacenan los datos de cada partido (participaciones y eventos); los acumulados se calculan con consultas.
 - Al registrar una tarjeta, la aplicación propone las multas del catálogo asociadas a ese tipo de tarjeta, si las hay (el entrenador confirma).
 - **Arquitectura de importadores**: las estadísticas entran por un único servicio con fuentes intercambiables. Fuente inicial: manual. Previstas: importación asistida desde el PDF del acta y, si se obtiene acceso, datos de la federación.
+- **Coherencia**: cada cambio comprueba el partido entero (solo convocados, como mucho 11 titulares, entra un suplente y sale quien está en el campo, nadie entra ni sale dos veces, un expulsado no sale en un cambio, goles y asistencias de quien está en el campo, no más goles que el resultado). Si algo no cuadra, no se guarda.
+- **Minutos jugados** sobre 90: un titular juega hasta que sale o le expulsan; quien entra, desde su minuto; un suplente que no entra, 0. Los minutos del descuento no suman.
+- Un partido pasa a **jugado** al poner el resultado; también se puede **aplazar**. No se saca de la convocatoria a quien tiene estadísticas en el partido.
+- Las estadísticas acumuladas solo cuentan los partidos jugados. Se ven en Partidos → Estadísticas (resultados del equipo y clasificaciones de goleadores, asistencias, minutos y tarjetas; un jugador ve las suyas) y en la ficha de cada jugador (sus partidos en la plantilla y sus números en cada temporada del club).
+- **Acta del partido**: se sube al partido la ficha en PDF de la Federación Gallega (como mucho 2 MB) y se queda guardada para descargarla. La app la lee (resultado, titulares, suplentes, cambios, goles, tarjetas, competición, jornada y estadio): las columnas de cada equipo por la posición del texto y, por el color de los iconos, quién entra y quién sale y si la tarjeta es amarilla o roja. Nuestro equipo es el local o el visitante según el partido (si no se sabe, por el nombre del club). Los nombres del acta se emparejan con la plantilla sin tildes ni mayúsculas, con el dorsal de apoyo. El entrenador revisa lo leído (elige los jugadores sin emparejar y el tipo de las tarjetas que no se han podido leer) y al confirmar se registra con la fuente `acta`: la convocatoria pasa a ser la del acta y competición, lugar y hora se rellenan si estaban vacíos. Volver a confirmar sustituye lo importado y conserva lo registrado a mano.
 
 ### 2.8 Planificación de entrenamientos (ciclo posterior)
 
@@ -158,7 +165,7 @@ Este documento recoge todas las decisiones funcionales, técnicas y de organizac
 
 **Sesiones planificadas**: cada entreno (la misma entidad en la que se pasa lista) puede tener un plan:
 
-- Datos de la sesión: fecha, hora, duración prevista, objetivo principal y notas.
+- Datos de la sesión: fecha, hora de inicio y de fin (la duración prevista se calcula), objetivo principal y notas.
 - Lista **ordenada** de ejercicios de la biblioteca, cada uno con duración, indicaciones específicas para esa sesión y organización de grupos si se quiere.
 - Duración total calculada y comparada con la prevista.
 - Duplicar una sesión en otra fecha y guardar sesiones como **modelo** para reutilizarlas.
@@ -362,6 +369,7 @@ Una categoría del club en una temporada. Es la unidad de trabajo.
 | temporada | text | formato `AAAA-AA` (`2026-27`), con el segundo año consecutivo al primero. No se modifica |
 | plantilla_anterior_id | uuid → plantillas | nullable, set null. La misma plantilla en la temporada anterior; del mismo club y de una temporada anterior (validado en el servicio) |
 | creado_por | uuid → user | |
+| multas_activas | boolean | por defecto true; false si la plantilla no usa multas |
 | created_at | timestamptz | |
 
 ### membresias
@@ -407,8 +415,8 @@ La participación de un jugador en una plantilla (una temporada).
 | plantilla_id | uuid → plantillas | cascade |
 | fecha | date | En `Europe/Madrid`. Varios entrenos por día (doble sesión), pero no dos a la misma hora ni dos sin hora: único `(plantilla_id, fecha, hora)` con `NULLS NOT DISTINCT`. Desde el ciclo 7, nullable solo si `es_modelo` |
 | hora | time | opcional |
+| hora_fin | time | opcional; exige `hora` y es posterior a ella (`CHECK`). Con la hora de inicio da la duración prevista de la sesión |
 | de_horario | boolean | por defecto false. true si lo creó el horario: al cambiar el horario se rehacen estos |
-| duracion_prevista | smallint | minutos, opcional (ciclo 7) |
 | objetivo | text | opcional (ciclo 7) |
 | es_modelo | boolean | por defecto false. Sesión guardada como modelo, sin fecha (ciclo 7). Los modelos no cuentan en el historial ni en el porcentaje de asistencia |
 | nombre_modelo | text | obligatorio si `es_modelo` (ciclo 7) |
@@ -449,9 +457,9 @@ Horario semanal de entrenos de una plantilla (uno por plantilla).
 | hora_citacion | time | opcional; no posterior a `hora` |
 | lugar | text | opcional |
 | local | boolean | true en casa, false fuera; null si es campo neutral o no se sabe |
-| estado | enum `programado, jugado, aplazado` | por defecto programado (ciclo 6, con su propia migración) |
-| goles_favor | smallint | nullable (ciclo 6) |
-| goles_contra | smallint | nullable (ciclo 6) |
+| estado | enum `programado, jugado, aplazado` | por defecto programado |
+| goles_favor | smallint | ≥ 0. Resultado desde el punto de vista de la plantilla. Con `goles_contra`, presente si y solo si el partido está jugado |
+| goles_contra | smallint | ≥ 0 |
 | created_at | timestamptz | |
 
 ### convocados
@@ -461,23 +469,34 @@ Horario semanal de entrenos de una plantilla (uno por plantilla).
 | jugador_id | uuid | PK compuesta |
 | plantilla_id | uuid | Garantiza que el jugador tiene ficha en la plantilla del partido, con las FK compuestas `(partido_id, plantilla_id) → partidos` y `(plantilla_id, jugador_id) → fichas`, ambas cascade. Que la ficha esté activa se valida al convocar; si después causa baja, la convocatoria se conserva |
 
-### participaciones (ciclo 6)
+### participaciones
 | Campo | Tipo | Notas |
 |---|---|---|
-| partido_id | uuid → partidos | PK compuesta, cascade |
-| jugador_id | uuid → jugadores | PK compuesta, cascade. FK compuesta `(partido_id, jugador_id) → convocados` para garantizar que está convocado |
-| titular | boolean | |
-| minutos | smallint | calculable a partir de eventos |
+| partido_id | uuid | PK compuesta |
+| jugador_id | uuid | PK compuesta. FK compuesta `(partido_id, jugador_id) → convocados`, cascade: solo convocados, y si se quita al convocado se va su participación |
+| titular | boolean | false = suplente |
+| minutos | smallint | 0–150. Se calculan con la titularidad y los cambios; un suplente que no entra juega 0 |
 
-### eventos_partido (ciclo 6)
+### eventos_partido
 | Campo | Tipo | Notas |
 |---|---|---|
 | id | uuid | PK |
 | partido_id | uuid → partidos | cascade |
-| jugador_id | uuid → jugadores | nullable (p. ej. gol en propia puerta del rival a nuestro favor), cascade |
+| jugador_id | uuid | FK compuesta `(partido_id, jugador_id) → convocados`, cascade. Solo puede faltar en `gol_propia` (gol en propia puerta del rival a nuestro favor) |
 | tipo | enum `gol, asistencia, amarilla, roja, entra, sale, gol_propia` | `gol_propia` con jugador = gol en propia de uno de los nuestros; sin jugador = gol en propia del rival |
-| minuto | smallint | opcional |
-| origen | enum `manual, acta, federacion` | fuente del dato |
+| minuto | smallint | opcional, 0–150 |
+| origen | enum `manual, acta, federacion` | fuente del dato; por defecto manual |
+| created_at | timestamptz | |
+
+### actas_partido
+| Campo | Tipo | Notas |
+|---|---|---|
+| partido_id | uuid → partidos | PK (un acta por partido), cascade |
+| pdf | bytea | el PDF tal como se subió; en la base de datos para que entre en las copias |
+| nombre_archivo | text | no vacío |
+| tamano | integer | bytes, entre 1 y 2 MB |
+| subida_por | uuid → user | set null |
+| subida_en | timestamptz | |
 
 ### motivos_multa
 | Campo | Tipo | Notas |
@@ -590,7 +609,7 @@ Prefijo `/api`. JSON. Todas las rutas de la plantilla cuelgan de `/plantillas`, 
 | Entrenos | `GET /plantillas/:id/horario` | Miembro |
 | | `PUT /plantillas/:id/horario` (crea y rehace sus entrenos) · `DELETE /plantillas/:id/horario` | Delegado |
 | | `GET /plantillas/:id/entrenos?desde=&hasta=` (con recuentos por estado) | Miembro |
-| | `POST /plantillas/:id/entrenos` (suelto o doble sesión) · `DELETE /plantillas/:id/entrenos/:eid` (cancelar) | Delegado |
+| | `POST /plantillas/:id/entrenos` (suelto o doble sesión) · `PATCH /plantillas/:id/entrenos/:eid` (hora y hora de fin) · `DELETE /plantillas/:id/entrenos/:eid` (cancelar) | Delegado |
 | | `GET /plantillas/:id/entrenos/:eid` | Miembro (jugador: solo su fila) |
 | | `PUT /plantillas/:id/entrenos/:eid/asistencias` (lista completa; no en entrenos futuros) | Delegado |
 | | `GET /plantillas/:id/asistencia/resumen` | Miembro (jugador: solo suyo) |
@@ -602,13 +621,17 @@ Prefijo `/api`. JSON. Todas las rutas de la plantilla cuelgan de `/plantillas`, 
 | | `PUT /plantillas/:id/entrenos/:eid/plan` (datos de sesión y lista ordenada de ejercicios) | Entrenador |
 | | `POST /plantillas/:id/entrenos/:eid/duplicar` · `POST .../guardar-modelo` · `POST /plantillas/:id/sesiones/modelos/:mid/aplicar` | Entrenador |
 | Partidos | `GET /plantillas/:id/partidos?cuando=proximos|pasados` (con el número de convocados) · `POST /plantillas/:id/partidos` | Miembro / Delegado |
-| | `GET /plantillas/:id/partidos/:pid` (con la lista para convocar) · `PATCH/DELETE /plantillas/:id/partidos/:pid` | Miembro / Delegado |
-| | `PUT /plantillas/:id/partidos/:pid/convocados` (lista completa; ficha activa para los nuevos) | Delegado |
+| | `GET /plantillas/:id/partidos/:pid` (lista para convocar con titular y minutos de cada uno, y eventos) · `PATCH/DELETE /plantillas/:id/partidos/:pid` (`estado: aplazado|programado` quita el resultado) | Miembro / Delegado |
+| | `PUT /plantillas/:id/partidos/:pid/convocados` (lista completa; ficha activa para los nuevos; no se quita a quien tiene estadísticas: 409) | Delegado |
 | | `GET /plantillas/:id/partidos/:pid/mensaje` (texto para WhatsApp y enlace `wa.me`) | Miembro |
-| Estadísticas | `PUT /plantillas/:id/partidos/:pid/resultado` | Delegado |
-| | `PUT /plantillas/:id/partidos/:pid/participaciones` | Delegado |
-| | `GET/POST/DELETE /plantillas/:id/partidos/:pid/eventos` | Miembro (eventos públicos del partido) / Delegado |
-| | `GET /plantillas/:id/estadisticas` (de la plantilla) | Miembro (jugador: solo suyas) |
+| Estadísticas | `PUT/DELETE /plantillas/:id/partidos/:pid/resultado` (jugado / vuelve a programado) | Delegado |
+| | `PUT /plantillas/:id/partidos/:pid/participaciones` (titulares y suplentes; recalcula minutos) | Delegado |
+| | `POST /plantillas/:id/partidos/:pid/eventos` · `POST .../eventos/lote` (varios a la vez, todo o nada: un cambio, un gol con su asistencia) · `DELETE .../eventos/:evid` (los eventos se leen en el detalle del partido) | Delegado |
+| | `GET /plantillas/:id/estadisticas` (resultados del equipo y acumulados por jugador) | Miembro (jugador: solo suyas) |
+| | `GET /clubes/:cid/jugadores/:jid/estadisticas` (trayectoria por temporadas y totales) | Miembro del club (jugador: solo la suya) |
+| Actas | `POST /plantillas/:id/partidos/:pid/acta` (PDF en `multipart/form-data`; devuelve lo leído sin registrar) · `GET .../acta/lectura` · `DELETE .../acta` | Delegado |
+| | `GET /plantillas/:id/partidos/:pid/acta` (descarga del PDF) | Miembro |
+| | `POST /plantillas/:id/partidos/:pid/acta/confirmar` (con las correcciones de la revisión; registra con la fuente `acta`) | Delegado |
 | Multas | `GET /plantillas/:id/motivos-multa?inactivos=` · `POST /plantillas/:id/motivos-multa` · `PATCH /plantillas/:id/motivos-multa/:mid` (editar, desactivar o reactivar; no se borran) | Miembro / Delegado |
 | | `GET /plantillas/:id/multas?jugador=&estado=pendientes|cobradas` · `POST /plantillas/:id/multas` (del catálogo o libre) · `PATCH/DELETE /plantillas/:id/multas/:mid` (`fechaPago` cobra; `null` deshace) | Miembro (jugador: suyas) / Delegado |
 | | `POST /plantillas/:id/jugadores/:jid/saldar` | Delegado |
@@ -1254,6 +1277,35 @@ Crear las plantillas de una temporada nueva a partir de las de la anterior (secc
 - [ ] La temporada anterior sigue consultable; el selector muestra primero la nueva
 - [ ] Tests
 
+#### GH-101
+**Título:** Multas opcionales por plantilla
+**Etiquetas:** feature, db, backend, frontend
+
+Las multas no tienen sentido en todas las plantillas (por ejemplo, en los alevines). Cada plantilla puede desactivarlas: entonces no se ven en la app y no se pueden poner. Depende de GH-22, GH-24, GH-25 y GH-70.
+
+**Criterios de aceptación**
+- [ ] Columna `multas_activas` en `plantillas` (por defecto true), con migración; una plantilla nueva toma el valor de su plantilla anterior si la tiene
+- [ ] `PATCH /api/plantillas/:id` admite `multasActivas` (entrenador o superior) y las respuestas de plantillas lo incluyen
+- [ ] Con las multas desactivadas, la API rechaza poner, editar, cobrar, borrar y saldar multas, y editar el catálogo (409 `multas_desactivadas`); las multas y el catálogo existentes se conservan y vuelven a verse al reactivarlas
+- [ ] Interruptor «Multas» en Configuración › Esta plantilla
+- [ ] Con las multas desactivadas no se ven la pestaña Multas ni la deuda en la plantilla y en la ficha del jugador
+- [ ] Tests
+
+#### GH-102
+**Título:** Hora de fin de los entrenos
+**Etiquetas:** feature, db, backend, frontend
+
+Saber cuándo termina cada entreno: hora de fin opcional, junto a la de inicio. Depende de GH-81 y GH-82.
+
+**Criterios de aceptación**
+- [ ] Columna `hora_fin` en `entrenos` (opcional, posterior a `hora` si las dos están), con migración
+- [ ] Horario semanal: cada sesión puede llevar hora de fin (`{ dia, hora, horaFin? }`), que pasa a los entrenos que crea
+- [ ] Entrenos sueltos con hora de fin opcional al crearlos
+- [ ] `PATCH /api/plantillas/:id/entrenos/:eid` para cambiar la hora y la hora de fin de un entreno (delegado o superior)
+- [ ] Las respuestas de entrenos incluyen `horaFin`; en pasar lista, el historial y los próximos se muestra «20:00–21:30»
+- [ ] En el documento, `hora_fin` sustituye a `duracion_prevista` del ciclo 7 (la duración se calcula)
+- [ ] Tests
+
 ---
 
 ### Milestone: Ciclo 6 · Estadísticas
@@ -1264,7 +1316,7 @@ Crear las plantillas de una temporada nueva a partir de las de la anterior (secc
 
 **Criterios de aceptación**
 - [ ] Campos `estado`, `goles_favor`, `goles_contra` en `partidos` si no se añadieron en GH-18
-- [ ] Asociación de tipo de tarjeta en el catálogo por defecto (amarilla por protestar → amarilla, roja → roja), con migración de datos para las plantillas existentes
+- [ ] Asociación de tipo de tarjeta en el catálogo por defecto (amarilla por protestar → amarilla, roja → roja), con migración de datos para las plantillas existentes (ya hecho en GH-22)
 - [ ] Tablas `participaciones` y `eventos_partido` (con `origen`) según la sección 6
 - [ ] Migración y seed con partidos jugados de ejemplo
 
@@ -1272,20 +1324,21 @@ Crear las plantillas de una temporada nueva a partir de las de la anterior (secc
 **Título:** Servicio de importación de estadísticas
 **Etiquetas:** feature, backend
 
-Punto de entrada único para registrar estadísticas con fuentes intercambiables. Depende de GH-31.
+Punto de entrada único para registrar estadísticas con fuentes intercambiables. Depende de GH-31. Se hace junto con GH-33, en la misma PR.
 
 **Criterios de aceptación**
 - [ ] Interfaz común de fuente (`manual`, `acta`, `federacion`) que produce resultado, participaciones y eventos normalizados
 - [ ] Implementación de la fuente `manual`
 - [ ] Validaciones comunes: solo jugadores convocados, minutos coherentes, un jugador no entra dos veces
 - [ ] Cálculo de minutos jugados a partir de titularidad y cambios
+- [ ] Registrar con una fuente sustituye las participaciones y los eventos que esa misma fuente registró antes en el partido
 - [ ] Tests
 
 #### GH-33
 **Título:** API de estadísticas de partido
 **Etiquetas:** feature, backend
 
-Depende de GH-32.
+Depende de GH-32; se hace junto con ella, en la misma PR.
 
 **Criterios de aceptación**
 - [ ] `PUT .../partidos/:pid/resultado` marca el partido como jugado
@@ -1299,13 +1352,14 @@ Depende de GH-32.
 **Título:** Pantalla de partido jugado
 **Etiquetas:** feature, frontend
 
-Depende de GH-33.
+Depende de GH-33 y GH-37.
 
 **Criterios de aceptación**
+- [ ] Botón «Subir acta» en el partido, que lleva a la revisión de GH-37
 - [ ] Marcador de resultado
 - [ ] Selección de titulares entre los convocados
 - [ ] Registro rápido de eventos: tipo, jugador y minuto, pensado para usarse durante o justo después del partido
-- [ ] Línea de tiempo del partido con opción de borrar eventos
+- [ ] Línea de tiempo del partido con opción de borrar eventos; lo importado del acta se corrige igual que lo manual
 
 #### GH-35
 **Título:** Pantalla de estadísticas de temporada
@@ -1331,16 +1385,21 @@ Depende de GH-24 y GH-33.
 - [ ] La multa queda vinculada al evento (`evento_id`); al borrar el evento se avisa de la multa asociada
 
 #### GH-37
-**Título:** Importación asistida desde el acta del partido
-**Etiquetas:** investigacion, backend
+**Título:** Importación desde la ficha del partido (PDF)
+**Etiquetas:** feature, db, backend, frontend
 
-Evaluar la extracción de datos del PDF del acta oficial que descarga el entrenador. Depende de GH-32.
+Subir al partido la ficha en PDF que publica la Federación Gallega y registrar con ella resultado, titulares, cambios, goles y tarjetas, siempre después de que el entrenador lo revise. Depende de GH-32 y GH-33.
 
 **Criterios de aceptación**
-- [ ] Análisis del formato de actas reales de la federación gallega
-- [ ] Prueba de concepto de extracción de resultado, goleadores y tarjetas
-- [ ] Emparejamiento de nombres del acta con la plantilla
-- [ ] Documento con conclusiones y propuesta de implementación como fuente `acta` (siempre con revisión del entrenador antes de guardar)
+- [ ] Tabla `actas_partido` (una por partido, cascade): el PDF en la base de datos (`bytea`, solo PDF, máximo 2 MB), nombre del archivo, quién lo subió y cuándo
+- [ ] `POST /api/plantillas/:id/partidos/:pid/acta` (delegado o superior): guarda el PDF y devuelve lo leído sin registrar nada; `GET` del mismo recurso descarga el PDF (cualquier miembro)
+- [ ] Lectura de la ficha por la posición del texto: resultado, titulares, suplentes, cambios (quien entra y quien sale, con el minuto), goles con minuto, tarjetas con minuto, competición, jornada y estadio
+- [ ] Nuestro equipo es la columna local o la visitante según `local` del partido; si no se sabe, se busca por el nombre del club
+- [ ] Tipo de tarjeta por el color del icono; si no se puede leer, queda señalada para revisar
+- [ ] Emparejamiento de los nombres del acta («APELLIDOS, NOMBRE») con los jugadores de la plantilla, sin tildes ni mayúsculas y con el dorsal de apoyo; los que no se emparejan quedan señalados
+- [ ] Confirmar registra con la fuente `acta`: la convocatoria pasa a ser la del acta, y se guardan resultado, participaciones con minutos y eventos; competición y lugar se rellenan si estaban vacíos. Volver a confirmar sustituye lo importado antes
+- [ ] Pantalla de revisión: subir el PDF, ver lo leído, elegir los jugadores sin emparejar, corregir el tipo de tarjeta y confirmar
+- [ ] Tests con una ficha de ejemplo
 
 ---
 
@@ -1353,7 +1412,7 @@ Evaluar la extracción de datos del PDF del acta oficial que descarga el entrena
 **Criterios de aceptación**
 - [ ] Tablas `ejercicios`, `ejercicio_medios` y `entreno_ejercicios` según la sección 6
 - [ ] La biblioteca (`ejercicios`) es del club (`club_id`), compartida por todas sus plantillas y temporadas
-- [ ] Nuevos campos en `entrenos`: `hora`, `duracion_prevista`, `objetivo`, `es_modelo` y `nombre_modelo`; `fecha` nullable solo en modelos de sesión y unicidad de fecha mediante índice parcial que los excluye
+- [ ] Nuevos campos en `entrenos`: `objetivo`, `es_modelo` y `nombre_modelo`; `fecha` nullable solo en modelos de sesión y unicidad de fecha mediante índice parcial que los excluye
 - [ ] Los modelos de sesión no aparecen en el historial ni cuentan para el porcentaje de asistencia
 - [ ] Un ejercicio usado en alguna sesión no se puede borrar, solo archivar
 - [ ] Ajuste de GH-15: un entreno con planificación no se elimina al quedar sin asistencias
@@ -1427,7 +1486,7 @@ Depende de GH-41 y GH-42.
 
 **Criterios de aceptación**
 - [ ] Vista de próximas sesiones (lista o calendario semanal) accesible desde Entrenos
-- [ ] Editor de sesión: fecha, hora, duración prevista, objetivo y notas
+- [ ] Editor de sesión: fecha, hora de inicio y de fin, objetivo y notas
 - [ ] Añadir ejercicios desde la biblioteca con buscador; reordenar arrastrando; duración e indicaciones por ejercicio
 - [ ] Duración total frente a la prevista, con aviso si se supera
 - [ ] Duplicar sesión, guardar como modelo y crear desde un modelo

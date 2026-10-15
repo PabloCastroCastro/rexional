@@ -58,18 +58,20 @@ export function Aplicacion() {
       </main>
 
       <nav className={estilos.navegacion} aria-label="Secciones">
-        {secciones.map(({ ruta, texto, icono: Icono }) => (
-          <NavLink
-            key={ruta}
-            to={`/plantillas/${plantilla.id}/${ruta}`}
-            className={({ isActive }) =>
-              [estilos.enlace, isActive && estilos.activo].filter(Boolean).join(' ')
-            }
-          >
-            <Icono aria-hidden size={24} />
-            <span>{texto}</span>
-          </NavLink>
-        ))}
+        {secciones
+          .filter(({ ruta }) => ruta !== 'multas' || plantilla.multasActivas)
+          .map(({ ruta, texto, icono: Icono }) => (
+            <NavLink
+              key={ruta}
+              to={`/plantillas/${plantilla.id}/${ruta}`}
+              className={({ isActive }) =>
+                [estilos.enlace, isActive && estilos.activo].filter(Boolean).join(' ')
+              }
+            >
+              <Icono aria-hidden size={24} />
+              <span>{texto}</span>
+            </NavLink>
+          ))}
       </nav>
 
       <HojaInferior

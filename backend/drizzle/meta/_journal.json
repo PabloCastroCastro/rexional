@@ -43,6 +43,34 @@
       "when": 1792055320082,
       "tag": "0005_multas",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792074772488,
+      "tag": "0006_multas_opcionales",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792076331269,
+      "tag": "0007_hora_fin_entrenos",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792078640776,
+      "tag": "0008_estadisticas_partido",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792083115009,
+      "tag": "0009_actas_partido",
+      "breakpoints": true
     }
   ]
 }

@@ -39,7 +39,13 @@ const DIA2 = '2026-09-03'
 const base = () => `/plantillas/${ids.senior}`
 const TODOS_LOS_DIAS = (hora: string) => [1, 2, 3, 4, 5, 6, 7].map((d) => ({ dia: d, hora }))
 
-type Resumen = { id: string; fecha: string; hora: string | null; deHorario: boolean }
+type Resumen = {
+  id: string
+  fecha: string
+  hora: string | null
+  horaFin?: string | null
+  deHorario: boolean
+}
 
 async function entrenosEntre(desde: string, hasta: string, quien = 'delegado') {
   const res = await pedir('GET', `${base()}/entrenos?desde=${desde}&hasta=${hasta}`, quien)
@@ -357,5 +363,95 @@ describe('permisos', () => {
 
     const resumen = await (await pedir('GET', `${base()}/asistencia/resumen`, 'jugador')).json()
     expect(resumen).toEqual([expect.objectContaining({ nombre: 'Zoe', porcentaje: 50 })])
+  })
+})
+
+describe('hora de fin y cambiar la hora', () => {
+  it('el horario lleva hora de fin a los entrenos que crea', async () => {
+    const res = await pedir('PUT', `${base()}/horario`, 'delegado', {
+      desde: dia(40),
+      hasta: dia(46),
+      sesiones: TODOS_LOS_DIAS('20:00').map((s) => ({ ...s, horaFin: '21:30' })),
+    })
+    expect(res.status).toBe(200)
+    const creados = await entrenosEntre(dia(40), dia(46))
+    expect(creados).toHaveLength(7)
+    expect(creados.every((e) => e.hora === '20:00' && e.horaFin === '21:30')).toBe(true)
+    // La lista va del más reciente al más antiguo: el último es el del día 40
+    ids.delHorario = creados.at(-1)?.id ?? ''
+  })
+
+  it('valida la hora de fin del horario', async () => {
+    const res = await pedir('PUT', `${base()}/horario`, 'delegado', {
+      desde: dia(40),
+      hasta: dia(46),
+      sesiones: [{ dia: 2, hora: '20:00', horaFin: '19:00' }],
+    })
+    expect(res.status).toBe(400)
+  })
+
+  it('un entreno suelto puede llevar hora de fin, siempre después de la de inicio', async () => {
+    let res = await pedir('POST', `${base()}/entrenos`, 'delegado', {
+      fecha: dia(50),
+      hora: '10:00',
+      horaFin: '11:15',
+    })
+    expect(await res.json()).toMatchObject({ hora: '10:00', horaFin: '11:15' })
+    for (const cuerpo of [
+      { fecha: dia(51), hora: '10:00', horaFin: '09:00' },
+      { fecha: dia(51), hora: '10:00', horaFin: '10:00' },
+      { fecha: dia(51), horaFin: '11:00' },
+    ]) {
+      res = await pedir('POST', `${base()}/entrenos`, 'delegado', cuerpo)
+      expect(res.status).toBe(400)
+      expect((await res.json()).error.detalles).toEqual([
+        expect.objectContaining({ campo: 'horaFin' }),
+      ])
+    }
+  })
+
+  it('se cambia la hora de un entreno y, si era del horario, pasa a suelto', async () => {
+    const ruta = `${base()}/entrenos/${ids.delHorario}`
+    const res = await pedir('PATCH', ruta, 'delegado', { hora: '18:30', horaFin: '20:00' })
+    expect(res.status).toBe(200)
+    expect(await res.json()).toMatchObject({ hora: '18:30', horaFin: '20:00', deHorario: false })
+
+    // Al volver a guardar el horario no se toca: se crea otro a la hora del horario
+    await pedir('PUT', `${base()}/horario`, 'delegado', {
+      desde: dia(40),
+      hasta: dia(46),
+      sesiones: TODOS_LOS_DIAS('20:00').map((s) => ({ ...s, horaFin: '21:30' })),
+    })
+    const ese = await entrenosEntre(dia(40), dia(40))
+    expect(ese.map((e) => [e.hora, e.horaFin, e.deHorario])).toEqual([
+      ['18:30', '20:00', false],
+      ['20:00', '21:30', true],
+    ])
+  })
+
+  it('valida el cambio de hora', async () => {
+    const ruta = `${base()}/entrenos/${ids.delHorario}`
+    // A la misma hora que el otro entreno de ese día
+    let res = await pedir('PATCH', ruta, 'delegado', { hora: '20:00' })
+    expect(res.status).toBe(409)
+    expect((await res.json()).error.codigo).toBe('entreno_duplicado')
+    res = await pedir('PATCH', ruta, 'delegado', { hora: '18:30', horaFin: '18:00' })
+    expect(res.status).toBe(400)
+    // Quitar la hora quita también la de fin
+    res = await pedir('PATCH', ruta, 'delegado', { hora: null })
+    expect(await res.json()).toMatchObject({ hora: null, horaFin: null })
+  })
+
+  it('solo delegado o superior cambia la hora; un entreno de otra plantilla no se encuentra', async () => {
+    const ruta = `${base()}/entrenos/${ids.delHorario}`
+    expect((await pedir('PATCH', ruta, 'jugador', { hora: '17:00' })).status).toBe(403)
+    expect((await pedir('PATCH', ruta, 'ajeno', { hora: '17:00' })).status).toBe(403)
+    const otro = await pedir('POST', `/plantillas/${ids.juvenil}/entrenos`, 'admin', {
+      fecha: dia(60),
+    })
+    const ajeno = (await otro.json()).id
+    expect(
+      (await pedir('PATCH', `${base()}/entrenos/${ajeno}`, 'delegado', { hora: '17:00' })).status,
+    ).toBe(404)
   })
 })
