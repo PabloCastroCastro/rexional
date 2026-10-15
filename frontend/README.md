@@ -78,6 +78,9 @@ En desarrollo, **http://localhost:5173/componentes** muestra todos los component
 | `/plantillas/:plantillaId/partidos?ver=pasados` | Próximos partidos (o pasados) con su convocatoria |
 | `/plantillas/:plantillaId/partidos/:partidoId` | Ficha del partido: datos, editar, borrar, convocatoria y mensaje para WhatsApp |
 | `/plantillas/:plantillaId/partidos/:partidoId/convocatoria` | Elegir los convocados |
+| `/plantillas/:plantillaId/multas` | Caja: pendiente, en caja y quién debe, con saldar (el rol jugador ve aquí sus multas) |
+| `/plantillas/:plantillaId/multas/lista?estado=&jugador=` | Multas con filtros: cobrar, deshacer el cobro y borrar |
+| `/plantillas/:plantillaId/multas/catalogo` | Catálogo de motivos: añadir, editar, desactivar y reactivar |
 | `/plantillas/:plantillaId/mas/configuracion` | Configuración: la ven el entrenador, el admin de la plantilla y los administradores del club |
 
 - **La plantilla activa va en la URL**: el botón Atrás y los enlaces llevan siempre a la plantilla correcta, y se pueden tener dos pestañas con plantillas distintas. La última usada se guarda en el navegador (por usuario).
