@@ -1,6 +1,5 @@
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
 import { and, asc, desc, eq, gte, inArray, lte, notExists, or, sql } from 'drizzle-orm'
-import { config } from '../config.js'
 import { db } from '../db/cliente.js'
 import {
   asistencias,
@@ -12,8 +11,9 @@ import {
   type SesionHorario,
 } from '../db/schema/index.js'
 import { ErrorApi, EsquemaError, validacionFallida } from '../errores.js'
+import { hoy, sumarDias } from '../fechas.js'
 import { type EnvPlantilla, requireRol, rolAlcanza } from '../permisos.js'
-import { EsquemaUuid, restriccionViolada } from '../validacion.js'
+import { EsquemaFecha, EsquemaHora, EsquemaUuid, restriccionViolada } from '../validacion.js'
 import { EsquemaPosicion, porNombre } from './jugadores.js'
 
 // Calendario de entrenos y asistencia (secciones 2.3 y 7). Los entrenos se planifican antes de pasar
@@ -25,24 +25,6 @@ const ESTADOS = estadoAsistencia.enumValues
 type Estado = (typeof ESTADOS)[number]
 
 const EsquemaEstado = z.enum(ESTADOS)
-
-const EsquemaFecha = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, 'La fecha debe tener el formato AAAA-MM-DD')
-  .refine(
-    (f) => {
-      // Zod evalúa el refine aunque falle el formato: una fecha inválida no debe lanzar
-      const dia = new Date(`${f}T00:00:00Z`)
-      return !Number.isNaN(dia.getTime()) && dia.toISOString().startsWith(f)
-    },
-    { message: 'La fecha no existe' },
-  )
-  .openapi({ example: '2026-10-13' })
-
-const EsquemaHora = z
-  .string()
-  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'La hora debe tener el formato HH:MM')
-  .openapi({ example: '20:00' })
 
 const EsquemaRecuentos = z
   .object({ asiste: z.int(), justificada: z.int(), falta: z.int() })
@@ -118,13 +100,6 @@ const ParamEntreno = ParamPlantilla.extend({
 })
 
 const MAXIMO_DIAS_HORARIO = 366
-
-// Día de hoy en la zona horaria de la aplicación, como AAAA-MM-DD
-const hoy = () =>
-  new Intl.DateTimeFormat('en-CA', { timeZone: config.zonaHoraria }).format(new Date())
-
-const sumarDias = (fecha: string, dias: number) =>
-  new Date(Date.parse(`${fecha}T00:00:00Z`) + dias * 86_400_000).toISOString().slice(0, 10)
 
 const diasEntre = (desde: string, hasta: string) =>
   Math.round((Date.parse(`${hasta}T00:00:00Z`) - Date.parse(`${desde}T00:00:00Z`)) / 86_400_000)

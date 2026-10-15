@@ -600,9 +600,10 @@ Prefijo `/api`. JSON. Todas las rutas de la plantilla cuelgan de `/plantillas`, 
 | Planificación | `GET /plantillas/:id/sesiones?desde=&hasta=` · `GET /plantillas/:id/sesiones/modelos` | Miembro |
 | | `PUT /plantillas/:id/entrenos/:eid/plan` (datos de sesión y lista ordenada de ejercicios) | Entrenador |
 | | `POST /plantillas/:id/entrenos/:eid/duplicar` · `POST .../guardar-modelo` · `POST /plantillas/:id/sesiones/modelos/:mid/aplicar` | Entrenador |
-| Partidos | `GET/POST /plantillas/:id/partidos` · `GET/PATCH/DELETE /plantillas/:id/partidos/:pid` | Miembro / Delegado |
-| | `PUT /plantillas/:id/partidos/:pid/convocados` (lista completa) | Delegado |
-| | `GET /plantillas/:id/partidos/:pid/mensaje` | Miembro |
+| Partidos | `GET /plantillas/:id/partidos?cuando=proximos|pasados` (con el número de convocados) · `POST /plantillas/:id/partidos` | Miembro / Delegado |
+| | `GET /plantillas/:id/partidos/:pid` (con la lista para convocar) · `PATCH/DELETE /plantillas/:id/partidos/:pid` | Miembro / Delegado |
+| | `PUT /plantillas/:id/partidos/:pid/convocados` (lista completa; ficha activa para los nuevos) | Delegado |
+| | `GET /plantillas/:id/partidos/:pid/mensaje` (texto para WhatsApp y enlace `wa.me`) | Miembro |
 | Estadísticas | `PUT /plantillas/:id/partidos/:pid/resultado` | Delegado |
 | | `PUT /plantillas/:id/partidos/:pid/participaciones` | Delegado |
 | | `GET/POST/DELETE /plantillas/:id/partidos/:pid/eventos` | Miembro (eventos públicos del partido) / Delegado |

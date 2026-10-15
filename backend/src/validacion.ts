@@ -26,3 +26,23 @@ export function restriccionViolada(error: unknown): string | undefined {
   const e = error as { constraint?: string; cause?: { constraint?: string } }
   return e?.cause?.constraint ?? e?.constraint
 }
+
+// Día AAAA-MM-DD que existe en el calendario
+export const EsquemaFecha = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, 'La fecha debe tener el formato AAAA-MM-DD')
+  .refine(
+    (f) => {
+      // Zod evalúa el refine aunque falle el formato: una fecha inválida no debe lanzar
+      const dia = new Date(`${f}T00:00:00Z`)
+      return !Number.isNaN(dia.getTime()) && dia.toISOString().startsWith(f)
+    },
+    { message: 'La fecha no existe' },
+  )
+  .openapi({ example: '2026-10-13' })
+
+// Hora HH:MM de 00:00 a 23:59
+export const EsquemaHora = z
+  .string()
+  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'La hora debe tener el formato HH:MM')
+  .openapi({ example: '20:00' })
