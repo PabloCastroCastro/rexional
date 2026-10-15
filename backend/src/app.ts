@@ -1,0 +1,68 @@
+import { OpenAPIHono } from '@hono/zod-openapi'
+import { Scalar } from '@scalar/hono-api-reference'
+import { auth } from './auth.js'
+import { config } from './config.js'
+import { comprobarBaseDeDatos } from './db/cliente.js'
+import { manejarError, rutaNoEncontrada, soloMismoOrigen, validacionFallida } from './errores.js'
+import { registrarPeticiones } from './peticiones.js'
+import { rutasClubes } from './rutas/clubes.js'
+import { rutasEntrenos } from './rutas/entrenos.js'
+import { rutasJugadoresClub, rutasJugadoresPlantilla } from './rutas/jugadores.js'
+import { rutasMultas, rutasMultasJugadores } from './rutas/multas.js'
+import { rutasPartidos } from './rutas/partidos.js'
+import { rutasPlantillas } from './rutas/plantillas.js'
+import { rutasSalud } from './rutas/salud.js'
+
+export const infoOpenApi = {
+  openapi: '3.1.0',
+  info: {
+    title: 'API de Vestuario',
+    version: '1.0.0',
+    description:
+      'API REST de Vestuario. Todas las rutas cuelgan de /api. Errores con el formato { error: { codigo, mensaje, detalles? } }.',
+  },
+}
+
+type Dependencias = {
+  comprobarBaseDeDatos: () => Promise<boolean>
+  // Documentación interactiva y contrato en /api/docs y /api/openapi.json
+  documentacion: boolean
+}
+
+// Las dependencias se pueden sustituir en los tests
+export function crearApp(dependencias: Partial<Dependencias> = {}) {
+  const d: Dependencias = {
+    comprobarBaseDeDatos,
+    documentacion: config.entorno !== 'produccion',
+    ...dependencias,
+  }
+
+  const app = new OpenAPIHono({ defaultHook: validacionFallida }).basePath('/api')
+
+  app.use(registrarPeticiones())
+  app.onError(manejarError)
+  app.notFound(rutaNoEncontrada)
+
+  // Autenticación (Better Auth): /api/auth/sign-in/email, /sign-out, /get-session y /change-password
+  app.post('/auth/*', soloMismoOrigen(config.urlPublica))
+  app.on(['GET', 'POST'], '/auth/*', (c) => auth.handler(c.req.raw))
+
+  app.route('/', rutasSalud(d.comprobarBaseDeDatos))
+  app.route('/', rutasClubes())
+  app.route('/', rutasPlantillas())
+  app.route('/', rutasJugadoresPlantilla())
+  app.route('/', rutasJugadoresClub())
+  app.route('/', rutasEntrenos())
+  app.route('/', rutasPartidos())
+  app.route('/', rutasMultas())
+  app.route('/', rutasMultasJugadores())
+
+  if (d.documentacion) {
+    app.doc31('/openapi.json', infoOpenApi)
+    app.get('/docs', Scalar({ url: '/api/openapi.json', pageTitle: 'API de Vestuario' }))
+  }
+
+  return app
+}
+
+export type App = ReturnType<typeof crearApp>

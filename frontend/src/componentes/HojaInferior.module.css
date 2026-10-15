@@ -1,0 +1,70 @@
+.hoja {
+  width: 100%;
+  max-width: var(--ancho-contenido);
+  max-height: 90dvh;
+  margin: auto auto 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radio-l) var(--radio-l) 0 0;
+  background: var(--color-superficie);
+  color: var(--color-texto);
+  box-shadow: var(--sombra-2);
+}
+
+.hoja::backdrop {
+  background: var(--color-velo);
+}
+
+.hoja[open] {
+  animation: subir var(--duracion) var(--curva);
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  max-height: 90dvh;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+  padding: var(--espacio-3) var(--espacio-2) var(--espacio-2) var(--espacio-4);
+}
+
+.cerrar {
+  display: grid;
+  place-items: center;
+  width: var(--altura-tactil);
+  height: var(--altura-tactil);
+  border: 0;
+  border-radius: var(--radio-completo);
+  background: transparent;
+  cursor: pointer;
+}
+
+.cuerpo {
+  display: grid;
+  gap: var(--espacio-4);
+  padding: var(--espacio-2) var(--espacio-4) var(--espacio-4);
+  overflow-y: auto;
+}
+
+.pie {
+  display: flex;
+  gap: var(--espacio-3);
+  padding: var(--espacio-3) var(--espacio-4) var(--espacio-4);
+  border-top: 1px solid var(--color-borde);
+}
+
+.pie > * {
+  flex: 1;
+}
+
+@keyframes subir {
+  from {
+    transform: translateY(100%);
+  }
+}

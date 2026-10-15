@@ -1,6 +1,8 @@
 # Vestuario
 
-Aplicación web para gestionar clubes de fútbol amateur desde el móvil, con varios equipos por club (uno por categoría): plantilla, asistencia a entrenamientos, convocatorias, caja de multas, personalización por club, estadísticas de partido y planificación de entrenos.
+[![CI](https://github.com/PabloCastroCastro/rexional/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/PabloCastroCastro/rexional/actions/workflows/ci.yml)
+
+Aplicación web para gestionar clubes de fútbol amateur desde el móvil, con una plantilla por categoría y temporada: jugadores, asistencia a entrenamientos, convocatorias, caja de multas, personalización por club, estadísticas de partido y planificación de entrenos.
 
 Se instala como PWA desde el navegador, sin tiendas de aplicaciones, y se autoaloja en un servidor propio con software libre y coste cero.
 
@@ -18,13 +20,13 @@ Todas las decisiones funcionales, técnicas y de organización, además del back
 
 ## Arquitectura
 
-Tres capas independientes, cada una en su contenedor y orquestadas con Docker Compose:
+Un repositorio con tres proyectos independientes, cada uno con sus dependencias y su contenedor, orquestados con Docker Compose:
 
-| Capa | Tecnología |
-|---|---|
-| Frontend | React + TypeScript + Vite, PWA, servida por Caddy |
-| Backend | Node.js LTS + TypeScript, Hono, Drizzle ORM, Zod, Better Auth |
-| Base de datos | PostgreSQL |
+| Proyecto | Carpeta | Tecnología |
+|---|---|---|
+| Frontend | `frontend/` | React + TypeScript + Vite, PWA |
+| Backend | `backend/` | Node.js LTS + TypeScript, Hono, Drizzle ORM, Zod, Better Auth y PostgreSQL |
+| Proxy | `proxy/` | nginx: sirve la PWA y redirige `/api` al backend |
 
 El acceso se hace inicialmente por Tailscale. La exposición pública a internet está prevista para el ciclo 10.
 
@@ -36,7 +38,7 @@ El acceso se hace inicialmente por Tailscale. La exposición pública a internet
 | 2 | Entrenos | v0.2.0 |
 | 3 | Convocatorias | v0.3.0 |
 | 4 | Multas (paridad con el MVP) | v1.0.0 |
-| 5 | Personalización | v1.1.0 |
+| 5 | Personalización y temporadas | v1.1.0 |
 | 6 | Estadísticas | v1.2.0 |
 | 7 | Planificación de entrenos | v1.3.0 |
 | 8 | Operación | v1.4.0 |
@@ -51,8 +53,81 @@ El avance de cada ciclo se sigue en los [milestones](https://github.com/PabloCas
 - Commits con [Conventional Commits](https://www.conventionalcommits.org/es/) y referencia a la issue, por ejemplo `feat(jugadores): alta de jugadores GH-8`.
 - Todo cambio entra por pull request con `Closes #<n>`.
 
-El detalle está en la sección 9 del documento de proyecto.
+El detalle está en la [guía de contribución](CONTRIBUTING.md).
+
+## Estructura del repositorio
+
+```
+frontend/                PWA (React + Vite)
+backend/                 API (Node + Hono) y base de datos (PostgreSQL)
+proxy/                   nginx: sirve la PWA y redirige /api al backend
+docker-compose.dev.yml   desarrollo local
+docker-compose.yml       servidor (pruebas y producción) y versión de servidor en local
+docker-compose.servidor.yml  solo en el servidor: certificado HTTPS de Tailscale
+scripts/                 despliegue, copias de seguridad y certificado del servidor
+.env.example             configuración de Compose
+docs/                    documento de proyecto y guía del servidor (servidor.md)
+```
+
+Cada proyecto es independiente: tiene sus propias dependencias, su Dockerfile y su README, y no importa código de los demás.
 
 ## Desarrollo local
 
-Pendiente de la issue GH-2 (estructura del monorepo y Docker Compose). Cuando esté lista, el entorno completo se arrancará con un solo comando.
+Requisitos: [Docker](https://docs.docker.com/get-docker/) con Docker Compose. Node.js 24 solo hace falta para trabajar en un proyecto fuera de Docker.
+
+Arranca todo con un solo comando:
+
+```
+docker compose -f docker-compose.dev.yml up --build
+```
+
+| Servicio | Dirección |
+|---|---|
+| Aplicación (Vite, con recarga en caliente) | http://localhost:5173 |
+| API | http://localhost:3000/api/health (también a través de http://localhost:5173/api) |
+| Documentación de la API | http://localhost:3000/api/docs |
+| Catálogo de componentes del frontend | http://localhost:5173/componentes |
+| PostgreSQL | `localhost:5432`, usuario, contraseña y base de datos `vestuario` |
+
+El código de `backend/` y `frontend/` se monta en los contenedores, así que los cambios se aplican al guardar. **En Windows**, con el repositorio en `C:\`, los cambios no llegan como eventos a los contenedores y la recarga no se produce: pon `RECARGA_POLLING=true` en un `.env` (copia de `.env.example`). Si clonas el repositorio dentro de WSL no hace falta.
+
+Si cambian las dependencias de un proyecto, reconstruye y renueva sus `node_modules`:
+
+```
+docker compose -f docker-compose.dev.yml up --build --renew-anon-volumes
+```
+
+El backend aplica las migraciones de la base de datos al arrancar. Para cargar datos de ejemplo (dos clubes con dos temporadas, jugadores y usuarios con contraseña `vestuario-dev`; ver el README del backend):
+
+```
+docker compose -f docker-compose.dev.yml exec backend npm run db:seed
+```
+
+Para entrar en la aplicación (http://localhost:5173) con los datos de ejemplo: `admin@rexional.test` / `vestuario-dev`. Los datos de ejemplo incluyen más usuarios (ver el README del backend). Para crear otro usuario con su club:
+
+```
+docker compose -f docker-compose.dev.yml exec backend npm run crear-admin
+```
+
+Los tests del backend se ejecutan en su contenedor, contra una base de datos de test aparte:
+
+```
+docker compose -f docker-compose.dev.yml exec backend npm test
+```
+
+Para trabajar en un solo proyecto sin Docker, sigue el README de su carpeta.
+
+> **Windows**: si el Control de aplicaciones de Windows (Smart App Control) bloquea los binarios nativos de `node_modules` ("An Application Control policy has blocked this file"), las herramientas que los usan (Vitest, Vite, Biome) fallan fuera de Docker. Dentro de los contenedores funcionan con normalidad: ejecuta allí los tests y las comprobaciones (`docker compose -f docker-compose.dev.yml exec backend npm test`).
+
+## Probar la versión de servidor en local
+
+```
+cp .env.example .env        # y define POSTGRES_PASSWORD
+docker compose up --build
+```
+
+La aplicación queda en http://localhost:8080, servida por nginx.
+
+## Servidor
+
+Pruebas y producción corren en una Raspberry Pi accesible por Tailscale, con HTTPS. Instalación, despliegues (`scripts/deploy.sh`), copias de seguridad y certificado: [docs/servidor.md](docs/servidor.md).

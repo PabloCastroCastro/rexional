@@ -1,0 +1,2 @@
+ALTER TABLE "jugadores" ADD COLUMN "apellidos" text;--> statement-breakpoint
+ALTER TABLE "jugadores" ADD CONSTRAINT "jugadores_apellidos_no_vacios" CHECK ("jugadores"."apellidos" IS NULL OR btrim("jugadores"."apellidos") <> '');

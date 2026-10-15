@@ -1,0 +1,24 @@
+.cargando {
+  display: grid;
+  justify-items: center;
+  gap: var(--espacio-3);
+  padding: var(--espacio-7) var(--espacio-4);
+  color: var(--color-texto-suave);
+}
+
+.icono {
+  color: var(--color-acento);
+  animation: girar 0.9s linear infinite;
+}
+
+@keyframes girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .icono {
+    animation-duration: 3s;
+  }
+}

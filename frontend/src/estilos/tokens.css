@@ -1,0 +1,97 @@
+/*
+  Tokens de diseño. Toda la aplicación usa estas variables y nunca colores sueltos: en el ciclo 5 el
+  tema de cada club se aplica cambiando --color-primario y --color-secundario (y sus "sobre-").
+*/
+:root {
+  color-scheme: light dark;
+
+  /* Colores del club (por defecto, los de Vestuario) */
+  --color-primario: #14553d;
+  --color-sobre-primario: #ffffff;
+  --color-secundario: #f2c230;
+  --color-sobre-secundario: #1b1f1d;
+
+  /* Superficies y texto */
+  --color-fondo: #f4f6f4;
+  --color-superficie: #ffffff;
+  --color-superficie-alterna: #e9eeea;
+  --color-texto: #1b1f1d;
+  --color-texto-suave: #56615b;
+  --color-borde: #cfd7d2;
+  --color-velo: rgb(15 20 18 / 55%);
+
+  /* Estados */
+  --color-peligro: #b42323;
+  --color-sobre-peligro: #ffffff;
+  --color-exito: #1a7a4f;
+  --color-aviso: #9a5b00;
+  --color-informacion: #1d5fb8;
+  --color-foco: #1d6fd1;
+  /* Texto de enlaces y acentos sobre la superficie (en oscuro, el primario sería ilegible) */
+  --color-acento: var(--color-primario);
+
+  /* Tipografía: la del sistema, sin descargas */
+  --fuente: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --texto-xs: 0.75rem;
+  --texto-sm: 0.875rem;
+  --texto-base: 1rem;
+  --texto-lg: 1.125rem;
+  --texto-xl: 1.375rem;
+  --texto-2xl: 1.75rem;
+  --peso-normal: 400;
+  --peso-medio: 500;
+  --peso-fuerte: 650;
+
+  /* Espaciado */
+  --espacio-1: 0.25rem;
+  --espacio-2: 0.5rem;
+  --espacio-3: 0.75rem;
+  --espacio-4: 1rem;
+  --espacio-5: 1.5rem;
+  --espacio-6: 2rem;
+  --espacio-7: 3rem;
+
+  /* Formas y profundidad */
+  --radio-s: 6px;
+  --radio-m: 10px;
+  --radio-l: 18px;
+  --radio-completo: 999px;
+  --sombra-1: 0 1px 2px rgb(0 0 0 / 8%), 0 1px 3px rgb(0 0 0 / 6%);
+  --sombra-2: 0 8px 24px rgb(0 0 0 / 16%);
+
+  /* Medidas de la interfaz: objetivos táctiles de al menos 44px */
+  --altura-tactil: 44px;
+  --altura-cabecera: 56px;
+  --altura-navegacion: 64px;
+  --ancho-contenido: 40rem;
+
+  /* Movimiento */
+  --duracion: 180ms;
+  --curva: cubic-bezier(0.2, 0, 0, 1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-fondo: #0f1311;
+    --color-superficie: #181d1a;
+    --color-superficie-alterna: #222a25;
+    --color-texto: #e8ece9;
+    --color-texto-suave: #a3aea8;
+    --color-borde: #34403a;
+    --color-velo: rgb(0 0 0 / 65%);
+    --color-peligro: #f07167;
+    --color-sobre-peligro: #1b0d0c;
+    --color-exito: #5fcf98;
+    --color-aviso: #f0b04a;
+    --color-informacion: #7fb2f5;
+    --color-foco: #7fb2f5;
+    --color-acento: #7fd1aa;
+    --sombra-2: 0 8px 24px rgb(0 0 0 / 50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duracion: 0ms;
+  }
+}

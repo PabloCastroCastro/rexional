@@ -1,0 +1,4852 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "API de Vestuario",
+    "version": "1.0.0",
+    "description": "API REST de Vestuario. Todas las rutas cuelgan de /api. Errores con el formato { error: { codigo, mensaje, detalles? } }."
+  },
+  "components": {
+    "schemas": {
+      "Salud": {
+        "type": "object",
+        "properties": {
+          "estado": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "error"
+            ],
+            "description": "ok solo si todos los componentes funcionan"
+          },
+          "api": {
+            "type": "string",
+            "enum": [
+              "ok"
+            ]
+          },
+          "baseDeDatos": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "error"
+            ]
+          }
+        },
+        "required": [
+          "estado",
+          "api",
+          "baseDeDatos"
+        ]
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "codigo": {
+                "type": "string",
+                "example": "validacion"
+              },
+              "mensaje": {
+                "type": "string",
+                "example": "Los datos enviados no son válidos"
+              },
+              "detalles": {}
+            },
+            "required": [
+              "codigo",
+              "mensaje"
+            ]
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "Club": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "escudo": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "colorPrincipal": {
+            "type": "string",
+            "example": "#14553d"
+          },
+          "colorSecundario": {
+            "type": "string",
+            "example": "#f2c230"
+          },
+          "esAdmin": {
+            "type": "boolean",
+            "description": "Si el usuario es administrador del club"
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "escudo",
+          "colorPrincipal",
+          "colorSecundario",
+          "esAdmin"
+        ]
+      },
+      "AdministradorClub": {
+        "type": "object",
+        "properties": {
+          "usuarioId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          }
+        },
+        "required": [
+          "usuarioId",
+          "nombre",
+          "email"
+        ]
+      },
+      "PlantillaConClub": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Plantilla"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "club": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "nombre": {
+                    "type": "string"
+                  },
+                  "escudo": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "colorPrincipal": {
+                    "type": "string"
+                  },
+                  "colorSecundario": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "nombre",
+                  "escudo",
+                  "colorPrincipal",
+                  "colorSecundario"
+                ]
+              }
+            },
+            "required": [
+              "club"
+            ]
+          }
+        ]
+      },
+      "Plantilla": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "clubId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string",
+            "example": "Senior"
+          },
+          "categoria": {
+            "type": "string",
+            "example": "sénior"
+          },
+          "temporada": {
+            "type": "string",
+            "example": "2026-27"
+          },
+          "plantillaAnteriorId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "rol": {
+            "type": "string",
+            "enum": [
+              "admin",
+              "entrenador",
+              "delegado",
+              "jugador"
+            ],
+            "description": "Rol efectivo del usuario en la plantilla"
+          },
+          "esAdminClub": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "clubId",
+          "nombre",
+          "categoria",
+          "temporada",
+          "plantillaAnteriorId",
+          "rol",
+          "esAdminClub"
+        ]
+      },
+      "JugadorPlantilla": {
+        "type": "object",
+        "properties": {
+          "jugadorId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string",
+            "example": "Brais"
+          },
+          "apellidos": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "Méndez"
+          },
+          "dorsal": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "example": 7
+          },
+          "posicion": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "portero",
+              "defensa",
+              "centrocampista",
+              "delantero",
+              null
+            ]
+          },
+          "activo": {
+            "type": "boolean",
+            "description": "false si está de baja en la plantilla"
+          }
+        },
+        "required": [
+          "jugadorId",
+          "nombre",
+          "apellidos",
+          "dorsal",
+          "posicion",
+          "activo"
+        ]
+      },
+      "JugadorClub": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "apellidos": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "Méndez"
+          },
+          "temporadas": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Temporadas en las que tiene ficha, la más reciente primero"
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "apellidos",
+          "temporadas"
+        ]
+      },
+      "TrayectoriaJugador": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "apellidos": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "Méndez"
+          },
+          "fichas": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "plantillaId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "plantilla": {
+                  "type": "string",
+                  "example": "Juvenil A"
+                },
+                "categoria": {
+                  "type": "string"
+                },
+                "temporada": {
+                  "type": "string",
+                  "example": "2026-27"
+                },
+                "dorsal": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "posicion": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "enum": [
+                    "portero",
+                    "defensa",
+                    "centrocampista",
+                    "delantero",
+                    null
+                  ]
+                },
+                "activo": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "plantillaId",
+                "plantilla",
+                "categoria",
+                "temporada",
+                "dorsal",
+                "posicion",
+                "activo"
+              ]
+            }
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "apellidos",
+          "fichas"
+        ]
+      },
+      "Horario": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "properties": {
+          "desde": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "example": "2026-10-13"
+          },
+          "hasta": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "example": "2026-10-13"
+          },
+          "sesiones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SesionHorario"
+            }
+          }
+        },
+        "required": [
+          "desde",
+          "hasta",
+          "sesiones"
+        ]
+      },
+      "SesionHorario": {
+        "type": "object",
+        "properties": {
+          "dia": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 7
+          },
+          "hora": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+            "example": "20:00"
+          }
+        },
+        "required": [
+          "dia",
+          "hora"
+        ]
+      },
+      "ResumenEntreno": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/RecuentosAsistencia"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "fecha": {
+                "type": "string",
+                "example": "2026-10-13"
+              },
+              "hora": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "example": "20:00"
+              },
+              "deHorario": {
+                "type": "boolean",
+                "description": "true si lo creó el horario; false si es suelto"
+              }
+            },
+            "required": [
+              "id",
+              "fecha",
+              "hora",
+              "deHorario"
+            ]
+          }
+        ]
+      },
+      "RecuentosAsistencia": {
+        "type": "object",
+        "properties": {
+          "asiste": {
+            "type": "integer"
+          },
+          "justificada": {
+            "type": "integer"
+          },
+          "falta": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "asiste",
+          "justificada",
+          "falta"
+        ]
+      },
+      "Entreno": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fecha": {
+            "type": "string",
+            "example": "2026-10-13"
+          },
+          "hora": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "20:00"
+          },
+          "deHorario": {
+            "type": "boolean",
+            "description": "true si lo creó el horario; false si es suelto"
+          },
+          "recuentos": {
+            "$ref": "#/components/schemas/RecuentosAsistencia"
+          },
+          "jugadores": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "jugadorId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "nombre": {
+                  "type": "string"
+                },
+                "apellidos": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "dorsal": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "posicion": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "enum": [
+                    "portero",
+                    "defensa",
+                    "centrocampista",
+                    "delantero",
+                    null
+                  ]
+                },
+                "activo": {
+                  "type": "boolean"
+                },
+                "estado": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "enum": [
+                    "asiste",
+                    "justificada",
+                    "falta",
+                    null
+                  ]
+                },
+                "motivo": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "jugadorId",
+                "nombre",
+                "apellidos",
+                "dorsal",
+                "posicion",
+                "activo",
+                "estado",
+                "motivo"
+              ]
+            }
+          }
+        },
+        "required": [
+          "id",
+          "fecha",
+          "hora",
+          "deHorario",
+          "recuentos",
+          "jugadores"
+        ]
+      },
+      "AsistenciaJugador": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/RecuentosAsistencia"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "jugadorId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "nombre": {
+                "type": "string"
+              },
+              "apellidos": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "activo": {
+                "type": "boolean"
+              },
+              "porcentaje": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "description": "Asistencias / entrenos con estado registrado, de 0 a 100"
+              }
+            },
+            "required": [
+              "jugadorId",
+              "nombre",
+              "apellidos",
+              "activo",
+              "porcentaje"
+            ]
+          }
+        ]
+      },
+      "ResumenPartido": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "rival": {
+            "type": "string",
+            "example": "SD Compostela"
+          },
+          "competicion": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "Preferente"
+          },
+          "fecha": {
+            "type": "string",
+            "example": "2026-10-18"
+          },
+          "hora": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "17:00"
+          },
+          "horaCitacion": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "16:00"
+          },
+          "lugar": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "local": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "true en casa, false fuera, null sin decidir"
+          },
+          "convocados": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "rival",
+          "competicion",
+          "fecha",
+          "hora",
+          "horaCitacion",
+          "lugar",
+          "local",
+          "convocados"
+        ]
+      },
+      "Partido": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "rival": {
+            "type": "string",
+            "example": "SD Compostela"
+          },
+          "competicion": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "Preferente"
+          },
+          "fecha": {
+            "type": "string",
+            "example": "2026-10-18"
+          },
+          "hora": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "17:00"
+          },
+          "horaCitacion": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "16:00"
+          },
+          "lugar": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "local": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "true en casa, false fuera, null sin decidir"
+          },
+          "jugadores": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JugadorConvocatoria"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "rival",
+          "competicion",
+          "fecha",
+          "hora",
+          "horaCitacion",
+          "lugar",
+          "local",
+          "jugadores"
+        ]
+      },
+      "JugadorConvocatoria": {
+        "type": "object",
+        "properties": {
+          "jugadorId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "apellidos": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "dorsal": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "posicion": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "portero",
+              "defensa",
+              "centrocampista",
+              "delantero",
+              null
+            ]
+          },
+          "activo": {
+            "type": "boolean"
+          },
+          "convocado": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "jugadorId",
+          "nombre",
+          "apellidos",
+          "dorsal",
+          "posicion",
+          "activo",
+          "convocado"
+        ]
+      },
+      "MensajeConvocatoria": {
+        "type": "object",
+        "properties": {
+          "texto": {
+            "type": "string"
+          },
+          "whatsapp": {
+            "type": "string",
+            "example": "https://wa.me/?text=…"
+          }
+        },
+        "required": [
+          "texto",
+          "whatsapp"
+        ]
+      },
+      "MotivoMulta": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "descripcion": {
+            "type": "string",
+            "example": "Llegar tarde al entreno"
+          },
+          "importeCentimos": {
+            "type": "integer",
+            "example": 200
+          },
+          "tipoTarjeta": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "amarilla",
+              "roja",
+              null
+            ],
+            "description": "Tarjeta que propone este motivo al registrar las estadísticas"
+          },
+          "activo": {
+            "type": "boolean"
+          },
+          "multas": {
+            "type": "integer",
+            "description": "Cuántas multas se han puesto con este motivo"
+          }
+        },
+        "required": [
+          "id",
+          "descripcion",
+          "importeCentimos",
+          "tipoTarjeta",
+          "activo",
+          "multas"
+        ]
+      },
+      "Multa": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "jugadorId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "apellidos": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "dorsal": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "motivoId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "null si es un motivo libre"
+          },
+          "motivo": {
+            "type": "string",
+            "example": "Llegar tarde al entreno"
+          },
+          "importeCentimos": {
+            "type": "integer",
+            "example": 200
+          },
+          "fecha": {
+            "type": "string",
+            "example": "2026-10-13"
+          },
+          "fechaPago": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Fecha de cobro; null si está pendiente"
+          }
+        },
+        "required": [
+          "id",
+          "jugadorId",
+          "nombre",
+          "apellidos",
+          "dorsal",
+          "motivoId",
+          "motivo",
+          "importeCentimos",
+          "fecha",
+          "fechaPago"
+        ]
+      },
+      "MultasSaldadas": {
+        "type": "object",
+        "properties": {
+          "cobradas": {
+            "type": "integer"
+          },
+          "importeCentimos": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "cobradas",
+          "importeCentimos"
+        ]
+      },
+      "ResumenMultas": {
+        "type": "object",
+        "properties": {
+          "pendienteCentimos": {
+            "type": "integer"
+          },
+          "cajaCentimos": {
+            "type": "integer"
+          },
+          "deudas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeudaJugador"
+            }
+          }
+        },
+        "required": [
+          "pendienteCentimos",
+          "cajaCentimos",
+          "deudas"
+        ]
+      },
+      "DeudaJugador": {
+        "type": "object",
+        "properties": {
+          "jugadorId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "apellidos": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "dorsal": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "pendienteCentimos": {
+            "type": "integer"
+          },
+          "multasPendientes": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "jugadorId",
+          "nombre",
+          "apellidos",
+          "dorsal",
+          "pendienteCentimos",
+          "multasPendientes"
+        ]
+      }
+    },
+    "parameters": {}
+  },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "tags": [
+          "Salud"
+        ],
+        "summary": "Estado de la API y de la base de datos",
+        "description": "Lo usa el healthcheck de Docker: responde 503 si la base de datos no está disponible.",
+        "responses": {
+          "200": {
+            "description": "Todo funciona",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Salud"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error inesperado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "La base de datos no responde",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Salud"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/clubes": {
+      "get": {
+        "tags": [
+          "Clubes"
+        ],
+        "summary": "Mis clubes",
+        "description": "Clubes que el usuario administra o en los que tiene un rol en alguna plantilla. Incluye los clubes sin plantillas que administra.",
+        "responses": {
+          "200": {
+            "description": "Clubes del usuario",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Club"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Clubes"
+        ],
+        "summary": "Crear un club",
+        "description": "Quien lo crea pasa a ser su administrador, en la misma transacción.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nombre": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80
+                  }
+                },
+                "required": [
+                  "nombre"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Club creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Club"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/clubes/{cid}": {
+      "get": {
+        "tags": [
+          "Clubes"
+        ],
+        "summary": "Datos e identidad visual de un club",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "cid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Club",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Club"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Clubes"
+        ],
+        "summary": "Cambiar el nombre del club",
+        "description": "Solo los administradores del club. El escudo y los colores llegan en el ciclo 5.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "cid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nombre": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80
+                  }
+                },
+                "required": [
+                  "nombre"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Club actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Club"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/clubes/{cid}/admins": {
+      "get": {
+        "tags": [
+          "Clubes"
+        ],
+        "summary": "Administradores del club",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "cid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Administradores",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AdministradorClub"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Clubes"
+        ],
+        "summary": "Añadir un administrador",
+        "description": "El usuario debe existir. Las invitaciones por email llegan en el ciclo 9.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "cid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "email"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Administrador añadido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdministradorClub"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Ya es administrador",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/clubes/{cid}/admins/{uid}": {
+      "delete": {
+        "tags": [
+          "Clubes"
+        ],
+        "summary": "Retirar un administrador",
+        "description": "Un club nunca se queda sin administradores.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "cid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "uid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Administrador retirado"
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Es el último administrador",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas": {
+      "get": {
+        "tags": [
+          "Plantillas"
+        ],
+        "summary": "Mis plantillas",
+        "description": "Plantillas en las que el usuario tiene un rol y todas las de los clubes que administra, ordenadas por club, temporada (la más reciente primero) y nombre. Con `club`, solo las de ese club.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "club",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Plantillas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PlantillaConClub"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Plantillas"
+        ],
+        "summary": "Crear una plantilla",
+        "description": "Solo los administradores del club. Para la temporada siguiente, indica la plantilla anterior (del mismo club y de una temporada anterior): su catálogo de multas se copia; si no hay anterior, se crea el catálogo por defecto.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "clubId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "nombre": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80
+                  },
+                  "categoria": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80
+                  },
+                  "temporada": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}$",
+                    "example": "2026-27"
+                  },
+                  "plantillaAnteriorId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  }
+                },
+                "required": [
+                  "clubId",
+                  "nombre",
+                  "categoria",
+                  "temporada"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Plantilla creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Plantilla"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Ya existe una plantilla con ese nombre en la temporada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}": {
+      "get": {
+        "tags": [
+          "Plantillas"
+        ],
+        "summary": "Una plantilla",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Plantilla",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Plantilla"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Plantillas"
+        ],
+        "summary": "Cambiar el nombre o la categoría",
+        "description": "Entrenador o superior. La temporada no se modifica.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nombre": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80
+                  },
+                  "categoria": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Plantilla actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Plantilla"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Ya existe una plantilla con ese nombre en la temporada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Plantillas"
+        ],
+        "summary": "Borrar una plantilla",
+        "description": "Solo los administradores del club, escribiendo el nombre de la plantilla como confirmación. Borra sus fichas, cuerpo técnico y datos; los jugadores siguen en el club.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "confirmacion": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "confirmacion"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Plantilla borrada"
+          },
+          "400": {
+            "description": "La confirmación no coincide con el nombre",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/jugadores": {
+      "get": {
+        "tags": [
+          "Jugadores"
+        ],
+        "summary": "Jugadores de la plantilla",
+        "description": "Fichas de la plantilla con los datos del jugador, ordenadas por dorsal (sin dorsal al final), apellidos y nombre. Por defecto, los activos; con `activos=false`, las bajas.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ],
+              "default": "true"
+            },
+            "required": false,
+            "name": "activos",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Jugadores",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/JugadorPlantilla"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Jugadores"
+        ],
+        "summary": "Añadir un jugador a la plantilla",
+        "description": "Delegado o superior. Con `nombre`, da de alta un jugador nuevo en el club; con `jugadorId`, crea la ficha de un jugador que ya es del club. Un jugador tiene como máximo una ficha por temporada.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "nombre": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 80
+                      },
+                      "apellidos": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "minLength": 1,
+                        "maxLength": 80
+                      },
+                      "dorsal": {
+                        "type": [
+                          "integer",
+                          "null"
+                        ],
+                        "minimum": 0,
+                        "maximum": 99
+                      },
+                      "posicion": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "enum": [
+                          "portero",
+                          "defensa",
+                          "centrocampista",
+                          "delantero",
+                          null
+                        ]
+                      }
+                    },
+                    "required": [
+                      "nombre"
+                    ],
+                    "additionalProperties": false,
+                    "title": "Jugador nuevo en el club"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "jugadorId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "dorsal": {
+                        "type": [
+                          "integer",
+                          "null"
+                        ],
+                        "minimum": 0,
+                        "maximum": 99
+                      },
+                      "posicion": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "enum": [
+                          "portero",
+                          "defensa",
+                          "centrocampista",
+                          "delantero",
+                          null
+                        ]
+                      }
+                    },
+                    "required": [
+                      "jugadorId"
+                    ],
+                    "additionalProperties": false,
+                    "title": "Jugador existente del club"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Jugador añadido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JugadorPlantilla"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Dorsal en uso o el jugador ya tiene ficha en la temporada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/jugadores/{jid}": {
+      "patch": {
+        "tags": [
+          "Jugadores"
+        ],
+        "summary": "Editar un jugador de la plantilla",
+        "description": "Delegado o superior. El nombre es del jugador y cambia en todas sus temporadas; dorsal, posición y `activo` son de su ficha en esta plantilla. `activo: false` da de baja y `activo: true` reactiva.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "jid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nombre": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80,
+                    "description": "Del jugador: cambia en todas sus temporadas"
+                  },
+                  "apellidos": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "minLength": 1,
+                    "maxLength": 80,
+                    "description": "Del jugador; null los quita"
+                  },
+                  "dorsal": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 99
+                  },
+                  "posicion": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "portero",
+                      "defensa",
+                      "centrocampista",
+                      "delantero",
+                      null
+                    ]
+                  },
+                  "activo": {
+                    "type": "boolean",
+                    "description": "false da de baja; true reactiva"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Jugador actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JugadorPlantilla"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Dorsal en uso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/clubes/{cid}/jugadores": {
+      "get": {
+        "tags": [
+          "Jugadores"
+        ],
+        "summary": "Buscar jugadores del club",
+        "description": "Para añadirlos a una plantilla. Delegado o superior en alguna plantilla del club. Busca en el nombre y los apellidos sin distinguir mayúsculas; ordenados por apellidos y nombre. Sin límite: son los jugadores de un club.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "cid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "required": false,
+            "name": "q",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Jugadores del club",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/JugadorClub"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/clubes/{cid}/jugadores/{jid}": {
+      "get": {
+        "tags": [
+          "Jugadores"
+        ],
+        "summary": "Un jugador del club y su trayectoria",
+        "description": "Sus fichas por temporada, la más reciente primero. Delegado o superior en alguna plantilla del club; un jugador solo puede ver la suya.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "cid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "jid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Jugador",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrayectoriaJugador"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/horario": {
+      "get": {
+        "tags": [
+          "Entrenos"
+        ],
+        "summary": "Horario de entrenos",
+        "description": "Horario semanal de la plantilla, o null si no tiene.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Horario",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Horario"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Entrenos"
+        ],
+        "summary": "Guardar el horario",
+        "description": "Delegado o superior. Crea los entrenos del horario entre «desde» (o hoy, si es anterior) y «hasta», como mucho un año. Al cambiarlo, se borran los entrenos futuros del horario que aún no tienen asistencia y se vuelven a crear; los que tienen asistencia, los pasados y los sueltos no se tocan, y no se crea un entreno donde ya hay uno a la misma hora.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "desde": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "example": "2026-10-13"
+                  },
+                  "hasta": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "example": "2026-10-13"
+                  },
+                  "sesiones": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/SesionHorario"
+                    },
+                    "minItems": 1,
+                    "maxItems": 14
+                  }
+                },
+                "required": [
+                  "desde",
+                  "hasta",
+                  "sesiones"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Horario guardado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "horario": {
+                      "$ref": "#/components/schemas/Horario"
+                    },
+                    "creados": {
+                      "type": "integer"
+                    },
+                    "borrados": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "horario",
+                    "creados",
+                    "borrados"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Entrenos"
+        ],
+        "summary": "Quitar el horario",
+        "description": "Delegado o superior. Borra el horario y sus entrenos futuros sin asistencia; el resto se conserva.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Horario quitado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "borrados": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "borrados"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/entrenos": {
+      "get": {
+        "tags": [
+          "Entrenos"
+        ],
+        "summary": "Entrenos",
+        "description": "Entrenos de la plantilla entre `desde` y `hasta` (ambos opcionales), del más reciente al más antiguo y, en un mismo día, por hora. Con el recuento de cada estado: no identifica a nadie, así que lo ve cualquier miembro.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2026-10-13"
+            },
+            "required": false,
+            "name": "desde",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2026-10-13"
+            },
+            "required": false,
+            "name": "hasta",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Entrenos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ResumenEntreno"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Fechas no válidas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Entrenos"
+        ],
+        "summary": "Crear un entreno",
+        "description": "Delegado o superior. Un entreno suelto, también en un día que ya tiene otro (doble sesión) si es a otra hora.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "fecha": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "example": "2026-10-13"
+                  },
+                  "hora": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                    "example": "20:00"
+                  }
+                },
+                "required": [
+                  "fecha"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Entreno creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResumenEntreno"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Ya hay un entreno ese día a esa hora",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/entrenos/{eid}": {
+      "get": {
+        "tags": [
+          "Entrenos"
+        ],
+        "summary": "Un entreno y su lista",
+        "description": "Los jugadores activos y los de baja con asistencia registrada en el entreno, con su estado. El rol jugador solo recibe su fila.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "eid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Entreno",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Entreno"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Entrenos"
+        ],
+        "summary": "Cancelar un entreno",
+        "description": "Delegado o superior. Borra el entreno y su asistencia, si la tiene.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "eid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Entreno cancelado"
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/entrenos/{eid}/asistencias": {
+      "put": {
+        "tags": [
+          "Entrenos"
+        ],
+        "summary": "Pasar lista",
+        "description": "Delegado o superior. Guarda la lista completa del entreno: quien no aparece queda sin registrar, y una lista vacía lo deja sin asistencia (el entreno sigue en el calendario). No admite entrenos futuros.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "eid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "asistencias": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "jugadorId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "estado": {
+                          "type": "string",
+                          "enum": [
+                            "asiste",
+                            "justificada",
+                            "falta"
+                          ]
+                        },
+                        "motivo": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "maxLength": 200
+                        }
+                      },
+                      "required": [
+                        "jugadorId",
+                        "estado"
+                      ]
+                    },
+                    "maxItems": 200
+                  }
+                },
+                "required": [
+                  "asistencias"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Asistencia guardada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Entreno"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos, entreno futuro o jugador sin ficha",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/asistencia/resumen": {
+      "get": {
+        "tags": [
+          "Entrenos"
+        ],
+        "summary": "Asistencia por jugador",
+        "description": "Asistencias, justificadas, faltas y porcentaje de cada jugador de la plantilla (también de las bajas). El porcentaje es asistencias / entrenos con estado registrado, y null si no tiene ninguno. El rol jugador solo recibe el suyo.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Asistencia",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AsistenciaJugador"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/partidos": {
+      "get": {
+        "tags": [
+          "Partidos"
+        ],
+        "summary": "Partidos",
+        "description": "Próximos (desde hoy, el más cercano primero; un partido de hoy es próximo) o pasados (el más reciente primero), con el número de convocados.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "proximos",
+                "pasados"
+              ],
+              "default": "proximos"
+            },
+            "required": false,
+            "name": "cuando",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Partidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ResumenPartido"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Partidos"
+        ],
+        "summary": "Crear un partido",
+        "description": "Delegado o superior. También en fechas pasadas, para apuntar partidos ya jugados.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "rival": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80
+                  },
+                  "fecha": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "example": "2026-10-13"
+                  },
+                  "competicion": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "minLength": 1,
+                    "maxLength": 80
+                  },
+                  "hora": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                    "example": "20:00"
+                  },
+                  "horaCitacion": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                    "example": "20:00"
+                  },
+                  "lugar": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "local": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "rival",
+                  "fecha"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Partido creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Partido"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/partidos/{pid}": {
+      "get": {
+        "tags": [
+          "Partidos"
+        ],
+        "summary": "Un partido y su convocatoria",
+        "description": "Con la lista para convocar: los jugadores activos y los de baja que ya estaban convocados, por dorsal.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "pid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Partido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Partido"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Partidos"
+        ],
+        "summary": "Editar un partido",
+        "description": "Delegado o superior. Los campos opcionales se quitan con null.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "pid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "rival": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80
+                  },
+                  "fecha": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "example": "2026-10-13"
+                  },
+                  "competicion": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "minLength": 1,
+                    "maxLength": 80
+                  },
+                  "hora": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                    "example": "20:00"
+                  },
+                  "horaCitacion": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                    "example": "20:00"
+                  },
+                  "lugar": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "local": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Partido actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Partido"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Partidos"
+        ],
+        "summary": "Borrar un partido",
+        "description": "Delegado o superior. Borra también su convocatoria.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "pid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Partido borrado"
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/partidos/{pid}/convocados": {
+      "put": {
+        "tags": [
+          "Partidos"
+        ],
+        "summary": "Convocar",
+        "description": "Delegado o superior. Guarda la lista completa de convocados. Cada jugador nuevo en la convocatoria debe tener ficha activa en la plantilla; quien ya estaba convocado puede seguir aunque haya causado baja.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "pid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "jugadores": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "maxItems": 100
+                  }
+                },
+                "required": [
+                  "jugadores"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Convocatoria guardada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Partido"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos o jugador que no se puede convocar",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/partidos/{pid}/mensaje": {
+      "get": {
+        "tags": [
+          "Partidos"
+        ],
+        "summary": "Mensaje de convocatoria",
+        "description": "Texto de la convocatoria con el formato de WhatsApp, y el enlace wa.me para compartirlo.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "pid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Mensaje",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MensajeConvocatoria"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/motivos-multa": {
+      "get": {
+        "tags": [
+          "Multas"
+        ],
+        "summary": "Catálogo de multas",
+        "description": "Motivos activos de la plantilla, por orden alfabético; con `inactivos=true`, también los desactivados. Lo ve cualquier miembro.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ],
+              "default": "false"
+            },
+            "required": false,
+            "name": "inactivos",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Catálogo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MotivoMulta"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Multas"
+        ],
+        "summary": "Añadir un motivo al catálogo",
+        "description": "Delegado o superior. El importe va en céntimos.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "descripcion": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80
+                  },
+                  "importeCentimos": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100000,
+                    "example": 500,
+                    "description": "En céntimos: 500 son 5,00 €"
+                  },
+                  "tipoTarjeta": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "amarilla",
+                      "roja",
+                      null
+                    ]
+                  }
+                },
+                "required": [
+                  "descripcion",
+                  "importeCentimos"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Motivo creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MotivoMulta"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Ya hay un motivo activo con esa descripción",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/motivos-multa/{mid}": {
+      "patch": {
+        "tags": [
+          "Multas"
+        ],
+        "summary": "Editar, desactivar o reactivar un motivo",
+        "description": "Delegado o superior. `activo: false` lo desactiva y `true` lo reactiva; `tipoTarjeta: null` quita la tarjeta. Las multas ya puestas conservan su motivo e importe.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "mid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "descripcion": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80
+                  },
+                  "importeCentimos": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100000,
+                    "example": 500,
+                    "description": "En céntimos: 500 son 5,00 €"
+                  },
+                  "tipoTarjeta": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "amarilla",
+                      "roja",
+                      null
+                    ]
+                  },
+                  "activo": {
+                    "type": "boolean"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Motivo actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MotivoMulta"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Ya hay un motivo activo con esa descripción",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/multas": {
+      "get": {
+        "tags": [
+          "Multas"
+        ],
+        "summary": "Multas",
+        "description": "Multas de la plantilla, la más reciente primero, con filtros por jugador y estado. El rol jugador solo recibe las suyas.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "jugador",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pendientes",
+                "cobradas"
+              ]
+            },
+            "required": false,
+            "name": "estado",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Multas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Multa"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Filtros no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Multas"
+        ],
+        "summary": "Poner una multa",
+        "description": "Delegado o superior. Con `motivoId`, copia la descripción y el importe del motivo activo del catálogo (el importe se puede cambiar); con `motivo`, texto libre e importe obligatorio. La fecha, por defecto, es hoy.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "jugadorId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "motivoId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "importeCentimos": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 100000,
+                        "example": 500,
+                        "description": "Si no se indica, el del catálogo"
+                      },
+                      "fecha": {
+                        "type": "string",
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                        "example": "2026-10-13"
+                      }
+                    },
+                    "required": [
+                      "jugadorId",
+                      "motivoId"
+                    ],
+                    "additionalProperties": false,
+                    "title": "Multa del catálogo"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "jugadorId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "motivo": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 120
+                      },
+                      "importeCentimos": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 100000,
+                        "example": 500,
+                        "description": "En céntimos: 500 son 5,00 €"
+                      },
+                      "fecha": {
+                        "type": "string",
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                        "example": "2026-10-13"
+                      }
+                    },
+                    "required": [
+                      "jugadorId",
+                      "motivo",
+                      "importeCentimos"
+                    ],
+                    "additionalProperties": false,
+                    "title": "Multa con motivo libre"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Multa puesta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Multa"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos, motivo no válido o jugador sin ficha",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/multas/{mid}": {
+      "patch": {
+        "tags": [
+          "Multas"
+        ],
+        "summary": "Editar, cobrar o deshacer el cobro de una multa",
+        "description": "Delegado o superior. `fechaPago` con una fecha la cobra y `fechaPago: null` deshace el cobro; la fecha de cobro no puede ser anterior a la de la multa.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "mid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "motivo": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "importeCentimos": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100000,
+                    "example": 500,
+                    "description": "En céntimos: 500 son 5,00 €"
+                  },
+                  "fecha": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "example": "2026-10-13"
+                  },
+                  "fechaPago": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "example": "2026-10-13"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Multa actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Multa"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Multas"
+        ],
+        "summary": "Borrar una multa",
+        "description": "Delegado o superior.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "mid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Multa borrada"
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/jugadores/{jid}/saldar": {
+      "post": {
+        "tags": [
+          "Multas"
+        ],
+        "summary": "Saldar las multas de un jugador",
+        "description": "Delegado o superior. Cobra de una vez todas sus multas pendientes en la plantilla, con la fecha indicada o la de hoy.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "jid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "fecha": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "example": "2026-10-13"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Multas cobradas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MultasSaldadas"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/multas/resumen": {
+      "get": {
+        "tags": [
+          "Multas"
+        ],
+        "summary": "Caja y deudas",
+        "description": "Delegado o superior. Total pendiente de cobro, total en caja (cobrado) y deuda de cada jugador con algo pendiente, de mayor a menor.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resumen",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResumenMultas"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "webhooks": {}
+}

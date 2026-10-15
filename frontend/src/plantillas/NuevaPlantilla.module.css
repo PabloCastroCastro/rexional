@@ -1,0 +1,36 @@
+.formulario {
+  display: grid;
+  gap: var(--espacio-4);
+}
+
+.campo {
+  display: grid;
+  gap: var(--espacio-1);
+}
+
+.campo label {
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
+}
+
+.campo select {
+  min-height: var(--altura-tactil);
+  padding: 0 var(--espacio-3);
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-m);
+  font-size: max(16px, var(--texto-base));
+}
+
+.ayuda {
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
+}
+
+.error {
+  padding: var(--espacio-3);
+  border-radius: var(--radio-m);
+  background: color-mix(in srgb, var(--color-peligro) 12%, transparent);
+  color: var(--color-peligro);
+  font-size: var(--texto-sm);
+}

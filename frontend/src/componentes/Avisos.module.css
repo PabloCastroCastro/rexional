@@ -1,0 +1,82 @@
+/* Encima de la navegación inferior y del área segura */
+.avisos {
+  position: fixed;
+  inset-inline: 0;
+  bottom: calc(var(--altura-navegacion) + env(safe-area-inset-bottom, 0px) + var(--espacio-3));
+  z-index: 50;
+  display: grid;
+  gap: var(--espacio-2);
+  justify-items: center;
+  padding: 0 var(--espacio-3);
+  pointer-events: none;
+}
+
+.aviso {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  width: 100%;
+  max-width: var(--ancho-contenido);
+  min-height: var(--altura-tactil);
+  padding: var(--espacio-1) var(--espacio-1) var(--espacio-1) var(--espacio-3);
+  border-radius: var(--radio-m);
+  /* Siempre oscuro, en los dos modos: destaca sobre el contenido y los iconos claros contrastan */
+  background: #1f2622;
+  color: #f1f4f2;
+  border: 1px solid rgb(255 255 255 / 12%);
+  box-shadow: var(--sombra-2);
+  pointer-events: auto;
+  animation: aparecer var(--duracion) var(--curva);
+}
+
+.icono {
+  display: grid;
+}
+
+.exito .icono {
+  color: #6fdba5;
+}
+
+.error .icono {
+  color: #ff8a80;
+}
+
+.info .icono {
+  color: #8fbdf7;
+}
+
+.mensaje {
+  flex: 1;
+  font-size: var(--texto-sm);
+}
+
+.accion,
+.cerrar {
+  min-height: var(--altura-tactil);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.accion {
+  padding: 0 var(--espacio-3);
+  font-weight: var(--peso-fuerte);
+  text-transform: uppercase;
+  font-size: var(--texto-sm);
+  letter-spacing: 0.02em;
+}
+
+.cerrar {
+  display: grid;
+  place-items: center;
+  width: var(--altura-tactil);
+  opacity: 0.8;
+}
+
+@keyframes aparecer {
+  from {
+    opacity: 0;
+    transform: translateY(var(--espacio-3));
+  }
+}

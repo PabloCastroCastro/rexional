@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <title>Vestuario</title>
+  <rect width="512" height="512" rx="112" fill="#14553d"/>
+  <path d="M256 84 400 136v114c0 88-58 148-144 182-86-34-144-94-144-182V136Z" fill="#f2c230"/>
+  <path d="M190 196 256 336 322 196" fill="none" stroke="#14553d" stroke-width="42" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

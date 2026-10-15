@@ -1,0 +1,10 @@
+# Servidor (pruebas y producción): se combina con docker-compose.yml. Lo usa scripts/deploy.sh:
+#   docker compose -p vestuario-pro -f docker-compose.yml -f docker-compose.servidor.yml up -d --build
+# Monta el certificado de Tailscale en el proxy, que así sirve HTTPS en 8443; con PUERTO_INTERNO=8443
+# en el .env, ese es el puerto que se publica (ver docs/servidor.md).
+
+services:
+  proxy:
+    volumes:
+      # cert.pem y key.pem; la clave debe ser legible por el usuario 101 (nginx sin privilegios)
+      - ${CERTIFICADOS:-/opt/vestuario/certs}:/etc/nginx/certs:ro

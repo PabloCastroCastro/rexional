@@ -1,0 +1,26 @@
+.vacio {
+  display: grid;
+  justify-items: center;
+  gap: var(--espacio-3);
+  padding: var(--espacio-7) var(--espacio-4);
+  text-align: center;
+}
+
+.icono {
+  display: grid;
+  place-items: center;
+  width: 4rem;
+  height: 4rem;
+  border-radius: var(--radio-completo);
+  background: var(--color-superficie-alterna);
+  color: var(--color-acento);
+}
+
+.descripcion {
+  max-width: 28rem;
+  color: var(--color-texto-suave);
+}
+
+.accion {
+  margin-top: var(--espacio-2);
+}

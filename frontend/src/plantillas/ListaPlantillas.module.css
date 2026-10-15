@@ -1,0 +1,68 @@
+.lista,
+.club,
+.temporada {
+  display: grid;
+  gap: var(--espacio-3);
+}
+
+.lista {
+  gap: var(--espacio-5);
+}
+
+.nombreClub {
+  font-size: var(--texto-lg);
+}
+
+.nombreTemporada {
+  margin: 0;
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
+}
+
+.plantillas {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  list-style: none;
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-m);
+  background: var(--color-superficie);
+}
+
+.plantillas li + li {
+  border-top: 1px solid var(--color-borde);
+}
+
+.plantilla {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  width: 100%;
+  min-height: calc(var(--altura-tactil) + var(--espacio-3));
+  padding: var(--espacio-2) var(--espacio-3) var(--espacio-2) var(--espacio-4);
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.plantilla[aria-current="true"] {
+  background: color-mix(in srgb, var(--color-primario) 10%, transparent);
+  color: var(--color-acento);
+}
+
+.texto {
+  display: grid;
+  flex: 1;
+}
+
+.nombre {
+  font-weight: var(--peso-medio);
+}
+
+.detalle {
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
+}
