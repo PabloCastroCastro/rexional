@@ -9,6 +9,8 @@ import {
   fichas,
   horarios,
   jugadores,
+  motivosMulta,
+  multas,
   partidos,
   plantillas,
 } from '../src/db/schema/index.js'
@@ -581,5 +583,124 @@ describe('partidos y convocados', () => {
       await tx.delete(plantillas).where(eq(plantillas.id, b.senior26.id))
       expect(await tx.$count(partidos, eq(partidos.plantillaId, b.senior26.id))).toBe(0)
       expect(await tx.$count(convocados, eq(convocados.plantillaId, b.senior26.id))).toBe(0)
+    }))
+})
+
+describe('multas y catálogo', () => {
+  // Un motivo en cada temporada del Senior; Ana tiene ficha en las dos y Berta en ninguna
+  async function conCatalogo(tx: Tx) {
+    const b = await base(tx)
+    const [motivo26, motivo25] = await tx
+      .insert(motivosMulta)
+      .values([
+        { plantillaId: b.senior26.id, descripcion: 'Llegar tarde', importeCentimos: 200 },
+        { plantillaId: b.senior25.id, descripcion: 'Llegar tarde', importeCentimos: 200 },
+      ])
+      .returning()
+    if (!motivo26 || !motivo25) throw new Error('Sin motivos')
+    const multa = {
+      plantillaId: b.senior26.id,
+      jugadorId: b.ana.id,
+      motivoId: motivo26.id,
+      motivo: 'Llegar tarde',
+      importeCentimos: 200,
+      fecha: '2026-10-13',
+    }
+    return { ...b, motivo26, motivo25, multa }
+  }
+
+  it('acepta una multa del catálogo o de texto libre, pendiente o cobrada', () =>
+    enTransaccion(async (tx) => {
+      const b = await conCatalogo(tx)
+      await tx
+        .insert(multas)
+        .values([
+          b.multa,
+          { ...b.multa, motivoId: null, motivo: 'Otro motivo', fechaPago: '2026-10-13' },
+        ])
+    }))
+
+  it('rechaza la multa de un jugador sin ficha en la plantilla', () =>
+    enTransaccion(async (tx) => {
+      const b = await conCatalogo(tx)
+      const r = await restriccionViolada(
+        tx.insert(multas).values({ ...b.multa, jugadorId: b.berta.id }),
+      )
+      expect(r).toBe('multas_ficha_fk')
+    }))
+
+  it('rechaza un motivo del catálogo de otra plantilla', () =>
+    enTransaccion(async (tx) => {
+      const b = await conCatalogo(tx)
+      const r = await restriccionViolada(
+        tx.insert(multas).values({ ...b.multa, motivoId: b.motivo25.id }),
+      )
+      expect(r).toBe('multas_motivo_fk')
+    }))
+
+  it.each([
+    [{ importeCentimos: 0 }, 'multas_importe_positivo'],
+    [{ motivo: '  ' }, 'multas_motivo_no_vacio'],
+    [{ fechaPago: '2026-10-12' }, 'multas_pago_posterior'],
+  ] as const)('rechaza la multa con %o', (cambios, restriccion) =>
+    enTransaccion(async (tx) => {
+      const b = await conCatalogo(tx)
+      const r = await restriccionViolada(tx.insert(multas).values({ ...b.multa, ...cambios }))
+      expect(r).toBe(restriccion)
+    }),
+  )
+
+  it('rechaza importes negativos y descripciones vacías en el catálogo', () =>
+    enTransaccion(async (tx) => {
+      const b = await conCatalogo(tx)
+      for (const [motivo, restriccion] of [
+        [{ descripcion: 'Gratis', importeCentimos: -1 }, 'motivos_multa_importe_no_negativo'],
+        [{ descripcion: ' ', importeCentimos: 100 }, 'motivos_multa_descripcion_no_vacia'],
+      ] as const) {
+        const r = await restriccionViolada(
+          tx.transaction((sp) =>
+            sp
+              .insert(motivosMulta)
+              .values({ plantillaId: b.senior26.id, ...motivo })
+              .then(() => undefined),
+          ),
+        )
+        expect(r).toBe(restriccion)
+      }
+      // Un motivo gratuito sí se admite
+      await tx
+        .insert(motivosMulta)
+        .values({ plantillaId: b.senior26.id, descripcion: 'Aviso', importeCentimos: 0 })
+    }))
+
+  it('no admite dos motivos activos con la misma descripción, sí uno desactivado', () =>
+    enTransaccion(async (tx) => {
+      const b = await conCatalogo(tx)
+      const r = await restriccionViolada(
+        tx.transaction((sp) =>
+          sp
+            .insert(motivosMulta)
+            .values({
+              plantillaId: b.senior26.id,
+              descripcion: ' LLEGAR TARDE ',
+              importeCentimos: 300,
+            })
+            .then(() => undefined),
+        ),
+      )
+      expect(r).toBe('motivos_multa_descripcion_unica_activos')
+      await tx.update(motivosMulta).set({ activo: false }).where(eq(motivosMulta.id, b.motivo26.id))
+      await tx
+        .insert(motivosMulta)
+        .values({ plantillaId: b.senior26.id, descripcion: 'Llegar tarde', importeCentimos: 300 })
+    }))
+
+  it('al borrar la plantilla se van su catálogo y sus multas', () =>
+    enTransaccion(async (tx) => {
+      const b = await conCatalogo(tx)
+      await tx.insert(multas).values(b.multa)
+      await tx.delete(plantillas).where(eq(plantillas.id, b.senior26.id))
+      expect(await tx.$count(multas, eq(multas.plantillaId, b.senior26.id))).toBe(0)
+      expect(await tx.$count(motivosMulta, eq(motivosMulta.plantillaId, b.senior26.id))).toBe(0)
     }))
 })

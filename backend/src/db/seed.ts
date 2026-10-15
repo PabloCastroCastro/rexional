@@ -1,4 +1,6 @@
 import { hashPassword } from 'better-auth/crypto'
+import { and, eq, inArray } from 'drizzle-orm'
+import { CATALOGO_POR_DEFECTO } from '../catalogoMultas.js'
 import { config } from '../config.js'
 import { db, pool } from './cliente.js'
 import { migrar } from './migrar.js'
@@ -13,6 +15,8 @@ import {
   horarios,
   jugadores,
   membresias,
+  motivosMulta,
+  multas,
   partidos,
   plantillas,
   user,
@@ -45,6 +49,8 @@ const PLANTILLA = 4
 const JUGADOR = 5
 const ENTRENO = 6
 const PARTIDO = 7
+const MOTIVO = 8
+const MULTA = 9
 
 type Posicion = 'portero' | 'defensa' | 'centrocampista' | 'delantero'
 
@@ -294,6 +300,40 @@ const listaConvocados = conConvocatoria.flatMap((p) => {
     }))
 })
 
+// Catálogo de multas: el de por defecto en todas las plantillas y un motivo más en el Senior 2026-27
+const listaMotivos = listaPlantillas.flatMap((p) => [
+  ...CATALOGO_POR_DEFECTO.map((m, k) => ({ plantilla: p.n, n: p.n * 10 + k, ...m })),
+  ...(p.n === 3
+    ? [
+        {
+          plantilla: 3,
+          n: 39,
+          descripcion: 'Móvil en el vestuario',
+          importeCentimos: 100,
+          tipoTarjeta: null,
+        },
+      ]
+    : []),
+])
+
+// Multas: [n, plantilla, jugador, motivo del catálogo o texto libre, céntimos, fecha, fecha de pago]
+// El importe solo se indica en las de texto libre; las demás toman el del catálogo
+const listaMultas: [number, number, number, string, number | null, string, string | null][] = [
+  [1, 3, 2, 'Llegar tarde al entreno', null, '2026-09-15', '2026-09-20'],
+  [2, 3, 5, 'Faltar sin avisar', null, '2026-09-22', null],
+  [3, 3, 7, 'Tarjeta amarilla por protestar', null, '2026-09-27', null],
+  [4, 3, 7, 'Llegar tarde al entreno', null, '2026-10-06', null],
+  [5, 3, 9, 'Olvidar la equipación', null, '2026-10-01', '2026-10-01'],
+  [6, 3, 3, 'Pinchar el balón del míster', 400, '2026-10-08', null],
+  [7, 3, 1, 'Móvil en el vestuario', null, '2026-10-13', null],
+  [8, 4, 21, 'Llegar tarde al entreno', null, '2026-09-17', '2026-09-24'],
+  [9, 4, 26, 'Tarjeta roja', null, '2026-10-03', null],
+  [10, 4, 27, 'Faltar sin avisar', null, '2026-10-08', null],
+  // Pendiente de la temporada anterior: sigue en su plantilla
+  [11, 1, 11, 'Faltar sin avisar', null, '2026-05-10', null],
+  [12, 5, 42, 'Llegar tarde al entreno', null, '2026-09-20', '2026-09-27'],
+]
+
 await migrar()
 
 const hash = await hashPassword(CONTRASENA)
@@ -435,13 +475,65 @@ await db.transaction(async (tx) => {
     .onConflictDoNothing()
 
   await tx.insert(convocados).values(listaConvocados).onConflictDoNothing()
+
+  await tx
+    .insert(motivosMulta)
+    .values(
+      listaMotivos.map(({ plantilla, n, ...m }) => ({
+        id: sid(MOTIVO, n),
+        plantillaId: sid(PLANTILLA, plantilla),
+        ...m,
+      })),
+    )
+    .onConflictDoNothing()
+
+  // El motivo de cada multa se busca por descripción: en una base ya migrada, el catálogo por
+  // defecto lo creó la migración con otros identificadores
+  const catalogo = await tx
+    .select({
+      id: motivosMulta.id,
+      plantillaId: motivosMulta.plantillaId,
+      descripcion: motivosMulta.descripcion,
+      importeCentimos: motivosMulta.importeCentimos,
+    })
+    .from(motivosMulta)
+    .where(
+      and(
+        inArray(
+          motivosMulta.plantillaId,
+          listaPlantillas.map((p) => sid(PLANTILLA, p.n)),
+        ),
+        eq(motivosMulta.activo, true),
+      ),
+    )
+  await tx
+    .insert(multas)
+    .values(
+      listaMultas.map(([n, plantilla, jugador, motivo, importe, fecha, fechaPago]) => {
+        const delCatalogo = catalogo.find(
+          (m) => m.plantillaId === sid(PLANTILLA, plantilla) && m.descripcion === motivo,
+        )
+        return {
+          id: sid(MULTA, n),
+          plantillaId: sid(PLANTILLA, plantilla),
+          jugadorId: sid(JUGADOR, jugador),
+          motivoId: delCatalogo?.id ?? null,
+          motivo,
+          importeCentimos: importe ?? delCatalogo?.importeCentimos ?? 100,
+          fecha,
+          fechaPago,
+          creadaPor: sid(USUARIO, plantilla === 5 ? 3 : 1),
+        }
+      }),
+    )
+    .onConflictDoNothing()
 })
 
 console.log(
   `Seed aplicado: ${usuarios.length} usuarios (contraseña "${CONTRASENA}"), ${listaClubes.length} clubes, ` +
     `${listaPlantillas.length} plantillas, ${listaJugadores.length} jugadores, ${listaFichas.length} fichas, ` +
     `${listaEntrenos.length} entrenos, ${listaAsistencias.length} asistencias, ` +
-    `${listaPartidos.length} partidos y ${listaConvocados.length} convocados`,
+    `${listaPartidos.length} partidos, ${listaConvocados.length} convocados y ${listaMultas.length} multas`,
 )
 
 await pool.end()

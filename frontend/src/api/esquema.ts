@@ -559,7 +559,7 @@ export interface paths {
         put?: never;
         /**
          * Crear una plantilla
-         * @description Solo los administradores del club. Para la temporada siguiente, indica la plantilla anterior (del mismo club y de una temporada anterior).
+         * @description Solo los administradores del club. Para la temporada siguiente, indica la plantilla anterior (del mismo club y de una temporada anterior): su catálogo de multas se copia; si no hay anterior, se crea el catálogo por defecto.
          */
         post: {
             parameters: {
