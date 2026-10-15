@@ -69,7 +69,8 @@ services:
       MAX_SUBIDA: ${MAX_SUBIDA:-200m}
       TZ: ${TZ:-Europe/Madrid}
     ports:
-      - "${PUERTO:-8080}:8080"
+      # En el servidor, PUERTO_INTERNO=8443: se publica el HTTPS (ver docker-compose.servidor.yml)
+      - "${PUERTO:-8080}:${PUERTO_INTERNO:-8080}"
     depends_on:
       backend:
         condition: service_healthy

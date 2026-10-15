@@ -7,7 +7,9 @@ Servidor web de Vestuario con **nginx** (imagen `nginx-unprivileged`, sin root, 
 - Limita el tamaño de las subidas (`client_max_body_size`).
 - `/nginx-health` responde `ok` para el healthcheck.
 
-Más adelante asumirá HTTPS con el certificado de Tailscale (GH-13), la caché de la PWA (GH-9), las cabeceras de seguridad (GH-57) y la limitación de peticiones (GH-58).
+- **HTTPS en 8443** si hay certificado montado en `/etc/nginx/certs` (`cert.pem` y `key.pem`): lo genera al arrancar `docker-entrypoint.d/40-https.sh`. En el servidor se monta el certificado de Tailscale (`docker-compose.servidor.yml`, ver [docs/servidor.md](../docs/servidor.md)); en local y en la CI no hay certificado y solo se sirve HTTP en 8080. La clave debe ser legible por el usuario 101 (nginx sin privilegios).
+
+Más adelante asumirá las cabeceras de seguridad (GH-57) y la limitación de peticiones (GH-58).
 
 ## Relación con los otros proyectos
 
@@ -16,7 +18,7 @@ Más adelante asumirá HTTPS con el certificado de Tailscale (GH-13), la caché 
 
 ## Configuración
 
-La configuración está en `templates/default.conf.template`. La imagen oficial la procesa con `envsubst` al arrancar, sustituyendo solo estas variables:
+La configuración está en `templates/`: `default.conf.template` (el servidor HTTP en 8080) y `vestuario.inc.template` (lo que se sirve, común a HTTP y HTTPS). La imagen oficial la procesa con `envsubst` al arrancar, sustituyendo solo estas variables:
 
 | Variable | Por defecto | Descripción |
 |---|---|---|

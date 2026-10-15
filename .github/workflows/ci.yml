@@ -48,6 +48,7 @@ jobs:
               - 'frontend/**'
               - 'proxy/**'
               - 'docker-compose.yml'
+              - 'docker-compose.servidor.yml'
               - '.github/workflows/ci.yml'
 
   backend:
@@ -145,6 +146,14 @@ jobs:
       - name: Configuración de nginx
         # El entrypoint procesa las plantillas antes de ejecutar nginx -t
         run: docker run --rm vestuario-proxy:ci nginx -t
+      - name: Configuración de nginx con HTTPS
+        # Con un certificado autofirmado montado, como el de Tailscale en el servidor; la clave es del
+        # usuario 101 (nginx sin privilegios)
+        run: |
+          mkdir certs
+          openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj /CN=ci -keyout certs/key.pem -out certs/cert.pem
+          sudo chown 101:101 certs/key.pem
+          docker run --rm -v "$PWD/certs:/etc/nginx/certs:ro" vestuario-proxy:ci nginx -t
 
   humo:
     name: Prueba de humo
