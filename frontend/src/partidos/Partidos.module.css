@@ -371,17 +371,6 @@
   background: var(--color-fondo);
 }
 
-/* Resultado de un partido jugado */
-.resultado {
-  color: var(--color-texto-suave);
-}
-
-.resultado strong {
-  color: var(--color-texto);
-  font-size: var(--texto-lg);
-  font-variant-numeric: tabular-nums;
-}
-
 /* Revisión del acta */
 .marcador {
   display: grid;
@@ -471,5 +460,247 @@
 }
 
 .sale {
+  color: var(--color-peligro);
+}
+
+/* Partido jugado */
+.marcadorPartido {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+  padding: var(--espacio-3) var(--espacio-4);
+  border-radius: var(--radio-l);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra-1);
+}
+
+.resultadoGrande {
+  font-size: var(--texto-xl);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.resultadoGrande[data-estado="programado"],
+.resultadoGrande[data-estado="aplazado"] {
+  color: var(--color-texto-suave);
+  font-size: var(--texto-base);
+  font-weight: var(--peso-medio);
+}
+
+.enlaceSecundario {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  min-height: var(--altura-tactil);
+  padding: 0 var(--espacio-4);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-m);
+  background: var(--color-superficie);
+  color: var(--color-texto);
+  font-weight: var(--peso-medio);
+  text-decoration: none;
+}
+
+.lineaTiempo {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-radius: var(--radio-l);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra-1);
+  overflow: hidden;
+}
+
+.evento {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  min-height: var(--altura-tactil);
+  padding: var(--espacio-1) var(--espacio-2) var(--espacio-1) var(--espacio-4);
+}
+
+.evento + .evento {
+  border-top: 1px solid var(--color-borde);
+}
+
+.iconoEvento {
+  flex: none;
+  color: var(--color-texto-suave);
+}
+
+[data-tipo="gol"] .iconoEvento {
+  color: var(--color-primario);
+}
+
+[data-tipo="amarilla"] .iconoEvento {
+  color: #d4a20b;
+  fill: #f2c230;
+}
+
+[data-tipo="roja"] .iconoEvento {
+  color: var(--color-peligro);
+  fill: var(--color-peligro);
+}
+
+[data-tipo="entra"] .iconoEvento {
+  color: var(--color-exito);
+}
+
+[data-tipo="sale"] .iconoEvento,
+[data-tipo="gol_propia"] .iconoEvento {
+  color: var(--color-peligro);
+}
+
+.textoEvento {
+  flex: 1;
+  min-width: 0;
+}
+
+.etiquetaActa {
+  margin-left: var(--espacio-2);
+  padding: 0 var(--espacio-2);
+  border-radius: var(--radio-completo);
+  background: var(--color-fondo);
+  color: var(--color-texto-suave);
+  font-size: var(--texto-xs);
+}
+
+.borrarEvento {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: var(--altura-tactil);
+  height: var(--altura-tactil);
+  border: 0;
+  border-radius: var(--radio-m);
+  background: none;
+  color: var(--color-texto-suave);
+  cursor: pointer;
+}
+
+.contadores {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--espacio-3);
+}
+
+.contadorGoles {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--espacio-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  text-align: center;
+}
+
+.contadorGoles legend {
+  overflow: hidden;
+  width: 100%;
+  margin-bottom: var(--espacio-2);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.contadorGoles output {
+  font-size: var(--texto-xl);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.contadorGoles button {
+  display: grid;
+  place-items: center;
+  width: var(--altura-tactil);
+  height: var(--altura-tactil);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-m);
+  background: var(--color-superficie);
+  color: var(--color-texto);
+  cursor: pointer;
+}
+
+.tiposEvento {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.tiposEvento legend {
+  margin-bottom: var(--espacio-2);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
+}
+
+.tiposEvento button {
+  min-height: 2.5rem;
+  padding: 0 var(--espacio-3);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-completo);
+  background: var(--color-superficie);
+  color: var(--color-texto);
+  font: inherit;
+  cursor: pointer;
+}
+
+.tiposEvento button[aria-pressed="true"] {
+  border-color: var(--color-primario);
+  background: var(--color-primario);
+  color: var(--color-sobre-primario);
+}
+
+.opcion {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  min-height: 2.5rem;
+}
+
+.campoMinuto {
+  display: grid;
+  gap: var(--espacio-1);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
+}
+
+.campoMinuto input {
+  width: 6rem;
+  min-height: var(--altura-tactil);
+  padding: 0 var(--espacio-3);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-m);
+  background: var(--color-superficie);
+  color: var(--color-texto);
+  font: inherit;
+  font-size: var(--texto-base);
+}
+
+.resultadoLista {
+  justify-self: start;
+  padding: 0 var(--espacio-2);
+  border-radius: var(--radio-m);
+  background: var(--color-primario);
+  color: var(--color-sobre-primario);
+  font-size: var(--texto-sm);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.resultadoLista[data-estado="aplazado"] {
+  background: var(--color-fondo);
+  color: var(--color-texto-suave);
+  font-weight: var(--peso-medio);
+}
+
+.barraConvocatoria [data-error] {
   color: var(--color-peligro);
 }

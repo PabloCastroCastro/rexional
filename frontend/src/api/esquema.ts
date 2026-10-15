@@ -2737,17 +2737,95 @@ export interface paths {
             };
             requestBody?: {
                 content: {
-                    "application/json": {
-                        /** Format: uuid */
-                        jugadorId?: string | null;
-                        /** @enum {string} */
-                        tipo: "gol" | "asistencia" | "amarilla" | "roja" | "entra" | "sale" | "gol_propia";
-                        minuto?: number | null;
-                    };
+                    "application/json": components["schemas"]["NuevoEvento"];
                 };
             };
             responses: {
                 /** @description Evento registrado */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Partido"];
+                    };
+                };
+                /** @description Datos no válidos o que no cuadran con el partido */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plantillas/{id}/partidos/{pid}/eventos/lote": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Registrar varios eventos a la vez
+         * @description Delegado o superior. Todo o nada: para un cambio (entra y sale) o un gol con su asistencia. Si uno no cuadra con el partido, no se guarda ninguno.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    pid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        eventos: components["schemas"]["NuevoEvento"][];
+                    };
+                };
+            };
+            responses: {
+                /** @description Eventos registrados */
                 201: {
                     headers: {
                         [name: string]: unknown;
@@ -4412,6 +4490,13 @@ export interface components {
             texto: string;
             /** @example https://wa.me/?text=… */
             whatsapp: string;
+        };
+        NuevoEvento: {
+            /** Format: uuid */
+            jugadorId?: string | null;
+            /** @enum {string} */
+            tipo: "gol" | "asistencia" | "amarilla" | "roja" | "entra" | "sale" | "gol_propia";
+            minuto?: number | null;
         };
         EstadisticasPlantilla: {
             equipo: {

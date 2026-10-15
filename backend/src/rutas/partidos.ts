@@ -197,7 +197,11 @@ export async function detallePartido(plantillaId: string, partidoId: string) {
     })
     .from(eventosPartido)
     .where(eq(eventosPartido.partidoId, partido.id))
-    .orderBy(sql`${eventosPartido.minuto} asc nulls last`, asc(eventosPartido.createdAt))
+    .orderBy(
+      sql`${eventosPartido.minuto} asc nulls last`,
+      asc(eventosPartido.createdAt),
+      asc(eventosPartido.id),
+    )
   const [acta] = await db
     .select({
       nombreArchivo: actasPartido.nombreArchivo,

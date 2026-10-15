@@ -269,6 +269,47 @@ describe('titulares, cambios y eventos', () => {
     expect(partido.eventos).toHaveLength(1)
   })
 
+  it('un lote se registra entero o no se registra', async () => {
+    const pid = await partidoConvocado([1, 2, 3])
+    await pedir('PUT', ruta(pid, '/participaciones'), 'delegado', {
+      titulares: [J(1), J(2)],
+      suplentes: [J(3)],
+    })
+    const lote = (eventos: Record<string, unknown>[], quien = 'delegado') =>
+      pedir('POST', ruta(pid, '/eventos/lote'), quien, { eventos })
+    expect((await lote([{ jugadorId: J(3), tipo: 'entra', minuto: 60 }], 'jugador')).status).toBe(
+      403,
+    )
+    expect((await lote([])).status).toBe(400)
+
+    // El cambio a la vez: quien entra y quien sale
+    const cambio = await lote([
+      { jugadorId: J(3), tipo: 'entra', minuto: 60 },
+      { jugadorId: J(2), tipo: 'sale', minuto: 60 },
+    ])
+    expect(cambio.status).toBe(201)
+    expect(minutosDe(await cambio.json())).toEqual({ J1: 90, J2: 60, J3: 30 })
+
+    // Gol de quien ya ha salido con asistencia válida: no se guarda ninguno de los dos
+    const mal = await lote([
+      { jugadorId: J(2), tipo: 'gol', minuto: 70 },
+      { jugadorId: J(1), tipo: 'asistencia', minuto: 70 },
+    ])
+    expect(mal.status).toBe(400)
+    expect((await leer(pid)).eventos).toHaveLength(2)
+
+    const gol = await lote([
+      { jugadorId: J(3), tipo: 'gol', minuto: 70 },
+      { jugadorId: J(1), tipo: 'asistencia', minuto: 70 },
+    ])
+    expect(((await gol.json()) as Partido).eventos.map((e) => e.tipo)).toEqual([
+      'entra',
+      'sale',
+      'gol',
+      'asistencia',
+    ])
+  })
+
   it('no se borra la entrada de quien después sale', async () => {
     const pid = await partidoConvocado([1, 2])
     await pedir('PUT', ruta(pid, '/participaciones'), 'delegado', {

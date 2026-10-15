@@ -38,6 +38,41 @@ import {
 
 const EsquemaGoles = z.int().min(0).max(99)
 
+const EsquemaNuevoEvento = z
+  .object({
+    jugadorId: EsquemaUuid.nullish(),
+    tipo: z.enum(tipoEvento.enumValues),
+    minuto: z.int().min(0).max(150).nullish(),
+  })
+  .strict()
+  .openapi('NuevoEvento')
+
+type NuevoEvento = z.infer<typeof EsquemaNuevoEvento>
+
+// Registra los eventos juntos: si uno no cuadra, no se guarda ninguno
+async function anadirEventos(partidoId: string, eventos: NuevoEvento[]) {
+  await db.transaction(async (tx) => {
+    await bloquearPartido(tx, partidoId)
+    if (eventos.some((e) => !e.jugadorId && e.tipo !== 'gol_propia')) {
+      throw new ErrorApi(400, 'estadisticas_incoherentes', 'Falta el jugador del evento')
+    }
+    await comprobarConvocados(
+      tx,
+      partidoId,
+      eventos.flatMap((e) => (e.jugadorId ? [e.jugadorId] : [])),
+    )
+    await tx.insert(eventosPartido).values(
+      eventos.map((e) => ({
+        partidoId,
+        jugadorId: e.jugadorId ?? null,
+        tipo: e.tipo,
+        minuto: e.minuto ?? null,
+      })),
+    )
+    await recalcular(tx, partidoId)
+  })
+}
+
 const ParamEvento = ParamPartido.extend({
   evid: EsquemaUuid.openapi({ param: { name: 'evid', in: 'path' } }),
 })
@@ -302,15 +337,7 @@ export const rutasEstadisticas = () =>
           params: ParamPartido,
           body: {
             content: {
-              'application/json': {
-                schema: z
-                  .object({
-                    jugadorId: EsquemaUuid.nullish(),
-                    tipo: z.enum(tipoEvento.enumValues),
-                    minuto: z.int().min(0).max(150).nullish(),
-                  })
-                  .strict(),
-              },
+              'application/json': { schema: EsquemaNuevoEvento },
             },
           },
         },
@@ -322,18 +349,42 @@ export const rutasEstadisticas = () =>
       }),
       async (c) => {
         const { pid } = c.req.valid('param')
-        const { jugadorId = null, tipo, minuto = null } = c.req.valid('json')
         const plantillaId = c.var.plantilla.id
         await buscarPartido(plantillaId, pid)
-        await db.transaction(async (tx) => {
-          await bloquearPartido(tx, pid)
-          if (jugadorId) await comprobarConvocados(tx, pid, [jugadorId])
-          else if (tipo !== 'gol_propia') {
-            throw new ErrorApi(400, 'estadisticas_incoherentes', 'Falta el jugador del evento')
-          }
-          await tx.insert(eventosPartido).values({ partidoId: pid, jugadorId, tipo, minuto })
-          await recalcular(tx, pid)
-        })
+        await anadirEventos(pid, [c.req.valid('json')])
+        return c.json(await detallePartido(plantillaId, pid), 201)
+      },
+    )
+    .openapi(
+      createRoute({
+        method: 'post',
+        path: '/plantillas/{id}/partidos/{pid}/eventos/lote',
+        tags: ['Estadísticas'],
+        summary: 'Registrar varios eventos a la vez',
+        description:
+          'Delegado o superior. Todo o nada: para un cambio (entra y sale) o un gol con su asistencia. Si uno no cuadra con el partido, no se guarda ninguno.',
+        middleware: [requireRol('delegado')] as const,
+        request: {
+          params: ParamPartido,
+          body: {
+            content: {
+              'application/json': {
+                schema: z.object({ eventos: z.array(EsquemaNuevoEvento).min(1).max(10) }).strict(),
+              },
+            },
+          },
+        },
+        responses: {
+          201: json(EsquemaPartido, 'Eventos registrados'),
+          400: json(EsquemaError, 'Datos no válidos o que no cuadran con el partido'),
+          ...errores,
+        },
+      }),
+      async (c) => {
+        const { pid } = c.req.valid('param')
+        const plantillaId = c.var.plantilla.id
+        await buscarPartido(plantillaId, pid)
+        await anadirEventos(pid, c.req.valid('json').eventos)
         return c.json(await detallePartido(plantillaId, pid), 201)
       },
     )

@@ -16,6 +16,7 @@ import { PaginaComponentes } from './paginas/PaginaComponentes'
 import { PaginaMas } from './paginas/PaginaMas'
 import { PaginaNoEncontrada } from './paginas/PaginaNoEncontrada'
 import { PaginaActa } from './partidos/Acta'
+import { PaginaAlineacion } from './partidos/PaginaAlineacion'
 import { PaginaConvocatoria } from './partidos/PaginaConvocatoria'
 import { PaginaPartido } from './partidos/PaginaPartido'
 import { PaginaPartidos } from './partidos/PaginaPartidos'
@@ -68,6 +69,7 @@ export const rutas = [
               { path: 'partidos/:partidoId', element: <PaginaPartido /> },
               { path: 'partidos/:partidoId/convocatoria', element: <PaginaConvocatoria /> },
               { path: 'partidos/:partidoId/acta', element: <PaginaActa /> },
+              { path: 'partidos/:partidoId/alineacion', element: <PaginaAlineacion /> },
               {
                 path: 'multas',
                 element: <SeccionMultas />,

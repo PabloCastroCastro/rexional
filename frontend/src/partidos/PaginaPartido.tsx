@@ -23,8 +23,9 @@ import { nombreCompleto, puedeGestionarJugadores } from '../jugadores/datos'
 import { Dorsal } from '../jugadores/PaginaPlantilla'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
 import { SeccionActa } from './Acta'
-import { CLAVE_PARTIDOS, type Partido, textoLocal, textoResultado, usePartido } from './datos'
+import { CLAVE_PARTIDOS, type Partido, textoLocal, usePartido } from './datos'
 import { FormularioPartido } from './FormularioPartido'
+import { SeccionPartido } from './Jugado'
 import { Mensaje } from './Mensaje'
 import estilos from './Partidos.module.css'
 
@@ -73,11 +74,6 @@ export function PaginaPartido() {
           {p.local === false ? 'en ' : 'vs '}
           {p.rival}
         </h1>
-        {p.estado === 'jugado' && (
-          <p className={estilos.resultado}>
-            Jugado · <strong>{textoResultado(p)}</strong>
-          </p>
-        )}
         <ul className={estilos.datos}>
           {p.competicion && (
             <li>
@@ -117,6 +113,8 @@ export function PaginaPartido() {
         </div>
       )}
 
+      <SeccionPartido partido={p} />
+
       <section className={estilos.seccion} aria-labelledby="convocatoria">
         <h2 id="convocatoria">
           <Users aria-hidden size={20} />
@@ -133,6 +131,13 @@ export function PaginaPartido() {
                 <span>
                   {nombreCompleto(j)}
                   {!j.activo && <span className={estilos.secundario}> · baja</span>}
+                  {j.titular !== null && (
+                    <span className={estilos.secundario}>
+                      {' · '}
+                      {j.titular ? 'Titular' : 'Suplente'}
+                      {j.minutos !== null && ` · ${j.minutos}'`}
+                    </span>
+                  )}
                 </span>
               </li>
             ))}
