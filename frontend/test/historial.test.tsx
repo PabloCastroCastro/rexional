@@ -41,6 +41,15 @@ const HISTORIAL: ResumenEntreno[] = [
   },
 ]
 
+// El historial pide hasta hoy y los próximos desde mañana: la API simulada filtra igual
+const historialSimulado = (peticion: Request, proximos: ResumenEntreno[] = []) => {
+  const consulta = new URL(peticion.url).searchParams
+  const desde = consulta.get('desde')
+  if (desde && desde === consulta.get('hasta'))
+    return json(HISTORIAL.filter((e) => e.fecha === desde))
+  return json(desde ? proximos : HISTORIAL)
+}
+
 const resumen = (
   jugadorId: string,
   nombre: string,
@@ -71,7 +80,7 @@ const ficha = (jugadorId: string, nombre: string, dorsal: number): JugadorPlanti
 describe('historial de entrenos', () => {
   it('agrupa por mes, del más reciente al más antiguo, con los recuentos', async () => {
     conDatos({ plantillas: [senior26] })
-    manejadores['GET /api/plantillas/p1/entrenos'] = () => json(HISTORIAL)
+    manejadores['GET /api/plantillas/p1/entrenos'] = historialSimulado
     abrir('/plantillas/p1/entrenos/historial')
 
     const octubre = await screen.findByRole('region', { name: 'octubre de 2026' })
@@ -105,7 +114,7 @@ describe('historial de entrenos', () => {
     await userEvent.click(await screen.findByRole('link', { name: /jueves, 1 oct/ }))
     expect(await screen.findByText('jueves, 1 oct')).toBeInTheDocument()
     expect(router.state.location.pathname).toBe('/plantillas/p1/entrenos')
-    expect(router.state.location.search).toBe('?fecha=2026-10-01')
+    expect(router.state.location.search).toBe('?fecha=2026-10-01&entreno=e2')
     expect(screen.getByRole('link', { name: 'Pasar lista' })).toHaveAttribute(
       'aria-current',
       'page',
@@ -121,13 +130,13 @@ describe('historial de entrenos', () => {
     expect(await screen.findByText('Todavía no hay entrenos')).toBeInTheDocument()
   })
 
-  it('sin entrenos invita a pasar lista solo a quien puede', async () => {
+  it('sin entrenos invita a fijar el horario solo a quien puede', async () => {
     conDatos({ plantillas: [senior26] })
     manejadores['GET /api/plantillas/p1/entrenos'] = () => json([])
     abrir('/plantillas/p1/entrenos/historial')
-    expect(await screen.findByRole('link', { name: 'Pasar lista hoy' })).toHaveAttribute(
+    expect(await screen.findByRole('link', { name: 'Fijar el horario' })).toHaveAttribute(
       'href',
-      '/plantillas/p1/entrenos',
+      '/plantillas/p1/entrenos/horario',
     )
   })
 
@@ -138,7 +147,7 @@ describe('historial de entrenos', () => {
     manejadores['GET /api/plantillas/p1/entrenos'] = () => json([])
     abrir('/plantillas/p1/entrenos/historial')
     expect(await screen.findByText('Todavía no hay entrenos')).toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: 'Pasar lista hoy' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Fijar el horario' })).not.toBeInTheDocument()
   })
 })
 

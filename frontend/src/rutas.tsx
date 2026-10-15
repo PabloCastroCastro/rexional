@@ -4,6 +4,7 @@ import { RequiereSesion } from './auth/RequiereSesion'
 import { PaginaConfiguracion } from './configuracion/PaginaConfiguracion'
 import { Aplicacion } from './diseno/Aplicacion'
 import { PaginaHistorial } from './entrenos/PaginaHistorial'
+import { PaginaHorario } from './entrenos/PaginaHorario'
 import { PaginaPasarLista } from './entrenos/PaginaPasarLista'
 import { SeccionEntrenos } from './entrenos/SeccionEntrenos'
 import { PaginaJugador } from './jugadores/PaginaJugador'
@@ -54,6 +55,7 @@ export const rutas = [
                 children: [
                   { index: true, element: <PaginaPasarLista /> },
                   { path: 'historial', element: <PaginaHistorial /> },
+                  { path: 'horario', element: <PaginaHorario /> },
                 ],
               },
               { path: 'partidos', element: <PaginaPartidos /> },

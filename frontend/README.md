@@ -72,8 +72,9 @@ En desarrollo, **http://localhost:5173/componentes** muestra todos los component
 | `/plantillas` | Selector de plantilla, agrupado por club y temporada; los administradores del club pueden crear plantillas |
 | `/plantillas/:plantillaId/<sección>` | Las secciones de la plantilla activa: `jugadores` (pestaña Plantilla), `entrenos`, `partidos`, `multas` y `mas`. Siguen las rutas de la API (`/api/plantillas/:id/jugadores`…) |
 | `/plantillas/:plantillaId/jugadores/:jugadorId` | Ficha de un jugador con su trayectoria en el club |
-| `/plantillas/:plantillaId/entrenos?fecha=AAAA-MM-DD` | Pasar lista de un día (hoy por defecto) |
-| `/plantillas/:plantillaId/entrenos/historial` | Historial de entrenos |
+| `/plantillas/:plantillaId/entrenos?fecha=AAAA-MM-DD&entreno=id` | Entrenos de un día (hoy por defecto) y sus sesiones: crear, cancelar y pasar lista |
+| `/plantillas/:plantillaId/entrenos/horario` | Horario semanal de entrenos de la plantilla |
+| `/plantillas/:plantillaId/entrenos/historial` | Próximos entrenos e historial |
 | `/plantillas/:plantillaId/mas/configuracion` | Configuración: la ven el entrenador, el admin de la plantilla y los administradores del club |
 
 - **La plantilla activa va en la URL**: el botón Atrás y los enlaces llevan siempre a la plantilla correcta, y se pueden tener dos pestañas con plantillas distintas. La última usada se guarda en el navegador (por usuario).
