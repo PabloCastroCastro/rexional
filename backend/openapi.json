@@ -433,6 +433,14 @@
             "type": "string",
             "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
             "example": "20:00"
+          },
+          "horaFin": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+            "example": "20:00"
           }
         },
         "required": [
@@ -463,6 +471,13 @@
                 ],
                 "example": "20:00"
               },
+              "horaFin": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "example": "21:30"
+              },
               "deHorario": {
                 "type": "boolean",
                 "description": "true si lo creó el horario; false si es suelto"
@@ -472,6 +487,7 @@
               "id",
               "fecha",
               "hora",
+              "horaFin",
               "deHorario"
             ]
           }
@@ -513,6 +529,13 @@
               "null"
             ],
             "example": "20:00"
+          },
+          "horaFin": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "21:30"
           },
           "deHorario": {
             "type": "boolean",
@@ -597,6 +620,7 @@
           "id",
           "fecha",
           "hora",
+          "horaFin",
           "deHorario",
           "recuentos",
           "jugadores"
@@ -2891,6 +2915,14 @@
                     ],
                     "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
                     "example": "20:00"
+                  },
+                  "horaFin": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                    "example": "20:00"
                   }
                 },
                 "required": [
@@ -3025,6 +3057,126 @@
           },
           "404": {
             "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Entrenos"
+        ],
+        "summary": "Cambiar la hora de un entreno",
+        "description": "Delegado o superior. Hora de inicio y de fin (null las quita). Un entreno del horario que se cambia a mano pasa a ser suelto: al cambiar el horario ya no se rehace.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "eid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "hora": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                    "example": "20:00"
+                  },
+                  "horaFin": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                    "example": "20:00"
+                  }
+                },
+                "required": [
+                  "hora"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Entreno actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResumenEntreno"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Ya hay un entreno ese día a esa hora",
             "content": {
               "application/json": {
                 "schema": {

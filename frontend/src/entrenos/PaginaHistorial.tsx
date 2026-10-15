@@ -4,7 +4,14 @@ import { Cargando } from '../componentes/Cargando'
 import { EstadoVacio } from '../componentes/EstadoVacio'
 import { puedeGestionarJugadores } from '../jugadores/datos'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
-import { type ResumenEntreno, textoFecha, textoMes, useHistorial, useProximos } from './datos'
+import {
+  type ResumenEntreno,
+  textoFecha,
+  textoHoras,
+  textoMes,
+  useHistorial,
+  useProximos,
+} from './datos'
 import estilos from './Entrenos.module.css'
 
 // Próximos entrenos y, debajo, los pasados por mes, el más reciente primero (la API ya los ordena).
@@ -94,8 +101,16 @@ export function PaginaHistorial() {
   )
 }
 
-// "Ayer · martes, 13 oct · 20:00"
-const cuando = (e: ResumenEntreno) => `${textoFecha(e.fecha)}${e.hora ? ` · ${e.hora}` : ''}`
+// "Ayer · martes, 13 oct" y debajo, si las tiene, las horas: "20:00–21:30"
+const cuando = (e: ResumenEntreno) => {
+  const horas = textoHoras(e)
+  return (
+    <>
+      <span>{textoFecha(e.fecha)}</span>
+      {horas && <span className={estilos.horas}>{horas}</span>}
+    </>
+  )
+}
 
 function Recuento({
   icono: Icono,

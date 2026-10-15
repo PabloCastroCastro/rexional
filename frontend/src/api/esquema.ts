@@ -1548,6 +1548,8 @@ export interface paths {
                         fecha: string;
                         /** @example 20:00 */
                         hora?: string | null;
+                        /** @example 20:00 */
+                        horaFin?: string | null;
                     };
                 };
             };
@@ -1731,7 +1733,87 @@ export interface paths {
         };
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Cambiar la hora de un entreno
+         * @description Delegado o superior. Hora de inicio y de fin (null las quita). Un entreno del horario que se cambia a mano pasa a ser suelto: al cambiar el horario ya no se rehace.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    eid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @example 20:00 */
+                        hora: string | null;
+                        /** @example 20:00 */
+                        horaFin?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Entreno actualizado */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ResumenEntreno"];
+                    };
+                };
+                /** @description Datos no válidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Ya hay un entreno ese día a esa hora */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
         trace?: never;
     };
     "/api/plantillas/{id}/entrenos/{eid}/asistencias": {
@@ -3272,6 +3354,8 @@ export interface components {
             dia: number;
             /** @example 20:00 */
             hora: string;
+            /** @example 20:00 */
+            horaFin?: string | null;
         };
         ResumenEntreno: components["schemas"]["RecuentosAsistencia"] & {
             /** Format: uuid */
@@ -3280,6 +3364,8 @@ export interface components {
             fecha: string;
             /** @example 20:00 */
             hora: string | null;
+            /** @example 21:30 */
+            horaFin: string | null;
             /** @description true si lo creó el horario; false si es suelto */
             deHorario: boolean;
         };
@@ -3295,6 +3381,8 @@ export interface components {
             fecha: string;
             /** @example 20:00 */
             hora: string | null;
+            /** @example 21:30 */
+            horaFin: string | null;
             /** @description true si lo creó el horario; false si es suelto */
             deHorario: boolean;
             recuentos: components["schemas"]["RecuentosAsistencia"];

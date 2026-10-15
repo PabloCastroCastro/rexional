@@ -35,6 +35,7 @@ import {
   type ResumenEntreno,
   sumarDias,
   textoFecha,
+  textoHoras,
   useEntreno,
   useEntrenosDelDia,
 } from './datos'
@@ -63,6 +64,7 @@ export function PaginaPasarLista() {
   const futuro = elegida !== undefined && elegida.fecha > actual
   const entreno = useEntreno(plantilla.id, elegida && !futuro ? elegida.id : undefined)
   const [creando, setCreando] = useState(false)
+  const [cambiandoHora, setCambiandoHora] = useState(false)
 
   const irA = (nueva: string) => setParametros(nueva === actual ? {} : { fecha: nueva })
   const elegir = (id: string) =>
@@ -112,7 +114,7 @@ export function PaginaPasarLista() {
               onClick={() => elegir(s.id)}
             >
               <Clock aria-hidden size={16} />
-              {s.hora ?? 'Sin hora'}
+              {textoHoras(s) ?? 'Sin hora'}
             </button>
           ))}
           {gestiona && (
@@ -160,7 +162,9 @@ export function PaginaPasarLista() {
           <p className={estilos.aviso}>
             Este entreno aún no ha llegado: la lista se pasa el mismo día.
           </p>
-          {gestiona && <CancelarEntreno entreno={elegida} />}
+          {gestiona && (
+            <AccionesEntreno entreno={elegida} alCambiarHora={() => setCambiandoHora(true)} />
+          )}
         </>
       ) : entreno.isPending ? (
         <Cargando />
@@ -172,7 +176,7 @@ export function PaginaPasarLista() {
         <>
           {/* Cada entreno empieza con su propio estado local y su propio guardado */}
           <Lista key={entreno.data.id} entreno={entreno.data} />
-          <CancelarEntreno entreno={elegida} />
+          <AccionesEntreno entreno={elegida} alCambiarHora={() => setCambiandoHora(true)} />
         </>
       ) : (
         <SoloLectura entreno={entreno.data} />
@@ -187,59 +191,109 @@ export function PaginaPasarLista() {
           elegir(id)
         }}
       />
+      {elegida && (
+        <CrearEntreno
+          abierta={cambiandoHora}
+          fecha={fecha}
+          entreno={elegida}
+          alCerrar={() => setCambiandoHora(false)}
+          alCrear={() => setCambiandoHora(false)}
+        />
+      )}
     </div>
   )
 }
 
-// Hoja para crear un entreno suelto en el día: el primero o una sesión más (doble sesión)
+// Hoja para crear un entreno suelto en el día (el primero o una sesión más: doble sesión) o, con
+// entreno, para cambiar su hora de inicio y de fin
 function CrearEntreno({
   abierta,
   fecha,
+  entreno,
   alCerrar,
   alCrear,
 }: {
   abierta: boolean
   fecha: string
+  entreno?: ResumenEntreno
   alCerrar: () => void
   alCrear: (id: string) => void
 }) {
   return (
-    <HojaInferior abierta={abierta} alCerrar={alCerrar} titulo="Crear entreno">
-      {abierta && <FormularioCrear fecha={fecha} alCerrar={alCerrar} alCrear={alCrear} />}
+    <HojaInferior
+      abierta={abierta}
+      alCerrar={alCerrar}
+      titulo={entreno ? 'Cambiar la hora' : 'Crear entreno'}
+    >
+      {abierta && (
+        <FormularioCrear fecha={fecha} entreno={entreno} alCerrar={alCerrar} alCrear={alCrear} />
+      )}
     </HojaInferior>
+  )
+}
+
+// Cambiar la hora y cancelar el entreno elegido
+function AccionesEntreno({
+  entreno,
+  alCambiarHora,
+}: {
+  entreno: ResumenEntreno
+  alCambiarHora: () => void
+}) {
+  return (
+    <div className={estilos.acciones}>
+      <Boton variante="texto" icono={<Clock aria-hidden size={18} />} onClick={alCambiarHora}>
+        Cambiar hora
+      </Boton>
+      <CancelarEntreno entreno={entreno} />
+    </div>
   )
 }
 
 function FormularioCrear({
   fecha,
+  entreno,
   alCerrar,
   alCrear,
 }: {
   fecha: string
+  entreno?: ResumenEntreno
   alCerrar: () => void
   alCrear: (id: string) => void
 }) {
   const plantilla = usePlantillaActiva()
   const cliente = useQueryClient()
   const { avisar } = useAvisos()
-  const [hora, setHora] = useState('')
+  const [hora, setHora] = useState(entreno?.hora ?? '')
+  const [horaFin, setHoraFin] = useState(entreno?.horaFin ?? '')
   const [errores, setErrores] = useState<Record<string, string>>({})
 
   const crear = useMutation({
-    mutationFn: () =>
-      datos(
-        api.POST('/api/plantillas/{id}/entrenos', {
-          params: { path: { id: plantilla.id } },
-          body: { fecha, hora: hora || null },
-        }),
-      ),
-    onSuccess: async (entreno) => {
+    mutationFn: () => {
+      const horas = { hora: hora || null, horaFin: horaFin || null }
+      return entreno
+        ? datos(
+            api.PATCH('/api/plantillas/{id}/entrenos/{eid}', {
+              params: { path: { id: plantilla.id, eid: entreno.id } },
+              body: horas,
+            }),
+          )
+        : datos(
+            api.POST('/api/plantillas/{id}/entrenos', {
+              params: { path: { id: plantilla.id } },
+              body: { fecha, ...horas },
+            }),
+          )
+    },
+    onSuccess: async (guardado) => {
       await cliente.invalidateQueries({ queryKey: CLAVE_ENTRENOS })
       avisar({
         tipo: 'exito',
-        mensaje: `Entreno creado: ${textoFecha(fecha)}${hora ? ` · ${hora}` : ''}`,
+        mensaje: `${entreno ? 'Hora cambiada' : 'Entreno creado'}: ${textoFecha(fecha)}${
+          textoHoras(guardado) ? ` · ${textoHoras(guardado)}` : ''
+        }`,
       })
-      alCrear(entreno.id)
+      alCrear(guardado.id)
     },
     onError: (error) => {
       const porCampo = erroresPorCampo(error)
@@ -260,6 +314,10 @@ function FormularioCrear({
       onSubmit={(e) => {
         e.preventDefault()
         setErrores({})
+        if (horaFin && !hora) return setErrores({ horaFin: 'Indica también la hora de inicio' })
+        if (horaFin && horaFin <= hora) {
+          return setErrores({ horaFin: 'La hora de fin debe ser posterior a la de inicio' })
+        }
         crear.mutate()
       }}
     >
@@ -270,7 +328,17 @@ function FormularioCrear({
         value={hora}
         onChange={(e) => setHora(e.target.value)}
         error={errores.hora}
-        ayuda="Opcional. Para una segunda sesión el mismo día, indica su hora."
+        ayuda={
+          entreno ? 'Opcional.' : 'Opcional. Para una segunda sesión el mismo día, indica su hora.'
+        }
+      />
+      <Campo
+        etiqueta="Hora de fin"
+        type="time"
+        value={horaFin}
+        onChange={(e) => setHoraFin(e.target.value)}
+        error={errores.horaFin}
+        ayuda="Opcional."
       />
       {errores.general && (
         <p className={estilos.error} role="alert">
@@ -284,9 +352,9 @@ function FormularioCrear({
         <Boton
           type="submit"
           cargando={crear.isPending}
-          icono={<CalendarPlus aria-hidden size={18} />}
+          icono={entreno ? <Check aria-hidden size={18} /> : <CalendarPlus aria-hidden size={18} />}
         >
-          Crear entreno
+          {entreno ? 'Guardar' : 'Crear entreno'}
         </Boton>
       </div>
     </form>
@@ -301,7 +369,8 @@ function CancelarEntreno({ entreno }: { entreno: ResumenEntreno }) {
   const confirmar = useConfirmacion()
   const [, setParametros] = useSearchParams()
   const conAsistencia = entreno.asiste + entreno.justificada + entreno.falta > 0
-  const cuando = `${textoFecha(entreno.fecha)}${entreno.hora ? ` · ${entreno.hora}` : ''}`
+  const horas = textoHoras(entreno)
+  const cuando = `${textoFecha(entreno.fecha)}${horas ? ` · ${horas}` : ''}`
 
   const cancelar = useMutation({
     mutationFn: () =>

@@ -164,7 +164,7 @@ const listaFichas: [number, number, number | null, Posicion, boolean][] = [
 
 const plantillaPorNumero = new Map(listaPlantillas.map((p) => [p.n, p]))
 
-// Horario de las plantillas de 2026-27: martes y jueves a las 20:00, del 1 de septiembre de 2026 al
+// Horario de las plantillas de 2026-27: martes y jueves de 20:00 a 21:30, del 1 de septiembre de 2026 al
 // 15 de junio de 2027, con sus entrenos. Hay asistencia, variada pero siempre la misma, hasta el 8 de
 // octubre; desde ahí quedan sin pasar lista: [plantilla, número, fecha]
 const PLANTILLAS_CON_ENTRENOS = [3, 4, 5]
@@ -172,8 +172,8 @@ const HORARIO = {
   desde: '2026-09-01',
   hasta: '2027-06-15',
   sesiones: [
-    { dia: 2, hora: '20:00' },
-    { dia: 4, hora: '20:00' },
+    { dia: 2, hora: '20:00', horaFin: '21:30' },
+    { dia: 4, hora: '20:00', horaFin: '21:30' },
   ],
 }
 const ULTIMO_CON_ASISTENCIA = '2026-10-08'
@@ -451,6 +451,7 @@ await db.transaction(async (tx) => {
         plantillaId: sid(PLANTILLA, e.plantilla),
         fecha: e.fecha,
         hora: '20:00',
+        horaFin: '21:30',
         deHorario: true,
       })),
     )

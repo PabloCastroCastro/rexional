@@ -50,6 +50,13 @@
       "when": 1792074772488,
       "tag": "0006_multas_opcionales",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792076331269,
+      "tag": "0007_hora_fin_entrenos",
+      "breakpoints": true
     }
   ]
 }

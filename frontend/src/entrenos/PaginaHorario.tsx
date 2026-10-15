@@ -36,12 +36,14 @@ const HORA_POR_DEFECTO = '20:00'
 // "martes y jueves a las 20:00", "lunes a las 19:00 y miércoles a las 20:30"
 function textoSesiones(sesiones: Horario['sesiones']) {
   const ordenadas = [...sesiones].sort((a, b) => a.dia - b.dia || a.hora.localeCompare(b.hora))
-  const horas = new Set(ordenadas.map((s) => s.hora))
+  const franja = (s: Horario['sesiones'][number]) =>
+    s.horaFin ? `de ${s.hora} a ${s.horaFin}` : `a las ${s.hora}`
+  const horas = new Set(ordenadas.map(franja))
   const nombre = (dia: number) => DIAS.find((d) => d.dia === dia)?.nombre ?? ''
   const unir = (partes: string[]) =>
     partes.length > 1 ? `${partes.slice(0, -1).join(', ')} y ${partes.at(-1)}` : (partes[0] ?? '')
-  if (horas.size === 1) return `${unir(ordenadas.map((s) => nombre(s.dia)))} a las ${[...horas][0]}`
-  return unir(ordenadas.map((s) => `${nombre(s.dia)} a las ${s.hora}`))
+  if (horas.size === 1) return `${unir(ordenadas.map((s) => nombre(s.dia)))} ${[...horas][0]}`
+  return unir(ordenadas.map((s) => `${nombre(s.dia)} ${franja(s)}`))
 }
 
 // Horario semanal de entrenos de la plantilla: al guardarlo se crean sus entrenos
@@ -81,15 +83,17 @@ function FormularioHorario({ guardado }: { guardado: Horario | null }) {
   const { avisar } = useAvisos()
   const confirmar = useConfirmacion()
   const actual = hoy()
-  const [horas, setHoras] = useState<Record<number, string>>(() =>
-    Object.fromEntries((guardado?.sesiones ?? []).map((s) => [s.dia, s.hora])),
+  const [horas, setHoras] = useState<Record<number, { hora: string; horaFin: string }>>(() =>
+    Object.fromEntries(
+      (guardado?.sesiones ?? []).map((s) => [s.dia, { hora: s.hora, horaFin: s.horaFin ?? '' }]),
+    ),
   )
   const [desde, setDesde] = useState(guardado?.desde ?? actual)
   const [hasta, setHasta] = useState(guardado?.hasta ?? finDeTemporada(plantilla.temporada))
   const [errores, setErrores] = useState<Record<string, string>>({})
 
   const sesiones = Object.entries(horas)
-    .map(([dia, hora]) => ({ dia: Number(dia), hora }))
+    .map(([dia, h]) => ({ dia: Number(dia), hora: h.hora, horaFin: h.horaFin || null }))
     .sort((a, b) => a.dia - b.dia)
   const fechasValidas = desde !== '' && hasta !== '' && hasta >= desde
   const aCrear = fechasValidas ? entrenosDelHorario({ desde, hasta, sesiones }, actual) : 0
@@ -98,7 +102,10 @@ function FormularioHorario({ guardado }: { guardado: Horario | null }) {
   function alternar(dia: number) {
     const nuevas = { ...horas }
     if (dia in nuevas) delete nuevas[dia]
-    else nuevas[dia] = sesiones.at(-1)?.hora ?? HORA_POR_DEFECTO
+    else {
+      const ultima = sesiones.at(-1)
+      nuevas[dia] = { hora: ultima?.hora ?? HORA_POR_DEFECTO, horaFin: ultima?.horaFin ?? '' }
+    }
     setHoras(nuevas)
   }
 
@@ -151,6 +158,12 @@ function FormularioHorario({ guardado }: { guardado: Horario | null }) {
     setErrores({})
     if (sesiones.length === 0) return setErrores({ sesiones: 'Marca al menos un día de entreno' })
     if (!fechasValidas) return setErrores({ hasta: 'Debe ser posterior a «desde»' })
+    const malFin = sesiones.find((s) => s.horaFin && s.horaFin <= s.hora)
+    if (malFin) {
+      return setErrores({
+        [`fin${malFin.dia}`]: 'La hora de fin debe ser posterior a la de inicio',
+      })
+    }
     guardar.mutate()
   }
 
@@ -186,15 +199,32 @@ function FormularioHorario({ guardado }: { guardado: Horario | null }) {
 
       {sesiones.length > 0 && (
         <div className={estilos.horasDias}>
-          {sesiones.map((s) => (
-            <Campo
-              key={s.dia}
-              etiqueta={`Hora del ${DIAS.find((d) => d.dia === s.dia)?.nombre}`}
-              type="time"
-              value={s.hora}
-              onChange={(e) => setHoras({ ...horas, [s.dia]: e.target.value })}
-            />
-          ))}
+          {sesiones.map((s) => {
+            const nombre = DIAS.find((d) => d.dia === s.dia)?.nombre
+            const cambiar = (cambios: Partial<{ hora: string; horaFin: string }>) =>
+              setHoras({
+                ...horas,
+                [s.dia]: { hora: s.hora, horaFin: s.horaFin ?? '', ...cambios },
+              })
+            return (
+              <div key={s.dia} className={estilos.franja}>
+                <Campo
+                  etiqueta={`Inicio del ${nombre}`}
+                  type="time"
+                  value={s.hora}
+                  onChange={(e) => cambiar({ hora: e.target.value })}
+                />
+                <Campo
+                  etiqueta={`Fin del ${nombre}`}
+                  type="time"
+                  value={s.horaFin ?? ''}
+                  onChange={(e) => cambiar({ horaFin: e.target.value })}
+                  error={errores[`fin${s.dia}`]}
+                  ayuda="Opcional"
+                />
+              </div>
+            )
+          })}
         </div>
       )}
 

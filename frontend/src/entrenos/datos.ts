@@ -103,6 +103,10 @@ const formatoMes = new Intl.DateTimeFormat('es-ES', {
 // "octubre de 2026"
 export const textoMes = (fecha: string) => formatoMes.format(new Date(`${fecha}T12:00:00Z`))
 
+// "20:00–21:30", "20:00" o null si no tiene hora
+export const textoHoras = (e: { hora: string | null; horaFin?: string | null }) =>
+  e.hora ? (e.horaFin ? `${e.hora}–${e.horaFin}` : e.hora) : null
+
 // --- Calendario: horario semanal, próximos entrenos ---
 
 // El esquema admite null (plantilla sin horario)

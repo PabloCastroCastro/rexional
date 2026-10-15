@@ -94,8 +94,9 @@ Este documento recoge todas las decisiones funcionales, técnicas y de organizac
 ### 2.3 Entrenamientos y asistencia
 
 - **Calendario de entrenos.** Los entrenos se planifican antes de pasar lista:
-  - **Horario semanal** de la plantilla: días de la semana con su hora, y fechas desde y hasta que se eligen (por ejemplo, hasta el 25 de mayo o el 15 de junio; por defecto, el 30 de junio de la temporada). Al guardarlo se crean los entrenos de esas fechas. Al cambiarlo, se rehacen los entrenos futuros que aún no tienen asistencia; los que la tienen, los pasados y los sueltos no se tocan.
+  - **Horario semanal** de la plantilla: días de la semana con su hora de inicio y, opcionalmente, de fin, y fechas desde y hasta que se eligen (por ejemplo, hasta el 25 de mayo o el 15 de junio; por defecto, el 30 de junio de la temporada). Al guardarlo se crean los entrenos de esas fechas. Al cambiarlo, se rehacen los entrenos futuros que aún no tienen asistencia; los que la tienen, los pasados y los sueltos no se tocan.
   - **Entrenos sueltos**: un día sin entreno o una segunda sesión el mismo día (doble sesión), a otra hora.
+  - **Cambiar la hora** de inicio y de fin de un entreno concreto. Si era del horario, pasa a ser suelto: al cambiar el horario ya no se rehace.
   - **Cancelar** un entreno, con confirmación si ya tiene asistencia.
   - Lo gestionan el delegado y los roles superiores (los segundos entrenadores y preparadores físicos se dan de alta como delegados).
 - Pasar lista de un entreno del calendario (por defecto, el de hoy, en la zona horaria `Europe/Madrid`), nunca de uno futuro. Un día sin entreno invita a crearlo.
@@ -159,7 +160,7 @@ Este documento recoge todas las decisiones funcionales, técnicas y de organizac
 
 **Sesiones planificadas**: cada entreno (la misma entidad en la que se pasa lista) puede tener un plan:
 
-- Datos de la sesión: fecha, hora, duración prevista, objetivo principal y notas.
+- Datos de la sesión: fecha, hora de inicio y de fin (la duración prevista se calcula), objetivo principal y notas.
 - Lista **ordenada** de ejercicios de la biblioteca, cada uno con duración, indicaciones específicas para esa sesión y organización de grupos si se quiere.
 - Duración total calculada y comparada con la prevista.
 - Duplicar una sesión en otra fecha y guardar sesiones como **modelo** para reutilizarlas.
@@ -409,8 +410,8 @@ La participación de un jugador en una plantilla (una temporada).
 | plantilla_id | uuid → plantillas | cascade |
 | fecha | date | En `Europe/Madrid`. Varios entrenos por día (doble sesión), pero no dos a la misma hora ni dos sin hora: único `(plantilla_id, fecha, hora)` con `NULLS NOT DISTINCT`. Desde el ciclo 7, nullable solo si `es_modelo` |
 | hora | time | opcional |
+| hora_fin | time | opcional; exige `hora` y es posterior a ella (`CHECK`). Con la hora de inicio da la duración prevista de la sesión |
 | de_horario | boolean | por defecto false. true si lo creó el horario: al cambiar el horario se rehacen estos |
-| duracion_prevista | smallint | minutos, opcional (ciclo 7) |
 | objetivo | text | opcional (ciclo 7) |
 | es_modelo | boolean | por defecto false. Sesión guardada como modelo, sin fecha (ciclo 7). Los modelos no cuentan en el historial ni en el porcentaje de asistencia |
 | nombre_modelo | text | obligatorio si `es_modelo` (ciclo 7) |
@@ -592,7 +593,7 @@ Prefijo `/api`. JSON. Todas las rutas de la plantilla cuelgan de `/plantillas`, 
 | Entrenos | `GET /plantillas/:id/horario` | Miembro |
 | | `PUT /plantillas/:id/horario` (crea y rehace sus entrenos) · `DELETE /plantillas/:id/horario` | Delegado |
 | | `GET /plantillas/:id/entrenos?desde=&hasta=` (con recuentos por estado) | Miembro |
-| | `POST /plantillas/:id/entrenos` (suelto o doble sesión) · `DELETE /plantillas/:id/entrenos/:eid` (cancelar) | Delegado |
+| | `POST /plantillas/:id/entrenos` (suelto o doble sesión) · `PATCH /plantillas/:id/entrenos/:eid` (hora y hora de fin) · `DELETE /plantillas/:id/entrenos/:eid` (cancelar) | Delegado |
 | | `GET /plantillas/:id/entrenos/:eid` | Miembro (jugador: solo su fila) |
 | | `PUT /plantillas/:id/entrenos/:eid/asistencias` (lista completa; no en entrenos futuros) | Delegado |
 | | `GET /plantillas/:id/asistencia/resumen` | Miembro (jugador: solo suyo) |
@@ -1384,7 +1385,7 @@ Evaluar la extracción de datos del PDF del acta oficial que descarga el entrena
 **Criterios de aceptación**
 - [ ] Tablas `ejercicios`, `ejercicio_medios` y `entreno_ejercicios` según la sección 6
 - [ ] La biblioteca (`ejercicios`) es del club (`club_id`), compartida por todas sus plantillas y temporadas
-- [ ] Nuevos campos en `entrenos`: `hora`, `duracion_prevista`, `objetivo`, `es_modelo` y `nombre_modelo`; `fecha` nullable solo en modelos de sesión y unicidad de fecha mediante índice parcial que los excluye
+- [ ] Nuevos campos en `entrenos`: `objetivo`, `es_modelo` y `nombre_modelo`; `fecha` nullable solo en modelos de sesión y unicidad de fecha mediante índice parcial que los excluye
 - [ ] Los modelos de sesión no aparecen en el historial ni cuentan para el porcentaje de asistencia
 - [ ] Un ejercicio usado en alguna sesión no se puede borrar, solo archivar
 - [ ] Ajuste de GH-15: un entreno con planificación no se elimina al quedar sin asistencias
@@ -1458,7 +1459,7 @@ Depende de GH-41 y GH-42.
 
 **Criterios de aceptación**
 - [ ] Vista de próximas sesiones (lista o calendario semanal) accesible desde Entrenos
-- [ ] Editor de sesión: fecha, hora, duración prevista, objetivo y notas
+- [ ] Editor de sesión: fecha, hora de inicio y de fin, objetivo y notas
 - [ ] Añadir ejercicios desde la biblioteca con buscador; reordenar arrastrando; duración e indicaciones por ejercicio
 - [ ] Duración total frente a la prevista, con aviso si se supera
 - [ ] Duplicar sesión, guardar como modelo y crear desde un modelo
