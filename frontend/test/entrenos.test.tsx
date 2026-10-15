@@ -45,7 +45,15 @@ const jugador = (
 const entreno = (fecha: string, jugadores: JugadorEntreno[]): Entreno => {
   const recuentos = { asiste: 0, justificada: 0, falta: 0 }
   for (const j of jugadores) if (j.estado) recuentos[j.estado] += 1
-  return { id: `e-${fecha}`, fecha, hora: '20:00', deHorario: true, recuentos, jugadores }
+  return {
+    id: `e-${fecha}`,
+    fecha,
+    hora: '20:00',
+    horaFin: null,
+    deHorario: true,
+    recuentos,
+    jugadores,
+  }
 }
 
 const IKER = jugador('j1', 'Íker', 1)

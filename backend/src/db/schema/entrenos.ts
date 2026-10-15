@@ -34,6 +34,8 @@ export const entrenos = pgTable(
     // Día y hora del entreno en Europe/Madrid; la hora es opcional
     fecha: date('fecha').notNull(),
     hora: time('hora'),
+    // Opcional; si se indica, posterior a la hora de inicio (que entonces es obligatoria)
+    horaFin: time('hora_fin'),
     // true si lo creó el horario de la plantilla: al cambiar el horario se rehacen estos
     deHorario: boolean('de_horario').notNull().default(false),
     notas: text('notas'),
@@ -42,13 +44,17 @@ export const entrenos = pgTable(
   (t) => [
     // Varios entrenos por día, pero no dos a la misma hora (ni dos sin hora)
     unique('entrenos_fecha_hora_unica').on(t.plantillaId, t.fecha, t.hora).nullsNotDistinct(),
+    check(
+      'entrenos_hora_fin_posterior',
+      sql`${t.horaFin} IS NULL OR (${t.hora} IS NOT NULL AND ${t.horaFin} > ${t.hora})`,
+    ),
     // Destino de la clave foránea compuesta de asistencias (misma plantilla)
     unique('entrenos_id_plantilla').on(t.id, t.plantillaId),
   ],
 )
 
-// Sesiones de la semana: día (1 lunes … 7 domingo) y hora "HH:MM"
-export type SesionHorario = { dia: number; hora: string }
+// Sesiones de la semana: día (1 lunes … 7 domingo), hora "HH:MM" y hora de fin opcional
+export type SesionHorario = { dia: number; hora: string; horaFin?: string | null }
 
 // Horario semanal de la plantilla (uno por plantilla): al guardarlo se crean sus entrenos entre
 // desde y hasta

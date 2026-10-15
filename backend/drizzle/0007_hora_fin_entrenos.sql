@@ -1,0 +1,2 @@
+ALTER TABLE "entrenos" ADD COLUMN "hora_fin" time;--> statement-breakpoint
+ALTER TABLE "entrenos" ADD CONSTRAINT "entrenos_hora_fin_posterior" CHECK ("entrenos"."hora_fin" IS NULL OR ("entrenos"."hora" IS NOT NULL AND "entrenos"."hora_fin" > "entrenos"."hora"));

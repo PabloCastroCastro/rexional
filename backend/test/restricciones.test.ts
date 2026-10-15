@@ -704,3 +704,19 @@ describe('multas y catálogo', () => {
       expect(await tx.$count(motivosMulta, eq(motivosMulta.plantillaId, b.senior26.id))).toBe(0)
     }))
 })
+
+describe('hora de fin de los entrenos', () => {
+  it.each([
+    [{ hora: '20:00', horaFin: '19:00' }],
+    [{ hora: '20:00', horaFin: '20:00' }],
+    [{ hora: null, horaFin: '21:00' }],
+  ])('rechaza %o', (horas) =>
+    enTransaccion(async (tx) => {
+      const b = await base(tx)
+      const r = await restriccionViolada(
+        tx.insert(entrenos).values({ plantillaId: b.senior26.id, fecha: '2026-10-20', ...horas }),
+      )
+      expect(r).toBe('entrenos_hora_fin_posterior')
+    }),
+  )
+})
