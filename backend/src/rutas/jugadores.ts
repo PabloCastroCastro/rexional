@@ -76,8 +76,6 @@ const ParamPlantilla = z.object({ id: EsquemaUuid.openapi({ param: { name: 'id',
 const ParamClub = z.object({ cid: EsquemaUuid.openapi({ param: { name: 'cid', in: 'path' } }) })
 const ParamJugador = { jid: EsquemaUuid.openapi({ param: { name: 'jid', in: 'path' } }) }
 
-const MAXIMO_BUSQUEDA = 20
-
 // Orden alfabético en español (tildes y mayúsculas); la colación de la base ordena como C
 export const porNombre = sql`${jugadores.nombre} collate "es-x-icu"`
 
@@ -354,7 +352,7 @@ export const rutasJugadoresClub = () =>
         path: '/clubes/{cid}/jugadores',
         tags: ['Jugadores'],
         summary: 'Buscar jugadores del club',
-        description: `Para añadirlos a una plantilla. Delegado o superior en alguna plantilla del club. Busca por nombre sin distinguir mayúsculas; ordenados por nombre, como máximo ${MAXIMO_BUSQUEDA}.`,
+        description: `Para añadirlos a una plantilla. Delegado o superior en alguna plantilla del club. Busca por nombre sin distinguir mayúsculas; ordenados por nombre. Sin límite: son los jugadores de un club.`,
         middleware: [requireRolEnClub('delegado')] as const,
         request: {
           params: ParamClub,
@@ -393,7 +391,6 @@ export const rutasJugadoresClub = () =>
             ),
           )
           .orderBy(porNombre, asc(jugadores.id))
-          .limit(MAXIMO_BUSQUEDA)
         return c.json(filas, 200)
       },
     )

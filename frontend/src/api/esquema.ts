@@ -1115,7 +1115,7 @@ export interface paths {
         };
         /**
          * Buscar jugadores del club
-         * @description Para añadirlos a una plantilla. Delegado o superior en alguna plantilla del club. Busca por nombre sin distinguir mayúsculas; ordenados por nombre, como máximo 20.
+         * @description Para añadirlos a una plantilla. Delegado o superior en alguna plantilla del club. Busca por nombre sin distinguir mayúsculas; ordenados por nombre. Sin límite: son los jugadores de un club.
          */
         get: {
             parameters: {
