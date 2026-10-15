@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import type { ActaLeida, LecturaActa, Partido } from '../src/partidos/datos'
@@ -160,8 +160,10 @@ describe('acta del partido', () => {
         tarjetas: [{ indice: 0, tipo: 'amarilla' }],
       },
     ])
-    expect(ruta(router)).toBe('/plantillas/p1/partidos/p1')
-    expect(await screen.findByText('2–1')).toBeInTheDocument()
+    // Ya en la ficha: el marcador de la revisión ha desaparecido y el del partido muestra el resultado
+    await waitFor(() => expect(ruta(router)).toBe('/plantillas/p1/partidos/p1'))
+    const partido = await screen.findByRole('region', { name: 'Partido' })
+    expect(await within(partido).findByText('2–1')).toBeInTheDocument()
   })
 
   it('un jugador elegido para dos nombres no deja registrar', async () => {
