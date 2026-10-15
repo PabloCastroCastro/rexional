@@ -40,10 +40,11 @@ const jugador = (
   ...extra,
 })
 
+// Un entreno a las 20:00 por día, con id e-AAAA-MM-DD
 const entreno = (fecha: string, jugadores: JugadorEntreno[]): Entreno => {
   const recuentos = { asiste: 0, justificada: 0, falta: 0 }
   for (const j of jugadores) if (j.estado) recuentos[j.estado] += 1
-  return { fecha, existe: jugadores.some((j) => j.estado), recuentos, jugadores }
+  return { id: `e-${fecha}`, fecha, hora: '20:00', deHorario: true, recuentos, jugadores }
 }
 
 const IKER = jugador('j1', 'Íker', 1)
@@ -52,27 +53,33 @@ const ZOE = jugador('j3', 'Zoe', null)
 
 const enviados = (fecha = HOY) =>
   peticiones
-    .filter((p) => p.clave === `PUT /api/plantillas/p1/entrenos/${fecha}/asistencias`)
+    .filter((p) => p.clave === `PUT /api/plantillas/p1/entrenos/e-${fecha}/asistencias`)
     .map((p) => (p.cuerpo as { asistencias: unknown[] }).asistencias)
 
-// La API simulada guarda lo que recibe y lo devuelve como el entreno del día
+// La API simulada: un entreno en cada día indicado; guarda lo que recibe y lo devuelve
 function conEntrenos(dias: Record<string, JugadorEntreno[]>, p = senior26) {
   conDatos({ plantillas: [p] })
+  const actuales: Record<string, Entreno> = {}
+  manejadores['GET /api/plantillas/p1/entrenos'] = (peticion) => {
+    const desde = new URL(peticion.url).searchParams.get('desde')
+    const delDia = actuales[desde ?? '']
+    return json(delDia ? [{ ...delDia, ...delDia.recuentos }] : [])
+  }
   for (const [fecha, jugadores] of Object.entries(dias)) {
-    let actual = entreno(fecha, jugadores)
-    manejadores[`GET /api/plantillas/p1/entrenos/${fecha}`] = () => json(actual)
-    manejadores[`PUT /api/plantillas/p1/entrenos/${fecha}/asistencias`] = async (peticion) => {
+    actuales[fecha] = entreno(fecha, jugadores)
+    manejadores[`GET /api/plantillas/p1/entrenos/e-${fecha}`] = () => json(actuales[fecha])
+    manejadores[`PUT /api/plantillas/p1/entrenos/e-${fecha}/asistencias`] = async (peticion) => {
       const { asistencias } = (await peticion.json()) as {
         asistencias: { jugadorId: string; estado: JugadorEntreno['estado']; motivo?: string }[]
       }
-      actual = entreno(
+      actuales[fecha] = entreno(
         fecha,
-        actual.jugadores.map((j) => {
+        (actuales[fecha]?.jugadores ?? []).map((j) => {
           const a = asistencias.find((x) => x.jugadorId === j.jugadorId)
           return { ...j, estado: a?.estado ?? null, motivo: a?.motivo ?? null }
         }),
       )
-      return json(actual)
+      return json(actuales[fecha])
     }
   }
 }
@@ -113,6 +120,13 @@ describe('fecha', () => {
 })
 
 describe('pasar lista', () => {
+  it('un día sin entreno no deja pasar lista', async () => {
+    conEntrenos({ [AYER]: [IKER] })
+    abrir('/plantillas/p1/entrenos')
+    expect(await screen.findByText('No hay entreno este día')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Asiste' })).not.toBeInTheDocument()
+  })
+
   it('marca, desmarca y guarda la lista completa automáticamente', async () => {
     conEntrenos({ [HOY]: [IKER, BRAIS, ZOE] })
     abrir('/plantillas/p1/entrenos')
@@ -186,8 +200,8 @@ describe('pasar lista', () => {
   it('si falla el guardado lo indica y permite reintentar', async () => {
     conEntrenos({ [HOY]: [IKER] })
     let fallar = true
-    const guardar = manejadores[`PUT /api/plantillas/p1/entrenos/${HOY}/asistencias`]
-    manejadores[`PUT /api/plantillas/p1/entrenos/${HOY}/asistencias`] = (peticion) =>
+    const guardar = manejadores[`PUT /api/plantillas/p1/entrenos/e-${HOY}/asistencias`]
+    manejadores[`PUT /api/plantillas/p1/entrenos/e-${HOY}/asistencias`] = (peticion) =>
       fallar
         ? json({ error: { codigo: 'error_interno', mensaje: 'Error' } }, 500)
         : (guardar?.(peticion) ?? json(null))
@@ -213,12 +227,10 @@ describe('sin permiso para pasar lista', () => {
       { [HOY]: [] },
       plantilla('p1', 'Senior', '2026-27', { rol: 'jugador', esAdminClub: false }),
     )
-    manejadores[`GET /api/plantillas/p1/entrenos/${HOY}`] = () =>
+    manejadores[`GET /api/plantillas/p1/entrenos/e-${HOY}`] = () =>
       json({
-        fecha: HOY,
-        existe: true,
+        ...entreno(HOY, []),
         recuentos: { asiste: 9, justificada: 1, falta: 2 },
-        jugadores: [],
       })
     abrir('/plantillas/p1/entrenos')
     expect(await screen.findByText('9 asisten · 1 justificada · 2 faltan')).toBeInTheDocument()

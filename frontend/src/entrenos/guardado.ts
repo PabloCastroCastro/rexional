@@ -12,7 +12,7 @@ export const ESPERA_GUARDADO = 600
 // Guardado automático de la lista de un día. Cada cambio programa el envío de la lista completa; nunca
 // hay dos envíos a la vez (si cambia durante uno, al terminar se envía lo último). Si falla, se
 // conserva para reintentar a mano o al recuperar la conexión, y se avisa antes de salir de la página.
-export function useGuardadoAutomatico(plantillaId: string, fecha: string) {
+export function useGuardadoAutomatico(plantillaId: string, entrenoId: string) {
   const cliente = useQueryClient()
   const [estado, setEstado] = useState<EstadoGuardado>('guardado')
   const pendiente = useRef<Asistencia[] | null>(null)
@@ -28,12 +28,12 @@ export function useGuardadoAutomatico(plantillaId: string, fecha: string) {
     setEstado('guardando')
     try {
       const entreno = await datos(
-        api.PUT('/api/plantillas/{id}/entrenos/{fecha}/asistencias', {
-          params: { path: { id: plantillaId, fecha } },
+        api.PUT('/api/plantillas/{id}/entrenos/{eid}/asistencias', {
+          params: { path: { id: plantillaId, eid: entrenoId } },
           body: { asistencias: lista },
         }),
       )
-      const clave = claveEntreno(plantillaId, fecha)
+      const clave = claveEntreno(plantillaId, entrenoId)
       cliente.setQueryData(clave, entreno)
       // El historial y los resúmenes cambian; este día ya está al día con la respuesta
       void cliente.invalidateQueries({
@@ -49,7 +49,7 @@ export function useGuardadoAutomatico(plantillaId: string, fecha: string) {
       pendiente.current ??= lista
       setEstado('error')
     }
-  }, [cliente, plantillaId, fecha])
+  }, [cliente, plantillaId, entrenoId])
 
   const programar = useCallback(
     (lista: Asistencia[]) => {

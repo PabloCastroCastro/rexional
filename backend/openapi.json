@@ -363,6 +363,54 @@
           "fichas"
         ]
       },
+      "Horario": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "properties": {
+          "desde": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "example": "2026-10-13"
+          },
+          "hasta": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "example": "2026-10-13"
+          },
+          "sesiones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SesionHorario"
+            }
+          }
+        },
+        "required": [
+          "desde",
+          "hasta",
+          "sesiones"
+        ]
+      },
+      "SesionHorario": {
+        "type": "object",
+        "properties": {
+          "dia": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 7
+          },
+          "hora": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+            "example": "20:00"
+          }
+        },
+        "required": [
+          "dia",
+          "hora"
+        ]
+      },
       "ResumenEntreno": {
         "allOf": [
           {
@@ -371,13 +419,31 @@
           {
             "type": "object",
             "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
               "fecha": {
                 "type": "string",
                 "example": "2026-10-13"
+              },
+              "hora": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "example": "20:00"
+              },
+              "deHorario": {
+                "type": "boolean",
+                "description": "true si lo creó el horario; false si es suelto"
               }
             },
             "required": [
-              "fecha"
+              "id",
+              "fecha",
+              "hora",
+              "deHorario"
             ]
           }
         ]
@@ -404,13 +470,24 @@
       "Entreno": {
         "type": "object",
         "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
           "fecha": {
             "type": "string",
             "example": "2026-10-13"
           },
-          "existe": {
+          "hora": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "20:00"
+          },
+          "deHorario": {
             "type": "boolean",
-            "description": "false si ese día aún no se ha pasado lista"
+            "description": "true si lo creó el horario; false si es suelto"
           },
           "recuentos": {
             "$ref": "#/components/schemas/RecuentosAsistencia"
@@ -481,8 +558,10 @@
           }
         },
         "required": [
+          "id",
           "fecha",
-          "existe",
+          "hora",
+          "deHorario",
           "recuentos",
           "jugadores"
         ]
@@ -1983,13 +2062,13 @@
         }
       }
     },
-    "/api/plantillas/{id}/entrenos": {
+    "/api/plantillas/{id}/horario": {
       "get": {
         "tags": [
           "Entrenos"
         ],
-        "summary": "Historial de entrenos",
-        "description": "Entrenos de la plantilla, el más reciente primero, con el recuento de cada estado. Los recuentos no identifican a nadie: los ve cualquier miembro.",
+        "summary": "Horario de entrenos",
+        "description": "Horario semanal de la plantilla, o null si no tiene.",
         "parameters": [
           {
             "schema": {
@@ -1999,6 +2078,276 @@
             "required": true,
             "name": "id",
             "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Horario",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Horario"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Entrenos"
+        ],
+        "summary": "Guardar el horario",
+        "description": "Delegado o superior. Crea los entrenos del horario entre «desde» (o hoy, si es anterior) y «hasta», como mucho un año. Al cambiarlo, se borran los entrenos futuros del horario que aún no tienen asistencia y se vuelven a crear; los que tienen asistencia, los pasados y los sueltos no se tocan, y no se crea un entreno donde ya hay uno a la misma hora.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "desde": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "example": "2026-10-13"
+                  },
+                  "hasta": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "example": "2026-10-13"
+                  },
+                  "sesiones": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/SesionHorario"
+                    },
+                    "minItems": 1,
+                    "maxItems": 14
+                  }
+                },
+                "required": [
+                  "desde",
+                  "hasta",
+                  "sesiones"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Horario guardado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "horario": {
+                      "$ref": "#/components/schemas/Horario"
+                    },
+                    "creados": {
+                      "type": "integer"
+                    },
+                    "borrados": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "horario",
+                    "creados",
+                    "borrados"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Entrenos"
+        ],
+        "summary": "Quitar el horario",
+        "description": "Delegado o superior. Borra el horario y sus entrenos futuros sin asistencia; el resto se conserva.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Horario quitado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "borrados": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "borrados"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/entrenos": {
+      "get": {
+        "tags": [
+          "Entrenos"
+        ],
+        "summary": "Entrenos",
+        "description": "Entrenos de la plantilla entre `desde` y `hasta` (ambos opcionales), del más reciente al más antiguo y, en un mismo día, por hora. Con el recuento de cada estado: no identifica a nadie, así que lo ve cualquier miembro.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2026-10-13"
+            },
+            "required": false,
+            "name": "desde",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2026-10-13"
+            },
+            "required": false,
+            "name": "hasta",
+            "in": "query"
           }
         ],
         "responses": {
@@ -2015,6 +2364,16 @@
               }
             }
           },
+          "400": {
+            "description": "Fechas no válidas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Sin sesión",
             "content": {
@@ -2046,15 +2405,123 @@
             }
           }
         }
+      },
+      "post": {
+        "tags": [
+          "Entrenos"
+        ],
+        "summary": "Crear un entreno",
+        "description": "Delegado o superior. Un entreno suelto, también en un día que ya tiene otro (doble sesión) si es a otra hora.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "fecha": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "example": "2026-10-13"
+                  },
+                  "hora": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                    "example": "20:00"
+                  }
+                },
+                "required": [
+                  "fecha"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Entreno creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResumenEntreno"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Ya hay un entreno ese día a esa hora",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
       }
     },
-    "/api/plantillas/{id}/entrenos/{fecha}": {
+    "/api/plantillas/{id}/entrenos/{eid}": {
       "get": {
         "tags": [
           "Entrenos"
         ],
-        "summary": "Asistencia de un día",
-        "description": "Los jugadores activos y los de baja con asistencia registrada ese día, con su estado. Si aún no se ha pasado lista, `existe` es false y los estados están vacíos. El rol jugador solo recibe su fila.",
+        "summary": "Un entreno y su lista",
+        "description": "Los jugadores activos y los de baja con asistencia registrada en el entreno, con su estado. El rol jugador solo recibe su fila.",
         "parameters": [
           {
             "schema": {
@@ -2068,11 +2535,10 @@
           {
             "schema": {
               "type": "string",
-              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
-              "example": "2026-10-13"
+              "format": "uuid"
             },
             "required": true,
-            "name": "fecha",
+            "name": "eid",
             "in": "path"
           }
         ],
@@ -2087,8 +2553,8 @@
               }
             }
           },
-          "400": {
-            "description": "Fecha no válida",
+          "401": {
+            "description": "Sin sesión",
             "content": {
               "application/json": {
                 "schema": {
@@ -2096,6 +2562,58 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Entrenos"
+        ],
+        "summary": "Cancelar un entreno",
+        "description": "Delegado o superior. Borra el entreno y su asistencia, si la tiene.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "eid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Entreno cancelado"
           },
           "401": {
             "description": "Sin sesión",
@@ -2130,13 +2648,13 @@
         }
       }
     },
-    "/api/plantillas/{id}/entrenos/{fecha}/asistencias": {
+    "/api/plantillas/{id}/entrenos/{eid}/asistencias": {
       "put": {
         "tags": [
           "Entrenos"
         ],
         "summary": "Pasar lista",
-        "description": "Delegado o superior. Guarda la lista completa del día: quien no aparece queda sin registrar. Crea el entreno con la primera asistencia y lo borra si la lista llega vacía. No admite fechas futuras.",
+        "description": "Delegado o superior. Guarda la lista completa del entreno: quien no aparece queda sin registrar, y una lista vacía lo deja sin asistencia (el entreno sigue en el calendario). No admite entrenos futuros.",
         "parameters": [
           {
             "schema": {
@@ -2150,11 +2668,10 @@
           {
             "schema": {
               "type": "string",
-              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
-              "example": "2026-10-13"
+              "format": "uuid"
             },
             "required": true,
-            "name": "fecha",
+            "name": "eid",
             "in": "path"
           }
         ],
@@ -2216,7 +2733,7 @@
             }
           },
           "400": {
-            "description": "Datos no válidos, fecha futura o jugador sin ficha",
+            "description": "Datos no válidos, entreno futuro o jugador sin ficha",
             "content": {
               "application/json": {
                 "schema": {

@@ -1,15 +1,24 @@
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
-import { and, asc, desc, eq, inArray, or, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, gte, inArray, lte, notExists, or, sql } from 'drizzle-orm'
 import { config } from '../config.js'
 import { db } from '../db/cliente.js'
-import { asistencias, entrenos, estadoAsistencia, fichas, jugadores } from '../db/schema/index.js'
+import {
+  asistencias,
+  entrenos,
+  estadoAsistencia,
+  fichas,
+  horarios,
+  jugadores,
+  type SesionHorario,
+} from '../db/schema/index.js'
 import { ErrorApi, EsquemaError, validacionFallida } from '../errores.js'
 import { type EnvPlantilla, requireRol, rolAlcanza } from '../permisos.js'
 import { EsquemaUuid, restriccionViolada } from '../validacion.js'
 import { EsquemaPosicion, porNombre } from './jugadores.js'
 
-// Entrenos y asistencia (secciones 2.3 y 7). Pasar lista guarda la lista completa de un día; el
-// entreno se crea con la primera asistencia y se borra si se queda sin ninguna. El rol jugador solo
+// Calendario de entrenos y asistencia (secciones 2.3 y 7). Los entrenos se planifican antes de pasar
+// lista: los crea el horario semanal de la plantilla o se crean sueltos, y un día puede tener varios
+// (doble sesión). Solo se pasa lista de un entreno que existe y que no es futuro. El rol jugador solo
 // recibe sus propios datos; los recuentos de cada entreno no identifican a nadie.
 
 const ESTADOS = estadoAsistencia.enumValues
@@ -17,18 +26,40 @@ type Estado = (typeof ESTADOS)[number]
 
 const EsquemaEstado = z.enum(ESTADOS)
 
+const EsquemaFecha = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, 'La fecha debe tener el formato AAAA-MM-DD')
+  .refine(
+    (f) => {
+      // Zod evalúa el refine aunque falle el formato: una fecha inválida no debe lanzar
+      const dia = new Date(`${f}T00:00:00Z`)
+      return !Number.isNaN(dia.getTime()) && dia.toISOString().startsWith(f)
+    },
+    { message: 'La fecha no existe' },
+  )
+  .openapi({ example: '2026-10-13' })
+
+const EsquemaHora = z
+  .string()
+  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'La hora debe tener el formato HH:MM')
+  .openapi({ example: '20:00' })
+
 const EsquemaRecuentos = z
   .object({ asiste: z.int(), justificada: z.int(), falta: z.int() })
   .openapi('RecuentosAsistencia')
 
-const EsquemaResumenEntreno = EsquemaRecuentos.extend({
+const datosEntreno = {
+  id: z.uuid(),
   fecha: z.string().openapi({ example: '2026-10-13' }),
-}).openapi('ResumenEntreno')
+  hora: z.string().nullable().openapi({ example: '20:00' }),
+  deHorario: z.boolean().openapi({ description: 'true si lo creó el horario; false si es suelto' }),
+}
+
+const EsquemaResumenEntreno = EsquemaRecuentos.extend(datosEntreno).openapi('ResumenEntreno')
 
 const EsquemaEntreno = z
   .object({
-    fecha: z.string().openapi({ example: '2026-10-13' }),
-    existe: z.boolean().openapi({ description: 'false si ese día aún no se ha pasado lista' }),
+    ...datosEntreno,
     recuentos: EsquemaRecuentos,
     jugadores: z.array(
       z.object({
@@ -43,6 +74,20 @@ const EsquemaEntreno = z
     ),
   })
   .openapi('Entreno')
+
+const EsquemaSesion = z
+  .object({
+    dia: z
+      .int()
+      .min(1, 'El día va de 1 (lunes) a 7 (domingo)')
+      .max(7, 'El día va de 1 (lunes) a 7 (domingo)'),
+    hora: EsquemaHora,
+  })
+  .openapi('SesionHorario')
+
+const EsquemaHorario = z
+  .object({ desde: EsquemaFecha, hasta: EsquemaFecha, sesiones: z.array(EsquemaSesion) })
+  .openapi('Horario')
 
 const EsquemaAsistenciaJugador = EsquemaRecuentos.extend({
   jugadorId: z.uuid(),
@@ -66,31 +111,42 @@ const errores = {
 }
 
 const ParamPlantilla = z.object({ id: EsquemaUuid.openapi({ param: { name: 'id', in: 'path' } }) })
-
-const EsquemaFecha = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, 'La fecha debe tener el formato AAAA-MM-DD')
-  .refine(
-    (f) => {
-      // Zod evalúa el refine aunque falle el formato: una fecha inválida no debe lanzar
-      const dia = new Date(`${f}T00:00:00Z`)
-      return !Number.isNaN(dia.getTime()) && dia.toISOString().startsWith(f)
-    },
-    {
-      message: 'La fecha no existe',
-    },
-  )
-
 const ParamEntreno = ParamPlantilla.extend({
-  fecha: EsquemaFecha.openapi({ param: { name: 'fecha', in: 'path' }, example: '2026-10-13' }),
+  eid: EsquemaUuid.openapi({ param: { name: 'eid', in: 'path' } }),
 })
+
+const MAXIMO_DIAS_HORARIO = 366
 
 // Día de hoy en la zona horaria de la aplicación, como AAAA-MM-DD
 const hoy = () =>
   new Intl.DateTimeFormat('en-CA', { timeZone: config.zonaHoraria }).format(new Date())
 
+const sumarDias = (fecha: string, dias: number) =>
+  new Date(Date.parse(`${fecha}T00:00:00Z`) + dias * 86_400_000).toISOString().slice(0, 10)
+
+const diasEntre = (desde: string, hasta: string) =>
+  Math.round((Date.parse(`${hasta}T00:00:00Z`) - Date.parse(`${desde}T00:00:00Z`)) / 86_400_000)
+
+// Día de la semana ISO: 1 lunes … 7 domingo
+const diaSemana = (fecha: string) => new Date(`${fecha}T00:00:00Z`).getUTCDay() || 7
+
 const recuento = (estado: Estado) =>
-  sql<number>`(count(*) filter (where ${asistencias.estado} = ${estado}))::int`
+  sql<number>`(count(${asistencias.estado}) filter (where ${asistencias.estado} = ${estado}))::int`
+
+// La hora sin segundos ("20:00")
+const horaEntreno = sql<string | null>`to_char(${entrenos.hora}, 'HH24:MI')`
+
+const columnasEntreno = {
+  id: entrenos.id,
+  fecha: entrenos.fecha,
+  hora: horaEntreno,
+  deHorario: entrenos.deHorario,
+}
+
+const sinAsistencias = () =>
+  notExists(
+    db.select({ uno: sql`1` }).from(asistencias).where(eq(asistencias.entrenoId, entrenos.id)),
+  )
 
 // Delegado o superior ve a todos; el rol jugador, solo su fila (si su usuario es un jugador del club)
 const visibles = <T extends { jugadorId: string }>(
@@ -101,13 +157,18 @@ const visibles = <T extends { jugadorId: string }>(
     ? filas
     : filas.filter((f) => f.jugadorId === variables.jugadorId)
 
-// Lista de un día: los jugadores activos y los de baja que tienen asistencia registrada ese día
-async function entrenoDelDia(plantillaId: string, fecha: string) {
+async function buscarEntreno(plantillaId: string, entrenoId: string) {
   const [entreno] = await db
-    .select({ id: entrenos.id })
+    .select(columnasEntreno)
     .from(entrenos)
-    .where(and(eq(entrenos.plantillaId, plantillaId), eq(entrenos.fecha, fecha)))
+    .where(and(eq(entrenos.id, entrenoId), eq(entrenos.plantillaId, plantillaId)))
+  if (!entreno) throw new ErrorApi(404, 'no_encontrado', 'No existe ese entreno en la plantilla')
+  return entreno
+}
 
+// Un entreno con su lista: los jugadores activos y los de baja que tienen asistencia registrada en él
+async function detalleEntreno(plantillaId: string, entrenoId: string) {
+  const entreno = await buscarEntreno(plantillaId, entrenoId)
   const filas = await db
     .select({
       jugadorId: jugadores.id,
@@ -122,10 +183,7 @@ async function entrenoDelDia(plantillaId: string, fecha: string) {
     .innerJoin(jugadores, eq(jugadores.id, fichas.jugadorId))
     .leftJoin(
       asistencias,
-      and(
-        eq(asistencias.jugadorId, fichas.jugadorId),
-        entreno ? eq(asistencias.entrenoId, entreno.id) : sql`false`,
-      ),
+      and(eq(asistencias.jugadorId, fichas.jugadorId), eq(asistencias.entrenoId, entreno.id)),
     )
     .where(
       and(
@@ -137,7 +195,69 @@ async function entrenoDelDia(plantillaId: string, fecha: string) {
 
   const recuentos = { asiste: 0, justificada: 0, falta: 0 }
   for (const f of filas) if (f.estado) recuentos[f.estado] += 1
-  return { fecha, existe: entreno !== undefined, recuentos, jugadores: filas }
+  return { ...entreno, recuentos, jugadores: filas }
+}
+
+const entrenoDuplicado = (fecha: string, hora: string | null) =>
+  new ErrorApi(
+    409,
+    'entreno_duplicado',
+    hora
+      ? `Ya hay un entreno el ${fecha} a las ${hora}`
+      : `Ya hay un entreno sin hora el ${fecha}: indica la hora de la otra sesión`,
+    [{ campo: 'hora', mensaje: 'Ya hay un entreno ese día a esa hora' }],
+  )
+
+const CuerpoHorario = z
+  .object({
+    desde: EsquemaFecha,
+    hasta: EsquemaFecha,
+    sesiones: z.array(EsquemaSesion).min(1, 'Indica al menos un día de entreno').max(14),
+  })
+  .superRefine((h, ctx) => {
+    if (h.hasta < h.desde) {
+      ctx.addIssue({ code: 'custom', path: ['hasta'], message: 'Debe ser posterior a «desde»' })
+    } else if (diasEntre(h.desde, h.hasta) > MAXIMO_DIAS_HORARIO) {
+      ctx.addIssue({ code: 'custom', path: ['hasta'], message: 'Como mucho, un año' })
+    }
+    const vistas = new Set<string>()
+    h.sesiones.forEach((s, i) => {
+      const clave = `${s.dia} ${s.hora}`
+      if (vistas.has(clave)) {
+        ctx.addIssue({ code: 'custom', path: ['sesiones', i], message: 'Sesión repetida' })
+      }
+      vistas.add(clave)
+    })
+  })
+
+// Fechas y horas que crea un horario a partir de un día: cada fecha de [inicio, hasta] cuyo día de la
+// semana tiene sesión
+function sesionesDelHorario(horario: { hasta: string; sesiones: SesionHorario[] }, inicio: string) {
+  const resultado: { fecha: string; hora: string }[] = []
+  for (let fecha = inicio; fecha <= horario.hasta; fecha = sumarDias(fecha, 1)) {
+    for (const s of horario.sesiones)
+      if (s.dia === diaSemana(fecha)) resultado.push({ fecha, hora: s.hora })
+  }
+  return resultado
+}
+
+// Borra los entrenos futuros del horario que aún no tienen asistencia (los que la tienen se conservan)
+async function borrarFuturosDelHorario(
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  plantillaId: string,
+) {
+  const borrados = await tx
+    .delete(entrenos)
+    .where(
+      and(
+        eq(entrenos.plantillaId, plantillaId),
+        eq(entrenos.deHorario, true),
+        gte(entrenos.fecha, hoy()),
+        sinAsistencias(),
+      ),
+    )
+    .returning({ id: entrenos.id })
+  return borrados.length
 }
 
 const CuerpoAsistencias = z
@@ -190,61 +310,226 @@ export const rutasEntrenos = () =>
     .openapi(
       createRoute({
         method: 'get',
-        path: '/plantillas/{id}/entrenos',
+        path: '/plantillas/{id}/horario',
         tags: ['Entrenos'],
-        summary: 'Historial de entrenos',
-        description:
-          'Entrenos de la plantilla, el más reciente primero, con el recuento de cada estado. Los recuentos no identifican a nadie: los ve cualquier miembro.',
+        summary: 'Horario de entrenos',
+        description: 'Horario semanal de la plantilla, o null si no tiene.',
         middleware: [requireRol('jugador')] as const,
         request: { params: ParamPlantilla },
-        responses: { 200: json(z.array(EsquemaResumenEntreno), 'Entrenos'), ...errores },
+        responses: { 200: json(EsquemaHorario.nullable(), 'Horario'), ...errores },
       }),
       async (c) => {
+        const [horario] = await db
+          .select({ desde: horarios.desde, hasta: horarios.hasta, sesiones: horarios.sesiones })
+          .from(horarios)
+          .where(eq(horarios.plantillaId, c.var.plantilla.id))
+        return c.json(horario ?? null, 200)
+      },
+    )
+    .openapi(
+      createRoute({
+        method: 'put',
+        path: '/plantillas/{id}/horario',
+        tags: ['Entrenos'],
+        summary: 'Guardar el horario',
+        description: `Delegado o superior. Crea los entrenos del horario entre «desde» (o hoy, si es anterior) y «hasta», como mucho un año. Al cambiarlo, se borran los entrenos futuros del horario que aún no tienen asistencia y se vuelven a crear; los que tienen asistencia, los pasados y los sueltos no se tocan, y no se crea un entreno donde ya hay uno a la misma hora.`,
+        middleware: [requireRol('delegado')] as const,
+        request: {
+          params: ParamPlantilla,
+          body: { content: { 'application/json': { schema: CuerpoHorario } } },
+        },
+        responses: {
+          200: json(
+            z.object({ horario: EsquemaHorario, creados: z.int(), borrados: z.int() }),
+            'Horario guardado',
+          ),
+          400: json(EsquemaError, 'Datos no válidos'),
+          ...errores,
+        },
+      }),
+      async (c) => {
+        const horario = c.req.valid('json')
+        const plantillaId = c.var.plantilla.id
+        const inicio = horario.desde > hoy() ? horario.desde : hoy()
+
+        const resultado = await db.transaction(async (tx) => {
+          await tx
+            .insert(horarios)
+            .values({ plantillaId, ...horario })
+            .onConflictDoUpdate({ target: horarios.plantillaId, set: horario })
+          const borrados = await borrarFuturosDelHorario(tx, plantillaId)
+          const nuevos = sesionesDelHorario(horario, inicio)
+          const creados = nuevos.length
+            ? await tx
+                .insert(entrenos)
+                .values(nuevos.map((n) => ({ plantillaId, ...n, deHorario: true })))
+                .onConflictDoNothing()
+                .returning({ id: entrenos.id })
+            : []
+          return { borrados, creados: creados.length }
+        })
+        return c.json({ horario, ...resultado }, 200)
+      },
+    )
+    .openapi(
+      createRoute({
+        method: 'delete',
+        path: '/plantillas/{id}/horario',
+        tags: ['Entrenos'],
+        summary: 'Quitar el horario',
+        description:
+          'Delegado o superior. Borra el horario y sus entrenos futuros sin asistencia; el resto se conserva.',
+        middleware: [requireRol('delegado')] as const,
+        request: { params: ParamPlantilla },
+        responses: { 200: json(z.object({ borrados: z.int() }), 'Horario quitado'), ...errores },
+      }),
+      async (c) => {
+        const plantillaId = c.var.plantilla.id
+        const borrados = await db.transaction(async (tx) => {
+          await tx.delete(horarios).where(eq(horarios.plantillaId, plantillaId))
+          return borrarFuturosDelHorario(tx, plantillaId)
+        })
+        return c.json({ borrados }, 200)
+      },
+    )
+    .openapi(
+      createRoute({
+        method: 'get',
+        path: '/plantillas/{id}/entrenos',
+        tags: ['Entrenos'],
+        summary: 'Entrenos',
+        description:
+          'Entrenos de la plantilla entre `desde` y `hasta` (ambos opcionales), del más reciente al más antiguo y, en un mismo día, por hora. Con el recuento de cada estado: no identifica a nadie, así que lo ve cualquier miembro.',
+        middleware: [requireRol('jugador')] as const,
+        request: {
+          params: ParamPlantilla,
+          query: z.object({
+            desde: EsquemaFecha.optional().openapi({ param: { name: 'desde', in: 'query' } }),
+            hasta: EsquemaFecha.optional().openapi({ param: { name: 'hasta', in: 'query' } }),
+          }),
+        },
+        responses: {
+          200: json(z.array(EsquemaResumenEntreno), 'Entrenos'),
+          400: json(EsquemaError, 'Fechas no válidas'),
+          ...errores,
+        },
+      }),
+      async (c) => {
+        const { desde, hasta } = c.req.valid('query')
         const filas = await db
           .select({
-            fecha: entrenos.fecha,
+            ...columnasEntreno,
             asiste: recuento('asiste'),
             justificada: recuento('justificada'),
             falta: recuento('falta'),
           })
           .from(entrenos)
           .leftJoin(asistencias, eq(asistencias.entrenoId, entrenos.id))
-          .where(eq(entrenos.plantillaId, c.var.plantilla.id))
+          .where(
+            and(
+              eq(entrenos.plantillaId, c.var.plantilla.id),
+              desde ? gte(entrenos.fecha, desde) : undefined,
+              hasta ? lte(entrenos.fecha, hasta) : undefined,
+            ),
+          )
           .groupBy(entrenos.id)
-          .orderBy(desc(entrenos.fecha))
+          .orderBy(desc(entrenos.fecha), sql`${entrenos.hora} asc nulls first`)
         return c.json(filas, 200)
       },
     )
     .openapi(
       createRoute({
-        method: 'get',
-        path: '/plantillas/{id}/entrenos/{fecha}',
+        method: 'post',
+        path: '/plantillas/{id}/entrenos',
         tags: ['Entrenos'],
-        summary: 'Asistencia de un día',
+        summary: 'Crear un entreno',
         description:
-          'Los jugadores activos y los de baja con asistencia registrada ese día, con su estado. Si aún no se ha pasado lista, `existe` es false y los estados están vacíos. El rol jugador solo recibe su fila.',
-        middleware: [requireRol('jugador')] as const,
-        request: { params: ParamEntreno },
+          'Delegado o superior. Un entreno suelto, también en un día que ya tiene otro (doble sesión) si es a otra hora.',
+        middleware: [requireRol('delegado')] as const,
+        request: {
+          params: ParamPlantilla,
+          body: {
+            content: {
+              'application/json': {
+                schema: z.object({ fecha: EsquemaFecha, hora: EsquemaHora.nullish() }).strict(),
+              },
+            },
+          },
+        },
         responses: {
-          200: json(EsquemaEntreno, 'Entreno'),
-          400: json(EsquemaError, 'Fecha no válida'),
+          201: json(EsquemaResumenEntreno, 'Entreno creado'),
+          400: json(EsquemaError, 'Datos no válidos'),
+          409: json(EsquemaError, 'Ya hay un entreno ese día a esa hora'),
           ...errores,
         },
       }),
       async (c) => {
-        const { fecha } = c.req.valid('param')
-        const entreno = await entrenoDelDia(c.var.plantilla.id, fecha)
+        const { fecha, hora = null } = c.req.valid('json')
+        try {
+          const [creado] = await db
+            .insert(entrenos)
+            .values({ plantillaId: c.var.plantilla.id, fecha, hora })
+            .returning({ id: entrenos.id })
+          if (!creado) throw new Error('No se pudo crear el entreno')
+          const entreno = await buscarEntreno(c.var.plantilla.id, creado.id)
+          return c.json({ ...entreno, asiste: 0, justificada: 0, falta: 0 }, 201)
+        } catch (error) {
+          if (restriccionViolada(error) === 'entrenos_fecha_hora_unica') {
+            throw entrenoDuplicado(fecha, hora)
+          }
+          throw error
+        }
+      },
+    )
+    .openapi(
+      createRoute({
+        method: 'get',
+        path: '/plantillas/{id}/entrenos/{eid}',
+        tags: ['Entrenos'],
+        summary: 'Un entreno y su lista',
+        description:
+          'Los jugadores activos y los de baja con asistencia registrada en el entreno, con su estado. El rol jugador solo recibe su fila.',
+        middleware: [requireRol('jugador')] as const,
+        request: { params: ParamEntreno },
+        responses: { 200: json(EsquemaEntreno, 'Entreno'), ...errores },
+      }),
+      async (c) => {
+        const { eid } = c.req.valid('param')
+        const entreno = await detalleEntreno(c.var.plantilla.id, eid)
         return c.json({ ...entreno, jugadores: visibles(entreno.jugadores, c.var) }, 200)
       },
     )
     .openapi(
       createRoute({
+        method: 'delete',
+        path: '/plantillas/{id}/entrenos/{eid}',
+        tags: ['Entrenos'],
+        summary: 'Cancelar un entreno',
+        description: 'Delegado o superior. Borra el entreno y su asistencia, si la tiene.',
+        middleware: [requireRol('delegado')] as const,
+        request: { params: ParamEntreno },
+        responses: { 204: { description: 'Entreno cancelado' }, ...errores },
+      }),
+      async (c) => {
+        const { eid } = c.req.valid('param')
+        const borrados = await db
+          .delete(entrenos)
+          .where(and(eq(entrenos.id, eid), eq(entrenos.plantillaId, c.var.plantilla.id)))
+          .returning({ id: entrenos.id })
+        if (borrados.length === 0) {
+          throw new ErrorApi(404, 'no_encontrado', 'No existe ese entreno en la plantilla')
+        }
+        return c.body(null, 204)
+      },
+    )
+    .openapi(
+      createRoute({
         method: 'put',
-        path: '/plantillas/{id}/entrenos/{fecha}/asistencias',
+        path: '/plantillas/{id}/entrenos/{eid}/asistencias',
         tags: ['Entrenos'],
         summary: 'Pasar lista',
         description:
-          'Delegado o superior. Guarda la lista completa del día: quien no aparece queda sin registrar. Crea el entreno con la primera asistencia y lo borra si la lista llega vacía. No admite fechas futuras.',
+          'Delegado o superior. Guarda la lista completa del entreno: quien no aparece queda sin registrar, y una lista vacía lo deja sin asistencia (el entreno sigue en el calendario). No admite entrenos futuros.',
         middleware: [requireRol('delegado')] as const,
         request: {
           params: ParamEntreno,
@@ -252,20 +537,21 @@ export const rutasEntrenos = () =>
         },
         responses: {
           200: json(EsquemaEntreno, 'Asistencia guardada'),
-          400: json(EsquemaError, 'Datos no válidos, fecha futura o jugador sin ficha'),
+          400: json(EsquemaError, 'Datos no válidos, entreno futuro o jugador sin ficha'),
           ...errores,
         },
       }),
       async (c) => {
-        const { fecha } = c.req.valid('param')
+        const { eid } = c.req.valid('param')
         const { asistencias: lista } = c.req.valid('json')
         const plantillaId = c.var.plantilla.id
+        const entreno = await buscarEntreno(plantillaId, eid)
 
-        if (fecha > hoy()) {
+        if (entreno.fecha > hoy()) {
           throw new ErrorApi(
             400,
             'fecha_futura',
-            'No se puede pasar lista de un día que no ha llegado',
+            'No se puede pasar lista de un entreno que no ha llegado',
           )
         }
         if (lista.length > 0) {
@@ -286,32 +572,29 @@ export const rutasEntrenos = () =>
 
         try {
           await db.transaction(async (tx) => {
-            // Crea el entreno o, si existe, bloquea su fila: dos guardados a la vez van uno detrás de otro
-            const [entreno] = await tx
-              .insert(entrenos)
-              .values({ plantillaId, fecha })
-              .onConflictDoUpdate({
-                target: [entrenos.plantillaId, entrenos.fecha],
-                set: { fecha: sql`excluded.fecha` },
-              })
-              .returning({ id: entrenos.id })
-            if (!entreno) throw new Error('No se pudo crear el entreno')
-
-            await tx.delete(asistencias).where(eq(asistencias.entrenoId, entreno.id))
-            if (lista.length === 0) {
-              await tx.delete(entrenos).where(eq(entrenos.id, entreno.id))
-              return
+            // Bloquea el entreno: dos guardados a la vez van uno detrás de otro, y si lo han
+            // cancelado mientras tanto, no se guarda nada
+            const [bloqueado] = await tx
+              .select({ id: entrenos.id })
+              .from(entrenos)
+              .where(eq(entrenos.id, entreno.id))
+              .for('update')
+            if (!bloqueado) {
+              throw new ErrorApi(404, 'no_encontrado', 'No existe ese entreno en la plantilla')
             }
-            await tx
-              .insert(asistencias)
-              .values(lista.map((a) => ({ ...a, entrenoId: entreno.id, plantillaId })))
+            await tx.delete(asistencias).where(eq(asistencias.entrenoId, entreno.id))
+            if (lista.length > 0) {
+              await tx
+                .insert(asistencias)
+                .values(lista.map((a) => ({ ...a, entrenoId: entreno.id, plantillaId })))
+            }
           })
         } catch (error) {
           if (restriccionViolada(error) === 'asistencias_ficha_fk') throw sinFicha()
           throw error
         }
 
-        return c.json(await entrenoDelDia(plantillaId, fecha), 200)
+        return c.json(await detalleEntreno(plantillaId, entreno.id), 200)
       },
     )
     .openapi(

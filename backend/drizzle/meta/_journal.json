@@ -15,6 +15,13 @@
       "when": 1791911935000,
       "tag": "0001_entrenos",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792047297759,
+      "tag": "0002_calendario_entrenos",
+      "breakpoints": true
     }
   ]
 }

@@ -12,9 +12,33 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers())
 
 const HISTORIAL: ResumenEntreno[] = [
-  { fecha: '2026-10-13', asiste: 12, justificada: 1, falta: 2 },
-  { fecha: '2026-10-01', asiste: 10, justificada: 0, falta: 3 },
-  { fecha: '2026-09-29', asiste: 14, justificada: 1, falta: 0 },
+  {
+    id: 'e1',
+    fecha: '2026-10-13',
+    hora: null,
+    deHorario: true,
+    asiste: 12,
+    justificada: 1,
+    falta: 2,
+  },
+  {
+    id: 'e2',
+    fecha: '2026-10-01',
+    hora: null,
+    deHorario: true,
+    asiste: 10,
+    justificada: 0,
+    falta: 3,
+  },
+  {
+    id: 'e3',
+    fecha: '2026-09-29',
+    hora: null,
+    deHorario: true,
+    asiste: 14,
+    justificada: 1,
+    falta: 0,
+  },
 ]
 
 const resumen = (
@@ -63,9 +87,20 @@ describe('historial de entrenos', () => {
 
   it('cada entreno abre ese día en pasar lista', async () => {
     conDatos({ plantillas: [senior26] })
-    manejadores['GET /api/plantillas/p1/entrenos'] = () => json(HISTORIAL)
-    manejadores['GET /api/plantillas/p1/entrenos/2026-10-01'] = () =>
-      json({ fecha: '2026-10-01', existe: true, recuentos: HISTORIAL[1], jugadores: [] })
+    // El historial pide hasta hoy; pasar lista, los entrenos de un día
+    manejadores['GET /api/plantillas/p1/entrenos'] = (peticion) => {
+      const desde = new URL(peticion.url).searchParams.get('desde')
+      return json(desde ? HISTORIAL.filter((e) => e.fecha === desde) : HISTORIAL)
+    }
+    manejadores['GET /api/plantillas/p1/entrenos/e2'] = () =>
+      json({
+        id: 'e2',
+        fecha: '2026-10-01',
+        hora: null,
+        deHorario: true,
+        recuentos: { asiste: 10, justificada: 0, falta: 3 },
+        jugadores: [],
+      })
     const router = abrir('/plantillas/p1/entrenos/historial')
     await userEvent.click(await screen.findByRole('link', { name: /jueves, 1 oct/ }))
     expect(await screen.findByText('jueves, 1 oct')).toBeInTheDocument()

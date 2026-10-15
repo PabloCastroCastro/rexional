@@ -9,16 +9,30 @@ export type Estado = NonNullable<JugadorEntreno['estado']>
 // Entrenos, asistencias y resúmenes cuelgan de esta clave, para refrescarlos juntos tras guardar
 export const CLAVE_ENTRENOS = ['entrenos'] as const
 
-export const claveEntreno = (plantillaId: string, fecha: string) =>
-  [...CLAVE_ENTRENOS, plantillaId, 'dia', fecha] as const
+export const claveEntreno = (plantillaId: string, entrenoId: string) =>
+  [...CLAVE_ENTRENOS, plantillaId, 'entreno', entrenoId] as const
 
-export const useEntreno = (plantillaId: string, fecha: string) =>
+// Un entreno con su lista
+export const useEntreno = (plantillaId: string, entrenoId: string | undefined) =>
   useQuery({
-    queryKey: claveEntreno(plantillaId, fecha),
+    queryKey: claveEntreno(plantillaId, entrenoId ?? ''),
     queryFn: () =>
       datos(
-        api.GET('/api/plantillas/{id}/entrenos/{fecha}', {
-          params: { path: { id: plantillaId, fecha } },
+        api.GET('/api/plantillas/{id}/entrenos/{eid}', {
+          params: { path: { id: plantillaId, eid: entrenoId ?? '' } },
+        }),
+      ),
+    enabled: entrenoId !== undefined,
+  })
+
+// Entrenos de un día (varios si hay doble sesión), por hora
+export const useEntrenosDelDia = (plantillaId: string, fecha: string) =>
+  useQuery({
+    queryKey: [...CLAVE_ENTRENOS, plantillaId, 'dia', fecha],
+    queryFn: () =>
+      datos(
+        api.GET('/api/plantillas/{id}/entrenos', {
+          params: { path: { id: plantillaId }, query: { desde: fecha, hasta: fecha } },
         }),
       ),
   })
@@ -56,11 +70,16 @@ export function textoFecha(fecha: string) {
 export type ResumenEntreno = components['schemas']['ResumenEntreno']
 export type AsistenciaJugador = components['schemas']['AsistenciaJugador']
 
+// Entrenos hasta hoy (los próximos se muestran con el calendario, GH-82)
 export const useHistorial = (plantillaId: string) =>
   useQuery({
     queryKey: [...CLAVE_ENTRENOS, plantillaId, 'historial'],
     queryFn: () =>
-      datos(api.GET('/api/plantillas/{id}/entrenos', { params: { path: { id: plantillaId } } })),
+      datos(
+        api.GET('/api/plantillas/{id}/entrenos', {
+          params: { path: { id: plantillaId }, query: { hasta: hoy() } },
+        }),
+      ),
   })
 
 // Asistencia por jugador (el rol jugador solo recibe la suya)
