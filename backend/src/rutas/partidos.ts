@@ -1,7 +1,31 @@
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
-import { type AnyColumn, and, asc, count, desc, eq, gte, inArray, lt, or, sql } from 'drizzle-orm'
+import {
+  type AnyColumn,
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gte,
+  inArray,
+  lt,
+  notInArray,
+  or,
+  sql,
+} from 'drizzle-orm'
 import { db } from '../db/cliente.js'
-import { clubes, convocados, fichas, jugadores, partidos } from '../db/schema/index.js'
+import {
+  clubes,
+  convocados,
+  estadoPartido,
+  eventosPartido,
+  fichas,
+  jugadores,
+  origenDato,
+  participaciones,
+  partidos,
+  tipoEvento,
+} from '../db/schema/index.js'
 import { ErrorApi, EsquemaError, validacionFallida } from '../errores.js'
 import { hoy, textoDia } from '../fechas.js'
 import { type EnvPlantilla, requireRol } from '../permisos.js'
@@ -14,23 +38,23 @@ import {
 } from '../validacion.js'
 import { EsquemaPosicion, porNombre } from './jugadores.js'
 
-// Partidos y convocatorias (secciones 2.4 y 7). La convocatoria es información del equipo: la ve
-// cualquier miembro. Convocar exige ficha activa en la plantilla; quien ya estaba convocado y causa
+// Partidos y convocatorias (secciones 2.4 y 7). La convocatoria, el resultado y lo que pasa en el
+// partido son información del equipo: lo ve cualquier miembro. Convocar exige ficha activa en la plantilla; quien ya estaba convocado y causa
 // baja después puede seguir en la lista.
 
-const json = <T extends z.ZodType>(schema: T, description: string) => ({
+export const json = <T extends z.ZodType>(schema: T, description: string) => ({
   description,
   content: { 'application/json': { schema } },
 })
 
-const errores = {
+export const errores = {
   401: json(EsquemaError, 'Sin sesión'),
   403: json(EsquemaError, 'Sin permiso'),
   404: json(EsquemaError, 'No existe'),
 }
 
 const ParamPlantilla = z.object({ id: EsquemaUuid.openapi({ param: { name: 'id', in: 'path' } }) })
-const ParamPartido = ParamPlantilla.extend({
+export const ParamPartido = ParamPlantilla.extend({
   pid: EsquemaUuid.openapi({ param: { name: 'pid', in: 'path' } }),
 })
 
@@ -46,6 +70,9 @@ const datosPartido = {
     .boolean()
     .nullable()
     .openapi({ description: 'true en casa, false fuera, null sin decidir' }),
+  estado: z.enum(estadoPartido.enumValues),
+  golesFavor: z.int().nullable().openapi({ description: 'Solo en los jugados', example: 7 }),
+  golesContra: z.int().nullable().openapi({ example: 1 }),
 }
 
 const EsquemaResumenPartido = z
@@ -61,11 +88,33 @@ const EsquemaJugadorConvocatoria = z
     posicion: EsquemaPosicion.nullable(),
     activo: z.boolean(),
     convocado: z.boolean(),
+    titular: z
+      .boolean()
+      .nullable()
+      .openapi({ description: 'true titular, false suplente; null si no se ha registrado' }),
+    minutos: z.int().nullable().openapi({ description: 'Minutos jugados, calculados' }),
   })
   .openapi('JugadorConvocatoria')
 
-const EsquemaPartido = z
-  .object({ ...datosPartido, jugadores: z.array(EsquemaJugadorConvocatoria) })
+export const EsquemaEvento = z
+  .object({
+    id: z.uuid(),
+    jugadorId: z
+      .uuid()
+      .nullable()
+      .openapi({ description: 'null solo en un gol en propia puerta del rival' }),
+    tipo: z.enum(tipoEvento.enumValues),
+    minuto: z.int().nullable(),
+    origen: z.enum(origenDato.enumValues),
+  })
+  .openapi('EventoPartido')
+
+export const EsquemaPartido = z
+  .object({
+    ...datosPartido,
+    jugadores: z.array(EsquemaJugadorConvocatoria),
+    eventos: z.array(EsquemaEvento).openapi({ description: 'Por minuto' }),
+  })
   .openapi('Partido')
 
 // Horas sin segundos ("17:00")
@@ -80,12 +129,15 @@ const columnasPartido = {
   horaCitacion: hhmm(partidos.horaCitacion),
   lugar: partidos.lugar,
   local: partidos.local,
+  estado: partidos.estado,
+  golesFavor: partidos.golesFavor,
+  golesContra: partidos.golesContra,
 }
 
-const noEncontrado = () =>
+export const noEncontrado = () =>
   new ErrorApi(404, 'no_encontrado', 'No existe ese partido en la plantilla')
 
-async function buscarPartido(plantillaId: string, partidoId: string) {
+export async function buscarPartido(plantillaId: string, partidoId: string) {
   const [partido] = await db
     .select(columnasPartido)
     .from(partidos)
@@ -94,8 +146,9 @@ async function buscarPartido(plantillaId: string, partidoId: string) {
   return partido
 }
 
-// El partido y la lista para convocar: los activos y los de baja que ya estaban convocados
-async function detallePartido(plantillaId: string, partidoId: string) {
+// El partido, la lista para convocar (los activos y los de baja que ya estaban convocados) con la
+// participación de cada uno, y los eventos
+export async function detallePartido(plantillaId: string, partidoId: string) {
   const partido = await buscarPartido(plantillaId, partidoId)
   const filas = await db
     .select({
@@ -106,12 +159,21 @@ async function detallePartido(plantillaId: string, partidoId: string) {
       posicion: fichas.posicion,
       activo: fichas.activo,
       convocado: sql<boolean>`${convocados.jugadorId} is not null`,
+      titular: participaciones.titular,
+      minutos: participaciones.minutos,
     })
     .from(fichas)
     .innerJoin(jugadores, eq(jugadores.id, fichas.jugadorId))
     .leftJoin(
       convocados,
       and(eq(convocados.jugadorId, fichas.jugadorId), eq(convocados.partidoId, partido.id)),
+    )
+    .leftJoin(
+      participaciones,
+      and(
+        eq(participaciones.jugadorId, fichas.jugadorId),
+        eq(participaciones.partidoId, partido.id),
+      ),
     )
     .where(
       and(
@@ -120,7 +182,18 @@ async function detallePartido(plantillaId: string, partidoId: string) {
       ),
     )
     .orderBy(sql`${fichas.dorsal} asc nulls last`, ...porNombre, asc(jugadores.id))
-  return { ...partido, jugadores: filas }
+  const eventos = await db
+    .select({
+      id: eventosPartido.id,
+      jugadorId: eventosPartido.jugadorId,
+      tipo: eventosPartido.tipo,
+      minuto: eventosPartido.minuto,
+      origen: eventosPartido.origen,
+    })
+    .from(eventosPartido)
+    .where(eq(eventosPartido.partidoId, partido.id))
+    .orderBy(sql`${eventosPartido.minuto} asc nulls last`, asc(eventosPartido.createdAt))
+  return { ...partido, jugadores: filas, eventos }
 }
 
 type Detalle = Awaited<ReturnType<typeof detallePartido>>
@@ -167,6 +240,11 @@ const CuerpoPartido = z.object({
   horaCitacion: EsquemaHora.nullish(),
   lugar: EsquemaTexto('El lugar', 120).nullish(),
   local: z.boolean().nullish(),
+  // A «jugado» solo se llega con el resultado
+  estado: z
+    .enum(['programado', 'aplazado'])
+    .optional()
+    .openapi({ description: 'Programado o aplazado; un partido jugado se marca con su resultado' }),
 })
 
 const citacionTarde = () => {
@@ -278,7 +356,8 @@ export const rutasPartidos = () =>
         path: '/plantillas/{id}/partidos/{pid}',
         tags: ['Partidos'],
         summary: 'Editar un partido',
-        description: 'Delegado o superior. Los campos opcionales se quitan con null.',
+        description:
+          'Delegado o superior. Los campos opcionales se quitan con null. Pasar un partido jugado a programado o aplazado quita el resultado; sus estadísticas se conservan.',
         middleware: [requireRol('delegado')] as const,
         request: {
           params: ParamPartido,
@@ -306,7 +385,7 @@ export const rutasPartidos = () =>
         try {
           const actualizados = await db
             .update(partidos)
-            .set(cambios)
+            .set(cambios.estado ? { ...cambios, golesFavor: null, golesContra: null } : cambios)
             .where(and(eq(partidos.id, pid), eq(partidos.plantillaId, c.var.plantilla.id)))
             .returning({ id: partidos.id })
           if (actualizados.length === 0) throw noEncontrado()
@@ -344,7 +423,7 @@ export const rutasPartidos = () =>
         tags: ['Partidos'],
         summary: 'Convocar',
         description:
-          'Delegado o superior. Guarda la lista completa de convocados. Cada jugador nuevo en la convocatoria debe tener ficha activa en la plantilla; quien ya estaba convocado puede seguir aunque haya causado baja.',
+          'Delegado o superior. Guarda la lista completa de convocados. Cada jugador nuevo en la convocatoria debe tener ficha activa en la plantilla; quien ya estaba convocado puede seguir aunque haya causado baja. No se puede quitar a quien tiene estadísticas en el partido.',
         middleware: [requireRol('delegado')] as const,
         request: {
           params: ParamPartido,
@@ -366,6 +445,7 @@ export const rutasPartidos = () =>
         responses: {
           200: json(EsquemaPartido, 'Convocatoria guardada'),
           400: json(EsquemaError, 'Datos no válidos o jugador que no se puede convocar'),
+          409: json(EsquemaError, 'Se quita a un jugador con estadísticas en el partido'),
           ...errores,
         },
       }),
@@ -406,6 +486,30 @@ export const rutasPartidos = () =>
                 'Solo se convoca a jugadores con ficha activa en la plantilla',
               )
             }
+          }
+          // Quitarlo borraría sus minutos y sus goles: antes hay que quitar sus estadísticas
+          const conEstadisticas = await tx
+            .selectDistinct({ nombre: jugadores.nombre, apellidos: jugadores.apellidos })
+            .from(jugadores)
+            .where(
+              and(
+                lista.length > 0 ? notInArray(jugadores.id, lista) : undefined,
+                or(
+                  sql`exists (select 1 from ${participaciones} where ${participaciones.partidoId} = ${pid} and ${participaciones.jugadorId} = ${jugadores.id})`,
+                  sql`exists (select 1 from ${eventosPartido} where ${eventosPartido.partidoId} = ${pid} and ${eventosPartido.jugadorId} = ${jugadores.id})`,
+                ),
+              ),
+            )
+          const [primero] = conEstadisticas
+          if (primero) {
+            const nombre = primero.apellidos
+              ? `${primero.nombre} ${primero.apellidos}`
+              : primero.nombre
+            throw new ErrorApi(
+              409,
+              'convocado_con_estadisticas',
+              `${nombre} tiene estadísticas en este partido: quítalas antes de sacarlo de la convocatoria`,
+            )
           }
           await tx.delete(convocados).where(eq(convocados.partidoId, pid))
           if (lista.length > 0) {

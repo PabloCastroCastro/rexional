@@ -144,6 +144,10 @@ Este documento recoge todas las decisiones funcionales, técnicas y de organizac
 - Solo se almacenan los datos de cada partido (participaciones y eventos); los acumulados se calculan con consultas.
 - Al registrar una tarjeta, la aplicación propone las multas del catálogo asociadas a ese tipo de tarjeta, si las hay (el entrenador confirma).
 - **Arquitectura de importadores**: las estadísticas entran por un único servicio con fuentes intercambiables. Fuente inicial: manual. Previstas: importación asistida desde el PDF del acta y, si se obtiene acceso, datos de la federación.
+- **Coherencia**: cada cambio comprueba el partido entero (solo convocados, como mucho 11 titulares, entra un suplente y sale quien está en el campo, nadie entra ni sale dos veces, un expulsado no sale en un cambio, goles y asistencias de quien está en el campo, no más goles que el resultado). Si algo no cuadra, no se guarda.
+- **Minutos jugados** sobre 90: un titular juega hasta que sale o le expulsan; quien entra, desde su minuto; un suplente que no entra, 0. Los minutos del descuento no suman.
+- Un partido pasa a **jugado** al poner el resultado; también se puede **aplazar**. No se saca de la convocatoria a quien tiene estadísticas en el partido.
+- Las estadísticas acumuladas solo cuentan los partidos jugados.
 
 ### 2.8 Planificación de entrenamientos (ciclo posterior)
 
@@ -606,13 +610,14 @@ Prefijo `/api`. JSON. Todas las rutas de la plantilla cuelgan de `/plantillas`, 
 | | `PUT /plantillas/:id/entrenos/:eid/plan` (datos de sesión y lista ordenada de ejercicios) | Entrenador |
 | | `POST /plantillas/:id/entrenos/:eid/duplicar` · `POST .../guardar-modelo` · `POST /plantillas/:id/sesiones/modelos/:mid/aplicar` | Entrenador |
 | Partidos | `GET /plantillas/:id/partidos?cuando=proximos|pasados` (con el número de convocados) · `POST /plantillas/:id/partidos` | Miembro / Delegado |
-| | `GET /plantillas/:id/partidos/:pid` (con la lista para convocar) · `PATCH/DELETE /plantillas/:id/partidos/:pid` | Miembro / Delegado |
-| | `PUT /plantillas/:id/partidos/:pid/convocados` (lista completa; ficha activa para los nuevos) | Delegado |
+| | `GET /plantillas/:id/partidos/:pid` (lista para convocar con titular y minutos de cada uno, y eventos) · `PATCH/DELETE /plantillas/:id/partidos/:pid` (`estado: aplazado|programado` quita el resultado) | Miembro / Delegado |
+| | `PUT /plantillas/:id/partidos/:pid/convocados` (lista completa; ficha activa para los nuevos; no se quita a quien tiene estadísticas: 409) | Delegado |
 | | `GET /plantillas/:id/partidos/:pid/mensaje` (texto para WhatsApp y enlace `wa.me`) | Miembro |
-| Estadísticas | `PUT /plantillas/:id/partidos/:pid/resultado` | Delegado |
-| | `PUT /plantillas/:id/partidos/:pid/participaciones` | Delegado |
-| | `GET/POST/DELETE /plantillas/:id/partidos/:pid/eventos` | Miembro (eventos públicos del partido) / Delegado |
-| | `GET /plantillas/:id/estadisticas` (de la plantilla) | Miembro (jugador: solo suyas) |
+| Estadísticas | `PUT/DELETE /plantillas/:id/partidos/:pid/resultado` (jugado / vuelve a programado) | Delegado |
+| | `PUT /plantillas/:id/partidos/:pid/participaciones` (titulares y suplentes; recalcula minutos) | Delegado |
+| | `POST /plantillas/:id/partidos/:pid/eventos` · `DELETE .../eventos/:evid` (los eventos se leen en el detalle del partido) | Delegado |
+| | `GET /plantillas/:id/estadisticas` (resultados del equipo y acumulados por jugador) | Miembro (jugador: solo suyas) |
+| | `GET /clubes/:cid/jugadores/:jid/estadisticas` (trayectoria por temporadas y totales) | Miembro del club (jugador: solo la suya) |
 | Multas | `GET /plantillas/:id/motivos-multa?inactivos=` · `POST /plantillas/:id/motivos-multa` · `PATCH /plantillas/:id/motivos-multa/:mid` (editar, desactivar o reactivar; no se borran) | Miembro / Delegado |
 | | `GET /plantillas/:id/multas?jugador=&estado=pendientes|cobradas` · `POST /plantillas/:id/multas` (del catálogo o libre) · `PATCH/DELETE /plantillas/:id/multas/:mid` (`fechaPago` cobra; `null` deshace) | Miembro (jugador: suyas) / Delegado |
 | | `POST /plantillas/:id/jugadores/:jid/saldar` | Delegado |

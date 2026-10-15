@@ -34,6 +34,9 @@ const resumen = (
   horaCitacion: null,
   lugar: null,
   local: null,
+  estado: 'programado',
+  golesFavor: null,
+  golesContra: null,
   convocados: 0,
   ...extra,
 })
@@ -68,7 +71,10 @@ const detalle = (r: ResumenPartido, convocados: string[] = []): Partido => {
       posicion: null,
       activo: true,
       convocado: convocados.includes(jugadorId as string),
+      titular: null,
+      minutos: null,
     })),
+    eventos: [],
   }
 }
 

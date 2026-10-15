@@ -717,6 +717,29 @@
             ],
             "description": "true en casa, false fuera, null sin decidir"
           },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "programado",
+              "jugado",
+              "aplazado"
+            ]
+          },
+          "golesFavor": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Solo en los jugados",
+            "example": 7
+          },
+          "golesContra": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "example": 1
+          },
           "convocados": {
             "type": "integer"
           }
@@ -730,6 +753,9 @@
           "horaCitacion",
           "lugar",
           "local",
+          "estado",
+          "golesFavor",
+          "golesContra",
           "convocados"
         ]
       },
@@ -782,11 +808,41 @@
             ],
             "description": "true en casa, false fuera, null sin decidir"
           },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "programado",
+              "jugado",
+              "aplazado"
+            ]
+          },
+          "golesFavor": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Solo en los jugados",
+            "example": 7
+          },
+          "golesContra": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "example": 1
+          },
           "jugadores": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/JugadorConvocatoria"
             }
+          },
+          "eventos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EventoPartido"
+            },
+            "description": "Por minuto"
           }
         },
         "required": [
@@ -798,7 +854,11 @@
           "horaCitacion",
           "lugar",
           "local",
-          "jugadores"
+          "estado",
+          "golesFavor",
+          "golesContra",
+          "jugadores",
+          "eventos"
         ]
       },
       "JugadorConvocatoria": {
@@ -841,6 +901,20 @@
           },
           "convocado": {
             "type": "boolean"
+          },
+          "titular": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "true titular, false suplente; null si no se ha registrado"
+          },
+          "minutos": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Minutos jugados, calculados"
           }
         },
         "required": [
@@ -850,7 +924,59 @@
           "dorsal",
           "posicion",
           "activo",
-          "convocado"
+          "convocado",
+          "titular",
+          "minutos"
+        ]
+      },
+      "EventoPartido": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "jugadorId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "null solo en un gol en propia puerta del rival"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "gol",
+              "asistencia",
+              "amarilla",
+              "roja",
+              "entra",
+              "sale",
+              "gol_propia"
+            ]
+          },
+          "minuto": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "origen": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "acta",
+              "federacion"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "jugadorId",
+          "tipo",
+          "minuto",
+          "origen"
         ]
       },
       "MensajeConvocatoria": {
@@ -867,6 +993,120 @@
         "required": [
           "texto",
           "whatsapp"
+        ]
+      },
+      "EstadisticasPlantilla": {
+        "type": "object",
+        "properties": {
+          "equipo": {
+            "type": "object",
+            "properties": {
+              "jugados": {
+                "type": "integer"
+              },
+              "ganados": {
+                "type": "integer"
+              },
+              "empatados": {
+                "type": "integer"
+              },
+              "perdidos": {
+                "type": "integer"
+              },
+              "golesFavor": {
+                "type": "integer"
+              },
+              "golesContra": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "jugados",
+              "ganados",
+              "empatados",
+              "perdidos",
+              "golesFavor",
+              "golesContra"
+            ]
+          },
+          "jugadores": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EstadisticasJugador"
+            }
+          }
+        },
+        "required": [
+          "equipo",
+          "jugadores"
+        ]
+      },
+      "EstadisticasJugador": {
+        "type": "object",
+        "properties": {
+          "jugadorId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "apellidos": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "dorsal": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "activo": {
+            "type": "boolean"
+          },
+          "partidos": {
+            "type": "integer",
+            "description": "Partidos jugados (con algún minuto)"
+          },
+          "titularidades": {
+            "type": "integer"
+          },
+          "minutos": {
+            "type": "integer"
+          },
+          "goles": {
+            "type": "integer"
+          },
+          "asistencias": {
+            "type": "integer"
+          },
+          "amarillas": {
+            "type": "integer"
+          },
+          "rojas": {
+            "type": "integer"
+          },
+          "golesPropia": {
+            "type": "integer",
+            "description": "Goles en propia puerta"
+          }
+        },
+        "required": [
+          "jugadorId",
+          "nombre",
+          "apellidos",
+          "dorsal",
+          "activo",
+          "partidos",
+          "titularidades",
+          "minutos",
+          "goles",
+          "asistencias",
+          "amarillas",
+          "rojas",
+          "golesPropia"
         ]
       },
       "MotivoMulta": {
@@ -3589,6 +3829,14 @@
                       "boolean",
                       "null"
                     ]
+                  },
+                  "estado": {
+                    "type": "string",
+                    "enum": [
+                      "programado",
+                      "aplazado"
+                    ],
+                    "description": "Programado o aplazado; un partido jugado se marca con su resultado"
                   }
                 },
                 "required": [
@@ -3729,7 +3977,7 @@
           "Partidos"
         ],
         "summary": "Editar un partido",
-        "description": "Delegado o superior. Los campos opcionales se quitan con null.",
+        "description": "Delegado o superior. Los campos opcionales se quitan con null. Pasar un partido jugado a programado o aplazado quita el resultado; sus estadísticas se conservan.",
         "parameters": [
           {
             "schema": {
@@ -3803,6 +4051,14 @@
                       "boolean",
                       "null"
                     ]
+                  },
+                  "estado": {
+                    "type": "string",
+                    "enum": [
+                      "programado",
+                      "aplazado"
+                    ],
+                    "description": "Programado o aplazado; un partido jugado se marca con su resultado"
                   }
                 },
                 "additionalProperties": false
@@ -3932,7 +4188,7 @@
           "Partidos"
         ],
         "summary": "Convocar",
-        "description": "Delegado o superior. Guarda la lista completa de convocados. Cada jugador nuevo en la convocatoria debe tener ficha activa en la plantilla; quien ya estaba convocado puede seguir aunque haya causado baja.",
+        "description": "Delegado o superior. Guarda la lista completa de convocados. Cada jugador nuevo en la convocatoria debe tener ficha activa en la plantilla; quien ya estaba convocado puede seguir aunque haya causado baja. No se puede quitar a quien tiene estadísticas en el partido.",
         "parameters": [
           {
             "schema": {
@@ -4025,6 +4281,16 @@
                 }
               }
             }
+          },
+          "409": {
+            "description": "Se quita a un jugador con estadísticas en el partido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -4063,6 +4329,641 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/MensajeConvocatoria"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/partidos/{pid}/resultado": {
+      "put": {
+        "tags": [
+          "Estadísticas"
+        ],
+        "summary": "Poner el resultado",
+        "description": "Delegado o superior. Marca el partido como jugado. Los goles registrados no pueden pasar del resultado.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "pid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "golesFavor": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 99
+                  },
+                  "golesContra": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 99
+                  }
+                },
+                "required": [
+                  "golesFavor",
+                  "golesContra"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Resultado guardado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Partido"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos o que no cuadran con los goles registrados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Estadísticas"
+        ],
+        "summary": "Quitar el resultado",
+        "description": "Delegado o superior. El partido vuelve a programado; titulares, suplentes y eventos se conservan.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "pid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resultado quitado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Partido"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/partidos/{pid}/participaciones": {
+      "put": {
+        "tags": [
+          "Estadísticas"
+        ],
+        "summary": "Titulares y suplentes",
+        "description": "Delegado o superior. Lista completa, entre los convocados; como mucho 11 titulares. Los minutos jugados se calculan con los cambios.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "pid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "titulares": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "maxItems": 11
+                  },
+                  "suplentes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "maxItems": 50
+                  }
+                },
+                "required": [
+                  "titulares",
+                  "suplentes"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Titulares y suplentes guardados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Partido"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos o que no cuadran con los eventos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/partidos/{pid}/eventos": {
+      "post": {
+        "tags": [
+          "Estadísticas"
+        ],
+        "summary": "Registrar un evento",
+        "description": "Delegado o superior. Gol, asistencia, tarjeta, cambio (entra o sale, con minuto) o gol en propia puerta (sin jugador: del rival a nuestro favor). Solo de convocados.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "pid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "jugadorId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "tipo": {
+                    "type": "string",
+                    "enum": [
+                      "gol",
+                      "asistencia",
+                      "amarilla",
+                      "roja",
+                      "entra",
+                      "sale",
+                      "gol_propia"
+                    ]
+                  },
+                  "minuto": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 150
+                  }
+                },
+                "required": [
+                  "tipo"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Evento registrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Partido"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos o que no cuadran con el partido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/partidos/{pid}/eventos/{evid}": {
+      "delete": {
+        "tags": [
+          "Estadísticas"
+        ],
+        "summary": "Borrar un evento",
+        "description": "Delegado o superior. También los importados del acta. No se puede dejar el partido incoherente (por ejemplo, borrar la entrada de quien después sale).",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "pid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "evid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Evento borrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Partido"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "El partido no cuadraría sin el evento",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/estadisticas": {
+      "get": {
+        "tags": [
+          "Estadísticas"
+        ],
+        "summary": "Estadísticas de la temporada",
+        "description": "Resultados del equipo y, por jugador, partidos, titularidades, minutos, goles, asistencias y tarjetas en los partidos jugados de la plantilla. El rol jugador solo ve su fila.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Estadísticas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EstadisticasPlantilla"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/clubes/{cid}/jugadores/{jid}/estadisticas": {
+      "get": {
+        "tags": [
+          "Estadísticas"
+        ],
+        "summary": "Trayectoria de un jugador",
+        "description": "Sus estadísticas en cada temporada (plantilla con ficha) y los totales en el club, en los partidos jugados. El rol jugador solo ve la suya.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "cid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "jid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Trayectoria",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrayectoriaJugador"
                 }
               }
             }

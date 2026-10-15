@@ -33,6 +33,8 @@ const jugador = (
   posicion: null,
   activo,
   convocado,
+  titular: null,
+  minutos: null,
 })
 
 const PARTIDO: Partido = {
@@ -44,6 +46,10 @@ const PARTIDO: Partido = {
   horaCitacion: '16:00',
   lugar: null,
   local: true,
+  estado: 'programado',
+  golesFavor: null,
+  golesContra: null,
+  eventos: [],
   jugadores: [
     jugador('j1', 'Íker', 1, true),
     jugador('j2', 'Brais', 7, true),
