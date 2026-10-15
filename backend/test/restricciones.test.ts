@@ -4,10 +4,12 @@ import { db, pool } from '../src/db/cliente.js'
 import {
   asistencias,
   clubes,
+  convocados,
   entrenos,
   fichas,
   horarios,
   jugadores,
+  partidos,
   plantillas,
 } from '../src/db/schema/index.js'
 
@@ -476,5 +478,108 @@ describe('entrenos y asistencias', () => {
       await tx.delete(plantillas).where(eq(plantillas.id, b.senior26.id))
       expect(await tx.$count(entrenos, eq(entrenos.plantillaId, b.senior26.id))).toBe(0)
       expect(await tx.$count(asistencias, eq(asistencias.plantillaId, b.senior26.id))).toBe(0)
+    }))
+})
+
+describe('partidos y convocados', () => {
+  // Un partido del Senior 2026-27, en el que Ana tiene ficha y Berta no
+  async function conPartido(tx: Tx) {
+    const b = await base(tx)
+    const [partido] = await tx
+      .insert(partidos)
+      .values({
+        plantillaId: b.senior26.id,
+        rival: 'SD Compostela',
+        fecha: '2026-10-18',
+        hora: '17:00',
+        horaCitacion: '16:00',
+      })
+      .returning()
+    if (!partido) throw new Error('Sin partido')
+    return { ...b, partido }
+  }
+
+  it('acepta un convocado con ficha en la plantilla del partido, una sola vez', () =>
+    enTransaccion(async (tx) => {
+      const b = await conPartido(tx)
+      const convocado = { partidoId: b.partido.id, jugadorId: b.ana.id, plantillaId: b.senior26.id }
+      await tx.insert(convocados).values(convocado)
+      const r = await restriccionViolada(tx.insert(convocados).values(convocado))
+      expect(r).toBe('convocados_partido_id_jugador_id_pk')
+    }))
+
+  it('rechaza a un jugador sin ficha en la plantilla del partido', () =>
+    enTransaccion(async (tx) => {
+      const b = await conPartido(tx)
+      const r = await restriccionViolada(
+        tx
+          .insert(convocados)
+          .values({ partidoId: b.partido.id, jugadorId: b.berta.id, plantillaId: b.senior26.id }),
+      )
+      expect(r).toBe('convocados_ficha_fk')
+    }))
+
+  it('rechaza declarar otra plantilla, aunque el jugador tenga ficha en ella', () =>
+    enTransaccion(async (tx) => {
+      const b = await conPartido(tx)
+      const r = await restriccionViolada(
+        tx
+          .insert(convocados)
+          .values({ partidoId: b.partido.id, jugadorId: b.ana.id, plantillaId: b.senior25.id }),
+      )
+      expect(r).toBe('convocados_partido_fk')
+    }))
+
+  it.each([
+    [{ rival: '  ' }, 'partidos_rival_no_vacio'],
+    [{ competicion: ' ' }, 'partidos_competicion_no_vacia'],
+    [{ lugar: '' }, 'partidos_lugar_no_vacio'],
+    [{ hora: '17:00', horaCitacion: '17:30' }, 'partidos_citacion_antes'],
+  ] as const)('rechaza %o', (cambios, restriccion) =>
+    enTransaccion(async (tx) => {
+      const b = await base(tx)
+      const r = await restriccionViolada(
+        tx
+          .insert(partidos)
+          .values({ plantillaId: b.senior26.id, rival: 'Rival', fecha: '2026-10-18', ...cambios }),
+      )
+      expect(r).toBe(restriccion)
+    }),
+  )
+
+  it('admite un partido solo con rival y fecha, y la citación a la hora del partido', () =>
+    enTransaccion(async (tx) => {
+      const b = await base(tx)
+      await tx.insert(partidos).values([
+        { plantillaId: b.senior26.id, rival: 'Rival', fecha: '2026-10-18' },
+        {
+          plantillaId: b.senior26.id,
+          rival: 'Rival',
+          fecha: '2026-10-25',
+          hora: '17:00',
+          horaCitacion: '17:00',
+        },
+      ])
+    }))
+
+  it('al borrar un partido o su plantilla se van sus convocados', () =>
+    enTransaccion(async (tx) => {
+      const b = await conPartido(tx)
+      await tx
+        .insert(convocados)
+        .values({ partidoId: b.partido.id, jugadorId: b.ana.id, plantillaId: b.senior26.id })
+      await tx.delete(partidos).where(eq(partidos.id, b.partido.id))
+      expect(await tx.$count(convocados, eq(convocados.plantillaId, b.senior26.id))).toBe(0)
+
+      const [otro] = await tx
+        .insert(partidos)
+        .values({ plantillaId: b.senior26.id, rival: 'Rival', fecha: '2026-10-25' })
+        .returning()
+      await tx
+        .insert(convocados)
+        .values({ partidoId: otro?.id ?? '', jugadorId: b.ana.id, plantillaId: b.senior26.id })
+      await tx.delete(plantillas).where(eq(plantillas.id, b.senior26.id))
+      expect(await tx.$count(partidos, eq(partidos.plantillaId, b.senior26.id))).toBe(0)
+      expect(await tx.$count(convocados, eq(convocados.plantillaId, b.senior26.id))).toBe(0)
     }))
 })

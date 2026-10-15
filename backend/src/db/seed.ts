@@ -7,11 +7,13 @@ import {
   adminsClub,
   asistencias,
   clubes,
+  convocados,
   entrenos,
   fichas,
   horarios,
   jugadores,
   membresias,
+  partidos,
   plantillas,
   user,
 } from './schema/index.js'
@@ -42,6 +44,7 @@ const CLUB = 3
 const PLANTILLA = 4
 const JUGADOR = 5
 const ENTRENO = 6
+const PARTIDO = 7
 
 type Posicion = 'portero' | 'defensa' | 'centrocampista' | 'delantero'
 
@@ -202,6 +205,95 @@ const listaAsistencias = listaEntrenos
       }),
   )
 
+// Partidos de liga de las plantillas de 2026-27, de septiembre a noviembre: el Senior y la UD Ejemplo
+// los domingos a las 17:00, el Juvenil los sábados a las 12:00, alternando en casa y fuera. Los ya
+// jugados (hasta el 11 de octubre) y el siguiente de cada plantilla tienen convocatoria.
+const RIVALES = [
+  'SD Compostela',
+  'Bergantiños FC',
+  'CD Lalín',
+  'Arosa SC',
+  'Céltiga FC',
+  'UD Somozas',
+  'CD Barco',
+  'Silva SD',
+  'Racing Villalbés',
+  'CD Estradense',
+  'Choco CF',
+  'UD Ourense',
+]
+const ULTIMO_JUGADO = '2026-10-11'
+const LIGAS = [
+  {
+    plantilla: 3,
+    dia: 0,
+    hora: '17:00',
+    citacion: '16:00',
+    competicion: 'Preferente',
+    campo: 'Campo municipal de Rexional',
+  },
+  {
+    plantilla: 4,
+    dia: 6,
+    hora: '12:00',
+    citacion: '11:00',
+    competicion: 'Liga Gallega Juvenil',
+    campo: 'Campo municipal de Rexional',
+  },
+  {
+    plantilla: 5,
+    dia: 0,
+    hora: '17:00',
+    citacion: '16:15',
+    competicion: 'Primera Futgal',
+    campo: 'Campo de A Ponte',
+  },
+]
+const listaPartidos = LIGAS.flatMap((liga) => {
+  const fechas: string[] = []
+  for (let dia = new Date('2026-09-12T00:00:00Z'); dia <= new Date('2026-11-29T00:00:00Z'); ) {
+    if (dia.getUTCDay() === liga.dia) fechas.push(dia.toISOString().slice(0, 10))
+    dia = new Date(dia.getTime() + 86_400_000)
+  }
+  return fechas.map((fecha, i) => {
+    const rival = RIVALES[(i + liga.plantilla) % RIVALES.length] ?? 'Rival'
+    const local = i % 2 === 0
+    return {
+      plantilla: liga.plantilla,
+      n: liga.plantilla * 100 + i,
+      i,
+      fecha,
+      rival,
+      competicion: liga.competicion,
+      hora: liga.hora,
+      horaCitacion: liga.citacion,
+      lugar: local ? liga.campo : `Campo del ${rival}`,
+      local,
+    }
+  })
+})
+
+// Convocados: los jugadores activos de la plantilla salvo uno, que va rotando
+const conConvocatoria = listaPartidos.filter(
+  (p) =>
+    p.fecha <= ULTIMO_JUGADO ||
+    p.fecha ===
+      listaPartidos.find((x) => x.plantilla === p.plantilla && x.fecha > ULTIMO_JUGADO)?.fecha,
+)
+const listaConvocados = conConvocatoria.flatMap((p) => {
+  const activos = listaFichas.filter(
+    ([plantilla, , , , activo]) => plantilla === p.plantilla && activo,
+  )
+  const descansa = activos[p.i % activos.length]?.[1]
+  return activos
+    .filter(([, jugador]) => jugador !== descansa)
+    .map(([, jugador]) => ({
+      partidoId: sid(PARTIDO, p.n),
+      jugadorId: sid(JUGADOR, jugador),
+      plantillaId: sid(PLANTILLA, p.plantilla),
+    }))
+})
+
 await migrar()
 
 const hash = await hashPassword(CONTRASENA)
@@ -330,12 +422,26 @@ await db.transaction(async (tx) => {
     .onConflictDoNothing()
 
   await tx.insert(asistencias).values(listaAsistencias).onConflictDoNothing()
+
+  await tx
+    .insert(partidos)
+    .values(
+      listaPartidos.map(({ plantilla, n, i: _i, ...partido }) => ({
+        id: sid(PARTIDO, n),
+        plantillaId: sid(PLANTILLA, plantilla),
+        ...partido,
+      })),
+    )
+    .onConflictDoNothing()
+
+  await tx.insert(convocados).values(listaConvocados).onConflictDoNothing()
 })
 
 console.log(
   `Seed aplicado: ${usuarios.length} usuarios (contraseña "${CONTRASENA}"), ${listaClubes.length} clubes, ` +
     `${listaPlantillas.length} plantillas, ${listaJugadores.length} jugadores, ${listaFichas.length} fichas, ` +
-    `${listaEntrenos.length} entrenos y ${listaAsistencias.length} asistencias`,
+    `${listaEntrenos.length} entrenos, ${listaAsistencias.length} asistencias, ` +
+    `${listaPartidos.length} partidos y ${listaConvocados.length} convocados`,
 )
 
 await pool.end()

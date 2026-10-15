@@ -444,12 +444,12 @@ Horario semanal de entrenos de una plantilla (uno por plantilla).
 | plantilla_id | uuid → plantillas | cascade |
 | rival | text | obligatorio |
 | competicion | text | opcional |
-| fecha | date | |
+| fecha | date | En `Europe/Madrid`. Índice `(plantilla_id, fecha)` para los listados |
 | hora | time | opcional |
-| hora_citacion | time | opcional |
+| hora_citacion | time | opcional; no posterior a `hora` |
 | lugar | text | opcional |
-| local | boolean | opcional |
-| estado | enum `programado, jugado, aplazado` | por defecto programado (ciclo 6) |
+| local | boolean | true en casa, false fuera; null si es campo neutral o no se sabe |
+| estado | enum `programado, jugado, aplazado` | por defecto programado (ciclo 6, con su propia migración) |
 | goles_favor | smallint | nullable (ciclo 6) |
 | goles_contra | smallint | nullable (ciclo 6) |
 | created_at | timestamptz | |
@@ -457,8 +457,9 @@ Horario semanal de entrenos de una plantilla (uno por plantilla).
 ### convocados
 | Campo | Tipo | Notas |
 |---|---|---|
-| partido_id | uuid → partidos | PK compuesta, cascade |
-| jugador_id | uuid → jugadores | PK compuesta, cascade. Con ficha activa en la plantilla del partido (validado en el servicio) |
+| partido_id | uuid | PK compuesta |
+| jugador_id | uuid | PK compuesta |
+| plantilla_id | uuid | Garantiza que el jugador tiene ficha en la plantilla del partido, con las FK compuestas `(partido_id, plantilla_id) → partidos` y `(plantilla_id, jugador_id) → fichas`, ambas cascade. Que la ficha esté activa se valida al convocar; si después causa baja, la convocatoria se conserva |
 
 ### participaciones (ciclo 6)
 | Campo | Tipo | Notas |
@@ -1057,9 +1058,10 @@ Pantallas del calendario de entrenos. Depende de GH-81, GH-16 y GH-17.
 Depende de GH-3.
 
 **Criterios de aceptación**
-- [ ] Tabla `partidos` según la sección 6, de la plantilla (los campos de estado y resultado pueden añadirse ya, sin uso hasta el ciclo 6)
-- [ ] Tabla `convocados`
+- [ ] Tabla `partidos` según la sección 6, de la plantilla (el estado y el resultado llegan con su migración en el ciclo 6)
+- [ ] Tabla `convocados`; la base de datos garantiza que el jugador tiene ficha en la plantilla del partido (`plantilla_id` y FK compuestas)
 - [ ] Migración y seed
+- [ ] Tests de las restricciones
 
 #### GH-19
 **Título:** API de partidos y convocatorias
