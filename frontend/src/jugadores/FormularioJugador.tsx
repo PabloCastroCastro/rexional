@@ -12,6 +12,7 @@ import {
   CLAVE_JUGADORES,
   type JugadorClub,
   type JugadorPlantilla,
+  nombreCompleto,
   POSICIONES,
   type Posicion,
   useBuscarJugadores,
@@ -32,7 +33,7 @@ type Props = {
 export function FormularioJugador({ modo, alCerrar }: Props) {
   const titulo =
     modo?.tipo === 'editar'
-      ? `${modo.reactivar ? 'Reactivar' : 'Editar'} a ${modo.jugador.nombre}`
+      ? `${modo.reactivar ? 'Reactivar' : 'Editar'} a ${nombreCompleto(modo.jugador)}`
       : 'Añadir jugador'
   return (
     <HojaInferior abierta={modo !== null} alCerrar={alCerrar} titulo={titulo}>
@@ -53,6 +54,7 @@ function Contenido({ modo, alCerrar }: { modo: ModoFormulario; alCerrar: () => v
   const [origen, setOrigen] = useState<'nuevo' | 'club'>('nuevo')
   const [elegido, setElegido] = useState<JugadorClub | null>(null)
   const [nombre, setNombre] = useState(editando?.nombre ?? '')
+  const [apellidos, setApellidos] = useState(editando?.apellidos ?? '')
   const [dorsal, setDorsal] = useState(editando?.dorsal?.toString() ?? '')
   const [posicion, setPosicion] = useState<Posicion | ''>(editando?.posicion ?? '')
   const [errores, setErrores] = useState<Record<string, string>>(
@@ -69,6 +71,9 @@ function Contenido({ modo, alCerrar }: { modo: ModoFormulario; alCerrar: () => v
             body: {
               ...ficha,
               ...(nombre.trim() !== editando.nombre && { nombre: nombre.trim() }),
+              ...((apellidos.trim() || null) !== editando.apellidos && {
+                apellidos: apellidos.trim() || null,
+              }),
               ...(modo.tipo === 'editar' && modo.reactivar && { activo: true }),
             },
           }),
@@ -80,7 +85,7 @@ function Contenido({ modo, alCerrar }: { modo: ModoFormulario; alCerrar: () => v
           body:
             origen === 'club' && elegido
               ? { jugadorId: elegido.id, ...ficha }
-              : { nombre: nombre.trim(), ...ficha },
+              : { nombre: nombre.trim(), apellidos: apellidos.trim() || null, ...ficha },
         }),
       )
     },
@@ -88,9 +93,9 @@ function Contenido({ modo, alCerrar }: { modo: ModoFormulario; alCerrar: () => v
       await cliente.invalidateQueries({ queryKey: CLAVE_JUGADORES })
       const mensaje =
         modo.tipo === 'alta'
-          ? `${jugador.nombre} añadido a la plantilla`
+          ? `${nombreCompleto(jugador)} añadido a la plantilla`
           : modo.reactivar
-            ? `${jugador.nombre} vuelve a la plantilla`
+            ? `${nombreCompleto(jugador)} vuelve a la plantilla`
             : 'Jugador guardado'
       avisar({ tipo: 'exito', mensaje })
       alCerrar()
@@ -154,12 +159,25 @@ function Contenido({ modo, alCerrar }: { modo: ModoFormulario; alCerrar: () => v
           value={nombre}
           onChange={(e) => setNombre(e.target.value)}
           error={errores.nombre}
-          ayuda={editando ? 'El nombre es del jugador: cambia en todas sus temporadas.' : undefined}
+        />
+      ) : null}
+      {pidiendoNombre ? (
+        <Campo
+          etiqueta="Apellidos"
+          autoComplete="off"
+          value={apellidos}
+          onChange={(e) => setApellidos(e.target.value)}
+          error={errores.apellidos}
+          ayuda={
+            editando
+              ? 'Opcionales. Nombre y apellidos son del jugador: cambian en todas sus temporadas.'
+              : 'Opcionales.'
+          }
         />
       ) : elegido ? (
         <div className={estilos.elegido}>
           <span>
-            <strong>{elegido.nombre}</strong>
+            <strong>{nombreCompleto(elegido)}</strong>
             <span className={estilos.secundario}>{textoTemporadas(elegido)}</span>
           </span>
           <Boton variante="texto" onClick={() => setElegido(null)}>
@@ -275,7 +293,7 @@ function BuscadorClub({
             return (
               <li key={j.id}>
                 <button type="button" disabled={ocupado} onClick={() => alElegir(j)}>
-                  <strong>{j.nombre}</strong>
+                  <strong>{nombreCompleto(j)}</strong>
                   <span className={estilos.secundario}>
                     {ocupado ? `Ya tiene ficha en ${temporada}` : textoTemporadas(j)}
                   </span>

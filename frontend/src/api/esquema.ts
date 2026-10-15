@@ -861,7 +861,7 @@ export interface paths {
         };
         /**
          * Jugadores de la plantilla
-         * @description Fichas de la plantilla con los datos del jugador, ordenadas por dorsal (sin dorsal al final) y nombre. Por defecto, los activos; con `activos=false`, las bajas.
+         * @description Fichas de la plantilla con los datos del jugador, ordenadas por dorsal (sin dorsal al final), apellidos y nombre. Por defecto, los activos; con `activos=false`, las bajas.
          */
         get: {
             parameters: {
@@ -932,6 +932,7 @@ export interface paths {
                 content: {
                     "application/json": {
                         nombre: string;
+                        apellidos?: string | null;
                         dorsal?: number | null;
                         /** @enum {string|null} */
                         posicion?: "portero" | "defensa" | "centrocampista" | "delantero" | null;
@@ -1039,6 +1040,8 @@ export interface paths {
                     "application/json": {
                         /** @description Del jugador: cambia en todas sus temporadas */
                         nombre?: string;
+                        /** @description Del jugador; null los quita */
+                        apellidos?: string | null;
                         dorsal?: number | null;
                         /** @enum {string|null} */
                         posicion?: "portero" | "defensa" | "centrocampista" | "delantero" | null;
@@ -1115,7 +1118,7 @@ export interface paths {
         };
         /**
          * Buscar jugadores del club
-         * @description Para añadirlos a una plantilla. Delegado o superior en alguna plantilla del club. Busca por nombre sin distinguir mayúsculas; ordenados por nombre. Sin límite: son los jugadores de un club.
+         * @description Para añadirlos a una plantilla. Delegado o superior en alguna plantilla del club. Busca en el nombre y los apellidos sin distinguir mayúsculas; ordenados por apellidos y nombre. Sin límite: son los jugadores de un club.
          */
         get: {
             parameters: {
@@ -1964,8 +1967,10 @@ export interface components {
         JugadorPlantilla: {
             /** Format: uuid */
             jugadorId: string;
-            /** @example Brais Méndez */
+            /** @example Brais */
             nombre: string;
+            /** @example Méndez */
+            apellidos: string | null;
             /** @example 7 */
             dorsal: number | null;
             /** @enum {string|null} */
@@ -1977,6 +1982,8 @@ export interface components {
             /** Format: uuid */
             id: string;
             nombre: string;
+            /** @example Méndez */
+            apellidos: string | null;
             /** @description Temporadas en las que tiene ficha, la más reciente primero */
             temporadas: string[];
         };
@@ -1984,6 +1991,8 @@ export interface components {
             /** Format: uuid */
             id: string;
             nombre: string;
+            /** @example Méndez */
+            apellidos: string | null;
             fichas: {
                 /** Format: uuid */
                 plantillaId: string;
@@ -2039,6 +2048,7 @@ export interface components {
                 /** Format: uuid */
                 jugadorId: string;
                 nombre: string;
+                apellidos: string | null;
                 dorsal: number | null;
                 /** @enum {string|null} */
                 posicion: "portero" | "defensa" | "centrocampista" | "delantero" | null;
@@ -2052,6 +2062,7 @@ export interface components {
             /** Format: uuid */
             jugadorId: string;
             nombre: string;
+            apellidos: string | null;
             activo: boolean;
             /** @description Asistencias / entrenos con estado registrado, de 0 a 100 */
             porcentaje: number | null;

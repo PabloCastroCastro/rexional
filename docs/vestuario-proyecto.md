@@ -84,12 +84,12 @@ Este documento recoge todas las decisiones funcionales, técnicas y de organizac
 
 ### 2.2 Jugadores de la plantilla
 
-- Alta en la plantilla de un jugador nuevo en el club (nombre) o de uno que ya existe en el club, por ejemplo de otra categoría o de una temporada anterior. En su ficha se indican dorsal (opcional, 0–99) y posición (portero, defensa, centrocampista, delantero).
+- Alta en la plantilla de un jugador nuevo en el club (nombre y, opcionalmente, apellidos) o de uno que ya existe en el club, por ejemplo de otra categoría o de una temporada anterior. En su ficha se indican dorsal (opcional, 0–99) y posición (portero, defensa, centrocampista, delantero).
 - Edición de los datos del jugador, comunes a todas sus temporadas, y de su ficha en la plantilla (dorsal y posición).
 - Baja **lógica** de la ficha: el jugador deja de aparecer en la plantilla, pero se conserva su historial de asistencia, multas y estadísticas. Posibilidad de reactivarlo.
 - El dorsal es único entre los jugadores activos de una misma plantilla.
 - Un jugador tiene como máximo una ficha por temporada.
-- Lista ordenada por dorsal y, a igualdad, por nombre. En cada jugador se muestra su porcentaje de asistencia y su deuda de multas pendiente (cuando existan esos módulos).
+- Lista ordenada por dorsal y, a igualdad, por apellidos y nombre (quien no tiene apellidos, por su nombre). En cada jugador se muestra su porcentaje de asistencia y su deuda de multas pendiente (cuando existan esos módulos).
 
 ### 2.3 Entrenamientos y asistencia
 
@@ -383,6 +383,7 @@ La persona, del club y permanente.
 | club_id | uuid → clubes | cascade |
 | usuario_id | uuid → user | nullable, set null; se vincula al aceptar invitación. Único por club |
 | nombre | text | obligatorio |
+| apellidos | text | opcional; nunca vacío si se indica |
 | created_at | timestamptz | |
 
 ### fichas

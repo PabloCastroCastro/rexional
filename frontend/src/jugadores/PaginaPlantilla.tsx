@@ -8,7 +8,13 @@ import { useResumenAsistencia } from '../entrenos/datos'
 import { Porcentaje } from '../entrenos/Porcentaje'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
 import { useBajaYReactivacion } from './acciones'
-import { type JugadorPlantilla, POSICIONES, puedeGestionarJugadores, useJugadores } from './datos'
+import {
+  type JugadorPlantilla,
+  nombreCompleto,
+  POSICIONES,
+  puedeGestionarJugadores,
+  useJugadores,
+} from './datos'
 import { FormularioJugador, type ModoFormulario } from './FormularioJugador'
 import estilos from './Jugadores.module.css'
 
@@ -106,7 +112,7 @@ export function PaginaPlantilla() {
                   icono={<RotateCcw aria-hidden size={18} />}
                   disabled={pendiente}
                   onClick={() => reactivar(j)}
-                  aria-label={`Reactivar a ${j.nombre}`}
+                  aria-label={`Reactivar a ${nombreCompleto(j)}`}
                 >
                   Reactivar
                 </Boton>
@@ -141,7 +147,7 @@ function Datos({
     <>
       <Dorsal dorsal={jugador.dorsal} />
       <span className={estilos.texto}>
-        <strong>{jugador.nombre}</strong>
+        <strong>{nombreCompleto(jugador)}</strong>
         <span className={estilos.secundario}>
           {jugador.posicion ? POSICIONES[jugador.posicion] : 'Sin posición'}
         </span>

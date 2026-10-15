@@ -32,6 +32,7 @@ const jugador = (
 ): JugadorEntreno => ({
   jugadorId,
   nombre,
+  apellidos: null,
   dorsal,
   posicion: null,
   activo: true,

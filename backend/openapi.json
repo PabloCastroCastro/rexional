@@ -233,7 +233,14 @@
           },
           "nombre": {
             "type": "string",
-            "example": "Brais Méndez"
+            "example": "Brais"
+          },
+          "apellidos": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "Méndez"
           },
           "dorsal": {
             "type": [
@@ -263,6 +270,7 @@
         "required": [
           "jugadorId",
           "nombre",
+          "apellidos",
           "dorsal",
           "posicion",
           "activo"
@@ -278,6 +286,13 @@
           "nombre": {
             "type": "string"
           },
+          "apellidos": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "Méndez"
+          },
           "temporadas": {
             "type": "array",
             "items": {
@@ -289,6 +304,7 @@
         "required": [
           "id",
           "nombre",
+          "apellidos",
           "temporadas"
         ]
       },
@@ -301,6 +317,13 @@
           },
           "nombre": {
             "type": "string"
+          },
+          "apellidos": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "Méndez"
           },
           "fichas": {
             "type": "array",
@@ -360,6 +383,7 @@
         "required": [
           "id",
           "nombre",
+          "apellidos",
           "fichas"
         ]
       },
@@ -504,6 +528,12 @@
                 "nombre": {
                   "type": "string"
                 },
+                "apellidos": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
                 "dorsal": {
                   "type": [
                     "integer",
@@ -548,6 +578,7 @@
               "required": [
                 "jugadorId",
                 "nombre",
+                "apellidos",
                 "dorsal",
                 "posicion",
                 "activo",
@@ -581,6 +612,12 @@
               "nombre": {
                 "type": "string"
               },
+              "apellidos": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
               "activo": {
                 "type": "boolean"
               },
@@ -595,6 +632,7 @@
             "required": [
               "jugadorId",
               "nombre",
+              "apellidos",
               "activo",
               "porcentaje"
             ]
@@ -1540,7 +1578,7 @@
           "Jugadores"
         ],
         "summary": "Jugadores de la plantilla",
-        "description": "Fichas de la plantilla con los datos del jugador, ordenadas por dorsal (sin dorsal al final) y nombre. Por defecto, los activos; con `activos=false`, las bajas.",
+        "description": "Fichas de la plantilla con los datos del jugador, ordenadas por dorsal (sin dorsal al final), apellidos y nombre. Por defecto, los activos; con `activos=false`, las bajas.",
         "parameters": [
           {
             "schema": {
@@ -1638,6 +1676,14 @@
                     "properties": {
                       "nombre": {
                         "type": "string",
+                        "minLength": 1,
+                        "maxLength": 80
+                      },
+                      "apellidos": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
                         "minLength": 1,
                         "maxLength": 80
                       },
@@ -1812,6 +1858,15 @@
                     "maxLength": 80,
                     "description": "Del jugador: cambia en todas sus temporadas"
                   },
+                  "apellidos": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "minLength": 1,
+                    "maxLength": 80,
+                    "description": "Del jugador; null los quita"
+                  },
                   "dorsal": {
                     "type": [
                       "integer",
@@ -1913,7 +1968,7 @@
           "Jugadores"
         ],
         "summary": "Buscar jugadores del club",
-        "description": "Para añadirlos a una plantilla. Delegado o superior en alguna plantilla del club. Busca por nombre sin distinguir mayúsculas; ordenados por nombre. Sin límite: son los jugadores de un club.",
+        "description": "Para añadirlos a una plantilla. Delegado o superior en alguna plantilla del club. Busca en el nombre y los apellidos sin distinguir mayúsculas; ordenados por apellidos y nombre. Sin límite: son los jugadores de un club.",
         "parameters": [
           {
             "schema": {

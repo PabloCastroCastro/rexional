@@ -65,6 +65,7 @@ const EsquemaEntreno = z
       z.object({
         jugadorId: z.uuid(),
         nombre: z.string(),
+        apellidos: z.string().nullable(),
         dorsal: z.number().int().nullable(),
         posicion: EsquemaPosicion.nullable(),
         activo: z.boolean(),
@@ -92,6 +93,7 @@ const EsquemaHorario = z
 const EsquemaAsistenciaJugador = EsquemaRecuentos.extend({
   jugadorId: z.uuid(),
   nombre: z.string(),
+  apellidos: z.string().nullable(),
   activo: z.boolean(),
   porcentaje: z
     .int()
@@ -173,6 +175,7 @@ async function detalleEntreno(plantillaId: string, entrenoId: string) {
     .select({
       jugadorId: jugadores.id,
       nombre: jugadores.nombre,
+      apellidos: jugadores.apellidos,
       dorsal: fichas.dorsal,
       posicion: fichas.posicion,
       activo: fichas.activo,
@@ -191,7 +194,7 @@ async function detalleEntreno(plantillaId: string, entrenoId: string) {
         or(eq(fichas.activo, true), sql`${asistencias.estado} is not null`),
       ),
     )
-    .orderBy(sql`${fichas.dorsal} asc nulls last`, porNombre, asc(jugadores.id))
+    .orderBy(sql`${fichas.dorsal} asc nulls last`, ...porNombre, asc(jugadores.id))
 
   const recuentos = { asiste: 0, justificada: 0, falta: 0 }
   for (const f of filas) if (f.estado) recuentos[f.estado] += 1
@@ -614,6 +617,7 @@ export const rutasEntrenos = () =>
           .select({
             jugadorId: jugadores.id,
             nombre: jugadores.nombre,
+            apellidos: jugadores.apellidos,
             activo: fichas.activo,
             asiste: recuento('asiste'),
             justificada: recuento('justificada'),
@@ -630,7 +634,7 @@ export const rutasEntrenos = () =>
           )
           .where(eq(fichas.plantillaId, c.var.plantilla.id))
           .groupBy(jugadores.id, fichas.plantillaId, fichas.jugadorId)
-          .orderBy(sql`${fichas.dorsal} asc nulls last`, porNombre, asc(jugadores.id))
+          .orderBy(sql`${fichas.dorsal} asc nulls last`, ...porNombre, asc(jugadores.id))
 
         const conPorcentaje = filas.map((f) => {
           const total = f.asiste + f.justificada + f.falta

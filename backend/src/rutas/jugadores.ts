@@ -26,7 +26,8 @@ const EsquemaDorsal = z
 export const EsquemaJugadorPlantilla = z
   .object({
     jugadorId: z.uuid(),
-    nombre: z.string().openapi({ example: 'Brais Méndez' }),
+    nombre: z.string().openapi({ example: 'Brais' }),
+    apellidos: z.string().nullable().openapi({ example: 'Méndez' }),
     dorsal: z.number().int().nullable().openapi({ example: 7 }),
     posicion: EsquemaPosicion.nullable(),
     activo: z.boolean().openapi({ description: 'false si está de baja en la plantilla' }),
@@ -37,6 +38,7 @@ const EsquemaJugadorClub = z
   .object({
     id: z.uuid(),
     nombre: z.string(),
+    apellidos: z.string().nullable().openapi({ example: 'Méndez' }),
     temporadas: z
       .array(z.string())
       .openapi({ description: 'Temporadas en las que tiene ficha, la más reciente primero' }),
@@ -47,6 +49,7 @@ const EsquemaTrayectoria = z
   .object({
     id: z.uuid(),
     nombre: z.string(),
+    apellidos: z.string().nullable().openapi({ example: 'Méndez' }),
     fichas: z.array(
       z.object({
         plantillaId: z.uuid(),
@@ -76,12 +79,20 @@ const ParamPlantilla = z.object({ id: EsquemaUuid.openapi({ param: { name: 'id',
 const ParamClub = z.object({ cid: EsquemaUuid.openapi({ param: { name: 'cid', in: 'path' } }) })
 const ParamJugador = { jid: EsquemaUuid.openapi({ param: { name: 'jid', in: 'path' } }) }
 
-// Orden alfabético en español (tildes y mayúsculas); la colación de la base ordena como C
-export const porNombre = sql`${jugadores.nombre} collate "es-x-icu"`
+// Orden alfabético en español (tildes y mayúsculas; la colación de la base ordena como C): por
+// apellidos y nombre, y quien no tiene apellidos, por su nombre. Se usa como .orderBy(...porNombre)
+export const porNombre = [
+  sql`coalesce(${jugadores.apellidos}, ${jugadores.nombre}) collate "es-x-icu"`,
+  sql`${jugadores.nombre} collate "es-x-icu"`,
+]
+
+// "Brais Méndez", o solo el nombre si no tiene apellidos
+export const nombreCompleto = sql<string>`concat_ws(' ', ${jugadores.nombre}, ${jugadores.apellidos})`
 
 const columnasJugadorPlantilla = {
   jugadorId: jugadores.id,
   nombre: jugadores.nombre,
+  apellidos: jugadores.apellidos,
   dorsal: fichas.dorsal,
   posicion: fichas.posicion,
   activo: fichas.activo,
@@ -93,7 +104,7 @@ const jugadorNoEncontrado = () =>
 // Error del dorsal repetido, en el formato de los errores de validación para mostrarlo en el campo
 async function dorsalEnUso(plantillaId: string, dorsal: number, jugadorId?: string) {
   const [titular] = await db
-    .select({ nombre: jugadores.nombre })
+    .select({ nombre: nombreCompleto })
     .from(fichas)
     .innerJoin(jugadores, eq(jugadores.id, fichas.jugadorId))
     .where(
@@ -117,7 +128,7 @@ async function fichaEnTemporada(jugadorId: string, temporada: string) {
       plantillaId: fichas.plantillaId,
       plantilla: plantillas.nombre,
       activo: fichas.activo,
-      nombre: jugadores.nombre,
+      nombre: nombreCompleto,
     })
     .from(fichas)
     .innerJoin(plantillas, eq(plantillas.id, fichas.plantillaId))
@@ -152,6 +163,7 @@ const CuerpoAlta = z.union([
   z
     .object({
       nombre: EsquemaTexto('El nombre'),
+      apellidos: EsquemaTexto('Los apellidos').nullish(),
       dorsal: EsquemaDorsal.optional(),
       posicion: EsquemaPosicion.nullable().optional(),
     })
@@ -172,6 +184,9 @@ const CuerpoEdicion = z
     nombre: EsquemaTexto('El nombre')
       .optional()
       .openapi({ description: 'Del jugador: cambia en todas sus temporadas' }),
+    apellidos: EsquemaTexto('Los apellidos')
+      .nullish()
+      .openapi({ description: 'Del jugador; null los quita' }),
     dorsal: EsquemaDorsal.optional(),
     posicion: EsquemaPosicion.nullable().optional(),
     activo: z.boolean().optional().openapi({ description: 'false da de baja; true reactiva' }),
@@ -190,7 +205,7 @@ export const rutasJugadoresPlantilla = () =>
         tags: ['Jugadores'],
         summary: 'Jugadores de la plantilla',
         description:
-          'Fichas de la plantilla con los datos del jugador, ordenadas por dorsal (sin dorsal al final) y nombre. Por defecto, los activos; con `activos=false`, las bajas.',
+          'Fichas de la plantilla con los datos del jugador, ordenadas por dorsal (sin dorsal al final), apellidos y nombre. Por defecto, los activos; con `activos=false`, las bajas.',
         middleware: [requireRol('jugador')] as const,
         request: {
           params: ParamPlantilla,
@@ -212,7 +227,7 @@ export const rutasJugadoresPlantilla = () =>
           .where(
             and(eq(fichas.plantillaId, c.var.plantilla.id), eq(fichas.activo, activos === 'true')),
           )
-          .orderBy(sql`${fichas.dorsal} asc nulls last`, porNombre, asc(jugadores.id))
+          .orderBy(sql`${fichas.dorsal} asc nulls last`, ...porNombre, asc(jugadores.id))
         return c.json(filas, 200)
       },
     )
@@ -260,7 +275,11 @@ export const rutasJugadoresPlantilla = () =>
             } else {
               const [nuevo] = await tx
                 .insert(jugadores)
-                .values({ clubId: plantilla.clubId, nombre: datos.nombre })
+                .values({
+                  clubId: plantilla.clubId,
+                  nombre: datos.nombre,
+                  apellidos: datos.apellidos ?? null,
+                })
                 .returning({ id: jugadores.id })
               if (!nuevo) throw new Error('No se pudo crear el jugador')
               id = nuevo.id
@@ -315,14 +334,14 @@ export const rutasJugadoresPlantilla = () =>
       }),
       async (c) => {
         const { jid } = c.req.valid('param')
-        const { nombre, ...cambiosFicha } = c.req.valid('json')
+        const { nombre, apellidos, ...cambiosFicha } = c.req.valid('json')
         const plantillaId = c.var.plantilla.id
         const actual = await jugadorDePlantilla(plantillaId, jid)
 
         try {
           await db.transaction(async (tx) => {
-            if (nombre !== undefined) {
-              await tx.update(jugadores).set({ nombre }).where(eq(jugadores.id, jid))
+            if (nombre !== undefined || apellidos !== undefined) {
+              await tx.update(jugadores).set({ nombre, apellidos }).where(eq(jugadores.id, jid))
             }
             if (Object.values(cambiosFicha).some((v) => v !== undefined)) {
               await tx
@@ -352,7 +371,7 @@ export const rutasJugadoresClub = () =>
         path: '/clubes/{cid}/jugadores',
         tags: ['Jugadores'],
         summary: 'Buscar jugadores del club',
-        description: `Para añadirlos a una plantilla. Delegado o superior en alguna plantilla del club. Busca por nombre sin distinguir mayúsculas; ordenados por nombre. Sin límite: son los jugadores de un club.`,
+        description: `Para añadirlos a una plantilla. Delegado o superior en alguna plantilla del club. Busca en el nombre y los apellidos sin distinguir mayúsculas; ordenados por apellidos y nombre. Sin límite: son los jugadores de un club.`,
         middleware: [requireRolEnClub('delegado')] as const,
         request: {
           params: ParamClub,
@@ -378,6 +397,7 @@ export const rutasJugadoresClub = () =>
           .select({
             id: jugadores.id,
             nombre: jugadores.nombre,
+            apellidos: jugadores.apellidos,
             temporadas: sql<string[]>`coalesce((
               select array_agg(${fichas.temporada} order by ${fichas.temporada} desc)
               from ${fichas} where ${fichas.jugadorId} = ${jugadores.id}
@@ -387,10 +407,10 @@ export const rutasJugadoresClub = () =>
           .where(
             and(
               eq(jugadores.clubId, c.var.club.id),
-              patron ? ilike(jugadores.nombre, patron) : undefined,
+              patron ? ilike(nombreCompleto, patron) : undefined,
             ),
           )
-          .orderBy(porNombre, asc(jugadores.id))
+          .orderBy(...porNombre, asc(jugadores.id))
         return c.json(filas, 200)
       },
     )
@@ -412,7 +432,7 @@ export const rutasJugadoresClub = () =>
           throw new ErrorApi(403, 'sin_permiso', 'Solo puedes ver tu propia ficha')
         }
         const [jugador] = await db
-          .select({ id: jugadores.id, nombre: jugadores.nombre })
+          .select({ id: jugadores.id, nombre: jugadores.nombre, apellidos: jugadores.apellidos })
           .from(jugadores)
           .where(and(eq(jugadores.id, jid), eq(jugadores.clubId, c.var.club.id)))
         if (!jugador) throw new ErrorApi(404, 'no_encontrado', 'Ese jugador no es del club')

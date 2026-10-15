@@ -40,6 +40,7 @@ const detalle = (r: ResumenEntreno): Entreno => ({
     {
       jugadorId: 'j1',
       nombre: 'Íker',
+      apellidos: null,
       dorsal: 1,
       posicion: null,
       activo: true,

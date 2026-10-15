@@ -66,7 +66,7 @@ const listaPlantillas = [
   { n: 5, club: 2, nombre: 'Senior', categoria: 'sénior', temporada: '2026-27' },
 ]
 
-// Jugadores: [número, club, nombre]
+// Jugadores: [número, club, nombre y apellidos]
 const listaJugadores: [number, number, string][] = [
   [1, 1, 'Brais Iglesias'],
   [2, 1, 'Xoán Rodríguez'],
@@ -279,11 +279,16 @@ await db.transaction(async (tx) => {
   await tx
     .insert(jugadores)
     .values(
-      listaJugadores.map(([n, club, nombre]) => ({
-        id: sid(JUGADOR, n),
-        clubId: sid(CLUB, club),
-        nombre,
-      })),
+      listaJugadores.map(([n, club, completo]) => {
+        // Nombre y apellidos: la primera palabra es el nombre
+        const [nombre = completo, ...apellidos] = completo.split(' ')
+        return {
+          id: sid(JUGADOR, n),
+          clubId: sid(CLUB, club),
+          nombre,
+          apellidos: apellidos.join(' ') || null,
+        }
+      }),
     )
     .onConflictDoNothing()
 

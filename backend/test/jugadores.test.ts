@@ -323,7 +323,12 @@ describe('jugadores del club', () => {
     const res = await pedir('GET', `/clubes/${ids.club}/jugadores?q=BRAIS`, 'delegado')
     expect(res.status).toBe(200)
     expect(await res.json()).toEqual([
-      { id: ids.brais, nombre: 'Brais Méndez', temporadas: ['2026-27', '2025-26'] },
+      {
+        id: ids.brais,
+        nombre: 'Brais Méndez',
+        apellidos: null,
+        temporadas: ['2026-27', '2025-26'],
+      },
     ])
   })
 
@@ -372,6 +377,7 @@ describe('jugadores del club', () => {
     expect(await res.json()).toEqual({
       id: ids.brais,
       nombre: 'Brais Méndez',
+      apellidos: null,
       fichas: [
         {
           plantillaId: ids.senior,
@@ -416,5 +422,80 @@ describe('jugadores del club', () => {
     expect(
       (await pedir('GET', `/clubes/${ids.club}/jugadores/${ids.brais}`, 'jugador')).status,
     ).toBe(403)
+  })
+})
+
+describe('nombre y apellidos', () => {
+  // Plantilla aparte, para no cambiar el orden ni los datos de las pruebas anteriores
+  it('alta con apellidos, orden por apellidos y nombre, y mensajes con el nombre completo', async () => {
+    const res = await pedir('POST', '/plantillas', 'admin', {
+      clubId: ids.club,
+      nombre: 'Veteranos',
+      categoria: 'veteranos',
+      temporada: '2026-27',
+    })
+    ids.veteranos = (await res.json()).id
+    await db
+      .insert(membresias)
+      .values({ plantillaId: ids.veteranos ?? '', usuarioId: ids.delegado ?? '', rol: 'delegado' })
+    const ruta = `/plantillas/${ids.veteranos}/jugadores`
+
+    const ana = await (
+      await pedir('POST', ruta, 'delegado', {
+        nombre: ' Ana ',
+        apellidos: ' Vázquez Rey ',
+        dorsal: 3,
+      })
+    ).json()
+    expect(ana).toMatchObject({ nombre: 'Ana', apellidos: 'Vázquez Rey' })
+    for (const cuerpo of [
+      { nombre: 'Berta', apellidos: 'Álvarez', dorsal: 3 },
+      { nombre: 'Carla', apellidos: null },
+      { nombre: 'Abril', apellidos: 'Álvarez' },
+    ]) {
+      const r = await pedir('POST', ruta, 'delegado', cuerpo)
+      if (cuerpo.nombre === 'Berta') {
+        // El dorsal 3 ya lo lleva Ana: el mensaje usa el nombre completo
+        expect((await r.json()).error.mensaje).toBe('El dorsal 3 ya lo lleva Ana Vázquez Rey')
+        await pedir('POST', ruta, 'delegado', { ...cuerpo, dorsal: null })
+      }
+    }
+
+    // A igual dorsal (sin dorsal): Abril y Berta Álvarez, Carla (sin apellidos, por su nombre)
+    const lista = await (await pedir('GET', ruta, 'delegado')).json()
+    expect(lista.map((j: { nombre: string }) => j.nombre)).toEqual([
+      'Ana',
+      'Abril',
+      'Berta',
+      'Carla',
+    ])
+    ids.ana = ana.jugadorId
+  })
+
+  it('valida los apellidos y se pueden cambiar o quitar', async () => {
+    const ruta = `/plantillas/${ids.veteranos}/jugadores`
+    expect((await pedir('POST', ruta, 'delegado', { nombre: 'X', apellidos: '  ' })).status).toBe(
+      400,
+    )
+    let res = await pedir('PATCH', `${ruta}/${ids.ana}`, 'delegado', { apellidos: 'Rey' })
+    expect(await res.json()).toMatchObject({ nombre: 'Ana', apellidos: 'Rey' })
+    res = await pedir('PATCH', `${ruta}/${ids.ana}`, 'delegado', { apellidos: null })
+    expect(await res.json()).toMatchObject({ nombre: 'Ana', apellidos: null })
+    await pedir('PATCH', `${ruta}/${ids.ana}`, 'delegado', { apellidos: 'Vázquez Rey' })
+  })
+
+  it('la búsqueda del club mira nombre y apellidos', async () => {
+    const buscar = async (q: string) =>
+      (
+        await (
+          await pedir('GET', `/clubes/${ids.club}/jugadores?q=${encodeURIComponent(q)}`, 'delegado')
+        ).json()
+      ).map((j: { nombre: string; apellidos: string | null }) => [j.nombre, j.apellidos])
+    expect(await buscar('vázquez')).toEqual([['Ana', 'Vázquez Rey']])
+    expect(await buscar('ana vázquez')).toEqual([['Ana', 'Vázquez Rey']])
+    expect(await buscar('álvarez')).toEqual([
+      ['Abril', 'Álvarez'],
+      ['Berta', 'Álvarez'],
+    ])
   })
 })

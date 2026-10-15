@@ -130,6 +130,8 @@ export const jugadores = pgTable(
       .references(() => clubes.id, { onDelete: 'cascade' }),
     usuarioId: uuid('usuario_id').references(() => user.id, { onDelete: 'set null' }),
     nombre: text('nombre').notNull(),
+    // Opcional: un alta rápida a pie de campo puede llevar solo el nombre
+    apellidos: text('apellidos'),
     createdAt: creadoEn(),
   },
   (t) => [
@@ -137,6 +139,7 @@ export const jugadores = pgTable(
     // Destino de la clave foránea compuesta de fichas (mismo club)
     unique('jugadores_id_club').on(t.id, t.clubId),
     check('jugadores_nombre_no_vacio', noVacio(t.nombre)),
+    check('jugadores_apellidos_no_vacios', sql`${t.apellidos} IS NULL OR ${noVacio(t.apellidos)}`),
   ],
 )
 
