@@ -7,6 +7,7 @@ import { EstadoVacio } from '../componentes/EstadoVacio'
 import { useResumenAsistencia } from '../entrenos/datos'
 import { Porcentaje } from '../entrenos/Porcentaje'
 import { euros, useMultas } from '../multas/datos'
+import { resumenEstadisticas, useEstadisticas, useTrayectoriaEstadisticas } from '../partidos/datos'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
 import { useBajaYReactivacion } from './acciones'
 import {
@@ -27,6 +28,8 @@ export function PaginaJugador() {
   const { jugadorId = '' } = useParams()
   const navegar = useNavigate()
   const trayectoria = useTrayectoria(plantilla.clubId, jugadorId)
+  const estadisticas = useEstadisticas(plantilla.id)
+  const numeros = useTrayectoriaEstadisticas(plantilla.clubId, jugadorId)
   const resumen = useResumenAsistencia(plantilla.id)
   const asistencia = resumen.data?.find((r) => r.jugadorId === jugadorId)
   const multasPendientes = useMultas(
@@ -159,6 +162,20 @@ export function PaginaJugador() {
         </section>
       )}
 
+      {estadisticas.data && (
+        <section className={estilos.seccion} aria-labelledby="partidos">
+          <h2 id="partidos">Partidos en esta plantilla</h2>
+          <p className={estilos.secundario}>
+            {(() => {
+              const suyas = estadisticas.data.jugadores.find((j) => j.jugadorId === jugadorId)
+              return suyas && suyas.partidos + suyas.goles + suyas.amarillas + suyas.rojas > 0
+                ? resumenEstadisticas(suyas)
+                : 'Todavía sin partidos jugados'
+            })()}
+          </p>
+        </section>
+      )}
+
       <section className={estilos.seccion} aria-labelledby="trayectoria">
         <h2 id="trayectoria">Temporadas en el club</h2>
         <ul className={estilos.lista}>
@@ -176,6 +193,12 @@ export function PaginaJugador() {
                       f.dorsal === null ? 'Sin dorsal' : `Dorsal ${f.dorsal}`,
                       f.posicion ? POSICIONES[f.posicion] : null,
                       f.activo ? null : 'de baja',
+                      (() => {
+                        const t = numeros.data?.temporadas.find(
+                          (x) => x.plantillaId === f.plantillaId,
+                        )
+                        return t && t.partidos + t.goles > 0 ? resumenEstadisticas(t) : null
+                      })(),
                     ]
                       .filter(Boolean)
                       .join(' · ')}

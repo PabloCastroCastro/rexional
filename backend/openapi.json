@@ -1169,6 +1169,136 @@
           "golesPropia"
         ]
       },
+      "TrayectoriaEstadisticas": {
+        "type": "object",
+        "properties": {
+          "jugadorId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "apellidos": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "temporadas": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "plantillaId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "plantilla": {
+                  "type": "string"
+                },
+                "temporada": {
+                  "type": "string"
+                },
+                "dorsal": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "partidos": {
+                  "type": "integer",
+                  "description": "Partidos jugados (con algún minuto)"
+                },
+                "titularidades": {
+                  "type": "integer"
+                },
+                "minutos": {
+                  "type": "integer"
+                },
+                "goles": {
+                  "type": "integer"
+                },
+                "asistencias": {
+                  "type": "integer"
+                },
+                "amarillas": {
+                  "type": "integer"
+                },
+                "rojas": {
+                  "type": "integer"
+                },
+                "golesPropia": {
+                  "type": "integer",
+                  "description": "Goles en propia puerta"
+                }
+              },
+              "required": [
+                "plantillaId",
+                "plantilla",
+                "temporada",
+                "dorsal",
+                "partidos",
+                "titularidades",
+                "minutos",
+                "goles",
+                "asistencias",
+                "amarillas",
+                "rojas",
+                "golesPropia"
+              ]
+            }
+          },
+          "totales": {
+            "type": "object",
+            "properties": {
+              "partidos": {
+                "type": "integer",
+                "description": "Partidos jugados (con algún minuto)"
+              },
+              "titularidades": {
+                "type": "integer"
+              },
+              "minutos": {
+                "type": "integer"
+              },
+              "goles": {
+                "type": "integer"
+              },
+              "asistencias": {
+                "type": "integer"
+              },
+              "amarillas": {
+                "type": "integer"
+              },
+              "rojas": {
+                "type": "integer"
+              },
+              "golesPropia": {
+                "type": "integer",
+                "description": "Goles en propia puerta"
+              }
+            },
+            "required": [
+              "partidos",
+              "titularidades",
+              "minutos",
+              "goles",
+              "asistencias",
+              "amarillas",
+              "rojas",
+              "golesPropia"
+            ]
+          }
+        },
+        "required": [
+          "jugadorId",
+          "nombre",
+          "apellidos",
+          "temporadas",
+          "totales"
+        ]
+      },
       "ActaLeida": {
         "type": "object",
         "properties": {
@@ -5366,7 +5496,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TrayectoriaJugador"
+                  "$ref": "#/components/schemas/TrayectoriaEstadisticas"
                 }
               }
             }
