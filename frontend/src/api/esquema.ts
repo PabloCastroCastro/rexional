@@ -3016,6 +3016,368 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/plantillas/{id}/partidos/{pid}/acta": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Descargar el acta
+         * @description El PDF tal como se subió. Cualquier miembro.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    pid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description PDF del acta */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/pdf": string;
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Subir el acta
+         * @description Delegado o superior. La ficha del partido en PDF (como mucho 2 MB), en el campo `archivo`. Sustituye a la anterior y devuelve lo leído, sin registrar nada todavía.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    pid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "multipart/form-data": {
+                        /** Format: binary */
+                        archivo?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Acta guardada y leída */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ActaLeida"];
+                    };
+                };
+                /** @description No es un PDF */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Pasa de 2 MB */
+                413: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        /**
+         * Quitar el acta
+         * @description Delegado o superior. Borra el PDF; lo que se registró con él se conserva (se borra evento a evento).
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    pid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Acta quitada */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plantillas/{id}/partidos/{pid}/acta/lectura": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Leer el acta guardada
+         * @description Delegado o superior. Lo mismo que devuelve la subida, para volver a la revisión.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    pid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Acta leída */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ActaLeida"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plantillas/{id}/partidos/{pid}/acta/confirmar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Registrar el acta
+         * @description Delegado o superior. Con las correcciones de la revisión, registra el acta con la fuente «acta»: la convocatoria pasa a ser la del acta (se conserva a quien tiene estadísticas a mano), se guardan resultado, titulares, cambios, goles y tarjetas, y competición, lugar y hora se rellenan si estaban vacíos. Volver a confirmar sustituye lo importado antes.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    pid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @description El jugador de cada nombre del acta; null para no contarlo */
+                        jugadores?: {
+                            nombre: string;
+                            /** Format: uuid */
+                            jugadorId: string | null;
+                        }[];
+                        /** @description Tipo de las tarjetas, por su posición en la lectura */
+                        tarjetas?: {
+                            indice: number;
+                            /** @enum {string} */
+                            tipo: "amarilla" | "roja";
+                        }[];
+                    };
+                };
+            };
+            responses: {
+                /** @description Acta registrada */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Partido"];
+                    };
+                };
+                /** @description El acta no se puede leer o lo leído no cuadra */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/plantillas/{id}/motivos-multa": {
         parameters: {
             query?: never;
@@ -4010,6 +4372,12 @@ export interface components {
             jugadores: components["schemas"]["JugadorConvocatoria"][];
             /** @description Por minuto */
             eventos: components["schemas"]["EventoPartido"][];
+            /** @description La ficha del partido en PDF, si se ha subido */
+            acta: {
+                nombreArchivo: string;
+                tamano: number;
+                subidaEn: string;
+            } | null;
         };
         JugadorConvocatoria: {
             /** Format: uuid */
@@ -4073,6 +4441,63 @@ export interface components {
             rojas: number;
             /** @description Goles en propia puerta */
             golesPropia: number;
+        };
+        ActaLeida: {
+            acta: {
+                nombreArchivo: string;
+                tamano: number;
+                subidaEn: string;
+            };
+            lectura: components["schemas"]["LecturaActa"];
+            /** @description Por qué no se ha podido leer */
+            error: string | null;
+        };
+        LecturaActa: {
+            /** @enum {string} */
+            equipo: "local" | "visitante";
+            nombreEquipo: string;
+            rival: string;
+            competicion: string | null;
+            jornada: number | null;
+            fecha: string | null;
+            hora: string | null;
+            estadio: string | null;
+            ciudad: string | null;
+            golesFavor: number;
+            golesContra: number;
+            titulares: components["schemas"]["JugadorActa"][];
+            suplentes: components["schemas"]["JugadorActa"][];
+            cambios: {
+                entra: components["schemas"]["JugadorActa"];
+                sale: components["schemas"]["JugadorActa"];
+                minuto: number | null;
+            }[];
+            goles: components["schemas"]["GolActa"][];
+            golesEnContra: components["schemas"]["GolActa"][];
+            tarjetas: (components["schemas"]["JugadorActa"] & {
+                minuto: number | null;
+                /** @enum {string|null} */
+                tipo: "amarilla" | "roja" | null;
+            })[];
+            avisos: string[];
+        } | null;
+        JugadorActa: {
+            dorsal: number | null;
+            /** @example CASTRO CASTRO, PABLO */
+            nombre: string;
+            /**
+             * Format: uuid
+             * @description null si no se ha emparejado
+             */
+            jugadorId: string | null;
+        };
+        GolActa: {
+            nombre: string;
+            /** Format: uuid */
+            jugadorId: string | null;
+            minuto: number | null;
+            /** @description A favor: gol en propia puerta del rival. En contra: de uno de los nuestros */
+            enPropia: boolean;
         };
         MotivoMulta: {
             /** Format: uuid */

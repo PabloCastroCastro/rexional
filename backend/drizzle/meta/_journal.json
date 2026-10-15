@@ -64,6 +64,13 @@
       "when": 1792078640776,
       "tag": "0008_estadisticas_partido",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792083115009,
+      "tag": "0009_actas_partido",
+      "breakpoints": true
     }
   ]
 }

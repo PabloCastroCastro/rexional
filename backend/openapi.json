@@ -843,6 +843,29 @@
               "$ref": "#/components/schemas/EventoPartido"
             },
             "description": "Por minuto"
+          },
+          "acta": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "nombreArchivo": {
+                "type": "string"
+              },
+              "tamano": {
+                "type": "integer"
+              },
+              "subidaEn": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "nombreArchivo",
+              "tamano",
+              "subidaEn"
+            ],
+            "description": "La ficha del partido en PDF, si se ha subido"
           }
         },
         "required": [
@@ -858,7 +881,8 @@
           "golesFavor",
           "golesContra",
           "jugadores",
-          "eventos"
+          "eventos",
+          "acta"
         ]
       },
       "JugadorConvocatoria": {
@@ -1107,6 +1131,278 @@
           "amarillas",
           "rojas",
           "golesPropia"
+        ]
+      },
+      "ActaLeida": {
+        "type": "object",
+        "properties": {
+          "acta": {
+            "type": "object",
+            "properties": {
+              "nombreArchivo": {
+                "type": "string"
+              },
+              "tamano": {
+                "type": "integer"
+              },
+              "subidaEn": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "nombreArchivo",
+              "tamano",
+              "subidaEn"
+            ]
+          },
+          "lectura": {
+            "$ref": "#/components/schemas/LecturaActa"
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Por qué no se ha podido leer"
+          }
+        },
+        "required": [
+          "acta",
+          "lectura",
+          "error"
+        ]
+      },
+      "LecturaActa": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "properties": {
+          "equipo": {
+            "type": "string",
+            "enum": [
+              "local",
+              "visitante"
+            ]
+          },
+          "nombreEquipo": {
+            "type": "string"
+          },
+          "rival": {
+            "type": "string"
+          },
+          "competicion": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "jornada": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "fecha": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "hora": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "estadio": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ciudad": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "golesFavor": {
+            "type": "integer"
+          },
+          "golesContra": {
+            "type": "integer"
+          },
+          "titulares": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JugadorActa"
+            }
+          },
+          "suplentes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JugadorActa"
+            }
+          },
+          "cambios": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "entra": {
+                  "$ref": "#/components/schemas/JugadorActa"
+                },
+                "sale": {
+                  "$ref": "#/components/schemas/JugadorActa"
+                },
+                "minuto": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "entra",
+                "sale",
+                "minuto"
+              ]
+            }
+          },
+          "goles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GolActa"
+            }
+          },
+          "golesEnContra": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GolActa"
+            }
+          },
+          "tarjetas": {
+            "type": "array",
+            "items": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/JugadorActa"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "minuto": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
+                    "tipo": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "enum": [
+                        "amarilla",
+                        "roja",
+                        null
+                      ]
+                    }
+                  },
+                  "required": [
+                    "minuto",
+                    "tipo"
+                  ]
+                }
+              ]
+            }
+          },
+          "avisos": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "equipo",
+          "nombreEquipo",
+          "rival",
+          "competicion",
+          "jornada",
+          "fecha",
+          "hora",
+          "estadio",
+          "ciudad",
+          "golesFavor",
+          "golesContra",
+          "titulares",
+          "suplentes",
+          "cambios",
+          "goles",
+          "golesEnContra",
+          "tarjetas",
+          "avisos"
+        ]
+      },
+      "JugadorActa": {
+        "type": "object",
+        "properties": {
+          "dorsal": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "nombre": {
+            "type": "string",
+            "example": "CASTRO CASTRO, PABLO"
+          },
+          "jugadorId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "null si no se ha emparejado"
+          }
+        },
+        "required": [
+          "dorsal",
+          "nombre",
+          "jugadorId"
+        ]
+      },
+      "GolActa": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string"
+          },
+          "jugadorId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "minuto": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "enPropia": {
+            "type": "boolean",
+            "description": "A favor: gol en propia puerta del rival. En contra: de uno de los nuestros"
+          }
+        },
+        "required": [
+          "nombre",
+          "jugadorId",
+          "minuto",
+          "enPropia"
         ]
       },
       "MotivoMulta": {
@@ -4964,6 +5260,459 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/TrayectoriaJugador"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/partidos/{pid}/acta": {
+      "post": {
+        "tags": [
+          "Actas"
+        ],
+        "summary": "Subir el acta",
+        "description": "Delegado o superior. La ficha del partido en PDF (como mucho 2 MB), en el campo `archivo`. Sustituye a la anterior y devuelve lo leído, sin registrar nada todavía.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "pid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "archivo": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Acta guardada y leída",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActaLeida"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "No es un PDF",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Pasa de 2 MB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Actas"
+        ],
+        "summary": "Descargar el acta",
+        "description": "El PDF tal como se subió. Cualquier miembro.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "pid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "PDF del acta",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Actas"
+        ],
+        "summary": "Quitar el acta",
+        "description": "Delegado o superior. Borra el PDF; lo que se registró con él se conserva (se borra evento a evento).",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "pid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Acta quitada"
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/partidos/{pid}/acta/lectura": {
+      "get": {
+        "tags": [
+          "Actas"
+        ],
+        "summary": "Leer el acta guardada",
+        "description": "Delegado o superior. Lo mismo que devuelve la subida, para volver a la revisión.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "pid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Acta leída",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActaLeida"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/partidos/{pid}/acta/confirmar": {
+      "post": {
+        "tags": [
+          "Actas"
+        ],
+        "summary": "Registrar el acta",
+        "description": "Delegado o superior. Con las correcciones de la revisión, registra el acta con la fuente «acta»: la convocatoria pasa a ser la del acta (se conserva a quien tiene estadísticas a mano), se guardan resultado, titulares, cambios, goles y tarjetas, y competición, lugar y hora se rellenan si estaban vacíos. Volver a confirmar sustituye lo importado antes.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "pid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "jugadores": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "nombre": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 200
+                        },
+                        "jugadorId": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "uuid"
+                        }
+                      },
+                      "required": [
+                        "nombre",
+                        "jugadorId"
+                      ]
+                    },
+                    "maxItems": 60,
+                    "description": "El jugador de cada nombre del acta; null para no contarlo"
+                  },
+                  "tarjetas": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "indice": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "tipo": {
+                          "type": "string",
+                          "enum": [
+                            "amarilla",
+                            "roja"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "indice",
+                        "tipo"
+                      ]
+                    },
+                    "maxItems": 40,
+                    "description": "Tipo de las tarjetas, por su posición en la lectura"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Acta registrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Partido"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "El acta no se puede leer o lo leído no cuadra",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }

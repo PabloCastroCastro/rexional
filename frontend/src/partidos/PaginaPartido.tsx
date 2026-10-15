@@ -22,7 +22,8 @@ import { hoy, textoFecha } from '../entrenos/datos'
 import { nombreCompleto, puedeGestionarJugadores } from '../jugadores/datos'
 import { Dorsal } from '../jugadores/PaginaPlantilla'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
-import { CLAVE_PARTIDOS, type Partido, textoLocal, usePartido } from './datos'
+import { SeccionActa } from './Acta'
+import { CLAVE_PARTIDOS, type Partido, textoLocal, textoResultado, usePartido } from './datos'
 import { FormularioPartido } from './FormularioPartido'
 import { Mensaje } from './Mensaje'
 import estilos from './Partidos.module.css'
@@ -64,11 +65,19 @@ export function PaginaPartido() {
       {volver}
 
       <header className={estilos.ficha}>
-        <span className={estilos.cuando}>{textoFecha(p.fecha)}</span>
+        <span className={estilos.cuando}>
+          {textoFecha(p.fecha)}
+          {p.estado === 'aplazado' && ' · Aplazado'}
+        </span>
         <h1>
           {p.local === false ? 'en ' : 'vs '}
           {p.rival}
         </h1>
+        {p.estado === 'jugado' && (
+          <p className={estilos.resultado}>
+            Jugado · <strong>{textoResultado(p)}</strong>
+          </p>
+        )}
         <ul className={estilos.datos}>
           {p.competicion && (
             <li>
@@ -149,6 +158,8 @@ export function PaginaPartido() {
           </Link>
         )}
       </section>
+
+      <SeccionActa partido={p} />
 
       <section className={estilos.seccion} aria-labelledby="mensaje">
         <h2 id="mensaje">

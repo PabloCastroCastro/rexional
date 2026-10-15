@@ -370,3 +370,106 @@
   padding: var(--espacio-3) 0;
   background: var(--color-fondo);
 }
+
+/* Resultado de un partido jugado */
+.resultado {
+  color: var(--color-texto-suave);
+}
+
+.resultado strong {
+  color: var(--color-texto);
+  font-size: var(--texto-lg);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Revisión del acta */
+.marcador {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--espacio-3);
+  padding: var(--espacio-3) var(--espacio-4);
+  border-radius: var(--radio-l);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra-1);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
+}
+
+.marcador span:last-child {
+  text-align: right;
+}
+
+.marcador strong {
+  font-size: var(--texto-xl);
+  font-variant-numeric: tabular-nums;
+}
+
+.avisosActa {
+  display: grid;
+  gap: var(--espacio-2);
+  margin: 0;
+  padding: var(--espacio-3) var(--espacio-3) var(--espacio-3) var(--espacio-6);
+  border-radius: var(--radio-m);
+  background: color-mix(in srgb, var(--color-aviso) 14%, transparent);
+  font-size: var(--texto-sm);
+}
+
+.convocados li.filaActa {
+  align-items: center;
+}
+
+.eleccion {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+}
+
+.eleccion > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.eleccion select {
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0 var(--espacio-2);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-m);
+  background: var(--color-superficie);
+  color: var(--color-texto);
+  font: inherit;
+}
+
+.eleccion select[aria-invalid="true"] {
+  border-color: var(--color-aviso);
+}
+
+.minuto {
+  flex: none;
+  min-width: 2.5rem;
+  color: var(--color-texto-suave);
+  font-variant-numeric: tabular-nums;
+}
+
+.cambio {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.cambio > span {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+}
+
+.entra {
+  color: var(--color-exito);
+}
+
+.sale {
+  color: var(--color-peligro);
+}

@@ -15,6 +15,7 @@ import {
 } from 'drizzle-orm'
 import { db } from '../db/cliente.js'
 import {
+  actasPartido,
   clubes,
   convocados,
   estadoPartido,
@@ -114,6 +115,10 @@ export const EsquemaPartido = z
     ...datosPartido,
     jugadores: z.array(EsquemaJugadorConvocatoria),
     eventos: z.array(EsquemaEvento).openapi({ description: 'Por minuto' }),
+    acta: z
+      .object({ nombreArchivo: z.string(), tamano: z.int(), subidaEn: z.string() })
+      .nullable()
+      .openapi({ description: 'La ficha del partido en PDF, si se ha subido' }),
   })
   .openapi('Partido')
 
@@ -193,7 +198,20 @@ export async function detallePartido(plantillaId: string, partidoId: string) {
     .from(eventosPartido)
     .where(eq(eventosPartido.partidoId, partido.id))
     .orderBy(sql`${eventosPartido.minuto} asc nulls last`, asc(eventosPartido.createdAt))
-  return { ...partido, jugadores: filas, eventos }
+  const [acta] = await db
+    .select({
+      nombreArchivo: actasPartido.nombreArchivo,
+      tamano: actasPartido.tamano,
+      subidaEn: actasPartido.subidaEn,
+    })
+    .from(actasPartido)
+    .where(eq(actasPartido.partidoId, partido.id))
+  return {
+    ...partido,
+    jugadores: filas,
+    eventos,
+    acta: acta ? { ...acta, subidaEn: acta.subidaEn.toISOString() } : null,
+  }
 }
 
 type Detalle = Awaited<ReturnType<typeof detallePartido>>
