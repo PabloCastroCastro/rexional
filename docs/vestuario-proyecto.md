@@ -610,7 +610,7 @@ Prefijo `/api`. JSON. Todas las rutas de la plantilla cuelgan de `/plantillas`, 
 | | `GET/POST/DELETE /plantillas/:id/partidos/:pid/eventos` | Miembro (eventos públicos del partido) / Delegado |
 | | `GET /plantillas/:id/estadisticas` (de la plantilla) | Miembro (jugador: solo suyas) |
 | Multas | `GET /plantillas/:id/motivos-multa?inactivos=` · `POST /plantillas/:id/motivos-multa` · `PATCH /plantillas/:id/motivos-multa/:mid` (editar, desactivar o reactivar; no se borran) | Miembro / Delegado |
-| | `GET/POST /plantillas/:id/multas` · `PATCH/DELETE /plantillas/:id/multas/:mid` | Miembro (jugador: suyas) / Delegado |
+| | `GET /plantillas/:id/multas?jugador=&estado=pendientes|cobradas` · `POST /plantillas/:id/multas` (del catálogo o libre) · `PATCH/DELETE /plantillas/:id/multas/:mid` (`fechaPago` cobra; `null` deshace) | Miembro (jugador: suyas) / Delegado |
 | | `POST /plantillas/:id/jugadores/:jid/saldar` | Delegado |
 | | `GET /plantillas/:id/multas/resumen` | Delegado |
 | Miembros | `GET /plantillas/:id/miembros` · `PATCH/DELETE /plantillas/:id/miembros/:uid` | Miembro / Admin |
