@@ -57,6 +57,13 @@
       "when": 1792076331269,
       "tag": "0007_hora_fin_entrenos",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792078640776,
+      "tag": "0008_estadisticas_partido",
+      "breakpoints": true
     }
   ]
 }

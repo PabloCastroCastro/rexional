@@ -452,9 +452,9 @@ Horario semanal de entrenos de una plantilla (uno por plantilla).
 | hora_citacion | time | opcional; no posterior a `hora` |
 | lugar | text | opcional |
 | local | boolean | true en casa, false fuera; null si es campo neutral o no se sabe |
-| estado | enum `programado, jugado, aplazado` | por defecto programado (ciclo 6, con su propia migración) |
-| goles_favor | smallint | nullable (ciclo 6) |
-| goles_contra | smallint | nullable (ciclo 6) |
+| estado | enum `programado, jugado, aplazado` | por defecto programado |
+| goles_favor | smallint | ≥ 0. Resultado desde el punto de vista de la plantilla. Con `goles_contra`, presente si y solo si el partido está jugado |
+| goles_contra | smallint | ≥ 0 |
 | created_at | timestamptz | |
 
 ### convocados
@@ -464,23 +464,24 @@ Horario semanal de entrenos de una plantilla (uno por plantilla).
 | jugador_id | uuid | PK compuesta |
 | plantilla_id | uuid | Garantiza que el jugador tiene ficha en la plantilla del partido, con las FK compuestas `(partido_id, plantilla_id) → partidos` y `(plantilla_id, jugador_id) → fichas`, ambas cascade. Que la ficha esté activa se valida al convocar; si después causa baja, la convocatoria se conserva |
 
-### participaciones (ciclo 6)
+### participaciones
 | Campo | Tipo | Notas |
 |---|---|---|
-| partido_id | uuid → partidos | PK compuesta, cascade |
-| jugador_id | uuid → jugadores | PK compuesta, cascade. FK compuesta `(partido_id, jugador_id) → convocados` para garantizar que está convocado |
-| titular | boolean | |
-| minutos | smallint | calculable a partir de eventos |
+| partido_id | uuid | PK compuesta |
+| jugador_id | uuid | PK compuesta. FK compuesta `(partido_id, jugador_id) → convocados`, cascade: solo convocados, y si se quita al convocado se va su participación |
+| titular | boolean | false = suplente |
+| minutos | smallint | 0–150. Se calculan con la titularidad y los cambios; un suplente que no entra juega 0 |
 
-### eventos_partido (ciclo 6)
+### eventos_partido
 | Campo | Tipo | Notas |
 |---|---|---|
 | id | uuid | PK |
 | partido_id | uuid → partidos | cascade |
-| jugador_id | uuid → jugadores | nullable (p. ej. gol en propia puerta del rival a nuestro favor), cascade |
+| jugador_id | uuid | FK compuesta `(partido_id, jugador_id) → convocados`, cascade. Solo puede faltar en `gol_propia` (gol en propia puerta del rival a nuestro favor) |
 | tipo | enum `gol, asistencia, amarilla, roja, entra, sale, gol_propia` | `gol_propia` con jugador = gol en propia de uno de los nuestros; sin jugador = gol en propia del rival |
-| minuto | smallint | opcional |
-| origen | enum `manual, acta, federacion` | fuente del dato |
+| minuto | smallint | opcional, 0–150 |
+| origen | enum `manual, acta, federacion` | fuente del dato; por defecto manual |
+| created_at | timestamptz | |
 
 ### motivos_multa
 | Campo | Tipo | Notas |
@@ -1296,7 +1297,7 @@ Saber cuándo termina cada entreno: hora de fin opcional, junto a la de inicio. 
 
 **Criterios de aceptación**
 - [ ] Campos `estado`, `goles_favor`, `goles_contra` en `partidos` si no se añadieron en GH-18
-- [ ] Asociación de tipo de tarjeta en el catálogo por defecto (amarilla por protestar → amarilla, roja → roja), con migración de datos para las plantillas existentes
+- [ ] Asociación de tipo de tarjeta en el catálogo por defecto (amarilla por protestar → amarilla, roja → roja), con migración de datos para las plantillas existentes (ya hecho en GH-22)
 - [ ] Tablas `participaciones` y `eventos_partido` (con `origen`) según la sección 6
 - [ ] Migración y seed con partidos jugados de ejemplo
 
@@ -1304,20 +1305,21 @@ Saber cuándo termina cada entreno: hora de fin opcional, junto a la de inicio. 
 **Título:** Servicio de importación de estadísticas
 **Etiquetas:** feature, backend
 
-Punto de entrada único para registrar estadísticas con fuentes intercambiables. Depende de GH-31.
+Punto de entrada único para registrar estadísticas con fuentes intercambiables. Depende de GH-31. Se hace junto con GH-33, en la misma PR.
 
 **Criterios de aceptación**
 - [ ] Interfaz común de fuente (`manual`, `acta`, `federacion`) que produce resultado, participaciones y eventos normalizados
 - [ ] Implementación de la fuente `manual`
 - [ ] Validaciones comunes: solo jugadores convocados, minutos coherentes, un jugador no entra dos veces
 - [ ] Cálculo de minutos jugados a partir de titularidad y cambios
+- [ ] Registrar con una fuente sustituye las participaciones y los eventos que esa misma fuente registró antes en el partido
 - [ ] Tests
 
 #### GH-33
 **Título:** API de estadísticas de partido
 **Etiquetas:** feature, backend
 
-Depende de GH-32.
+Depende de GH-32; se hace junto con ella, en la misma PR.
 
 **Criterios de aceptación**
 - [ ] `PUT .../partidos/:pid/resultado` marca el partido como jugado
@@ -1331,13 +1333,14 @@ Depende de GH-32.
 **Título:** Pantalla de partido jugado
 **Etiquetas:** feature, frontend
 
-Depende de GH-33.
+Depende de GH-33 y GH-37.
 
 **Criterios de aceptación**
+- [ ] Botón «Subir acta» en el partido, que lleva a la revisión de GH-37
 - [ ] Marcador de resultado
 - [ ] Selección de titulares entre los convocados
 - [ ] Registro rápido de eventos: tipo, jugador y minuto, pensado para usarse durante o justo después del partido
-- [ ] Línea de tiempo del partido con opción de borrar eventos
+- [ ] Línea de tiempo del partido con opción de borrar eventos; lo importado del acta se corrige igual que lo manual
 
 #### GH-35
 **Título:** Pantalla de estadísticas de temporada
@@ -1363,16 +1366,21 @@ Depende de GH-24 y GH-33.
 - [ ] La multa queda vinculada al evento (`evento_id`); al borrar el evento se avisa de la multa asociada
 
 #### GH-37
-**Título:** Importación asistida desde el acta del partido
-**Etiquetas:** investigacion, backend
+**Título:** Importación desde la ficha del partido (PDF)
+**Etiquetas:** feature, db, backend, frontend
 
-Evaluar la extracción de datos del PDF del acta oficial que descarga el entrenador. Depende de GH-32.
+Subir al partido la ficha en PDF que publica la Federación Gallega y registrar con ella resultado, titulares, cambios, goles y tarjetas, siempre después de que el entrenador lo revise. Depende de GH-32 y GH-33.
 
 **Criterios de aceptación**
-- [ ] Análisis del formato de actas reales de la federación gallega
-- [ ] Prueba de concepto de extracción de resultado, goleadores y tarjetas
-- [ ] Emparejamiento de nombres del acta con la plantilla
-- [ ] Documento con conclusiones y propuesta de implementación como fuente `acta` (siempre con revisión del entrenador antes de guardar)
+- [ ] Tabla `actas_partido` (una por partido, cascade): el PDF en la base de datos (`bytea`, solo PDF, máximo 2 MB), nombre del archivo, quién lo subió y cuándo
+- [ ] `POST /api/plantillas/:id/partidos/:pid/acta` (delegado o superior): guarda el PDF y devuelve lo leído sin registrar nada; `GET` del mismo recurso descarga el PDF (cualquier miembro)
+- [ ] Lectura de la ficha por la posición del texto: resultado, titulares, suplentes, cambios (quien entra y quien sale, con el minuto), goles con minuto, tarjetas con minuto, competición, jornada y estadio
+- [ ] Nuestro equipo es la columna local o la visitante según `local` del partido; si no se sabe, se busca por el nombre del club
+- [ ] Tipo de tarjeta por el color del icono; si no se puede leer, queda señalada para revisar
+- [ ] Emparejamiento de los nombres del acta («APELLIDOS, NOMBRE») con los jugadores de la plantilla, sin tildes ni mayúsculas y con el dorsal de apoyo; los que no se emparejan quedan señalados
+- [ ] Confirmar registra con la fuente `acta`: la convocatoria pasa a ser la del acta, y se guardan resultado, participaciones con minutos y eventos; competición y lugar se rellenan si estaban vacíos. Volver a confirmar sustituye lo importado antes
+- [ ] Pantalla de revisión: subir el PDF, ver lo leído, elegir los jugadores sin emparejar, corregir el tipo de tarjeta y confirmar
+- [ ] Tests con una ficha de ejemplo
 
 ---
 
