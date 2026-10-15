@@ -24,6 +24,7 @@ import {
   sumarDias,
   textoFecha,
   useEntreno,
+  useEntrenosDelDia,
 } from './datos'
 import estilos from './Entrenos.module.css'
 import { type Asistencia, type EstadoGuardado, useGuardadoAutomatico } from './guardado'
@@ -41,7 +42,11 @@ export function PaginaPasarLista() {
   const actual = hoy()
   const pedida = parametros.get('fecha')
   const fecha = esFechaValida(pedida) && pedida <= actual ? pedida : actual
-  const entreno = useEntreno(plantilla.id, fecha)
+  // De momento se pasa lista del primer entreno del día; elegir la sesión y crear entrenos llega
+  // con las pantallas del calendario (GH-82)
+  const delDia = useEntrenosDelDia(plantilla.id, fecha)
+  const primero = delDia.data?.at(0)
+  const entreno = useEntreno(plantilla.id, primero?.id)
   const irA = (nueva: string) => setParametros(nueva === actual ? {} : { fecha: nueva })
 
   return (
@@ -79,15 +84,20 @@ export function PaginaPasarLista() {
         </button>
       </nav>
 
-      {entreno.isPending ? (
+      {delDia.isPending || (primero && entreno.isPending) ? (
         <Cargando />
-      ) : entreno.isError ? (
+      ) : delDia.isError || entreno.isError ? (
         <p className={estilos.error} role="alert">
-          {entreno.error.message}
+          {(delDia.error ?? entreno.error)?.message}
         </p>
+      ) : !entreno.data ? (
+        <EstadoVacio
+          titulo="No hay entreno este día"
+          descripcion="Solo se pasa lista de los entrenos del calendario de la plantilla."
+        />
       ) : puedeGestionarJugadores(plantilla) ? (
-        // Cada día empieza con su propio estado local y su propio guardado
-        <Lista key={fecha} fecha={fecha} entreno={entreno.data} />
+        // Cada entreno empieza con su propio estado local y su propio guardado
+        <Lista key={entreno.data.id} entreno={entreno.data} />
       ) : (
         <SoloLectura entreno={entreno.data} />
       )}
@@ -97,9 +107,9 @@ export function PaginaPasarLista() {
 
 type Marca = { estado: Estado | null; motivo: string }
 
-function Lista({ fecha, entreno }: { fecha: string; entreno: Entreno }) {
+function Lista({ entreno }: { entreno: Entreno }) {
   const plantilla = usePlantillaActiva()
-  const guardado = useGuardadoAutomatico(plantilla.id, fecha)
+  const guardado = useGuardadoAutomatico(plantilla.id, entreno.id)
   const [marcas, setMarcas] = useState<Record<string, Marca>>(() =>
     Object.fromEntries(
       entreno.jugadores.map((j) => [j.jugadorId, { estado: j.estado, motivo: j.motivo ?? '' }]),
@@ -261,10 +271,10 @@ function SoloLectura({ entreno }: { entreno: Entreno }) {
   const textos = Object.fromEntries(ESTADOS.map((e) => [e.estado, e.texto]))
   return (
     <>
-      {entreno.existe ? (
+      {entreno.recuentos.asiste + entreno.recuentos.justificada + entreno.recuentos.falta > 0 ? (
         <Recuentos recuentos={entreno.recuentos} />
       ) : (
-        <p className={estilos.recuentos}>Aún no se ha pasado lista este día.</p>
+        <p className={estilos.recuentos}>Aún no se ha pasado lista de este entreno.</p>
       )}
       {entreno.jugadores.length > 0 && (
         <ul className={estilos.lista} aria-label="Mi asistencia">

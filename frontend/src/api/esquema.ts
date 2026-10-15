@@ -1254,7 +1254,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/plantillas/{id}/entrenos": {
+    "/api/plantillas/{id}/horario": {
         parameters: {
             query?: never;
             header?: never;
@@ -1262,8 +1262,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Historial de entrenos
-         * @description Entrenos de la plantilla, el más reciente primero, con el recuento de cada estado. Los recuentos no identifican a nadie: los ve cualquier miembro.
+         * Horario de entrenos
+         * @description Horario semanal de la plantilla, o null si no tiene.
          */
         get: {
             parameters: {
@@ -1276,13 +1276,13 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Entrenos */
+                /** @description Horario */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ResumenEntreno"][];
+                        "application/json": components["schemas"]["Horario"];
                     };
                 };
                 /** @description Sin sesión */
@@ -1314,15 +1314,144 @@ export interface paths {
                 };
             };
         };
-        put?: never;
+        /**
+         * Guardar el horario
+         * @description Delegado o superior. Crea los entrenos del horario entre «desde» (o hoy, si es anterior) y «hasta», como mucho un año. Al cambiarlo, se borran los entrenos futuros del horario que aún no tienen asistencia y se vuelven a crear; los que tienen asistencia, los pasados y los sueltos no se tocan, y no se crea un entreno donde ya hay uno a la misma hora.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @example 2026-10-13 */
+                        desde: string;
+                        /** @example 2026-10-13 */
+                        hasta: string;
+                        sesiones: components["schemas"]["SesionHorario"][];
+                    };
+                };
+            };
+            responses: {
+                /** @description Horario guardado */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            horario: components["schemas"]["Horario"];
+                            creados: number;
+                            borrados: number;
+                        };
+                    };
+                };
+                /** @description Datos no válidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
         post?: never;
-        delete?: never;
+        /**
+         * Quitar el horario
+         * @description Delegado o superior. Borra el horario y sus entrenos futuros sin asistencia; el resto se conserva.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Horario quitado */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            borrados: number;
+                        };
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/plantillas/{id}/entrenos/{fecha}": {
+    "/api/plantillas/{id}/entrenos": {
         parameters: {
             query?: never;
             header?: never;
@@ -1330,31 +1459,33 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Asistencia de un día
-         * @description Los jugadores activos y los de baja con asistencia registrada ese día, con su estado. Si aún no se ha pasado lista, `existe` es false y los estados están vacíos. El rol jugador solo recibe su fila.
+         * Entrenos
+         * @description Entrenos de la plantilla entre `desde` y `hasta` (ambos opcionales), del más reciente al más antiguo y, en un mismo día, por hora. Con el recuento de cada estado: no identifica a nadie, así que lo ve cualquier miembro.
          */
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    desde?: string;
+                    hasta?: string;
+                };
                 header?: never;
                 path: {
                     id: string;
-                    fecha: string;
                 };
                 cookie?: never;
             };
             requestBody?: never;
             responses: {
-                /** @description Entreno */
+                /** @description Entrenos */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["Entreno"];
+                        "application/json": components["schemas"]["ResumenEntreno"][];
                     };
                 };
-                /** @description Fecha no válida */
+                /** @description Fechas no válidas */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -1393,14 +1524,213 @@ export interface paths {
             };
         };
         put?: never;
-        post?: never;
+        /**
+         * Crear un entreno
+         * @description Delegado o superior. Un entreno suelto, también en un día que ya tiene otro (doble sesión) si es a otra hora.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @example 2026-10-13 */
+                        fecha: string;
+                        /** @example 20:00 */
+                        hora?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Entreno creado */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ResumenEntreno"];
+                    };
+                };
+                /** @description Datos no válidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Ya hay un entreno ese día a esa hora */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/plantillas/{id}/entrenos/{fecha}/asistencias": {
+    "/api/plantillas/{id}/entrenos/{eid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Un entreno y su lista
+         * @description Los jugadores activos y los de baja con asistencia registrada en el entreno, con su estado. El rol jugador solo recibe su fila.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    eid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Entreno */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Entreno"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        /**
+         * Cancelar un entreno
+         * @description Delegado o superior. Borra el entreno y su asistencia, si la tiene.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    eid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Entreno cancelado */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plantillas/{id}/entrenos/{eid}/asistencias": {
         parameters: {
             query?: never;
             header?: never;
@@ -1410,7 +1740,7 @@ export interface paths {
         get?: never;
         /**
          * Pasar lista
-         * @description Delegado o superior. Guarda la lista completa del día: quien no aparece queda sin registrar. Crea el entreno con la primera asistencia y lo borra si la lista llega vacía. No admite fechas futuras.
+         * @description Delegado o superior. Guarda la lista completa del entreno: quien no aparece queda sin registrar, y una lista vacía lo deja sin asistencia (el entreno sigue en el calendario). No admite entrenos futuros.
          */
         put: {
             parameters: {
@@ -1418,7 +1748,7 @@ export interface paths {
                 header?: never;
                 path: {
                     id: string;
-                    fecha: string;
+                    eid: string;
                 };
                 cookie?: never;
             };
@@ -1445,7 +1775,7 @@ export interface paths {
                         "application/json": components["schemas"]["Entreno"];
                     };
                 };
-                /** @description Datos no válidos, fecha futura o jugador sin ficha */
+                /** @description Datos no válidos, entreno futuro o jugador sin ficha */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -1668,9 +1998,27 @@ export interface components {
                 activo: boolean;
             }[];
         };
+        Horario: {
+            /** @example 2026-10-13 */
+            desde: string;
+            /** @example 2026-10-13 */
+            hasta: string;
+            sesiones: components["schemas"]["SesionHorario"][];
+        } | null;
+        SesionHorario: {
+            dia: number;
+            /** @example 20:00 */
+            hora: string;
+        };
         ResumenEntreno: components["schemas"]["RecuentosAsistencia"] & {
+            /** Format: uuid */
+            id: string;
             /** @example 2026-10-13 */
             fecha: string;
+            /** @example 20:00 */
+            hora: string | null;
+            /** @description true si lo creó el horario; false si es suelto */
+            deHorario: boolean;
         };
         RecuentosAsistencia: {
             asiste: number;
@@ -1678,10 +2026,14 @@ export interface components {
             falta: number;
         };
         Entreno: {
+            /** Format: uuid */
+            id: string;
             /** @example 2026-10-13 */
             fecha: string;
-            /** @description false si ese día aún no se ha pasado lista */
-            existe: boolean;
+            /** @example 20:00 */
+            hora: string | null;
+            /** @description true si lo creó el horario; false si es suelto */
+            deHorario: boolean;
             recuentos: components["schemas"]["RecuentosAsistencia"];
             jugadores: {
                 /** Format: uuid */

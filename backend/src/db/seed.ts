@@ -9,6 +9,7 @@ import {
   clubes,
   entrenos,
   fichas,
+  horarios,
   jugadores,
   membresias,
   plantillas,
@@ -154,11 +155,24 @@ const listaFichas: [number, number, number | null, Posicion, boolean][] = [
 
 const plantillaPorNumero = new Map(listaPlantillas.map((p) => [p.n, p]))
 
-// Entrenos de martes y jueves de septiembre y principios de octubre de 2026 en las plantillas de
-// 2026-27, con asistencia variada pero siempre la misma: [plantilla, número, fecha]
+// Horario de las plantillas de 2026-27: martes y jueves a las 20:00, del 1 de septiembre de 2026 al
+// 15 de junio de 2027, con sus entrenos. Hay asistencia, variada pero siempre la misma, hasta el 8 de
+// octubre; desde ahí quedan sin pasar lista: [plantilla, número, fecha]
 const PLANTILLAS_CON_ENTRENOS = [3, 4, 5]
+const HORARIO = {
+  desde: '2026-09-01',
+  hasta: '2027-06-15',
+  sesiones: [
+    { dia: 2, hora: '20:00' },
+    { dia: 4, hora: '20:00' },
+  ],
+}
+const ULTIMO_CON_ASISTENCIA = '2026-10-08'
 const fechasEntreno: string[] = []
-for (let dia = new Date(Date.UTC(2026, 8, 1)); dia < new Date(Date.UTC(2026, 9, 9)); ) {
+for (
+  let dia = new Date(`${HORARIO.desde}T00:00:00Z`);
+  dia <= new Date(`${HORARIO.hasta}T00:00:00Z`);
+) {
   if (dia.getUTCDay() === 2 || dia.getUTCDay() === 4)
     fechasEntreno.push(dia.toISOString().slice(0, 10))
   dia = new Date(dia.getTime() + 86_400_000)
@@ -170,21 +184,23 @@ const listaEntrenos = PLANTILLAS_CON_ENTRENOS.flatMap((plantilla) =>
 const MOTIVOS = ['Trabajo', 'Lesión', null, 'Estudios']
 
 // Estado de cada jugador activo en cada entreno: casi siempre asiste, a veces justifica o falta
-const listaAsistencias = listaEntrenos.flatMap((e) =>
-  listaFichas
-    .filter(([plantilla, , , , activo]) => plantilla === e.plantilla && activo)
-    .map(([, jugador]) => {
-      const v = (e.i * 7 + jugador * 13) % 20
-      const estado = v < 15 ? 'asiste' : v < 17 ? 'justificada' : 'falta'
-      return {
-        entrenoId: sid(ENTRENO, e.n),
-        jugadorId: sid(JUGADOR, jugador),
-        plantillaId: sid(PLANTILLA, e.plantilla),
-        estado: estado as 'asiste' | 'justificada' | 'falta',
-        motivo: estado === 'justificada' ? MOTIVOS[(e.i + jugador) % MOTIVOS.length] : null,
-      }
-    }),
-)
+const listaAsistencias = listaEntrenos
+  .filter((e) => e.fecha <= ULTIMO_CON_ASISTENCIA)
+  .flatMap((e) =>
+    listaFichas
+      .filter(([plantilla, , , , activo]) => plantilla === e.plantilla && activo)
+      .map(([, jugador]) => {
+        const v = (e.i * 7 + jugador * 13) % 20
+        const estado = v < 15 ? 'asiste' : v < 17 ? 'justificada' : 'falta'
+        return {
+          entrenoId: sid(ENTRENO, e.n),
+          jugadorId: sid(JUGADOR, jugador),
+          plantillaId: sid(PLANTILLA, e.plantilla),
+          estado: estado as 'asiste' | 'justificada' | 'falta',
+          motivo: estado === 'justificada' ? MOTIVOS[(e.i + jugador) % MOTIVOS.length] : null,
+        }
+      }),
+  )
 
 await migrar()
 
@@ -297,8 +313,15 @@ await db.transaction(async (tx) => {
         id: sid(ENTRENO, e.n),
         plantillaId: sid(PLANTILLA, e.plantilla),
         fecha: e.fecha,
+        hora: '20:00',
+        deHorario: true,
       })),
     )
+    .onConflictDoNothing()
+
+  await tx
+    .insert(horarios)
+    .values(PLANTILLAS_CON_ENTRENOS.map((n) => ({ plantillaId: sid(PLANTILLA, n), ...HORARIO })))
     .onConflictDoNothing()
 
   await tx.insert(asistencias).values(listaAsistencias).onConflictDoNothing()

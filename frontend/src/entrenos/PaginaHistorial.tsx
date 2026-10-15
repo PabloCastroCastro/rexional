@@ -47,9 +47,12 @@ export function PaginaHistorial() {
           <h2 className={estilos.mes}>{mes}</h2>
           <ul className={estilos.lista}>
             {entrenos.map((e) => (
-              <li key={e.fecha}>
+              <li key={e.id}>
                 <Link to={`${pasarLista}?fecha=${e.fecha}`} className={estilos.entreno}>
-                  <span className={estilos.nombre}>{textoFecha(e.fecha)}</span>
+                  <span className={estilos.nombre}>
+                    {textoFecha(e.fecha)}
+                    {e.hora && ` · ${e.hora}`}
+                  </span>
                   <Recuento icono={Check} clase={estilos.asiste} n={e.asiste} texto="asisten" />
                   <Recuento
                     icono={FileText}

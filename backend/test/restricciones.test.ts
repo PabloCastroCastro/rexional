@@ -6,6 +6,7 @@ import {
   clubes,
   entrenos,
   fichas,
+  horarios,
   jugadores,
   plantillas,
 } from '../src/db/schema/index.js'
@@ -327,14 +328,52 @@ describe('entrenos y asistencias', () => {
     return { ...b, entreno }
   }
 
-  it('rechaza dos entrenos de la plantilla en la misma fecha, pero no en otra plantilla', () =>
+  it('admite varios entrenos el mismo día a distinta hora (doble sesión)', () =>
     enTransaccion(async (tx) => {
       const b = await conEntreno(tx)
-      await tx.insert(entrenos).values({ plantillaId: b.senior25.id, fecha: '2026-10-13' })
-      const r = await restriccionViolada(
-        tx.insert(entrenos).values({ plantillaId: b.senior26.id, fecha: '2026-10-13' }),
+      await tx.insert(entrenos).values([
+        { plantillaId: b.senior26.id, fecha: '2026-10-13', hora: '10:00' },
+        { plantillaId: b.senior26.id, fecha: '2026-10-13', hora: '18:00' },
+        { plantillaId: b.senior25.id, fecha: '2026-10-13' },
+      ])
+    }))
+
+  it('rechaza dos entrenos el mismo día a la misma hora, o dos sin hora', () =>
+    enTransaccion(async (tx) => {
+      const b = await conEntreno(tx)
+      // El entreno de conEntreno no tiene hora
+      let r = await restriccionViolada(
+        tx.transaction((sp) =>
+          sp
+            .insert(entrenos)
+            .values({ plantillaId: b.senior26.id, fecha: '2026-10-13' })
+            .then(() => undefined),
+        ),
       )
-      expect(r).toBe('entrenos_fecha_unica')
+      expect(r).toBe('entrenos_fecha_hora_unica')
+      await tx
+        .insert(entrenos)
+        .values({ plantillaId: b.senior26.id, fecha: '2026-10-14', hora: '20:00' })
+      r = await restriccionViolada(
+        tx
+          .insert(entrenos)
+          .values({ plantillaId: b.senior26.id, fecha: '2026-10-14', hora: '20:00' }),
+      )
+      expect(r).toBe('entrenos_fecha_hora_unica')
+    }))
+
+  it('rechaza un horario que termina antes de empezar', () =>
+    enTransaccion(async (tx) => {
+      const b = await conEntreno(tx)
+      const r = await restriccionViolada(
+        tx.insert(horarios).values({
+          plantillaId: b.senior26.id,
+          desde: '2026-10-13',
+          hasta: '2026-10-12',
+          sesiones: [{ dia: 2, hora: '20:00' }],
+        }),
+      )
+      expect(r).toBe('horarios_hasta_posterior')
     }))
 
   it('acepta la asistencia de un jugador con ficha en la plantilla del entreno', () =>

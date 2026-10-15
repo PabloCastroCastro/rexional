@@ -93,10 +93,15 @@ Este documento recoge todas las decisiones funcionales, técnicas y de organizac
 
 ### 2.3 Entrenamientos y asistencia
 
-- Pasar lista para una fecha (por defecto, hoy, en la zona horaria `Europe/Madrid`). Si el entreno no existe (no se planificó), se crea al registrar la primera asistencia.
+- **Calendario de entrenos.** Los entrenos se planifican antes de pasar lista:
+  - **Horario semanal** de la plantilla: días de la semana con su hora, y fechas desde y hasta que se eligen (por ejemplo, hasta el 25 de mayo o el 15 de junio; por defecto, el 30 de junio de la temporada). Al guardarlo se crean los entrenos de esas fechas. Al cambiarlo, se rehacen los entrenos futuros que aún no tienen asistencia; los que la tienen, los pasados y los sueltos no se tocan.
+  - **Entrenos sueltos**: un día sin entreno o una segunda sesión el mismo día (doble sesión), a otra hora.
+  - **Cancelar** un entreno, con confirmación si ya tiene asistencia.
+  - Lo gestionan el delegado y los roles superiores (los segundos entrenadores y preparadores físicos se dan de alta como delegados).
+- Pasar lista de un entreno del calendario (por defecto, el de hoy, en la zona horaria `Europe/Madrid`), nunca de uno futuro. Un día sin entreno invita a crearlo.
 - Tres estados por jugador: **asiste**, **justificada** (falta con motivo, texto opcional) y **falta**.
 - Marcar de nuevo el estado seleccionado lo deja sin registrar.
-- Historial de entrenos con el recuento de cada estado; desde el historial se puede abrir y corregir un entreno pasado.
+- Historial de entrenos con el recuento de cada estado y los próximos entrenos; los pasados sin lista se marcan; desde el historial se puede abrir y corregir un entreno pasado.
 - Porcentaje de asistencia por jugador: asistencias / entrenos en los que tiene estado registrado.
 
 ### 2.4 Partidos y convocatorias
@@ -399,8 +404,9 @@ La participación de un jugador en una plantilla (una temporada).
 |---|---|---|
 | id | uuid | PK |
 | plantilla_id | uuid → plantillas | cascade |
-| fecha | date | En `Europe/Madrid`. Única por plantilla. Desde el ciclo 7, nullable solo si `es_modelo` y única entre los que no son modelo (índice único parcial `WHERE NOT es_modelo`) |
-| hora | time | opcional (ciclo 7) |
+| fecha | date | En `Europe/Madrid`. Varios entrenos por día (doble sesión), pero no dos a la misma hora ni dos sin hora: único `(plantilla_id, fecha, hora)` con `NULLS NOT DISTINCT`. Desde el ciclo 7, nullable solo si `es_modelo` |
+| hora | time | opcional |
+| de_horario | boolean | por defecto false. true si lo creó el horario: al cambiar el horario se rehacen estos |
 | duracion_prevista | smallint | minutos, opcional (ciclo 7) |
 | objetivo | text | opcional (ciclo 7) |
 | es_modelo | boolean | por defecto false. Sesión guardada como modelo, sin fecha (ciclo 7). Los modelos no cuentan en el historial ni en el porcentaje de asistencia |
@@ -409,6 +415,17 @@ La participación de un jugador en una plantilla (una temporada).
 | created_at | timestamptz | |
 
 Las columnas marcadas como ciclo 7 se añaden con su propia migración en GH-38.
+
+### horarios
+Horario semanal de entrenos de una plantilla (uno por plantilla).
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| plantilla_id | uuid → plantillas | PK, cascade |
+| desde | date | |
+| hasta | date | `>= desde`; como mucho un año después |
+| sesiones | jsonb | lista de `{ dia, hora }`: día de la semana (1 lunes … 7 domingo) y hora `HH:MM` |
+| created_at | timestamptz | |
 
 ### asistencias
 | Campo | Tipo | Notas |
@@ -567,17 +584,20 @@ Prefijo `/api`. JSON. Todas las rutas de la plantilla cuelgan de `/plantillas`, 
 | | `DELETE /plantillas/:id` (con confirmación del nombre; borra también sus datos) | Administrador del club |
 | Jugadores | `GET /plantillas/:id/jugadores?activos=` (fichas con los datos del jugador) | Miembro (jugador: asistencia y deuda solo suyas) |
 | | `POST /plantillas/:id/jugadores` (jugador nuevo o `jugador_id` existente del club) · `PATCH /plantillas/:id/jugadores/:jid` | Delegado |
-| Entrenos | `GET /plantillas/:id/entrenos` | Miembro |
-| | `GET /plantillas/:id/entrenos/:fecha` | Miembro (jugador: solo su fila) |
-| | `PUT /plantillas/:id/entrenos/:fecha/asistencias` (lista completa) | Delegado |
+| Entrenos | `GET /plantillas/:id/horario` | Miembro |
+| | `PUT /plantillas/:id/horario` (crea y rehace sus entrenos) · `DELETE /plantillas/:id/horario` | Delegado |
+| | `GET /plantillas/:id/entrenos?desde=&hasta=` (con recuentos por estado) | Miembro |
+| | `POST /plantillas/:id/entrenos` (suelto o doble sesión) · `DELETE /plantillas/:id/entrenos/:eid` (cancelar) | Delegado |
+| | `GET /plantillas/:id/entrenos/:eid` | Miembro (jugador: solo su fila) |
+| | `PUT /plantillas/:id/entrenos/:eid/asistencias` (lista completa; no en entrenos futuros) | Delegado |
 | | `GET /plantillas/:id/asistencia/resumen` | Miembro (jugador: solo suyo) |
 | Ejercicios | `GET /clubes/:cid/ejercicios?categoria=&etiqueta=&q=&archivados=` · `GET /clubes/:cid/ejercicios/:eid` | Miembro de alguna plantilla del club |
 | | `POST/PATCH/DELETE /clubes/:cid/ejercicios/:eid` · `POST .../:eid/duplicar` · `POST .../:eid/copiar` (a otro club) | Entrenador en alguna plantilla del club |
 | | `POST /clubes/:cid/ejercicios/:eid/medios` (multipart o enlace) · `PATCH/DELETE .../medios/:mid` · `PUT .../medios/orden` | Entrenador en alguna plantilla del club |
 | | `GET /medios/:mid` y `GET /medios/:mid/miniatura` (con `Range` para vídeo) | Miembro de alguna plantilla del club del medio |
 | Planificación | `GET /plantillas/:id/sesiones?desde=&hasta=` · `GET /plantillas/:id/sesiones/modelos` | Miembro |
-| | `PUT /plantillas/:id/entrenos/:fecha/plan` (datos de sesión y lista ordenada de ejercicios) | Entrenador |
-| | `POST /plantillas/:id/entrenos/:fecha/duplicar` · `POST .../guardar-modelo` · `POST /plantillas/:id/sesiones/modelos/:mid/aplicar` | Entrenador |
+| | `PUT /plantillas/:id/entrenos/:eid/plan` (datos de sesión y lista ordenada de ejercicios) | Entrenador |
+| | `POST /plantillas/:id/entrenos/:eid/duplicar` · `POST .../guardar-modelo` · `POST /plantillas/:id/sesiones/modelos/:mid/aplicar` | Entrenador |
 | Partidos | `GET/POST /plantillas/:id/partidos` · `GET/PATCH/DELETE /plantillas/:id/partidos/:pid` | Miembro / Delegado |
 | | `PUT /plantillas/:id/partidos/:pid/convocados` (lista completa) | Delegado |
 | | `GET /plantillas/:id/partidos/:pid/mensaje` | Miembro |
@@ -964,6 +984,67 @@ Depende de GH-11 y GH-15.
 - [ ] Porcentaje de asistencia visible en cada jugador de la plantilla
 - [ ] Estado vacío cuando no hay entrenos
 
+#### GH-79
+**Título:** Nombre y apellidos del jugador
+**Etiquetas:** feature, db, backend, frontend
+
+Separar nombre y apellidos del jugador. Depende de GH-8 y GH-11.
+
+**Criterios de aceptación**
+- [ ] Columna `apellidos` en `jugadores` (opcional, nunca vacía si se indica), con migración; el seed separa nombre y apellidos
+- [ ] API de jugadores con `apellidos` en alta, edición, listados, búsqueda y trayectoria; el resto de respuestas que llevan el nombre del jugador (entrenos, asistencia) incluyen también los apellidos
+- [ ] A igual dorsal, la lista se ordena por apellidos y nombre
+- [ ] `GET /api/clubes/:cid/jugadores?q=` busca en nombre y apellidos
+- [ ] Formularios de alta y edición con nombre y apellidos; el nombre completo se muestra en listas y fichas
+- [ ] Tests
+
+#### GH-80
+**Título:** Plantilla: el buscador del club se corta en 20 y la lista no hace scroll
+**Etiquetas:** bug, backend, frontend
+
+Fallos de la plantilla detectados al probar en local. Depende de GH-8 y GH-11.
+
+**1. El buscador del club se corta en 20.** El buscador «Ya es del club» de la hoja de alta solo muestra 20 jugadores, sin avisar de que hay más: la API los limita a 20 (`GET /api/clubes/:cid/jugadores`), así que en un club con 23 jugadores faltan 3 (sin escribir nada, no aparecen ni Roi Fraga, ni Sergio Alonso, ni Xoán Rodríguez).
+
+**2. La lista de la plantilla no hace scroll.** En CD Rexional › Senior 2026-27 (11 activos) la página no se desplaza y el último jugador no se ve bien. Pendiente de reproducir: en Edge sin ventana a 1280×800 la página sí se desplaza hasta el final, también con la rueda del ratón y después de abrir y cerrar las hojas inferiores. Falta saber navegador, tamaño de ventana y zoom, y cómo se intenta desplazar.
+
+**Criterios de aceptación**
+- [ ] `GET /api/clubes/:cid/jugadores` devuelve todos los jugadores del club que coinciden con la búsqueda, sin límite
+- [ ] La lista de la plantilla se desplaza hasta el último jugador, que queda visible por encima de la barra de pestañas, en el navegador y tamaño en que se detectó el fallo
+- [ ] Tests
+
+#### GH-81
+**Título:** Calendario de entrenos: horario semanal, entrenos sueltos y doble sesión (API)
+**Etiquetas:** feature, db, backend
+
+Los entrenos se planifican antes de pasar lista: con un horario semanal de la plantilla o uno a uno, y un día puede tener varios (doble sesión). Solo se pasa lista de entrenos que existen. Sustituye el comportamiento de GH-15, en el que el entreno se creaba con la primera asistencia. Depende de GH-14 y GH-15.
+
+**Criterios de aceptación**
+- [ ] `entrenos`: sin la fecha única por plantilla (varios entrenos por día), con `hora` opcional y el horario del que sale, si sale de uno; orden por fecha y hora
+- [ ] Horario semanal de la plantilla: días de la semana con su hora, y fechas desde y hasta elegibles (por defecto, hasta el 30 de junio de la temporada)
+- [ ] `GET/PUT /api/plantillas/:id/horario`: guardarlo crea los entrenos de esas fechas; al cambiarlo, se rehacen los entrenos futuros del horario que no tienen asistencia (los que la tienen no se tocan)
+- [ ] `GET /api/plantillas/:id/entrenos?desde=&hasta=`: entrenos con fecha, hora, origen (horario o suelto) y recuentos por estado
+- [ ] `POST /api/plantillas/:id/entrenos` (fecha y hora opcional, también un día que ya tiene entreno) y `DELETE /api/plantillas/:id/entrenos/:eid` (cancelar, también con asistencia)
+- [ ] `GET /api/plantillas/:id/entrenos/:eid` y `PUT /api/plantillas/:id/entrenos/:eid/asistencias`: la asistencia va al entreno por su id; la lista vacía lo deja sin asistencias pero no lo borra; sin asistencia en entrenos futuros
+- [ ] Gestionar el horario y los entrenos: delegado o superior (los segundos entrenadores y preparadores físicos se dan de alta como delegados)
+- [ ] Seed con horario de martes y jueves y entrenos pasados y futuros
+- [ ] Documento actualizado (secciones 2.3, 6 y 7) y tests
+
+#### GH-82
+**Título:** Calendario de entrenos: horario, crear y cancelar entrenos y doble sesión (pantallas)
+**Etiquetas:** feature, frontend
+
+Pantallas del calendario de entrenos. Depende de GH-81, GH-16 y GH-17.
+
+**Criterios de aceptación**
+- [ ] Horario de la plantilla: días de la semana con su hora, desde y hasta (el «hasta» se elige: 25 de mayo, 15 de junio…), y aviso de cuántos entrenos se crearán o cambiarán
+- [ ] Pasar lista por día (‹ › y calendario, hoy por defecto) con los entrenos de ese día: sin entreno, «Crear entreno»; con varios (doble sesión), elegir la sesión por su hora; botón + para añadir otra sesión
+- [ ] Cancelar un entreno, con confirmación si ya tiene asistencia
+- [ ] En días futuros se pueden crear y cancelar entrenos, pero no pasar lista
+- [ ] Historial con los próximos entrenos y los pasados; los pasados sin lista se marcan «Sin pasar lista»; en los días con doble sesión se ve la hora
+- [ ] Controles de gestión solo para delegado o superior
+- [ ] Tests
+
 ---
 
 ### Milestone: Ciclo 3 · Convocatorias
@@ -1311,7 +1392,7 @@ Depende de GH-38 y GH-39.
 Depende de GH-38.
 
 **Criterios de aceptación**
-- [ ] `PUT /api/plantillas/:id/entrenos/:fecha/plan` guarda en una transacción los datos de la sesión y la lista ordenada de ejercicios
+- [ ] `PUT /api/plantillas/:id/entrenos/:eid/plan` guarda en una transacción los datos de la sesión y la lista ordenada de ejercicios
 - [ ] Listado de sesiones por rango de fechas con duración total y número de ejercicios
 - [ ] Duplicar una sesión en otra fecha
 - [ ] Guardar una sesión como modelo y aplicar un modelo a una fecha
