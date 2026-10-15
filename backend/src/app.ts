@@ -8,6 +8,7 @@ import { registrarPeticiones } from './peticiones.js'
 import { rutasClubes } from './rutas/clubes.js'
 import { rutasEntrenos } from './rutas/entrenos.js'
 import { rutasJugadoresClub, rutasJugadoresPlantilla } from './rutas/jugadores.js'
+import { rutasMultas } from './rutas/multas.js'
 import { rutasPartidos } from './rutas/partidos.js'
 import { rutasPlantillas } from './rutas/plantillas.js'
 import { rutasSalud } from './rutas/salud.js'
@@ -53,6 +54,7 @@ export function crearApp(dependencias: Partial<Dependencias> = {}) {
   app.route('/', rutasJugadoresClub())
   app.route('/', rutasEntrenos())
   app.route('/', rutasPartidos())
+  app.route('/', rutasMultas())
 
   if (d.documentacion) {
     app.doc31('/openapi.json', infoOpenApi)

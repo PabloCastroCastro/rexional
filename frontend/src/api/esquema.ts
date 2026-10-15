@@ -2387,6 +2387,260 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/plantillas/{id}/motivos-multa": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Catálogo de multas
+         * @description Motivos activos de la plantilla, por orden alfabético; con `inactivos=true`, también los desactivados. Lo ve cualquier miembro.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    inactivos?: "true" | "false";
+                };
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Catálogo */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MotivoMulta"][];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Añadir un motivo al catálogo
+         * @description Delegado o superior. El importe va en céntimos.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        descripcion: string;
+                        /**
+                         * @description En céntimos: 500 son 5,00 €
+                         * @example 500
+                         */
+                        importeCentimos: number;
+                        /** @enum {string|null} */
+                        tipoTarjeta?: "amarilla" | "roja" | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Motivo creado */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MotivoMulta"];
+                    };
+                };
+                /** @description Datos no válidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Ya hay un motivo activo con esa descripción */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plantillas/{id}/motivos-multa/{mid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Editar, desactivar o reactivar un motivo
+         * @description Delegado o superior. `activo: false` lo desactiva y `true` lo reactiva; `tipoTarjeta: null` quita la tarjeta. Las multas ya puestas conservan su motivo e importe.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    mid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        descripcion?: string;
+                        /**
+                         * @description En céntimos: 500 son 5,00 €
+                         * @example 500
+                         */
+                        importeCentimos?: number;
+                        /** @enum {string|null} */
+                        tipoTarjeta?: "amarilla" | "roja" | null;
+                        activo?: boolean;
+                    };
+                };
+            };
+            responses: {
+                /** @description Motivo actualizado */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MotivoMulta"];
+                    };
+                };
+                /** @description Datos no válidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Ya hay un motivo activo con esa descripción */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2614,6 +2868,22 @@ export interface components {
             texto: string;
             /** @example https://wa.me/?text=… */
             whatsapp: string;
+        };
+        MotivoMulta: {
+            /** Format: uuid */
+            id: string;
+            /** @example Llegar tarde al entreno */
+            descripcion: string;
+            /** @example 200 */
+            importeCentimos: number;
+            /**
+             * @description Tarjeta que propone este motivo al registrar las estadísticas
+             * @enum {string|null}
+             */
+            tipoTarjeta: "amarilla" | "roja" | null;
+            activo: boolean;
+            /** @description Cuántas multas se han puesto con este motivo */
+            multas: number;
         };
     };
     responses: never;

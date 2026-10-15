@@ -839,6 +839,50 @@
           "texto",
           "whatsapp"
         ]
+      },
+      "MotivoMulta": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "descripcion": {
+            "type": "string",
+            "example": "Llegar tarde al entreno"
+          },
+          "importeCentimos": {
+            "type": "integer",
+            "example": 200
+          },
+          "tipoTarjeta": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "amarilla",
+              "roja",
+              null
+            ],
+            "description": "Tarjeta que propone este motivo al registrar las estadísticas"
+          },
+          "activo": {
+            "type": "boolean"
+          },
+          "multas": {
+            "type": "integer",
+            "description": "Cuántas multas se han puesto con este motivo"
+          }
+        },
+        "required": [
+          "id",
+          "descripcion",
+          "importeCentimos",
+          "tipoTarjeta",
+          "activo",
+          "multas"
+        ]
       }
     },
     "parameters": {}
@@ -3743,6 +3787,332 @@
           },
           "404": {
             "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/motivos-multa": {
+      "get": {
+        "tags": [
+          "Multas"
+        ],
+        "summary": "Catálogo de multas",
+        "description": "Motivos activos de la plantilla, por orden alfabético; con `inactivos=true`, también los desactivados. Lo ve cualquier miembro.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ],
+              "default": "false"
+            },
+            "required": false,
+            "name": "inactivos",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Catálogo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MotivoMulta"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Multas"
+        ],
+        "summary": "Añadir un motivo al catálogo",
+        "description": "Delegado o superior. El importe va en céntimos.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "descripcion": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80
+                  },
+                  "importeCentimos": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100000,
+                    "example": 500,
+                    "description": "En céntimos: 500 son 5,00 €"
+                  },
+                  "tipoTarjeta": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "amarilla",
+                      "roja",
+                      null
+                    ]
+                  }
+                },
+                "required": [
+                  "descripcion",
+                  "importeCentimos"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Motivo creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MotivoMulta"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Ya hay un motivo activo con esa descripción",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/motivos-multa/{mid}": {
+      "patch": {
+        "tags": [
+          "Multas"
+        ],
+        "summary": "Editar, desactivar o reactivar un motivo",
+        "description": "Delegado o superior. `activo: false` lo desactiva y `true` lo reactiva; `tipoTarjeta: null` quita la tarjeta. Las multas ya puestas conservan su motivo e importe.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "mid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "descripcion": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80
+                  },
+                  "importeCentimos": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100000,
+                    "example": 500,
+                    "description": "En céntimos: 500 son 5,00 €"
+                  },
+                  "tipoTarjeta": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "amarilla",
+                      "roja",
+                      null
+                    ]
+                  },
+                  "activo": {
+                    "type": "boolean"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Motivo actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MotivoMulta"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Ya hay un motivo activo con esa descripción",
             "content": {
               "application/json": {
                 "schema": {
