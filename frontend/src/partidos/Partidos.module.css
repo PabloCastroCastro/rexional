@@ -704,3 +704,72 @@
 .barraConvocatoria [data-error] {
   color: var(--color-peligro);
 }
+
+/* Estadísticas de la temporada */
+.cifras {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--espacio-2);
+  margin: 0;
+}
+
+.cifras div {
+  display: grid;
+  gap: 2px;
+  padding: var(--espacio-3) var(--espacio-2);
+  border-radius: var(--radio-l);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra-1);
+  text-align: center;
+}
+
+.cifras dt {
+  color: var(--color-texto-suave);
+  font-size: var(--texto-xs);
+}
+
+.cifras dd {
+  margin: 0;
+  font-size: var(--texto-xl);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.nombreClasificacion {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: inherit;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.valorClasificacion {
+  display: flex;
+  flex: none;
+  gap: var(--espacio-2);
+  font-size: var(--texto-lg);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.tarjeta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  height: 2rem;
+  border-radius: var(--radio-s);
+  font-size: var(--texto-sm);
+}
+
+.tarjeta[data-tipo="amarilla"] {
+  background: #f2c230;
+  color: #1d1d1d;
+}
+
+.tarjeta[data-tipo="roja"] {
+  background: var(--color-peligro);
+  color: #fff;
+}

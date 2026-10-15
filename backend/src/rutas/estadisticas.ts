@@ -129,7 +129,7 @@ const EsquemaTrayectoria = z
     ),
     totales: z.object(datosEstadisticas),
   })
-  .openapi('TrayectoriaJugador')
+  .openapi('TrayectoriaEstadisticas')
 
 // Acumulados por plantilla y jugador en los partidos jugados, de una plantilla o de un jugador
 function acumulados(filtro: { plantillaId: string } | { jugadorId: string }) {

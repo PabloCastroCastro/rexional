@@ -8,6 +8,7 @@ import { textoFecha } from '../entrenos/datos'
 import { puedeGestionarJugadores } from '../jugadores/datos'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
 import { type ResumenPartido, textoLocal, textoResultado, usePartidos } from './datos'
+import { Estadisticas } from './Estadisticas'
 import { FormularioPartido } from './FormularioPartido'
 import estilos from './Partidos.module.css'
 
@@ -17,7 +18,9 @@ export function PaginaPartidos() {
   const gestiona = puedeGestionarJugadores(plantilla)
   const navegar = useNavigate()
   const [parametros, setParametros] = useSearchParams()
-  const pasados = parametros.get('ver') === 'pasados'
+  const ver = parametros.get('ver')
+  const pasados = ver === 'pasados'
+  const enEstadisticas = ver === 'estadisticas'
   const partidos = usePartidos(plantilla.id, pasados ? 'pasados' : 'proximos')
   const [creando, setCreando] = useState(false)
 
@@ -36,7 +39,11 @@ export function PaginaPartidos() {
 
       <fieldset className={estilos.segmentos}>
         <legend className="solo-lectores">Ver</legend>
-        <button type="button" aria-pressed={!pasados} onClick={() => setParametros({})}>
+        <button
+          type="button"
+          aria-pressed={!pasados && !enEstadisticas}
+          onClick={() => setParametros({})}
+        >
           Próximos
         </button>
         <button
@@ -46,9 +53,18 @@ export function PaginaPartidos() {
         >
           Pasados
         </button>
+        <button
+          type="button"
+          aria-pressed={enEstadisticas}
+          onClick={() => setParametros({ ver: 'estadisticas' })}
+        >
+          Estadísticas
+        </button>
       </fieldset>
 
-      {partidos.isPending ? (
+      {enEstadisticas ? (
+        <Estadisticas />
+      ) : partidos.isPending ? (
         <Cargando />
       ) : partidos.isError ? (
         <p className={estilos.error} role="alert">

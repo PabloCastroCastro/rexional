@@ -3054,7 +3054,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["TrayectoriaJugador"];
+                        "application/json": components["schemas"]["TrayectoriaEstadisticas"];
                     };
                 };
                 /** @description Sin sesión */
@@ -4526,6 +4526,41 @@ export interface components {
             rojas: number;
             /** @description Goles en propia puerta */
             golesPropia: number;
+        };
+        TrayectoriaEstadisticas: {
+            /** Format: uuid */
+            jugadorId: string;
+            nombre: string;
+            apellidos: string | null;
+            temporadas: {
+                /** Format: uuid */
+                plantillaId: string;
+                plantilla: string;
+                temporada: string;
+                dorsal: number | null;
+                /** @description Partidos jugados (con algún minuto) */
+                partidos: number;
+                titularidades: number;
+                minutos: number;
+                goles: number;
+                asistencias: number;
+                amarillas: number;
+                rojas: number;
+                /** @description Goles en propia puerta */
+                golesPropia: number;
+            }[];
+            totales: {
+                /** @description Partidos jugados (con algún minuto) */
+                partidos: number;
+                titularidades: number;
+                minutos: number;
+                goles: number;
+                asistencias: number;
+                amarillas: number;
+                rojas: number;
+                /** @description Goles en propia puerta */
+                golesPropia: number;
+            };
         };
         ActaLeida: {
             acta: {

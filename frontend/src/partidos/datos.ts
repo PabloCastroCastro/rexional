@@ -95,3 +95,54 @@ export const urlActa = (plantillaId: string, partidoId: string) =>
 // "7–1" si el partido se ha jugado
 export const textoResultado = (p: { golesFavor: number | null; golesContra: number | null }) =>
   p.golesFavor === null || p.golesContra === null ? null : `${p.golesFavor}–${p.golesContra}`
+
+export type EstadisticasPlantilla = components['schemas']['EstadisticasPlantilla']
+export type EstadisticasJugador = components['schemas']['EstadisticasJugador']
+export type TrayectoriaEstadisticas = components['schemas']['TrayectoriaEstadisticas']
+
+// Resultados del equipo y acumulados por jugador en los partidos jugados de la plantilla
+export const useEstadisticas = (plantillaId: string) =>
+  useQuery({
+    queryKey: [...CLAVE_PARTIDOS, plantillaId, 'estadisticas'],
+    queryFn: () =>
+      datos(
+        api.GET('/api/plantillas/{id}/estadisticas', { params: { path: { id: plantillaId } } }),
+      ),
+  })
+
+// Estadísticas del jugador en cada temporada en el club
+export const useTrayectoriaEstadisticas = (clubId: string, jugadorId: string, activa = true) =>
+  useQuery({
+    queryKey: [...CLAVE_PARTIDOS, 'trayectoria', clubId, jugadorId],
+    queryFn: () =>
+      datos(
+        api.GET('/api/clubes/{cid}/jugadores/{jid}/estadisticas', {
+          params: { path: { cid: clubId, jid: jugadorId } },
+        }),
+      ),
+    enabled: activa,
+  })
+
+const plural = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno : varios}`
+
+// "4 partidos (3 de titular) · 360' · 2 goles · 1 asistencia · 1 amarilla"
+export function resumenEstadisticas(e: {
+  partidos: number
+  titularidades: number
+  minutos: number
+  goles: number
+  asistencias: number
+  amarillas: number
+  rojas: number
+}) {
+  return [
+    `${plural(e.partidos, 'partido', 'partidos')}${e.titularidades > 0 ? ` (${e.titularidades} de titular)` : ''}`,
+    e.minutos > 0 && `${e.minutos}'`,
+    e.goles > 0 && plural(e.goles, 'gol', 'goles'),
+    e.asistencias > 0 && plural(e.asistencias, 'asistencia', 'asistencias'),
+    e.amarillas > 0 && plural(e.amarillas, 'amarilla', 'amarillas'),
+    e.rojas > 0 && plural(e.rojas, 'roja', 'rojas'),
+  ]
+    .filter(Boolean)
+    .join(' · ')
+}
