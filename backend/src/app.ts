@@ -7,6 +7,7 @@ import { manejarError, rutaNoEncontrada, soloMismoOrigen, validacionFallida } fr
 import { registrarPeticiones } from './peticiones.js'
 import { rutasClubes } from './rutas/clubes.js'
 import { rutasEntrenos } from './rutas/entrenos.js'
+import { rutasEstadisticas, rutasEstadisticasClub } from './rutas/estadisticas.js'
 import { rutasJugadoresClub, rutasJugadoresPlantilla } from './rutas/jugadores.js'
 import { rutasMultas, rutasMultasJugadores } from './rutas/multas.js'
 import { rutasPartidos } from './rutas/partidos.js'
@@ -54,6 +55,8 @@ export function crearApp(dependencias: Partial<Dependencias> = {}) {
   app.route('/', rutasJugadoresClub())
   app.route('/', rutasEntrenos())
   app.route('/', rutasPartidos())
+  app.route('/', rutasEstadisticas())
+  app.route('/', rutasEstadisticasClub())
   app.route('/', rutasMultas())
   app.route('/', rutasMultasJugadores())
 
