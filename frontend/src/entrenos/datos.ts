@@ -52,3 +52,34 @@ export function textoFecha(fecha: string) {
   if (fecha === sumarDias(actual, -1)) return `Ayer · ${dia}`
   return dia
 }
+
+export type ResumenEntreno = components['schemas']['ResumenEntreno']
+export type AsistenciaJugador = components['schemas']['AsistenciaJugador']
+
+export const useHistorial = (plantillaId: string) =>
+  useQuery({
+    queryKey: [...CLAVE_ENTRENOS, plantillaId, 'historial'],
+    queryFn: () =>
+      datos(api.GET('/api/plantillas/{id}/entrenos', { params: { path: { id: plantillaId } } })),
+  })
+
+// Asistencia por jugador (el rol jugador solo recibe la suya)
+export const useResumenAsistencia = (plantillaId: string) =>
+  useQuery({
+    queryKey: [...CLAVE_ENTRENOS, plantillaId, 'resumen'],
+    queryFn: () =>
+      datos(
+        api.GET('/api/plantillas/{id}/asistencia/resumen', {
+          params: { path: { id: plantillaId } },
+        }),
+      ),
+  })
+
+const formatoMes = new Intl.DateTimeFormat('es-ES', {
+  month: 'long',
+  year: 'numeric',
+  timeZone: 'UTC',
+})
+
+// "octubre de 2026"
+export const textoMes = (fecha: string) => formatoMes.format(new Date(`${fecha}T12:00:00Z`))

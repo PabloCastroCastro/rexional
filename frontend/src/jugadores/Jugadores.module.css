@@ -107,7 +107,14 @@ a.fila:hover {
 
 .texto {
   display: grid;
+  flex: 1;
   min-width: 0;
+}
+
+.asistencia {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
 }
 
 .texto strong {

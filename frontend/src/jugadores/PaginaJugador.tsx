@@ -4,6 +4,8 @@ import { Link, useNavigate, useParams } from 'react-router'
 import { Boton } from '../componentes/Boton'
 import { Cargando } from '../componentes/Cargando'
 import { EstadoVacio } from '../componentes/EstadoVacio'
+import { useResumenAsistencia } from '../entrenos/datos'
+import { Porcentaje } from '../entrenos/Porcentaje'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
 import { useBajaYReactivacion } from './acciones'
 import { type JugadorPlantilla, POSICIONES, puedeGestionarJugadores, useTrayectoria } from './datos'
@@ -18,8 +20,10 @@ export function PaginaJugador() {
   const { jugadorId = '' } = useParams()
   const navegar = useNavigate()
   const trayectoria = useTrayectoria(plantilla.clubId, jugadorId)
+  const resumen = useResumenAsistencia(plantilla.id)
+  const asistencia = resumen.data?.find((r) => r.jugadorId === jugadorId)
   const [formulario, setFormulario] = useState<ModoFormulario | null>(null)
-  const lista = `/p/${plantilla.id}/plantilla`
+  const lista = `/plantillas/${plantilla.id}/jugadores`
   const { darDeBaja, reactivar, pendiente } = useBajaYReactivacion({
     alDarDeBaja: () => navegar(lista),
     alDorsalOcupado: (j, mensaje) =>
@@ -103,6 +107,24 @@ export function PaginaJugador() {
             </Boton>
           )}
         </div>
+      )}
+
+      {asistencia && (
+        <section className={estilos.seccion} aria-labelledby="asistencia">
+          <h2 id="asistencia">Asistencia en esta plantilla</h2>
+          <p className={estilos.asistencia}>
+            <Porcentaje valor={asistencia.porcentaje} />
+            <span className={estilos.secundario}>
+              {asistencia.porcentaje === null
+                ? 'Todavía sin entrenos registrados'
+                : [
+                    `${asistencia.asiste} ${asistencia.asiste === 1 ? 'asistencia' : 'asistencias'}`,
+                    `${asistencia.justificada} ${asistencia.justificada === 1 ? 'justificada' : 'justificadas'}`,
+                    `${asistencia.falta} ${asistencia.falta === 1 ? 'falta' : 'faltas'}`,
+                  ].join(' · ')}
+            </span>
+          </p>
+        </section>
       )}
 
       <section className={estilos.seccion} aria-labelledby="trayectoria">

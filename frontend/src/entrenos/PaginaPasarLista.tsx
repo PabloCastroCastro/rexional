@@ -46,8 +46,6 @@ export function PaginaPasarLista() {
 
   return (
     <div className={estilos.pagina}>
-      <h1>Pasar lista</h1>
-
       <nav className={estilos.fecha} aria-label="Fecha del entreno">
         <button
           type="button"

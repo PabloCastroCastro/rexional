@@ -4,6 +4,8 @@ import { Link, useSearchParams } from 'react-router'
 import { Boton } from '../componentes/Boton'
 import { Cargando } from '../componentes/Cargando'
 import { EstadoVacio } from '../componentes/EstadoVacio'
+import { useResumenAsistencia } from '../entrenos/datos'
+import { Porcentaje } from '../entrenos/Porcentaje'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
 import { useBajaYReactivacion } from './acciones'
 import { type JugadorPlantilla, POSICIONES, puedeGestionarJugadores, useJugadores } from './datos'
@@ -17,6 +19,9 @@ export function PaginaPlantilla() {
   const [parametros, setParametros] = useSearchParams()
   const verBajas = parametros.get('ver') === 'bajas'
   const jugadores = useJugadores(plantilla.id, !verBajas)
+  // Asistencia de cada jugador; al rol jugador solo le llega la suya
+  const resumen = useResumenAsistencia(plantilla.id)
+  const porcentajes = new Map(resumen.data?.map((r) => [r.jugadorId, r.porcentaje]))
   const gestiona = puedeGestionarJugadores(plantilla)
   const [formulario, setFormulario] = useState<ModoFormulario | null>(null)
   const { reactivar, pendiente } = useBajaYReactivacion({
@@ -87,12 +92,12 @@ export function PaginaPlantilla() {
             <li key={j.jugadorId}>
               {gestiona ? (
                 <Link to={j.jugadorId} className={estilos.fila}>
-                  <Datos jugador={j} />
+                  <Datos jugador={j} porcentaje={porcentajes.get(j.jugadorId)} />
                   <ChevronRight aria-hidden size={20} className={estilos.flecha} />
                 </Link>
               ) : (
                 <div className={estilos.fila}>
-                  <Datos jugador={j} />
+                  <Datos jugador={j} porcentaje={porcentajes.get(j.jugadorId)} />
                 </div>
               )}
               {gestiona && verBajas && (
@@ -125,7 +130,13 @@ export function Dorsal({ dorsal }: { dorsal: number | null }) {
   )
 }
 
-function Datos({ jugador }: { jugador: JugadorPlantilla }) {
+function Datos({
+  jugador,
+  porcentaje,
+}: {
+  jugador: JugadorPlantilla
+  porcentaje: number | null | undefined
+}) {
   return (
     <>
       <Dorsal dorsal={jugador.dorsal} />
@@ -135,6 +146,7 @@ function Datos({ jugador }: { jugador: JugadorPlantilla }) {
           {jugador.posicion ? POSICIONES[jugador.posicion] : 'Sin posición'}
         </span>
       </span>
+      <Porcentaje valor={porcentaje} />
     </>
   )
 }

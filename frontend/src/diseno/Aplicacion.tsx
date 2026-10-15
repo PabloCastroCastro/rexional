@@ -8,7 +8,7 @@ import { ActualizacionPwa } from '../pwa/ActualizacionPwa'
 import estilos from './Aplicacion.module.css'
 
 const secciones = [
-  { ruta: 'plantilla', texto: 'Plantilla', icono: Users },
+  { ruta: 'jugadores', texto: 'Plantilla', icono: Users },
   { ruta: 'entrenos', texto: 'Entrenos', icono: ClipboardCheck },
   { ruta: 'partidos', texto: 'Partidos', icono: CalendarDays },
   { ruta: 'multas', texto: 'Multas', icono: Coins },
@@ -24,7 +24,7 @@ export function Aplicacion() {
   const [cambiando, setCambiando] = useState(false)
 
   // Al cambiar de plantilla se mantiene la sección: de los entrenos de una a los de la otra
-  const seccionActual = ubicacion.pathname.split('/')[3] ?? 'plantilla'
+  const seccionActual = ubicacion.pathname.split('/')[3] ?? 'jugadores'
 
   return (
     <div className={estilos.aplicacion}>
@@ -61,7 +61,7 @@ export function Aplicacion() {
         {secciones.map(({ ruta, texto, icono: Icono }) => (
           <NavLink
             key={ruta}
-            to={`/p/${plantilla.id}/${ruta}`}
+            to={`/plantillas/${plantilla.id}/${ruta}`}
             className={({ isActive }) =>
               [estilos.enlace, isActive && estilos.activo].filter(Boolean).join(' ')
             }
@@ -81,7 +81,7 @@ export function Aplicacion() {
           actualId={plantilla.id}
           alElegir={(id) => {
             setCambiando(false)
-            navegar(`/p/${id}/${seccionActual}`)
+            navegar(`/plantillas/${id}/${seccionActual}`)
           }}
         />
       </HojaInferior>

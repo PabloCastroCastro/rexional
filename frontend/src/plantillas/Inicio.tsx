@@ -13,5 +13,5 @@ export function Inicio() {
   const ultima = leerUltimaPlantilla(sesion.data.user.id)
 
   const destino = lista.find((p) => p.id === ultima) ?? (lista.length === 1 ? lista[0] : undefined)
-  return <Navigate to={destino ? `/p/${destino.id}/plantilla` : '/plantillas'} replace />
+  return <Navigate to={destino ? `/plantillas/${destino.id}/jugadores` : '/plantillas'} replace />
 }

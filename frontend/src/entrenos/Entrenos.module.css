@@ -224,3 +224,111 @@
   color: var(--color-peligro);
   font-size: var(--texto-sm);
 }
+
+/* Pestañas de la sección: Pasar lista | Historial */
+.pestanas {
+  display: grid;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
+  gap: var(--espacio-1);
+  padding: var(--espacio-1);
+  border-radius: var(--radio-m);
+  background: var(--color-superficie-alterna);
+}
+
+.pestanas a {
+  display: grid;
+  place-items: center;
+  min-height: calc(var(--altura-tactil) - var(--espacio-2));
+  border-radius: var(--radio-s);
+  color: var(--color-texto-suave);
+  font-weight: var(--peso-medio);
+  text-decoration: none;
+}
+
+.pestanas a.activa {
+  background: var(--color-superficie);
+  color: var(--color-texto);
+  box-shadow: var(--sombra-1);
+}
+
+/* Historial */
+.meses {
+  display: grid;
+  gap: var(--espacio-4);
+}
+
+.mes {
+  margin-bottom: var(--espacio-2);
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
+}
+
+.mes::first-letter {
+  text-transform: uppercase;
+}
+
+.entreno {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  min-height: var(--altura-tactil);
+  color: inherit;
+  text-decoration: none;
+}
+
+.entreno .nombre::first-letter {
+  text-transform: uppercase;
+}
+
+.recuento {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 2.5rem;
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.recuento.asiste {
+  color: var(--color-exito);
+}
+
+.recuento.justificada {
+  color: var(--color-aviso);
+}
+
+.recuento.falta {
+  color: var(--color-peligro);
+}
+
+/* Porcentaje de asistencia */
+.porcentaje {
+  flex: none;
+  min-width: 3.25rem;
+  padding: 2px var(--espacio-2);
+  border-radius: var(--radio-completo);
+  background: var(--color-superficie-alterna);
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.porcentaje[data-nivel="alto"] {
+  background: color-mix(in srgb, var(--color-exito) 15%, transparent);
+  color: var(--color-exito);
+}
+
+.porcentaje[data-nivel="medio"] {
+  background: color-mix(in srgb, var(--color-aviso) 15%, transparent);
+  color: var(--color-aviso);
+}
+
+.porcentaje[data-nivel="bajo"] {
+  background: color-mix(in srgb, var(--color-peligro) 15%, transparent);
+  color: var(--color-peligro);
+}

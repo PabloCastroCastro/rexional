@@ -23,7 +23,7 @@ import {
 describe('login', () => {
   it('sin sesión cualquier página lleva al login', async () => {
     manejadores['GET /api/auth/get-session'] = sinSesion
-    const router = abrir('/p/p1/entrenos')
+    const router = abrir('/plantillas/p1/entrenos')
     expect(await screen.findByLabelText(/Email/)).toBeInTheDocument()
     expect(ruta(router)).toBe('/login')
   })
@@ -73,7 +73,7 @@ describe('login', () => {
     expect(
       await screen.findByRole('button', { name: /Plantilla Senior, temporada 2026-27/ }),
     ).toBeInTheDocument()
-    expect(ruta(router)).toBe('/p/p1/plantilla')
+    expect(ruta(router)).toBe('/plantillas/p1/jugadores')
   })
 
   it('el botón muestra y oculta la contraseña', async () => {
@@ -96,7 +96,7 @@ describe('elegir la plantilla', () => {
     expect(temporadas).toEqual(['Temporada 2026-27', 'Temporada 2025-26'])
 
     await userEvent.click(screen.getByRole('button', { name: /Juvenil/ }))
-    expect(ruta(router)).toBe('/p/p2/plantilla')
+    expect(ruta(router)).toBe('/plantillas/p2/jugadores')
   })
 
   it('entra directamente en la última plantilla usada', async () => {
@@ -104,18 +104,18 @@ describe('elegir la plantilla', () => {
     localStorage.setItem('vestuario:ultima-plantilla:u1', 'p2')
     const router = abrir('/')
     expect(await screen.findByRole('button', { name: /Plantilla Juvenil/ })).toBeInTheDocument()
-    expect(ruta(router)).toBe('/p/p2/plantilla')
+    expect(ruta(router)).toBe('/plantillas/p2/jugadores')
   })
 
   it('cambia de plantilla desde la cabecera manteniendo la sección', async () => {
     conDatos({ plantillas: [juvenil26, senior26, senior25] })
-    const router = abrir('/p/p1/entrenos')
+    const router = abrir('/plantillas/p1/entrenos')
     await userEvent.click(await screen.findByRole('button', { name: /Cambiar de plantilla/ }))
     const hoja = screen.getByRole('dialog', { name: 'Cambiar de plantilla' })
     expect(within(hoja).getByRole('button', { name: /Senior/, current: true })).toBeInTheDocument()
 
     await userEvent.click(within(hoja).getAllByRole('button', { name: /Senior/ })[1] as HTMLElement)
-    expect(ruta(router)).toBe('/p/p3/entrenos')
+    expect(ruta(router)).toBe('/plantillas/p3/entrenos')
     expect(
       screen.getByRole('button', { name: /Plantilla Senior, temporada 2025-26/ }),
     ).toBeInTheDocument()
@@ -124,7 +124,7 @@ describe('elegir la plantilla', () => {
 
   it('una plantilla sin acceso muestra el aviso y el enlace al selector', async () => {
     conDatos({ plantillas: [senior26] })
-    abrir('/p/otra/plantilla')
+    abrir('/plantillas/otra/jugadores')
     expect(
       await screen.findByRole('heading', { name: 'No tienes acceso a esta plantilla' }),
     ).toBeInTheDocument()
@@ -172,7 +172,7 @@ describe('crear una plantilla', () => {
     await userEvent.click(within(hoja).getByRole('button', { name: 'Crear' }))
 
     expect(await screen.findByRole('button', { name: /Plantilla Senior/ })).toBeInTheDocument()
-    expect(ruta(router)).toBe('/p/nueva/plantilla')
+    expect(ruta(router)).toBe('/plantillas/nueva/jugadores')
     expect(peticiones.find((p) => p.clave === 'POST /api/plantillas')?.cuerpo).toEqual({
       clubId: 'c1',
       nombre: 'Senior',
@@ -190,7 +190,7 @@ describe('crear una plantilla', () => {
       `${Number(actual.slice(0, 4)) - 1}-${actual.slice(2, 4)}`,
     )
     conDatos({ plantillas: [previa] })
-    abrir('/p/previa/plantilla')
+    abrir('/plantillas/previa/jugadores')
     await userEvent.click(await screen.findByRole('button', { name: /Cambiar de plantilla/ }))
     await userEvent.click(screen.getByRole('button', { name: 'Nueva plantilla' }))
     const hoja = screen.getByRole('dialog', { name: 'Nueva plantilla' })
@@ -228,10 +228,10 @@ describe('sesión', () => {
     manejadores['GET /api/auth/get-session'] = sesionActiva
     manejadores['GET /api/plantillas'] = () =>
       json({ error: { codigo: 'no_autenticado', mensaje: 'x' } }, 401)
-    const router = abrir('/p/p1/entrenos')
+    const router = abrir('/plantillas/p1/entrenos')
     expect(await screen.findByText(/Tu sesión ha caducado/)).toBeInTheDocument()
     expect(ruta(router)).toBe('/login')
-    expect(router.state.location.state).toEqual({ volver: '/p/p1/entrenos' })
+    expect(router.state.location.state).toEqual({ volver: '/plantillas/p1/entrenos' })
   })
 
   it('cerrar sesión vuelve al login', async () => {
@@ -242,7 +242,7 @@ describe('sesión', () => {
       conectado = false
       return json({ success: true })
     }
-    const router = abrir('/p/p1/mas')
+    const router = abrir('/plantillas/p1/mas')
     expect(await screen.findByText('Ana Administradora')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Cerrar sesión' }))
     expect(await screen.findByLabelText(/Email/)).toBeInTheDocument()
@@ -253,7 +253,7 @@ describe('sesión', () => {
 describe('navegación de una plantilla', () => {
   it('muestra las cinco secciones de la plantilla activa y marca la actual', async () => {
     conDatos({ plantillas: [senior26] })
-    abrir('/p/p1/plantilla')
+    abrir('/plantillas/p1/jugadores')
     const navegacion = await screen.findByRole('navigation', { name: 'Secciones' })
     const enlaces = within(navegacion).getAllByRole('link')
     expect(enlaces.map((a) => a.textContent)).toEqual([
@@ -263,7 +263,7 @@ describe('navegación de una plantilla', () => {
       'Multas',
       'Más',
     ])
-    expect(enlaces.map((a) => a.getAttribute('href'))).toContain('/p/p1/entrenos')
+    expect(enlaces.map((a) => a.getAttribute('href'))).toContain('/plantillas/p1/entrenos')
     await userEvent.click(within(navegacion).getByRole('link', { name: 'Entrenos' }))
     expect(within(navegacion).getByRole('link', { name: 'Entrenos' })).toHaveAttribute(
       'aria-current',
@@ -273,7 +273,7 @@ describe('navegación de una plantilla', () => {
 
   it('una sección desconocida muestra la página de no encontrada', async () => {
     conDatos({ plantillas: [senior26] })
-    abrir('/p/p1/no-existe')
+    abrir('/plantillas/p1/no-existe')
     expect(
       await screen.findByRole('heading', { name: 'Esta página no existe' }),
     ).toBeInTheDocument()
