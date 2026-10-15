@@ -102,3 +102,64 @@ const formatoMes = new Intl.DateTimeFormat('es-ES', {
 
 // "octubre de 2026"
 export const textoMes = (fecha: string) => formatoMes.format(new Date(`${fecha}T12:00:00Z`))
+
+// --- Calendario: horario semanal, próximos entrenos ---
+
+// El esquema admite null (plantilla sin horario)
+export type Horario = NonNullable<components['schemas']['Horario']>
+export type SesionHorario = components['schemas']['SesionHorario']
+
+export const useHorario = (plantillaId: string) =>
+  useQuery({
+    queryKey: [...CLAVE_ENTRENOS, plantillaId, 'horario'],
+    queryFn: () =>
+      datos(api.GET('/api/plantillas/{id}/horario', { params: { path: { id: plantillaId } } })),
+  })
+
+// Los próximos entrenos, del más cercano al más lejano
+export const useProximos = (plantillaId: string, cuantos = 5) =>
+  useQuery({
+    queryKey: [...CLAVE_ENTRENOS, plantillaId, 'proximos'],
+    queryFn: async () => {
+      const futuros = await datos(
+        api.GET('/api/plantillas/{id}/entrenos', {
+          params: { path: { id: plantillaId }, query: { desde: sumarDias(hoy(), 1) } },
+        }),
+      )
+      // La API los da del más lejano al más cercano y, dentro de un día, por hora
+      return [...futuros]
+        .sort(
+          (a, b) => a.fecha.localeCompare(b.fecha) || (a.hora ?? '').localeCompare(b.hora ?? ''),
+        )
+        .slice(0, cuantos)
+    },
+  })
+
+// Día de la semana ISO: 1 lunes … 7 domingo
+export const diaSemana = (fecha: string) => new Date(`${fecha}T12:00:00Z`).getUTCDay() || 7
+
+// Cuántos entrenos crea un horario al guardarlo: los de las fechas entre «desde» (o hoy, si es
+// anterior) y «hasta» cuyo día de la semana tiene sesión. La misma regla que la API.
+export function entrenosDelHorario(
+  horario: { desde: string; hasta: string; sesiones: SesionHorario[] },
+  actual = hoy(),
+) {
+  let total = 0
+  const inicio = horario.desde > actual ? horario.desde : actual
+  for (let fecha = inicio; fecha <= horario.hasta; fecha = sumarDias(fecha, 1)) {
+    total += horario.sesiones.filter((s) => s.dia === diaSemana(fecha)).length
+  }
+  return total
+}
+
+// Último día por defecto de un horario: el 30 de junio de la temporada (2026-27 → 2027-06-30)
+export const finDeTemporada = (temporada: string) => `${Number(temporada.slice(0, 4)) + 1}-06-30`
+
+const formatoCorto = new Intl.DateTimeFormat('es-ES', {
+  day: 'numeric',
+  month: 'long',
+  timeZone: 'UTC',
+})
+
+// "15 de octubre"
+export const textoDiaMes = (fecha: string) => formatoCorto.format(new Date(`${fecha}T12:00:00Z`))

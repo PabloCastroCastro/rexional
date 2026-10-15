@@ -96,11 +96,10 @@ const esperarGuardado = () =>
   waitFor(() => expect(screen.getByText('Guardado')).toBeInTheDocument(), { timeout: 3000 })
 
 describe('fecha', () => {
-  it('abre el día de hoy y no deja pasar al día siguiente', async () => {
+  it('abre el día de hoy y se mueve por días, también futuros', async () => {
     conEntrenos({ [HOY]: [IKER], [AYER]: [BRAIS] })
     const router = abrir('/plantillas/p1/entrenos')
     expect(await screen.findByText(/Hoy · miércoles, 14 oct/)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Día siguiente' })).toBeDisabled()
 
     await userEvent.click(screen.getByRole('button', { name: 'Día anterior' }))
     expect(await screen.findByText(/Ayer · martes, 13 oct/)).toBeInTheDocument()
@@ -110,11 +109,15 @@ describe('fecha', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Día siguiente' }))
     expect(await screen.findByText(/Hoy/)).toBeInTheDocument()
     expect(ruta(router)).toBe('/plantillas/p1/entrenos')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Día siguiente' }))
+    expect(await screen.findByText(/jueves, 15 oct/)).toBeInTheDocument()
+    expect(await screen.findByText('No hay entreno este día')).toBeInTheDocument()
   })
 
-  it('una fecha futura en la URL abre hoy', async () => {
+  it('una fecha no válida en la URL abre hoy', async () => {
     conEntrenos({ [HOY]: [IKER] })
-    abrir('/plantillas/p1/entrenos?fecha=2026-10-20')
+    abrir('/plantillas/p1/entrenos?fecha=2026-02-30')
     expect(await screen.findByText(/Hoy · miércoles/)).toBeInTheDocument()
   })
 })

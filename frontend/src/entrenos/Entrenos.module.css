@@ -1,5 +1,7 @@
 .pagina {
   display: grid;
+  /* La columna no crece más que la pantalla aunque una fila sea ancha */
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--espacio-4);
 }
 
@@ -40,7 +42,15 @@
   place-items: center;
   min-height: var(--altura-tactil);
   font-weight: var(--peso-medio);
-  text-transform: capitalize;
+}
+
+/* Solo la primera letra en mayúscula: «Jueves, 8 oct» */
+.dia span {
+  display: block;
+}
+
+.dia span::first-letter {
+  text-transform: uppercase;
 }
 
 .dia input {
@@ -116,6 +126,7 @@
 
 .lista {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -255,6 +266,7 @@
 /* Historial */
 .meses {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--espacio-4);
 }
 
@@ -331,4 +343,121 @@
 .porcentaje[data-nivel="bajo"] {
   background: color-mix(in srgb, var(--color-peligro) 15%, transparent);
   color: var(--color-peligro);
+}
+
+/* Sesiones del día: una pastilla por entreno y + para añadir otra */
+.sesiones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.sesiones button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-1);
+  min-height: var(--altura-tactil);
+  padding: 0 var(--espacio-3);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-completo);
+  background: var(--color-superficie);
+  color: var(--color-texto);
+  font-weight: var(--peso-medio);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.sesiones button[aria-pressed="true"] {
+  border-color: var(--color-primario);
+  background: var(--color-primario);
+  color: var(--color-sobre-primario);
+}
+
+.sesiones .anadirSesion {
+  justify-content: center;
+  width: var(--altura-tactil);
+  padding: 0;
+  border-style: dashed;
+  color: var(--color-acento);
+}
+
+.aviso {
+  padding: var(--espacio-3);
+  border-radius: var(--radio-m);
+  background: var(--color-superficie-alterna);
+  font-size: var(--texto-sm);
+}
+
+.formulario {
+  display: grid;
+  gap: var(--espacio-4);
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-2);
+}
+
+/* Horario: siete botones de día y una hora por día marcado */
+.diasSemana {
+  display: grid;
+  gap: var(--espacio-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.diasSemana legend {
+  margin-bottom: var(--espacio-2);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
+}
+
+.botonesDias {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: var(--espacio-1);
+}
+
+.botonesDias button {
+  min-height: var(--altura-tactil);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-m);
+  background: var(--color-superficie);
+  color: var(--color-texto);
+  font-weight: var(--peso-fuerte);
+  cursor: pointer;
+}
+
+.botonesDias button[aria-pressed="true"] {
+  border-color: var(--color-primario);
+  background: var(--color-primario);
+  color: var(--color-sobre-primario);
+}
+
+.horasDias {
+  display: grid;
+  align-items: start;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: var(--espacio-3);
+}
+
+.errorCampo {
+  color: var(--color-peligro);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
+}
+
+.sinLista {
+  padding: 2px var(--espacio-2);
+  border-radius: var(--radio-completo);
+  background: color-mix(in srgb, var(--color-aviso) 15%, transparent);
+  color: var(--color-aviso);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
 }
