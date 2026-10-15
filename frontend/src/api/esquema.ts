@@ -2641,6 +2641,471 @@ export interface paths {
         };
         trace?: never;
     };
+    "/api/plantillas/{id}/multas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Multas
+         * @description Multas de la plantilla, la más reciente primero, con filtros por jugador y estado. El rol jugador solo recibe las suyas.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    jugador?: string;
+                    estado?: "pendientes" | "cobradas";
+                };
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Multas */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Multa"][];
+                    };
+                };
+                /** @description Filtros no válidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Poner una multa
+         * @description Delegado o superior. Con `motivoId`, copia la descripción y el importe del motivo activo del catálogo (el importe se puede cambiar); con `motivo`, texto libre e importe obligatorio. La fecha, por defecto, es hoy.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        jugadorId: string;
+                        /** Format: uuid */
+                        motivoId: string;
+                        /**
+                         * @description Si no se indica, el del catálogo
+                         * @example 500
+                         */
+                        importeCentimos?: number;
+                        /** @example 2026-10-13 */
+                        fecha?: string;
+                    } | {
+                        /** Format: uuid */
+                        jugadorId: string;
+                        motivo: string;
+                        /**
+                         * @description En céntimos: 500 son 5,00 €
+                         * @example 500
+                         */
+                        importeCentimos: number;
+                        /** @example 2026-10-13 */
+                        fecha?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Multa puesta */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Multa"];
+                    };
+                };
+                /** @description Datos no válidos, motivo no válido o jugador sin ficha */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plantillas/{id}/multas/{mid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Borrar una multa
+         * @description Delegado o superior.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    mid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Multa borrada */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /**
+         * Editar, cobrar o deshacer el cobro de una multa
+         * @description Delegado o superior. `fechaPago` con una fecha la cobra y `fechaPago: null` deshace el cobro; la fecha de cobro no puede ser anterior a la de la multa.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    mid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        motivo?: string;
+                        /**
+                         * @description En céntimos: 500 son 5,00 €
+                         * @example 500
+                         */
+                        importeCentimos?: number;
+                        /** @example 2026-10-13 */
+                        fecha?: string;
+                        /** @example 2026-10-13 */
+                        fechaPago?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Multa actualizada */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Multa"];
+                    };
+                };
+                /** @description Datos no válidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/api/plantillas/{id}/jugadores/{jid}/saldar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Saldar las multas de un jugador
+         * @description Delegado o superior. Cobra de una vez todas sus multas pendientes en la plantilla, con la fecha indicada o la de hoy.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    jid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @example 2026-10-13 */
+                        fecha?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Multas cobradas */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MultasSaldadas"];
+                    };
+                };
+                /** @description Datos no válidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plantillas/{id}/multas/resumen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Caja y deudas
+         * @description Delegado o superior. Total pendiente de cobro, total en caja (cobrado) y deuda de cada jugador con algo pendiente, de mayor a menor.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Resumen */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ResumenMultas"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2884,6 +3349,46 @@ export interface components {
             activo: boolean;
             /** @description Cuántas multas se han puesto con este motivo */
             multas: number;
+        };
+        Multa: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            jugadorId: string;
+            nombre: string;
+            apellidos: string | null;
+            dorsal: number | null;
+            /**
+             * Format: uuid
+             * @description null si es un motivo libre
+             */
+            motivoId: string | null;
+            /** @example Llegar tarde al entreno */
+            motivo: string;
+            /** @example 200 */
+            importeCentimos: number;
+            /** @example 2026-10-13 */
+            fecha: string;
+            /** @description Fecha de cobro; null si está pendiente */
+            fechaPago: string | null;
+        };
+        MultasSaldadas: {
+            cobradas: number;
+            importeCentimos: number;
+        };
+        ResumenMultas: {
+            pendienteCentimos: number;
+            cajaCentimos: number;
+            deudas: components["schemas"]["DeudaJugador"][];
+        };
+        DeudaJugador: {
+            /** Format: uuid */
+            jugadorId: string;
+            nombre: string;
+            apellidos: string | null;
+            dorsal: number | null;
+            pendienteCentimos: number;
+            multasPendientes: number;
         };
     };
     responses: never;

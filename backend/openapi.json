@@ -883,6 +883,148 @@
           "activo",
           "multas"
         ]
+      },
+      "Multa": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "jugadorId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "apellidos": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "dorsal": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "motivoId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "null si es un motivo libre"
+          },
+          "motivo": {
+            "type": "string",
+            "example": "Llegar tarde al entreno"
+          },
+          "importeCentimos": {
+            "type": "integer",
+            "example": 200
+          },
+          "fecha": {
+            "type": "string",
+            "example": "2026-10-13"
+          },
+          "fechaPago": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Fecha de cobro; null si está pendiente"
+          }
+        },
+        "required": [
+          "id",
+          "jugadorId",
+          "nombre",
+          "apellidos",
+          "dorsal",
+          "motivoId",
+          "motivo",
+          "importeCentimos",
+          "fecha",
+          "fechaPago"
+        ]
+      },
+      "MultasSaldadas": {
+        "type": "object",
+        "properties": {
+          "cobradas": {
+            "type": "integer"
+          },
+          "importeCentimos": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "cobradas",
+          "importeCentimos"
+        ]
+      },
+      "ResumenMultas": {
+        "type": "object",
+        "properties": {
+          "pendienteCentimos": {
+            "type": "integer"
+          },
+          "cajaCentimos": {
+            "type": "integer"
+          },
+          "deudas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeudaJugador"
+            }
+          }
+        },
+        "required": [
+          "pendienteCentimos",
+          "cajaCentimos",
+          "deudas"
+        ]
+      },
+      "DeudaJugador": {
+        "type": "object",
+        "properties": {
+          "jugadorId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "apellidos": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "dorsal": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "pendienteCentimos": {
+            "type": "integer"
+          },
+          "multasPendientes": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "jugadorId",
+          "nombre",
+          "apellidos",
+          "dorsal",
+          "pendienteCentimos",
+          "multasPendientes"
+        ]
       }
     },
     "parameters": {}
@@ -4113,6 +4255,587 @@
           },
           "409": {
             "description": "Ya hay un motivo activo con esa descripción",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/multas": {
+      "get": {
+        "tags": [
+          "Multas"
+        ],
+        "summary": "Multas",
+        "description": "Multas de la plantilla, la más reciente primero, con filtros por jugador y estado. El rol jugador solo recibe las suyas.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "jugador",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pendientes",
+                "cobradas"
+              ]
+            },
+            "required": false,
+            "name": "estado",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Multas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Multa"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Filtros no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Multas"
+        ],
+        "summary": "Poner una multa",
+        "description": "Delegado o superior. Con `motivoId`, copia la descripción y el importe del motivo activo del catálogo (el importe se puede cambiar); con `motivo`, texto libre e importe obligatorio. La fecha, por defecto, es hoy.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "jugadorId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "motivoId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "importeCentimos": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 100000,
+                        "example": 500,
+                        "description": "Si no se indica, el del catálogo"
+                      },
+                      "fecha": {
+                        "type": "string",
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                        "example": "2026-10-13"
+                      }
+                    },
+                    "required": [
+                      "jugadorId",
+                      "motivoId"
+                    ],
+                    "additionalProperties": false,
+                    "title": "Multa del catálogo"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "jugadorId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "motivo": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 120
+                      },
+                      "importeCentimos": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 100000,
+                        "example": 500,
+                        "description": "En céntimos: 500 son 5,00 €"
+                      },
+                      "fecha": {
+                        "type": "string",
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                        "example": "2026-10-13"
+                      }
+                    },
+                    "required": [
+                      "jugadorId",
+                      "motivo",
+                      "importeCentimos"
+                    ],
+                    "additionalProperties": false,
+                    "title": "Multa con motivo libre"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Multa puesta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Multa"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos, motivo no válido o jugador sin ficha",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/multas/{mid}": {
+      "patch": {
+        "tags": [
+          "Multas"
+        ],
+        "summary": "Editar, cobrar o deshacer el cobro de una multa",
+        "description": "Delegado o superior. `fechaPago` con una fecha la cobra y `fechaPago: null` deshace el cobro; la fecha de cobro no puede ser anterior a la de la multa.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "mid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "motivo": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "importeCentimos": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100000,
+                    "example": 500,
+                    "description": "En céntimos: 500 son 5,00 €"
+                  },
+                  "fecha": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "example": "2026-10-13"
+                  },
+                  "fechaPago": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "example": "2026-10-13"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Multa actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Multa"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Multas"
+        ],
+        "summary": "Borrar una multa",
+        "description": "Delegado o superior.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "mid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Multa borrada"
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/jugadores/{jid}/saldar": {
+      "post": {
+        "tags": [
+          "Multas"
+        ],
+        "summary": "Saldar las multas de un jugador",
+        "description": "Delegado o superior. Cobra de una vez todas sus multas pendientes en la plantilla, con la fecha indicada o la de hoy.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "jid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "fecha": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "example": "2026-10-13"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Multas cobradas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MultasSaldadas"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/multas/resumen": {
+      "get": {
+        "tags": [
+          "Multas"
+        ],
+        "summary": "Caja y deudas",
+        "description": "Delegado o superior. Total pendiente de cobro, total en caja (cobrado) y deuda de cada jugador con algo pendiente, de mayor a menor.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resumen",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResumenMultas"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
             "content": {
               "application/json": {
                 "schema": {
