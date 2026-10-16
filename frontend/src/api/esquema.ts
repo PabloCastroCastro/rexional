@@ -1976,6 +1976,187 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/plantillas/{id}/partidos/calendario/leer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Leer el calendario
+         * @description Delegado o superior. El calendario de la competición en PDF (como mucho 2 MB), en el campo `archivo`. Devuelve las jornadas leídas sin crear nada; el PDF no se guarda.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "multipart/form-data": {
+                        /** Format: binary */
+                        archivo?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Calendario leído */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CalendarioLeido"];
+                    };
+                };
+                /** @description No es un PDF o no se puede leer */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Pasa de 2 MB */
+                413: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plantillas/{id}/partidos/calendario": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Importar el calendario
+         * @description Delegado o superior. Crea los partidos elegidos del calendario, programados y sin hora. Omite los que ya están: otro partido el mismo día, o contra un rival parecido con 3 días o menos de diferencia.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        partidos: {
+                            /** @example 2026-10-13 */
+                            fecha: string;
+                            rival: string;
+                            local: boolean;
+                        }[];
+                    };
+                };
+            };
+            responses: {
+                /** @description Partidos creados */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CalendarioImportado"];
+                    };
+                };
+                /** @description Datos no válidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/plantillas/{id}/partidos": {
         parameters: {
             query?: never;
@@ -6033,6 +6214,38 @@ export interface components {
             activo: boolean;
             /** @description Asistencias / entrenos con estado registrado, de 0 a 100 */
             porcentaje: number | null;
+        };
+        CalendarioLeido: {
+            /** @example TERCERA FUTGAL, A CORUÑA | GRUPO 1 */
+            competicion: string | null;
+            /** @example 2026-2027 */
+            temporada: string | null;
+            /** @description Los equipos de la competición */
+            equipos: string[];
+            /** @description El equipo que se parece al club; null si no hay uno claro */
+            equipo: string | null;
+            jornadas: {
+                numero: number;
+                fecha: string;
+                enfrentamientos: {
+                    local: string;
+                    visitante: string;
+                }[];
+                descansa: string | null;
+            }[];
+            /** @description Los partidos que ya tiene la plantilla, para no repetirlos */
+            existentes: {
+                fecha: string;
+                rival: string;
+            }[];
+        };
+        CalendarioImportado: {
+            creados: number;
+            /** @description Los que ya estaban (mismo día, o rival parecido a pocos días) */
+            omitidos: {
+                fecha: string;
+                rival: string;
+            }[];
         };
         ResumenPartido: {
             /** Format: uuid */

@@ -1525,6 +1525,23 @@ Ver la sesión durante el entreno en el móvil. Depende de GH-43.
 - [ ] La pantalla no se apaga mientras está abierta (Wake Lock, si el navegador lo permite)
 - [ ] Legible a pleno sol: tamaño de letra grande y alto contraste
 
+#### GH-127
+**Título:** Importar el calendario de la competición en PDF
+**Etiquetas:** feature, backend, frontend
+
+Crear de una vez todos los partidos de la temporada a partir del calendario en PDF que publica la Federación Gallega («Calendario de Competiciones»).
+
+**Alcance:** solo registrar los partidos, con la **fecha**, el **rival** y si somos **local o visitante**. Ni horas, ni lugar, ni convocatorias.
+
+**Criterios de aceptación**
+- [ ] En Partidos, «Importar calendario»: se sube el PDF y se ve la lista de partidos que se van a crear antes de crearlos; el PDF no se guarda
+- [ ] Lectura del PDF: las jornadas (número y fecha) de las dos vueltas y sus enfrentamientos; las jornadas en las que el equipo descansa no crean partido
+- [ ] Nuestro equipo se reconoce por el nombre del club y se puede elegir otro de la lista de equipos del calendario
+- [ ] En la lista se marcan los partidos que faltan por jugar; los de fechas pasadas y los que ya están se pueden marcar a mano
+- [ ] Al confirmar se crean los partidos elegidos; los que ya existen no se duplican: otro partido el mismo día, o contra un rival parecido con 3 días o menos de diferencia (el calendario da el domingo y se puede jugar el sábado)
+- [ ] Delegado o superior
+- [ ] Tests con un calendario de ejemplo (sin datos reales en el repositorio)
+
 ---
 
 ### Milestone: Ciclo 8 · Operación
