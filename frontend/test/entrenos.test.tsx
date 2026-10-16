@@ -51,6 +51,9 @@ const entreno = (fecha: string, jugadores: JugadorEntreno[]): Entreno => {
     hora: '20:00',
     horaFin: null,
     deHorario: true,
+    objetivo: null,
+    ejerciciosPlan: 0,
+    duracionPlan: 0,
     recuentos,
     jugadores,
   }

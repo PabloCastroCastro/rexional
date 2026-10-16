@@ -25,6 +25,9 @@ const resumen = (
   hora,
   horaFin: null,
   deHorario: false,
+  objetivo: null,
+  ejerciciosPlan: 0,
+  duracionPlan: 0,
   asiste: 0,
   justificada: 0,
   falta: 0,
@@ -37,6 +40,9 @@ const detalle = (r: ResumenEntreno): Entreno => ({
   hora: r.hora,
   horaFin: r.horaFin,
   deHorario: r.deHorario,
+  objetivo: r.objetivo,
+  ejerciciosPlan: r.ejerciciosPlan,
+  duracionPlan: r.duracionPlan,
   recuentos: { asiste: r.asiste, justificada: r.justificada, falta: r.falta },
   jugadores: [
     {
