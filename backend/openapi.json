@@ -1571,6 +1571,158 @@
           "enPropia"
         ]
       },
+      "ResumenEjercicio": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string",
+            "example": "Rondo 4 contra 1"
+          },
+          "categoria": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "calentamiento",
+              "tecnica",
+              "tactica",
+              "fisico",
+              "finalizacion",
+              "porteros",
+              "partido",
+              "vuelta_calma",
+              null
+            ]
+          },
+          "duracionMin": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "etiquetas": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "archivado": {
+            "type": "boolean"
+          },
+          "medios": {
+            "type": "integer",
+            "description": "Número de fotos, vídeos y enlaces"
+          },
+          "urlMiniatura": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "La de su primera foto o vídeo"
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "categoria",
+          "duracionMin",
+          "etiquetas",
+          "archivado",
+          "medios",
+          "urlMiniatura"
+        ]
+      },
+      "Ejercicio": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string",
+            "example": "Rondo 4 contra 1"
+          },
+          "categoria": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "calentamiento",
+              "tecnica",
+              "tactica",
+              "fisico",
+              "finalizacion",
+              "porteros",
+              "partido",
+              "vuelta_calma",
+              null
+            ]
+          },
+          "duracionMin": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "etiquetas": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "archivado": {
+            "type": "boolean"
+          },
+          "descripcion": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "jugadores": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "material": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "usos": {
+            "type": "integer",
+            "description": "Planes de entreno y modelos que lo usan"
+          },
+          "medios": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Medio"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "categoria",
+          "duracionMin",
+          "etiquetas",
+          "archivado",
+          "descripcion",
+          "jugadores",
+          "material",
+          "usos",
+          "medios"
+        ]
+      },
       "Medio": {
         "type": "object",
         "properties": {
@@ -6073,6 +6225,1089 @@
         }
       }
     },
+    "/api/clubes/{cid}/ejercicios": {
+      "get": {
+        "tags": [
+          "Ejercicios"
+        ],
+        "summary": "Biblioteca de ejercicios",
+        "description": "Cualquier miembro de una plantilla del club. Búsqueda por nombre, descripción o etiqueta (sin tildes ni mayúsculas); filtros por categoría y etiqueta. Por defecto, sin los archivados.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "cid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 100
+            },
+            "required": false,
+            "name": "q",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "calentamiento",
+                "tecnica",
+                "tactica",
+                "fisico",
+                "finalizacion",
+                "porteros",
+                "partido",
+                "vuelta_calma"
+              ]
+            },
+            "required": false,
+            "name": "categoria",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 30
+            },
+            "required": false,
+            "name": "etiqueta",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "no",
+                "si",
+                "todos"
+              ],
+              "default": "no"
+            },
+            "required": false,
+            "name": "archivados",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ejercicios",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ResumenEjercicio"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Ejercicios"
+        ],
+        "summary": "Crear un ejercicio",
+        "description": "Delegado o superior en alguna plantilla del club.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "cid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nombre": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "descripcion": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 4000
+                  },
+                  "categoria": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "calentamiento",
+                      "tecnica",
+                      "tactica",
+                      "fisico",
+                      "finalizacion",
+                      "porteros",
+                      "partido",
+                      "vuelta_calma",
+                      null
+                    ]
+                  },
+                  "duracionMin": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "minimum": 1,
+                    "maximum": 240
+                  },
+                  "jugadores": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 60
+                  },
+                  "material": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 500
+                  },
+                  "etiquetas": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 30
+                    },
+                    "maxItems": 10
+                  }
+                },
+                "required": [
+                  "nombre"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Ejercicio creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ejercicio"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/clubes/{cid}/ejercicios/etiquetas": {
+      "get": {
+        "tags": [
+          "Ejercicios"
+        ],
+        "summary": "Etiquetas usadas en la biblioteca",
+        "description": "Para los filtros. Cualquier miembro de una plantilla del club.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "cid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Etiquetas, en orden alfabético",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/clubes/{cid}/ejercicios/{eid}": {
+      "get": {
+        "tags": [
+          "Ejercicios"
+        ],
+        "summary": "Un ejercicio con sus fotos, vídeos y enlaces",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "cid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "eid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ejercicio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ejercicio"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Ejercicios"
+        ],
+        "summary": "Editar o archivar un ejercicio",
+        "description": "Delegado o superior en alguna plantilla del club. Los campos opcionales se quitan con null; `archivado: true` lo archiva (sigue en los planes que lo usan) y `false` lo recupera.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "cid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "eid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nombre": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "descripcion": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 4000
+                  },
+                  "categoria": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "calentamiento",
+                      "tecnica",
+                      "tactica",
+                      "fisico",
+                      "finalizacion",
+                      "porteros",
+                      "partido",
+                      "vuelta_calma",
+                      null
+                    ]
+                  },
+                  "duracionMin": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "minimum": 1,
+                    "maximum": 240
+                  },
+                  "jugadores": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 60
+                  },
+                  "material": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 500
+                  },
+                  "etiquetas": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 30
+                    },
+                    "maxItems": 10
+                  },
+                  "archivado": {
+                    "type": "boolean"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ejercicio actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ejercicio"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Ejercicios"
+        ],
+        "summary": "Borrar un ejercicio",
+        "description": "Delegado o superior en alguna plantilla del club. Solo si no se ha usado en ningún plan ni modelo (si no, se archiva). Borra también sus archivos.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "cid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "eid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Ejercicio borrado"
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Está usado en algún plan o modelo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/clubes/{cid}/ejercicios/{eid}/duplicar": {
+      "post": {
+        "tags": [
+          "Ejercicios"
+        ],
+        "summary": "Duplicar un ejercicio",
+        "description": "Delegado o superior en alguna plantilla del club. Copia sus datos y sus fotos, vídeos y enlaces (los vídeos que aún se procesan no se copian), para crear una variante.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "cid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "eid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Copia creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ejercicio"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/clubes/{cid}/ejercicios/{eid}/medios/enlace": {
+      "post": {
+        "tags": [
+          "Ejercicios"
+        ],
+        "summary": "Añadir un enlace",
+        "description": "Delegado o superior en alguna plantilla del club. Un vídeo externo (por ejemplo, de YouTube): no ocupa espacio en el servidor.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "cid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "eid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "maxLength": 2000,
+                    "format": "uri"
+                  },
+                  "pie": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 500
+                  }
+                },
+                "required": [
+                  "url"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Enlace añadido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Medio"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/clubes/{cid}/ejercicios/{eid}/medios/{mid}": {
+      "patch": {
+        "tags": [
+          "Ejercicios"
+        ],
+        "summary": "Cambiar el pie de un medio",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "cid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "eid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "mid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "pie": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 500
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Medio actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Medio"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Ejercicios"
+        ],
+        "summary": "Quitar una foto, un vídeo o un enlace",
+        "description": "Delegado o superior en alguna plantilla del club. Borra también sus archivos.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "cid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "eid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "mid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Medio quitado"
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/clubes/{cid}/ejercicios/{eid}/medios/orden": {
+      "put": {
+        "tags": [
+          "Ejercicios"
+        ],
+        "summary": "Reordenar los medios",
+        "description": "Delegado o superior en alguna plantilla del club. La lista completa de sus medios, en el orden nuevo.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "cid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "eid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "medios": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "maxItems": 100
+                  }
+                },
+                "required": [
+                  "medios"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Orden guardado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ejercicio"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "La lista no son exactamente sus medios",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/clubes/{cid}/ejercicios/{eid}/medios": {
       "post": {
         "tags": [
@@ -6163,79 +7398,6 @@
           },
           "415": {
             "description": "Tipo no admitido",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/clubes/{cid}/ejercicios/{eid}/medios/{mid}": {
-      "delete": {
-        "tags": [
-          "Ejercicios"
-        ],
-        "summary": "Quitar una foto, un vídeo o un enlace",
-        "description": "Delegado o superior en alguna plantilla del club. Borra también sus archivos.",
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "required": true,
-            "name": "cid",
-            "in": "path"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "required": true,
-            "name": "eid",
-            "in": "path"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "required": true,
-            "name": "mid",
-            "in": "path"
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Medio quitado"
-          },
-          "401": {
-            "description": "Sin sesión",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Sin permiso",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "No existe",
             "content": {
               "application/json": {
                 "schema": {
