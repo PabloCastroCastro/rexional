@@ -780,3 +780,44 @@
   background: color-mix(in srgb, var(--color-aviso) 14%, transparent);
   font-size: var(--texto-sm);
 }
+
+/* Importar el calendario */
+.enlaceCalendario {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--espacio-2);
+  min-width: var(--altura-tactil);
+  min-height: var(--altura-tactil);
+  padding: 0 var(--espacio-3);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-m);
+  color: var(--color-texto);
+  font-weight: var(--peso-medio);
+  text-decoration: none;
+}
+
+/* En pantallas estrechas solo el icono, para que quepa junto a «Nuevo partido» */
+@media (max-width: 30rem) {
+  .enlaceCalendario span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .enlaceCalendario {
+    padding: 0;
+  }
+}
+
+.descanso {
+  display: flex;
+  align-items: center;
+  min-height: var(--altura-tactil);
+  padding: var(--espacio-2) var(--espacio-4);
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
+}

@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "API de Vestuario",
-    "version": "1.1.2",
+    "version": "1.2.0",
     "description": "API REST de Vestuario. Todas las rutas cuelgan de /api. Errores con el formato { error: { codigo, mensaje, detalles? } }."
   },
   "components": {
@@ -481,6 +481,21 @@
               "deHorario": {
                 "type": "boolean",
                 "description": "true si lo creó el horario; false si es suelto"
+              },
+              "objetivo": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Objetivo del plan de la sesión"
+              },
+              "ejerciciosPlan": {
+                "type": "integer",
+                "description": "Ejercicios en su plan (0 si no tiene)"
+              },
+              "duracionPlan": {
+                "type": "integer",
+                "description": "Suma de las duraciones de su plan, en minutos"
               }
             },
             "required": [
@@ -488,7 +503,10 @@
               "fecha",
               "hora",
               "horaFin",
-              "deHorario"
+              "deHorario",
+              "objetivo",
+              "ejerciciosPlan",
+              "duracionPlan"
             ]
           }
         ]
@@ -540,6 +558,21 @@
           "deHorario": {
             "type": "boolean",
             "description": "true si lo creó el horario; false si es suelto"
+          },
+          "objetivo": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Objetivo del plan de la sesión"
+          },
+          "ejerciciosPlan": {
+            "type": "integer",
+            "description": "Ejercicios en su plan (0 si no tiene)"
+          },
+          "duracionPlan": {
+            "type": "integer",
+            "description": "Suma de las duraciones de su plan, en minutos"
           },
           "recuentos": {
             "$ref": "#/components/schemas/RecuentosAsistencia"
@@ -622,6 +655,9 @@
           "hora",
           "horaFin",
           "deHorario",
+          "objetivo",
+          "ejerciciosPlan",
+          "duracionPlan",
           "recuentos",
           "jugadores"
         ]
@@ -666,6 +702,141 @@
               "porcentaje"
             ]
           }
+        ]
+      },
+      "CalendarioLeido": {
+        "type": "object",
+        "properties": {
+          "competicion": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "TERCERA FUTGAL, A CORUÑA | GRUPO 1"
+          },
+          "temporada": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "2026-2027"
+          },
+          "equipos": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Los equipos de la competición"
+          },
+          "equipo": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "El equipo que se parece al club; null si no hay uno claro"
+          },
+          "jornadas": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "numero": {
+                  "type": "integer"
+                },
+                "fecha": {
+                  "type": "string"
+                },
+                "enfrentamientos": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "local": {
+                        "type": "string"
+                      },
+                      "visitante": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "local",
+                      "visitante"
+                    ]
+                  }
+                },
+                "descansa": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "numero",
+                "fecha",
+                "enfrentamientos",
+                "descansa"
+              ]
+            }
+          },
+          "existentes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "fecha": {
+                  "type": "string"
+                },
+                "rival": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "fecha",
+                "rival"
+              ]
+            },
+            "description": "Los partidos que ya tiene la plantilla, para no repetirlos"
+          }
+        },
+        "required": [
+          "competicion",
+          "temporada",
+          "equipos",
+          "equipo",
+          "jornadas",
+          "existentes"
+        ]
+      },
+      "CalendarioImportado": {
+        "type": "object",
+        "properties": {
+          "creados": {
+            "type": "integer"
+          },
+          "omitidos": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "fecha": {
+                  "type": "string"
+                },
+                "rival": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "fecha",
+                "rival"
+              ]
+            },
+            "description": "Los que ya estaban (mismo día, o rival parecido a pocos días)"
+          }
+        },
+        "required": [
+          "creados",
+          "omitidos"
         ]
       },
       "ResumenPartido": {
@@ -1569,6 +1740,413 @@
           "jugadorId",
           "minuto",
           "enPropia"
+        ]
+      },
+      "ResumenEjercicio": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string",
+            "example": "Rondo 4 contra 1"
+          },
+          "categoria": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "calentamiento",
+              "tecnica",
+              "tactica",
+              "fisico",
+              "finalizacion",
+              "porteros",
+              "partido",
+              "vuelta_calma",
+              null
+            ]
+          },
+          "duracionMin": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "etiquetas": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "archivado": {
+            "type": "boolean"
+          },
+          "medios": {
+            "type": "integer",
+            "description": "Número de fotos, vídeos y enlaces"
+          },
+          "urlMiniatura": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "La de su primera foto o vídeo"
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "categoria",
+          "duracionMin",
+          "etiquetas",
+          "archivado",
+          "medios",
+          "urlMiniatura"
+        ]
+      },
+      "Ejercicio": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string",
+            "example": "Rondo 4 contra 1"
+          },
+          "categoria": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "calentamiento",
+              "tecnica",
+              "tactica",
+              "fisico",
+              "finalizacion",
+              "porteros",
+              "partido",
+              "vuelta_calma",
+              null
+            ]
+          },
+          "duracionMin": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "etiquetas": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "archivado": {
+            "type": "boolean"
+          },
+          "descripcion": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "jugadores": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "material": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "usos": {
+            "type": "integer",
+            "description": "Planes de entreno y modelos que lo usan"
+          },
+          "medios": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Medio"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "categoria",
+          "duracionMin",
+          "etiquetas",
+          "archivado",
+          "descripcion",
+          "jugadores",
+          "material",
+          "usos",
+          "medios"
+        ]
+      },
+      "Medio": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "foto",
+              "video",
+              "enlace"
+            ]
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "listo",
+              "procesando",
+              "error"
+            ],
+            "description": "Un vídeo está «procesando» hasta que tiene miniatura (y, si hacía falta, se recodifica)"
+          },
+          "mime": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tamanoBytes": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "duracionSeg": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "pie": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "orden": {
+            "type": "integer"
+          },
+          "url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Solo en los enlaces"
+          },
+          "urlArchivo": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "/api/medios/…"
+          },
+          "urlMiniatura": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "tipo",
+          "estado",
+          "mime",
+          "tamanoBytes",
+          "duracionSeg",
+          "pie",
+          "orden",
+          "url",
+          "urlArchivo",
+          "urlMiniatura"
+        ]
+      },
+      "Plan": {
+        "type": "object",
+        "properties": {
+          "entrenoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fecha": {
+            "type": "string"
+          },
+          "hora": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "horaFin": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "objetivo": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "notas": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "duracionPrevista": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Minutos de la hora de inicio a la de fin; null sin las dos"
+          },
+          "duracionTotal": {
+            "type": "integer",
+            "description": "Suma de las duraciones de los ejercicios"
+          },
+          "ejercicios": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EjercicioPlan"
+            }
+          }
+        },
+        "required": [
+          "entrenoId",
+          "fecha",
+          "hora",
+          "horaFin",
+          "objetivo",
+          "notas",
+          "duracionPrevista",
+          "duracionTotal",
+          "ejercicios"
+        ]
+      },
+      "EjercicioPlan": {
+        "type": "object",
+        "properties": {
+          "ejercicioId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "categoria": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "calentamiento",
+              "tecnica",
+              "tactica",
+              "fisico",
+              "finalizacion",
+              "porteros",
+              "partido",
+              "vuelta_calma",
+              null
+            ]
+          },
+          "archivado": {
+            "type": "boolean"
+          },
+          "urlMiniatura": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "duracionMin": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "indicaciones": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "ejercicioId",
+          "nombre",
+          "categoria",
+          "archivado",
+          "urlMiniatura",
+          "duracionMin",
+          "indicaciones"
+        ]
+      },
+      "ModeloSesion": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "objetivo": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ejercicios": {
+            "type": "integer"
+          },
+          "duracionTotal": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "objetivo",
+          "ejercicios",
+          "duracionTotal"
+        ]
+      },
+      "LimitesMedios": {
+        "type": "object",
+        "properties": {
+          "maxFotoBytes": {
+            "type": "integer"
+          },
+          "maxVideoBytes": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "maxFotoBytes",
+          "maxVideoBytes"
         ]
       },
       "MotivoMulta": {
@@ -3773,8 +4351,8 @@
         "tags": [
           "Entrenos"
         ],
-        "summary": "Cambiar la hora de un entreno",
-        "description": "Delegado o superior. Hora de inicio y de fin (null las quita). Un entreno del horario que se cambia a mano pasa a ser suelto: al cambiar el horario ya no se rehace.",
+        "summary": "Cambiar la fecha o la hora de un entreno",
+        "description": "Delegado o superior. Fecha (opcional), hora de inicio y de fin (null las quita). Un entreno del horario que se cambia a mano pasa a ser suelto: al cambiar el horario ya no se rehace.",
         "parameters": [
           {
             "schema": {
@@ -3801,6 +4379,11 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "fecha": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "example": "2026-10-13"
+                  },
                   "hora": {
                     "type": [
                       "string",
@@ -4107,6 +4690,219 @@
                   "items": {
                     "$ref": "#/components/schemas/AsistenciaJugador"
                   }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/partidos/calendario/leer": {
+      "post": {
+        "tags": [
+          "Partidos"
+        ],
+        "summary": "Leer el calendario",
+        "description": "Delegado o superior. El calendario de la competición en PDF (como mucho 2 MB), en el campo `archivo`. Devuelve las jornadas leídas sin crear nada; el PDF no se guarda.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "archivo": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Calendario leído",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarioLeido"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "No es un PDF o no se puede leer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Pasa de 2 MB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/partidos/calendario": {
+      "post": {
+        "tags": [
+          "Partidos"
+        ],
+        "summary": "Importar el calendario",
+        "description": "Delegado o superior. Crea los partidos elegidos del calendario, programados y sin hora. Omite los que ya están: otro partido el mismo día, o contra un rival parecido con 3 días o menos de diferencia.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "partidos": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "fecha": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                          "example": "2026-10-13"
+                        },
+                        "rival": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 80
+                        },
+                        "local": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "fecha",
+                        "rival",
+                        "local"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "minItems": 1,
+                    "maxItems": 80
+                  }
+                },
+                "required": [
+                  "partidos"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Partidos creados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarioImportado"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }
@@ -5983,6 +6779,1990 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/clubes/{cid}/ejercicios": {
+      "get": {
+        "tags": [
+          "Ejercicios"
+        ],
+        "summary": "Biblioteca de ejercicios",
+        "description": "Cualquier miembro de una plantilla del club. Búsqueda por nombre, descripción o etiqueta (sin tildes ni mayúsculas); filtros por categoría y etiqueta. Por defecto, sin los archivados.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "cid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 100
+            },
+            "required": false,
+            "name": "q",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "calentamiento",
+                "tecnica",
+                "tactica",
+                "fisico",
+                "finalizacion",
+                "porteros",
+                "partido",
+                "vuelta_calma"
+              ]
+            },
+            "required": false,
+            "name": "categoria",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 30
+            },
+            "required": false,
+            "name": "etiqueta",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "no",
+                "si",
+                "todos"
+              ],
+              "default": "no"
+            },
+            "required": false,
+            "name": "archivados",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ejercicios",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ResumenEjercicio"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Ejercicios"
+        ],
+        "summary": "Crear un ejercicio",
+        "description": "Delegado o superior en alguna plantilla del club.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "cid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nombre": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "descripcion": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 4000
+                  },
+                  "categoria": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "calentamiento",
+                      "tecnica",
+                      "tactica",
+                      "fisico",
+                      "finalizacion",
+                      "porteros",
+                      "partido",
+                      "vuelta_calma",
+                      null
+                    ]
+                  },
+                  "duracionMin": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "minimum": 1,
+                    "maximum": 240
+                  },
+                  "jugadores": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 60
+                  },
+                  "material": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 500
+                  },
+                  "etiquetas": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 30
+                    },
+                    "maxItems": 10
+                  }
+                },
+                "required": [
+                  "nombre"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Ejercicio creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ejercicio"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/clubes/{cid}/ejercicios/etiquetas": {
+      "get": {
+        "tags": [
+          "Ejercicios"
+        ],
+        "summary": "Etiquetas usadas en la biblioteca",
+        "description": "Para los filtros. Cualquier miembro de una plantilla del club.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "cid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Etiquetas, en orden alfabético",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/clubes/{cid}/ejercicios/{eid}": {
+      "get": {
+        "tags": [
+          "Ejercicios"
+        ],
+        "summary": "Un ejercicio con sus fotos, vídeos y enlaces",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "cid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "eid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ejercicio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ejercicio"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Ejercicios"
+        ],
+        "summary": "Editar o archivar un ejercicio",
+        "description": "Delegado o superior en alguna plantilla del club. Los campos opcionales se quitan con null; `archivado: true` lo archiva (sigue en los planes que lo usan) y `false` lo recupera.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "cid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "eid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nombre": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "descripcion": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 4000
+                  },
+                  "categoria": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "calentamiento",
+                      "tecnica",
+                      "tactica",
+                      "fisico",
+                      "finalizacion",
+                      "porteros",
+                      "partido",
+                      "vuelta_calma",
+                      null
+                    ]
+                  },
+                  "duracionMin": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "minimum": 1,
+                    "maximum": 240
+                  },
+                  "jugadores": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 60
+                  },
+                  "material": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 500
+                  },
+                  "etiquetas": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 30
+                    },
+                    "maxItems": 10
+                  },
+                  "archivado": {
+                    "type": "boolean"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ejercicio actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ejercicio"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Ejercicios"
+        ],
+        "summary": "Borrar un ejercicio",
+        "description": "Delegado o superior en alguna plantilla del club. Solo si no se ha usado en ningún plan ni modelo (si no, se archiva). Borra también sus archivos.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "cid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "eid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Ejercicio borrado"
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Está usado en algún plan o modelo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/clubes/{cid}/ejercicios/{eid}/duplicar": {
+      "post": {
+        "tags": [
+          "Ejercicios"
+        ],
+        "summary": "Duplicar un ejercicio",
+        "description": "Delegado o superior en alguna plantilla del club. Copia sus datos y sus fotos, vídeos y enlaces (los vídeos que aún se procesan no se copian), para crear una variante.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "cid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "eid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Copia creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ejercicio"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/clubes/{cid}/ejercicios/{eid}/medios/enlace": {
+      "post": {
+        "tags": [
+          "Ejercicios"
+        ],
+        "summary": "Añadir un enlace",
+        "description": "Delegado o superior en alguna plantilla del club. Un vídeo externo (por ejemplo, de YouTube): no ocupa espacio en el servidor.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "cid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "eid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "maxLength": 2000,
+                    "format": "uri"
+                  },
+                  "pie": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 500
+                  }
+                },
+                "required": [
+                  "url"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Enlace añadido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Medio"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/clubes/{cid}/ejercicios/{eid}/medios/{mid}": {
+      "patch": {
+        "tags": [
+          "Ejercicios"
+        ],
+        "summary": "Cambiar el pie de un medio",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "cid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "eid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "mid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "pie": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 500
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Medio actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Medio"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Ejercicios"
+        ],
+        "summary": "Quitar una foto, un vídeo o un enlace",
+        "description": "Delegado o superior en alguna plantilla del club. Borra también sus archivos.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "cid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "eid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "mid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Medio quitado"
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/clubes/{cid}/ejercicios/{eid}/medios/orden": {
+      "put": {
+        "tags": [
+          "Ejercicios"
+        ],
+        "summary": "Reordenar los medios",
+        "description": "Delegado o superior en alguna plantilla del club. La lista completa de sus medios, en el orden nuevo.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "cid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "eid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "medios": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "maxItems": 100
+                  }
+                },
+                "required": [
+                  "medios"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Orden guardado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ejercicio"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "La lista no son exactamente sus medios",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/entrenos/{eid}/plan": {
+      "get": {
+        "tags": [
+          "Planificación"
+        ],
+        "summary": "Plan de un entreno",
+        "description": "Cualquier miembro. Objetivo, notas y ejercicios en orden, con la duración total y la prevista.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "eid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Plan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Plan"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Planificación"
+        ],
+        "summary": "Guardar el plan de un entreno",
+        "description": "Delegado o superior. Objetivo, notas y la lista completa de ejercicios en orden, en una transacción. No toca la asistencia.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "eid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "objetivo": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 300
+                  },
+                  "notas": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 2000
+                  },
+                  "ejercicios": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "ejercicioId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "duracionMin": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ],
+                          "minimum": 1,
+                          "maximum": 240
+                        },
+                        "indicaciones": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "maxLength": 1000
+                        }
+                      },
+                      "required": [
+                        "ejercicioId"
+                      ]
+                    },
+                    "maxItems": 40
+                  }
+                },
+                "required": [
+                  "ejercicios"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Plan guardado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Plan"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos o ejercicio de otro club",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/entrenos/{eid}/plan/duplicar": {
+      "post": {
+        "tags": [
+          "Planificación"
+        ],
+        "summary": "Duplicar el plan en otra fecha",
+        "description": "Delegado o superior. Va al primer entreno de esa fecha que no tenga plan; si ese día no hay ninguno, se crea uno suelto con las mismas horas. Si todos los de ese día tienen plan, 409.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "eid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "fecha": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "example": "2026-10-13"
+                  }
+                },
+                "required": [
+                  "fecha"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Plan copiado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Plan"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Todos los entrenos de ese día ya tienen plan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/entrenos/{eid}/plan/guardar-modelo": {
+      "post": {
+        "tags": [
+          "Planificación"
+        ],
+        "summary": "Guardar el plan como modelo del club",
+        "description": "Delegado o superior. El nombre no puede repetirse en el club (sin distinguir mayúsculas).",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "eid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nombre": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80
+                  }
+                },
+                "required": [
+                  "nombre"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Modelo guardado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModeloSesion"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Sin ejercicios en el plan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Ya hay un modelo con ese nombre",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/entrenos/{eid}/plan/desde-modelo/{mid}": {
+      "post": {
+        "tags": [
+          "Planificación"
+        ],
+        "summary": "Aplicar un modelo al entreno",
+        "description": "Delegado o superior. Sustituye el plan del entreno por el del modelo (objetivo, notas y ejercicios).",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "eid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "mid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Plan del modelo aplicado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Plan"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/clubes/{cid}/modelos-sesion": {
+      "get": {
+        "tags": [
+          "Planificación"
+        ],
+        "summary": "Modelos de sesión del club",
+        "description": "Cualquier miembro de una plantilla del club.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "cid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Modelos, por nombre",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ModeloSesion"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/clubes/{cid}/modelos-sesion/{mid}": {
+      "delete": {
+        "tags": [
+          "Planificación"
+        ],
+        "summary": "Borrar un modelo de sesión",
+        "description": "Delegado o superior en alguna plantilla del club. Los planes creados con él no cambian.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "cid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "mid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Modelo borrado"
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/clubes/{cid}/ejercicios/{eid}/medios": {
+      "post": {
+        "tags": [
+          "Ejercicios"
+        ],
+        "summary": "Subir una foto o un vídeo",
+        "description": "Delegado o superior en alguna plantilla del club. Cuerpo `multipart/form-data` con el archivo en `archivo` y, opcional, `pie` (no se declara aquí: validarlo leería el cuerpo entero y la subida dejaría de ir en streaming). Fotos JPEG, PNG o WebP; vídeos MP4, MOV o WebM. Límites configurables (por defecto 15 MB por foto y 150 MB por vídeo). La foto se guarda reducida, en WebP y sin metadatos; el vídeo queda «procesando» hasta tener miniatura y, si hace falta, recodificarse a MP4 H.264.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "cid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "eid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Medio añadido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Medio"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Falta el archivo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Supera el límite",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Tipo no admitido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/medios/limites": {
+      "get": {
+        "tags": [
+          "Ejercicios"
+        ],
+        "summary": "Tamaño máximo de las fotos y los vídeos",
+        "description": "Para comprobarlo antes de subir. Cualquier usuario con sesión.",
+        "responses": {
+          "200": {
+            "description": "Límites",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LimitesMedios"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/medios/{mid}": {
+      "get": {
+        "tags": [
+          "Ejercicios"
+        ],
+        "summary": "Archivo de una foto o un vídeo",
+        "description": "Miembro de alguna plantilla del club del ejercicio. Admite Range (respuesta 206) para avanzar en los vídeos.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "mid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "El archivo",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "206": {
+            "description": "Un trozo del archivo"
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "416": {
+            "description": "Rango no válido"
+          }
+        }
+      }
+    },
+    "/api/medios/{mid}/miniatura": {
+      "get": {
+        "tags": [
+          "Ejercicios"
+        ],
+        "summary": "Miniatura de una foto o un vídeo",
+        "description": "Miembro de alguna plantilla del club del ejercicio. Admite Range (respuesta 206) para avanzar en los vídeos.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "mid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "El archivo",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "206": {
+            "description": "Un trozo del archivo"
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "416": {
+            "description": "Rango no válido"
           }
         }
       }

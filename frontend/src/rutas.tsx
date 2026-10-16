@@ -3,6 +3,8 @@ import { PaginaLogin } from './auth/PaginaLogin'
 import { RequiereSesion } from './auth/RequiereSesion'
 import { PaginaConfiguracion } from './configuracion/PaginaConfiguracion'
 import { Aplicacion } from './diseno/Aplicacion'
+import { PaginaEjercicio } from './ejercicios/PaginaEjercicio'
+import { PaginaEjercicios } from './ejercicios/PaginaEjercicios'
 import { PaginaHistorial } from './entrenos/PaginaHistorial'
 import { PaginaHorario } from './entrenos/PaginaHorario'
 import { PaginaPasarLista } from './entrenos/PaginaPasarLista'
@@ -17,9 +19,12 @@ import { PaginaMas } from './paginas/PaginaMas'
 import { PaginaNoEncontrada } from './paginas/PaginaNoEncontrada'
 import { PaginaActa } from './partidos/Acta'
 import { PaginaAlineacion } from './partidos/PaginaAlineacion'
+import { PaginaCalendario } from './partidos/PaginaCalendario'
 import { PaginaConvocatoria } from './partidos/PaginaConvocatoria'
 import { PaginaPartido } from './partidos/PaginaPartido'
 import { PaginaPartidos } from './partidos/PaginaPartidos'
+import { ModoCampo } from './planificacion/ModoCampo'
+import { PaginaPlan } from './planificacion/PaginaPlan'
 import { Inicio } from './plantillas/Inicio'
 import { PaginaElegirPlantilla } from './plantillas/PaginaElegirPlantilla'
 import { PlantillaActiva } from './plantillas/PlantillaActiva'
@@ -50,6 +55,8 @@ export const rutas = [
         path: 'plantillas/:plantillaId',
         element: <PlantillaActiva />,
         children: [
+          // A pantalla completa, sin la navegación de la aplicación
+          { path: 'campo/:entrenoId', element: <ModoCampo /> },
           {
             element: <Aplicacion />,
             children: [
@@ -63,9 +70,13 @@ export const rutas = [
                   { index: true, element: <PaginaPasarLista /> },
                   { path: 'historial', element: <PaginaHistorial /> },
                   { path: 'horario', element: <PaginaHorario /> },
+                  { path: 'ejercicios', element: <PaginaEjercicios /> },
+                  { path: 'ejercicios/:ejercicioId', element: <PaginaEjercicio /> },
+                  { path: 'plan/:entrenoId', element: <PaginaPlan /> },
                 ],
               },
               { path: 'partidos', element: <PaginaPartidos /> },
+              { path: 'partidos/calendario', element: <PaginaCalendario /> },
               { path: 'partidos/:partidoId', element: <PaginaPartido /> },
               { path: 'partidos/:partidoId/convocatoria', element: <PaginaConvocatoria /> },
               { path: 'partidos/:partidoId/acta', element: <PaginaActa /> },

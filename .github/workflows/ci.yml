@@ -24,6 +24,7 @@ jobs:
       frontend: ${{ steps.filtro.outputs.frontend }}
       proxy: ${{ steps.filtro.outputs.proxy }}
       humo: ${{ steps.filtro.outputs.humo }}
+      scripts: ${{ steps.filtro.outputs.scripts }}
     steps:
       - uses: actions/checkout@v7
       - uses: dorny/paths-filter@v4
@@ -42,6 +43,9 @@ jobs:
             proxy:
               - 'proxy/**'
               - 'frontend/**'
+              - '.github/workflows/ci.yml'
+            scripts:
+              - 'scripts/**'
               - '.github/workflows/ci.yml'
             humo:
               - 'backend/**'
@@ -94,6 +98,8 @@ jobs:
         run: npm run build
 
       # Los siguientes scripts se ejecutan solo cuando el proyecto los define (ver CONTRIBUTING.md)
+      - name: ffmpeg (vídeos de los ejercicios)
+        run: sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends ffmpeg
       - name: Tests contra PostgreSQL
         run: npm run test --if-present
       - name: Sin migraciones pendientes de generar
@@ -155,6 +161,19 @@ jobs:
           sudo chown 101:101 certs/key.pem
           docker run --rm -v "$PWD/certs:/etc/nginx/certs:ro" vestuario-proxy:ci nginx -t
 
+  scripts:
+    name: Scripts
+    needs: cambios
+    if: needs.cambios.outputs.scripts == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - name: ShellCheck
+        run: shellcheck -x scripts/*.sh scripts/test/*.sh
+      - name: Rotación de las copias
+        run: bash scripts/test/rotacion.sh
+
   humo:
     name: Prueba de humo
     needs: [cambios, backend, frontend, proxy]
@@ -202,7 +221,7 @@ jobs:
 
   resultado:
     name: Resultado de la CI
-    needs: [cambios, backend, frontend, proxy, humo]
+    needs: [cambios, backend, frontend, proxy, scripts, humo]
     # Comprobación única para la protección de ramas: falla si algún trabajo falló o se canceló
     if: always()
     runs-on: ubuntu-latest

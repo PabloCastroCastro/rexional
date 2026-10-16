@@ -6,12 +6,16 @@ import { comprobarBaseDeDatos } from './db/cliente.js'
 import { manejarError, rutaNoEncontrada, soloMismoOrigen, validacionFallida } from './errores.js'
 import { registrarPeticiones } from './peticiones.js'
 import { rutasActas } from './rutas/actas.js'
+import { rutasCalendario } from './rutas/calendario.js'
 import { rutasClubes } from './rutas/clubes.js'
+import { rutasEjercicios } from './rutas/ejercicios.js'
 import { rutasEntrenos } from './rutas/entrenos.js'
 import { rutasEstadisticas, rutasEstadisticasClub } from './rutas/estadisticas.js'
 import { rutasJugadoresClub, rutasJugadoresPlantilla } from './rutas/jugadores.js'
+import { rutasMedios, rutasMediosClub } from './rutas/medios.js'
 import { rutasMultas, rutasMultasJugadores } from './rutas/multas.js'
 import { rutasPartidos } from './rutas/partidos.js'
+import { rutasModelosSesion, rutasPlanes } from './rutas/planes.js'
 import { rutasPlantillas } from './rutas/plantillas.js'
 import { rutasSalud } from './rutas/salud.js'
 
@@ -19,7 +23,7 @@ export const infoOpenApi = {
   openapi: '3.1.0',
   info: {
     title: 'API de Vestuario',
-    version: '1.1.2',
+    version: '1.2.0',
     description:
       'API REST de Vestuario. Todas las rutas cuelgan de /api. Errores con el formato { error: { codigo, mensaje, detalles? } }.',
   },
@@ -55,10 +59,17 @@ export function crearApp(dependencias: Partial<Dependencias> = {}) {
   app.route('/', rutasJugadoresPlantilla())
   app.route('/', rutasJugadoresClub())
   app.route('/', rutasEntrenos())
+  // Antes que los partidos: en /partidos/calendario, «calendario» no es el id de un partido
+  app.route('/', rutasCalendario())
   app.route('/', rutasPartidos())
   app.route('/', rutasEstadisticas())
   app.route('/', rutasEstadisticasClub())
   app.route('/', rutasActas())
+  app.route('/', rutasEjercicios())
+  app.route('/', rutasPlanes())
+  app.route('/', rutasModelosSesion())
+  app.route('/', rutasMediosClub())
+  app.route('/', rutasMedios())
   app.route('/', rutasMultas())
   app.route('/', rutasMultasJugadores())
 

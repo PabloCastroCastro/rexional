@@ -3,6 +3,7 @@ import { and, asc, desc, eq, gte, inArray, lte, notExists, or, sql } from 'drizz
 import { db } from '../db/cliente.js'
 import {
   asistencias,
+  entrenoEjercicios,
   entrenos,
   estadoAsistencia,
   fichas,
@@ -36,6 +37,9 @@ const datosEntreno = {
   hora: z.string().nullable().openapi({ example: '20:00' }),
   horaFin: z.string().nullable().openapi({ example: '21:30' }),
   deHorario: z.boolean().openapi({ description: 'true si lo creó el horario; false si es suelto' }),
+  objetivo: z.string().nullable().openapi({ description: 'Objetivo del plan de la sesión' }),
+  ejerciciosPlan: z.int().openapi({ description: 'Ejercicios en su plan (0 si no tiene)' }),
+  duracionPlan: z.int().openapi({ description: 'Suma de las duraciones de su plan, en minutos' }),
 }
 
 const EsquemaResumenEntreno = EsquemaRecuentos.extend(datosEntreno).openapi('ResumenEntreno')
@@ -120,12 +124,25 @@ const recuento = (estado: Estado) =>
 const horaEntreno = sql<string | null>`to_char(${entrenos.hora}, 'HH24:MI')`
 const horaFinEntreno = sql<string | null>`to_char(${entrenos.horaFin}, 'HH24:MI')`
 
+// Resumen del plan con el constructor de consultas: así la columna del entreno lleva su tabla
+const ejerciciosDelPlan = db
+  .select({ n: sql`count(*)::int` })
+  .from(entrenoEjercicios)
+  .where(eq(entrenoEjercicios.entrenoId, entrenos.id))
+const duracionDelPlan = db
+  .select({ n: sql`coalesce(sum(${entrenoEjercicios.duracionMin}), 0)::int` })
+  .from(entrenoEjercicios)
+  .where(eq(entrenoEjercicios.entrenoId, entrenos.id))
+
 const columnasEntreno = {
   id: entrenos.id,
   fecha: entrenos.fecha,
   hora: horaEntreno,
   horaFin: horaFinEntreno,
   deHorario: entrenos.deHorario,
+  objetivo: entrenos.objetivo,
+  ejerciciosPlan: sql<number>`(${ejerciciosDelPlan})`,
+  duracionPlan: sql<number>`(${duracionDelPlan})`,
 }
 
 const sinAsistencias = () =>
@@ -247,7 +264,20 @@ function sesionesDelHorario(horario: { hasta: string; sesiones: SesionHorario[] 
   return resultado
 }
 
-// Borra los entrenos futuros del horario que aún no tienen asistencia (los que la tienen se conservan)
+// Sin plan: ni ejercicios ni objetivo (ciclo 7)
+const sinPlan = () =>
+  and(
+    sql`${entrenos.objetivo} is null`,
+    notExists(
+      db
+        .select({ uno: sql`1` })
+        .from(entrenoEjercicios)
+        .where(eq(entrenoEjercicios.entrenoId, entrenos.id)),
+    ),
+  )
+
+// Borra los entrenos futuros del horario que aún no tienen asistencia ni plan (los que tienen algo se
+// conservan)
 async function borrarFuturosDelHorario(
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
   plantillaId: string,
@@ -260,6 +290,7 @@ async function borrarFuturosDelHorario(
         eq(entrenos.deHorario, true),
         gte(entrenos.fecha, hoy()),
         sinAsistencias(),
+        sinPlan(),
       ),
     )
     .returning({ id: entrenos.id })
@@ -517,9 +548,9 @@ export const rutasEntrenos = () =>
         method: 'patch',
         path: '/plantillas/{id}/entrenos/{eid}',
         tags: ['Entrenos'],
-        summary: 'Cambiar la hora de un entreno',
+        summary: 'Cambiar la fecha o la hora de un entreno',
         description:
-          'Delegado o superior. Hora de inicio y de fin (null las quita). Un entreno del horario que se cambia a mano pasa a ser suelto: al cambiar el horario ya no se rehace.',
+          'Delegado o superior. Fecha (opcional), hora de inicio y de fin (null las quita). Un entreno del horario que se cambia a mano pasa a ser suelto: al cambiar el horario ya no se rehace.',
         middleware: [requireRol('delegado')] as const,
         request: {
           params: ParamEntreno,
@@ -527,7 +558,11 @@ export const rutasEntrenos = () =>
             content: {
               'application/json': {
                 schema: z
-                  .object({ hora: EsquemaHora.nullable(), horaFin: EsquemaHora.nullish() })
+                  .object({
+                    fecha: EsquemaFecha.optional(),
+                    hora: EsquemaHora.nullable(),
+                    horaFin: EsquemaHora.nullish(),
+                  })
                   .strict()
                   .superRefine(validarHoras),
               },
@@ -543,18 +578,18 @@ export const rutasEntrenos = () =>
       }),
       async (c) => {
         const { eid } = c.req.valid('param')
-        const { hora, horaFin = null } = c.req.valid('json')
+        const { fecha, hora, horaFin = null } = c.req.valid('json')
         const plantillaId = c.var.plantilla.id
         const actual = await buscarEntreno(plantillaId, eid)
         try {
           await db
             .update(entrenos)
-            .set({ hora, horaFin, deHorario: false })
+            .set({ ...(fecha ? { fecha } : {}), hora, horaFin, deHorario: false })
             .where(and(eq(entrenos.id, eid), eq(entrenos.plantillaId, plantillaId)))
         } catch (error) {
           const restriccion = restriccionViolada(error)
           if (restriccion === 'entrenos_fecha_hora_unica')
-            throw entrenoDuplicado(actual.fecha, hora)
+            throw entrenoDuplicado(fecha ?? actual.fecha, hora)
           if (restriccion === 'entrenos_hora_fin_posterior') throw horaFinNoValida()
           throw error
         }

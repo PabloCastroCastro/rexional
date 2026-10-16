@@ -1,0 +1,381 @@
+/* Biblioteca de ejercicios: lista, ficha y formularios */
+.biblioteca,
+.ficha {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--espacio-4);
+}
+
+.biblioteca > button {
+  justify-self: start;
+}
+
+.buscador {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  min-height: var(--altura-tactil);
+  padding: 0 var(--espacio-3);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-m);
+  background: var(--color-superficie);
+  color: var(--color-texto-suave);
+}
+
+.buscador input {
+  flex: 1;
+  min-width: 0;
+  min-height: calc(var(--altura-tactil) - 2px);
+  border: 0;
+  background: transparent;
+  color: var(--color-texto);
+  font: inherit;
+  font-size: var(--texto-base);
+  outline: none;
+}
+
+.filtros {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: center;
+  gap: var(--espacio-2);
+}
+
+.filtros select {
+  width: 100%;
+  min-width: 0;
+  min-height: 2.5rem;
+  padding: 0 var(--espacio-2);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-m);
+  background: var(--color-superficie);
+  color: var(--color-texto);
+  font: inherit;
+}
+
+.archivados {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  min-height: 2.5rem;
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
+}
+
+.lista {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-radius: var(--radio-l);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra-1);
+  overflow: hidden;
+}
+
+.tarjetaEjercicio {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  min-width: 0;
+  padding: var(--espacio-3) var(--espacio-4);
+  color: inherit;
+  text-decoration: none;
+}
+
+.miniatura {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 4rem;
+  height: 3rem;
+  border-radius: var(--radio-s);
+  background: var(--color-superficie-alterna);
+  color: var(--color-texto-suave);
+  object-fit: cover;
+}
+
+.textoTarjeta {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+}
+
+.textoTarjeta strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.secundario {
+  margin: 0;
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
+}
+
+.etiquetas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-1);
+  margin: 0;
+}
+
+.etiquetas span {
+  padding: 0 var(--espacio-2);
+  border-radius: var(--radio-completo);
+  background: var(--color-superficie-alterna);
+  color: var(--color-texto-suave);
+  font-size: var(--texto-xs);
+}
+
+.error {
+  padding: var(--espacio-3);
+  border-radius: var(--radio-m);
+  background: color-mix(in srgb, var(--color-peligro) 12%, transparent);
+  color: var(--color-peligro);
+  font-size: var(--texto-sm);
+}
+
+/* Ficha */
+.volver {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-1);
+  justify-self: start;
+  min-height: var(--altura-tactil);
+  color: var(--color-primario);
+  font-weight: var(--peso-medio);
+  text-decoration: none;
+}
+
+.cabecera {
+  display: grid;
+  gap: var(--espacio-1);
+}
+
+.cabecera h2 {
+  margin: 0;
+}
+
+.descripcion {
+  margin: 0;
+  white-space: pre-line;
+}
+
+.datosFicha {
+  display: grid;
+  gap: var(--espacio-2);
+  margin: 0;
+}
+
+.datosFicha dt {
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
+}
+
+.datosFicha dd {
+  margin: 0;
+}
+
+.seccion {
+  display: grid;
+  gap: var(--espacio-3);
+}
+
+.seccion h3 {
+  margin: 0;
+}
+
+.acciones,
+.accionesMedios {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-2);
+}
+
+.galeria {
+  display: grid;
+  gap: var(--espacio-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.galeria > li {
+  display: grid;
+  gap: var(--espacio-2);
+}
+
+.foto,
+.video {
+  display: block;
+  width: 100%;
+  max-height: 70vh;
+  border-radius: var(--radio-l);
+  background: #000;
+  object-fit: contain;
+}
+
+.foto {
+  background: var(--color-superficie-alterna);
+}
+
+.enlace {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  padding: var(--espacio-3) var(--espacio-4);
+  border-radius: var(--radio-l);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra-1);
+  color: inherit;
+  text-decoration: none;
+}
+
+.enlace > span {
+  display: grid;
+}
+
+.procesando {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  min-height: 6rem;
+  padding: var(--espacio-4);
+  border-radius: var(--radio-l);
+  background: var(--color-superficie-alterna);
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
+}
+
+.girando {
+  flex: none;
+  animation: girar 1s linear infinite;
+}
+
+@keyframes girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.pieMedio {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-2);
+}
+
+.pieMedio p {
+  margin: 0;
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
+}
+
+.controles {
+  display: flex;
+  gap: var(--espacio-1);
+  margin-left: auto;
+}
+
+.controles button,
+.subidas button {
+  display: grid;
+  place-items: center;
+  width: var(--altura-tactil);
+  height: var(--altura-tactil);
+  border: 0;
+  border-radius: var(--radio-m);
+  background: none;
+  color: var(--color-texto-suave);
+  cursor: pointer;
+}
+
+.controles button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.subidas {
+  display: grid;
+  flex-basis: 100%;
+  gap: var(--espacio-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.subidas li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--espacio-1) var(--espacio-2);
+  padding: var(--espacio-2) var(--espacio-1) var(--espacio-2) var(--espacio-3);
+  border-radius: var(--radio-m);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra-1);
+  font-size: var(--texto-sm);
+}
+
+.subidas li > :not(button) {
+  grid-column: 1;
+}
+
+.subidas li > button {
+  grid-row: 1 / span 2;
+  grid-column: 2;
+}
+
+.subidas li[data-error] [role="alert"] {
+  color: var(--color-peligro);
+}
+
+.subidas progress {
+  width: 100%;
+  accent-color: var(--color-primario);
+}
+
+.nombreSubida {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Formulario */
+.formulario {
+  display: grid;
+  gap: var(--espacio-4);
+}
+
+.columnas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  align-items: start;
+  gap: var(--espacio-3);
+}
+
+.areaTexto {
+  display: grid;
+  gap: var(--espacio-1);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
+}
+
+.areaTexto textarea {
+  padding: var(--espacio-2) var(--espacio-3);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-m);
+  background: var(--color-superficie);
+  color: var(--color-texto);
+  font: inherit;
+  font-size: var(--texto-base);
+  font-weight: var(--peso-normal);
+  resize: vertical;
+}
+
+/* Al final: separador entre ejercicios de la lista (más específico que las reglas de li) */
+.lista li + li {
+  border-top: 1px solid var(--color-borde);
+}

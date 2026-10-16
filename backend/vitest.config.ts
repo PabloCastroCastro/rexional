@@ -1,3 +1,5 @@
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { defineConfig } from 'vitest/config'
 import { urlDeTest } from './test/bd.js'
 
@@ -13,6 +15,10 @@ export default defineConfig({
       LOG_LEVEL: 'silent',
       BETTER_AUTH_SECRET: 'tests-sin-valor-real-0123456789abcdefghij',
       URL_PUBLICA: 'http://localhost:5173',
+      // Subidas en una carpeta temporal y con límites pequeños, para probarlos sin archivos enormes
+      SUBIDAS_DIR: join(tmpdir(), 'vestuario-test-subidas'),
+      MAX_FOTO_MB: '1',
+      MAX_VIDEO_MB: '2',
     },
     // Los archivos comparten la base de datos: se ejecutan de uno en uno
     fileParallelism: false,

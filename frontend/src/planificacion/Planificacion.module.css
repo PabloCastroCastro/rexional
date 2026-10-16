@@ -1,0 +1,345 @@
+/* Plan de un entreno */
+.pagina {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--espacio-4);
+}
+
+.volver {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-1);
+  justify-self: start;
+  min-height: var(--altura-tactil);
+  color: var(--color-primario);
+  font-weight: var(--peso-medio);
+  text-decoration: none;
+}
+
+.cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-2);
+}
+
+.titulo {
+  margin: 0;
+}
+
+.titulo::first-letter {
+  text-transform: uppercase;
+}
+
+.cabecera h3 {
+  margin: 0;
+}
+
+.secundario {
+  margin: 0;
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
+}
+
+.seccion {
+  display: grid;
+  gap: var(--espacio-3);
+}
+
+.objetivo {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  font-weight: var(--peso-medio);
+}
+
+.notas {
+  margin: 0;
+  white-space: pre-line;
+}
+
+.duracion {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  margin: 0;
+  padding: var(--espacio-2) var(--espacio-3);
+  border-radius: var(--radio-m);
+  background: var(--color-superficie-alterna);
+  font-size: var(--texto-sm);
+}
+
+.duracion[data-sobra] {
+  background: color-mix(in srgb, var(--color-aviso) 14%, transparent);
+  color: var(--color-aviso);
+}
+
+.lista {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-radius: var(--radio-l);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra-1);
+  overflow: hidden;
+}
+
+.paso {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  min-width: 0;
+  padding: var(--espacio-3) var(--espacio-4);
+}
+
+.pasoEditable {
+  display: grid;
+  gap: var(--espacio-2);
+  padding-bottom: var(--espacio-3);
+}
+
+.pasoEditable .paso {
+  padding-bottom: 0;
+}
+
+.numero {
+  flex: none;
+  min-width: 1.5rem;
+  color: var(--color-texto-suave);
+  font-weight: 700;
+  text-align: center;
+}
+
+.miniatura {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 3.5rem;
+  height: 2.6rem;
+  border-radius: var(--radio-s);
+  background: var(--color-superficie-alterna);
+  color: var(--color-texto-suave);
+  object-fit: cover;
+}
+
+.textoPaso {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+}
+
+.textoPaso a,
+.textoPaso strong {
+  overflow: hidden;
+  color: inherit;
+  font-weight: var(--peso-medio);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.minutos {
+  flex: none;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.detallesPaso {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--espacio-2);
+  padding: 0 var(--espacio-4);
+}
+
+.minutosEditable {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-1);
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
+}
+
+.minutosEditable input,
+.indicaciones {
+  min-height: 2.5rem;
+  padding: 0 var(--espacio-2);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-m);
+  background: var(--color-superficie);
+  color: var(--color-texto);
+  font: inherit;
+  font-size: var(--texto-base);
+}
+
+.minutosEditable input {
+  width: 4.5rem;
+}
+
+.indicaciones {
+  min-width: 0;
+}
+
+.botonesPaso {
+  display: flex;
+  grid-column: 1 / -1;
+  justify-content: flex-end;
+  gap: var(--espacio-1);
+}
+
+.botonesPaso button {
+  display: grid;
+  place-items: center;
+  width: var(--altura-tactil);
+  height: var(--altura-tactil);
+  border: 0;
+  border-radius: var(--radio-m);
+  background: none;
+  color: var(--color-texto-suave);
+  cursor: pointer;
+}
+
+.botonesPaso button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-2);
+}
+
+.error {
+  padding: var(--espacio-3);
+  border-radius: var(--radio-m);
+  background: color-mix(in srgb, var(--color-peligro) 12%, transparent);
+  color: var(--color-peligro);
+  font-size: var(--texto-sm);
+}
+
+/* Guardar, siempre a mano encima de la navegación (como en la convocatoria) */
+.pieFijo {
+  position: sticky;
+  bottom: calc(var(--altura-navegacion) + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--espacio-2);
+  padding: var(--espacio-3) 0;
+  background: var(--color-fondo);
+}
+
+.areaTexto {
+  display: grid;
+  gap: var(--espacio-1);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
+}
+
+.areaTexto textarea {
+  padding: var(--espacio-2) var(--espacio-3);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-m);
+  background: var(--color-superficie);
+  color: var(--color-texto);
+  font: inherit;
+  font-size: var(--texto-base);
+  font-weight: var(--peso-normal);
+  resize: vertical;
+}
+
+/* Elegir ejercicio y modelos */
+.elegir {
+  display: grid;
+  gap: var(--espacio-3);
+}
+
+.buscador {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  min-height: var(--altura-tactil);
+  padding: 0 var(--espacio-3);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-m);
+  background: var(--color-superficie);
+  color: var(--color-texto-suave);
+}
+
+.buscador input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-texto);
+  font: inherit;
+  font-size: var(--texto-base);
+  outline: none;
+}
+
+.opcionEjercicio {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  width: 100%;
+  padding: var(--espacio-3) var(--espacio-4);
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.formulario {
+  display: grid;
+  gap: var(--espacio-4);
+}
+
+.columnas {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--espacio-3);
+}
+
+/* Tarjeta del plan en pasar lista */
+.tarjetaPlan {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  padding: var(--espacio-3) var(--espacio-4);
+  border-radius: var(--radio-l);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra-1);
+  color: var(--color-primario);
+  text-decoration: none;
+}
+
+.tarjetaPlan > span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  color: var(--color-texto);
+}
+
+/* Al final: separadores de las listas (más específicos que las reglas de li) */
+.lista li + li {
+  border-top: 1px solid var(--color-borde);
+}
+
+.botonCampo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: start;
+  gap: var(--espacio-2);
+  min-height: var(--altura-tactil);
+  padding: 0 var(--espacio-4);
+  border-radius: var(--radio-m);
+  background: var(--color-primario);
+  color: var(--color-sobre-primario);
+  font-weight: var(--peso-medio);
+  text-decoration: none;
+}

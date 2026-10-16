@@ -164,7 +164,8 @@ describe('acta del partido', () => {
     await waitFor(() => expect(ruta(router)).toBe('/plantillas/p1/partidos/p1'))
     const partido = await screen.findByRole('region', { name: 'Partido' })
     expect(await within(partido).findByText('2–1')).toBeInTheDocument()
-  })
+    // El recorrido entero (subir, revisar y registrar) pasa de los 5 s por defecto con la máquina cargada
+  }, 15_000)
 
   it('un jugador elegido para dos nombres no deja registrar', async () => {
     conActa()

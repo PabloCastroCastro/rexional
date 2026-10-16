@@ -1,4 +1,4 @@
-import { CalendarDays, CalendarPlus, ChevronRight } from 'lucide-react'
+import { CalendarDays, CalendarPlus, ChevronRight, FileUp } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { Boton } from '../componentes/Boton'
@@ -30,11 +30,28 @@ export function PaginaPartidos() {
     </Boton>
   )
 
+  const importar = (
+    <Link
+      to="calendario"
+      className={estilos.enlaceCalendario}
+      aria-label="Importar calendario"
+      title="Importar el calendario de la competición"
+    >
+      <FileUp aria-hidden size={18} />
+      <span aria-hidden>Importar calendario</span>
+    </Link>
+  )
+
   return (
     <div className={estilos.pagina}>
       <div className={estilos.cabecera}>
         <h1>Partidos</h1>
-        {gestiona && nuevo}
+        {gestiona && (
+          <div className={estilos.acciones}>
+            {importar}
+            {nuevo}
+          </div>
+        )}
       </div>
 
       <fieldset className={estilos.segmentos}>
@@ -85,7 +102,14 @@ export function PaginaPartidos() {
                 ? 'Crea el próximo partido para preparar la convocatoria.'
                 : 'Cuando el cuerpo técnico cree el próximo partido, aparecerá aquí.'
             }
-            accion={gestiona && nuevo}
+            accion={
+              gestiona && (
+                <div className={estilos.acciones}>
+                  {nuevo}
+                  {importar}
+                </div>
+              )
+            }
           />
         )
       ) : (

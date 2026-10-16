@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 import { Cargando } from '../componentes/Cargando'
 import { EstadoVacio } from '../componentes/EstadoVacio'
 import { puedeGestionarJugadores } from '../jugadores/datos'
+import { resumenPlan, rutaPlan } from '../planificacion/datos'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
 import {
   type ResumenEntreno,
@@ -59,8 +60,12 @@ export function PaginaHistorial() {
           <ul className={estilos.lista}>
             {proximos.data.map((e) => (
               <li key={e.id}>
-                <Link to={enlace(e)} className={estilos.entreno}>
-                  <span className={estilos.nombre}>{cuando(e)}</span>
+                {/* Un entreno futuro se abre por su plan: aún no se pasa lista */}
+                <Link to={rutaPlan(plantilla.id, e.id)} className={estilos.entreno}>
+                  <span className={estilos.nombre}>
+                    {cuando(e)}
+                    <span className={estilos.planResumen}>{resumenPlan(e) ?? 'Sin plan'}</span>
+                  </span>
                   <ChevronRight aria-hidden size={20} className={estilos.secundario} />
                 </Link>
               </li>
