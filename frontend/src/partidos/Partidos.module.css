@@ -773,3 +773,10 @@
   background: var(--color-peligro);
   color: #fff;
 }
+
+.avisoGoles {
+  padding: var(--espacio-3);
+  border-radius: var(--radio-m);
+  background: color-mix(in srgb, var(--color-aviso) 14%, transparent);
+  font-size: var(--texto-sm);
+}

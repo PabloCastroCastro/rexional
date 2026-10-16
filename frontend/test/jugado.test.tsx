@@ -112,6 +112,8 @@ describe('partido jugado', () => {
     expect(screen.getByRole('list', { name: 'Convocados' })).toHaveTextContent(
       "Zoe · Suplente · 0'",
     )
+    // 2–1 con un solo gol registrado: se avisa de cómo añadir el otro
+    expect(screen.getByRole('note')).toHaveTextContent('Falta 1 gol por asignar')
   })
 
   it('se cambia el resultado con los contadores y se aplaza', async () => {
@@ -214,6 +216,7 @@ describe('partido jugado', () => {
     expect(screen.queryByRole('button', { name: 'Añadir' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Cambiar resultado' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Borrar:/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('note')).not.toBeInTheDocument()
   })
 })
 
