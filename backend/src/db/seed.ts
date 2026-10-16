@@ -10,12 +10,17 @@ import {
   asistencias,
   clubes,
   convocados,
+  ejercicioMedios,
+  ejercicios,
+  entrenoEjercicios,
   entrenos,
   eventosPartido,
   fichas,
   horarios,
   jugadores,
   membresias,
+  modeloEjercicios,
+  modelosSesion,
   motivosMulta,
   multas,
   participaciones,
@@ -54,6 +59,9 @@ const PARTIDO = 7
 const MOTIVO = 8
 const MULTA = 9
 const EVENTO = 10
+const EJERCICIO = 11
+const MEDIO = 12
+const MODELO = 13
 
 type Posicion = 'portero' | 'defensa' | 'centrocampista' | 'delantero'
 
@@ -369,6 +377,113 @@ const estadisticas = listaPartidos
     }
   })
 
+// Biblioteca de ejercicios del CD Rexional, un enlace de vídeo, el plan del martes 20 de octubre del
+// Senior 2026-27 y un modelo de sesión
+const listaEjercicios = [
+  {
+    n: 1,
+    nombre: 'Rondo 4 contra 1',
+    categoria: 'calentamiento',
+    duracionMin: 10,
+    jugadores: '5 por grupo',
+    material: 'Conos y un balón por grupo',
+    descripcion:
+      'Cuadrado de 6×6 m. Cuatro fuera mantienen el balón a uno o dos toques; el del centro roba y cambia con quien pierde.',
+    etiquetas: ['posesión', 'activación'],
+  },
+  {
+    n: 2,
+    nombre: 'Movilidad articular y carrera continua',
+    categoria: 'calentamiento',
+    duracionMin: 10,
+    material: null,
+    jugadores: 'Todos',
+    descripcion:
+      'Carrera suave alrededor del campo con movilidad de cadera, tobillo y hombro cada media vuelta.',
+    etiquetas: ['activación'],
+  },
+  {
+    n: 3,
+    nombre: 'Pase y control en triángulo',
+    categoria: 'tecnica',
+    duracionMin: 15,
+    jugadores: '3 por grupo',
+    material: 'Tres conos y un balón por grupo',
+    descripcion:
+      'Triángulo de 10 m. Pase y sigue al cono al que pasas; cambiar de sentido cada 2 minutos y controlar con el pie contrario.',
+    etiquetas: ['pase', 'control'],
+  },
+  {
+    n: 4,
+    nombre: 'Salida de balón 6 contra 4',
+    categoria: 'tactica',
+    duracionMin: 20,
+    jugadores: '10 + portero',
+    material: 'Petos de dos colores y miniporterías',
+    descripcion:
+      'Medio campo. Seis con el portero salen jugando hasta pasar la línea de medio campo conduciendo; cuatro presionan y, si roban, finalizan en miniporterías.',
+    etiquetas: ['salida de balón', 'presión'],
+  },
+  {
+    n: 5,
+    nombre: 'Finalización tras centro lateral',
+    categoria: 'finalizacion',
+    duracionMin: 15,
+    jugadores: '8-12 + portero',
+    material: 'Balones y conos',
+    descripcion:
+      'Extremo conduce y centra; dos rematadores atacan primer y segundo palo. Rotar por bandas.',
+    etiquetas: ['centros', 'remate'],
+  },
+  {
+    n: 6,
+    nombre: 'Series de 30 m con recuperación',
+    categoria: 'fisico',
+    duracionMin: 12,
+    jugadores: 'Todos',
+    material: 'Conos',
+    descripcion:
+      '3 series de 6 sprints de 30 m; 30 s de recuperación entre sprints y 2 min entre series.',
+    etiquetas: ['velocidad'],
+  },
+  {
+    n: 7,
+    nombre: 'Partido 8 contra 8 a dos toques',
+    categoria: 'partido',
+    duracionMin: 20,
+    jugadores: '16',
+    material: 'Petos y dos porterías',
+    descripcion: 'Campo reducido. Máximo dos toques; el gol tras cinco pases seguidos vale doble.',
+    etiquetas: ['juego real'],
+  },
+  {
+    n: 8,
+    nombre: 'Estiramientos y vuelta a la calma',
+    categoria: 'vuelta_calma',
+    duracionMin: 8,
+    jugadores: 'Todos',
+    material: null,
+    descripcion: 'Trote suave y estiramientos de isquios, cuádriceps, aductores y gemelos.',
+    etiquetas: [],
+  },
+] as const
+
+const PLAN_SENIOR = {
+  fecha: '2026-10-20',
+  objetivo: 'Salida de balón ante presión alta',
+  ejercicios: [
+    { ejercicio: 1, duracionMin: 10, indicaciones: null },
+    { ejercicio: 3, duracionMin: 15, indicaciones: 'Insistir en perfilarse antes de recibir' },
+    {
+      ejercicio: 4,
+      duracionMin: 25,
+      indicaciones: 'Centrales abiertos; el pivote baja entre ellos',
+    },
+    { ejercicio: 7, duracionMin: 20, indicaciones: null },
+    { ejercicio: 8, duracionMin: 8, indicaciones: null },
+  ],
+}
+
 // Catálogo de multas: el de por defecto en todas las plantillas y un motivo más en el Senior 2026-27
 const listaMotivos = listaPlantillas.flatMap((p) => [
   ...CATALOGO_POR_DEFECTO.map((m, k) => ({ plantilla: p.n, n: p.n * 10 + k, ...m })),
@@ -546,6 +661,75 @@ await db.transaction(async (tx) => {
 
   await tx.insert(convocados).values(listaConvocados).onConflictDoNothing()
 
+  await tx
+    .insert(ejercicios)
+    .values(
+      listaEjercicios.map(({ n, etiquetas, ...e }) => ({
+        id: sid(EJERCICIO, n),
+        clubId: sid(CLUB, 1),
+        ...e,
+        etiquetas: [...etiquetas],
+        creadoPor: sid(USUARIO, 1),
+      })),
+    )
+    .onConflictDoNothing()
+  await tx
+    .insert(ejercicioMedios)
+    .values({
+      id: sid(MEDIO, 1),
+      ejercicioId: sid(EJERCICIO, 1),
+      tipo: 'enlace',
+      url: 'https://www.youtube.com/results?search_query=rondo+4+contra+1+futbol',
+      pie: 'Vídeos de ejemplo del rondo',
+      orden: 0,
+    })
+    .onConflictDoNothing()
+
+  // El entreno se busca por fecha: en una base ya usada, el horario puede haberlo rehecho con otro id
+  const [entrenoPlan] = await tx
+    .select({ id: entrenos.id })
+    .from(entrenos)
+    .where(and(eq(entrenos.plantillaId, sid(PLANTILLA, 3)), eq(entrenos.fecha, PLAN_SENIOR.fecha)))
+  if (
+    entrenoPlan &&
+    (await tx.$count(entrenoEjercicios, eq(entrenoEjercicios.entrenoId, entrenoPlan.id))) === 0
+  ) {
+    await tx
+      .update(entrenos)
+      .set({ objetivo: PLAN_SENIOR.objetivo })
+      .where(eq(entrenos.id, entrenoPlan.id))
+    await tx.insert(entrenoEjercicios).values(
+      PLAN_SENIOR.ejercicios.map((e, orden) => ({
+        entrenoId: entrenoPlan.id,
+        ejercicioId: sid(EJERCICIO, e.ejercicio),
+        orden,
+        duracionMin: e.duracionMin,
+        indicaciones: e.indicaciones,
+      })),
+    )
+  }
+
+  await tx
+    .insert(modelosSesion)
+    .values({
+      id: sid(MODELO, 1),
+      clubId: sid(CLUB, 1),
+      nombre: 'Sesión tipo de martes',
+      objetivo: 'Técnica y juego real',
+      creadoPor: sid(USUARIO, 1),
+    })
+    .onConflictDoNothing()
+  if ((await tx.$count(modeloEjercicios, eq(modeloEjercicios.modeloId, sid(MODELO, 1)))) === 0) {
+    await tx.insert(modeloEjercicios).values(
+      [2, 3, 5, 7, 8].map((ejercicio, orden) => ({
+        modeloId: sid(MODELO, 1),
+        ejercicioId: sid(EJERCICIO, ejercicio),
+        orden,
+        duracionMin: listaEjercicios.find((e) => e.n === ejercicio)?.duracionMin ?? null,
+      })),
+    )
+  }
+
   // El resultado solo se pone en los partidos que siguen sin jugar: no pisa lo registrado a mano
   for (const e of estadisticas) {
     await tx
@@ -620,7 +804,8 @@ console.log(
     `${listaPlantillas.length} plantillas, ${listaJugadores.length} jugadores, ${listaFichas.length} fichas, ` +
     `${listaEntrenos.length} entrenos, ${listaAsistencias.length} asistencias, ` +
     `${listaPartidos.length} partidos (${estadisticas.length} jugados), ${listaConvocados.length} convocados, ` +
-    `${estadisticas.flatMap((e) => e.eventos).length} eventos de partido y ${listaMultas.length} multas`,
+    `${estadisticas.flatMap((e) => e.eventos).length} eventos de partido, ${listaEjercicios.length} ejercicios ` +
+    `y ${listaMultas.length} multas`,
 )
 
 await pool.end()

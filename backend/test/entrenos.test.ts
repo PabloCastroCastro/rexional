@@ -2,7 +2,16 @@ import { eq, inArray } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { crearApp } from '../src/app.js'
 import { db, pool } from '../src/db/cliente.js'
-import { clubes, fichas, jugadores, membresias, user } from '../src/db/schema/index.js'
+import {
+  clubes,
+  ejercicios,
+  entrenoEjercicios,
+  fichas,
+  jugadores,
+  membresias,
+  entrenos as tablaEntrenos,
+  user,
+} from '../src/db/schema/index.js'
 import { crearUsuario, iniciarSesion, ORIGEN } from './utilidades.js'
 
 const app = crearApp()
@@ -71,6 +80,7 @@ beforeAll(async () => {
 
   const club = await (await pedir('POST', '/clubes', 'admin', { nombre: 'CD Entrenos' })).json()
   clubesCreados.push(club.id)
+  ids.club = club.id
   for (const [clave, nombre] of [
     ['senior', 'Senior'],
     ['juvenil', 'Juvenil'],
@@ -156,6 +166,41 @@ describe('horario', () => {
       ['19:00', 0],
       ['20:00', 1],
     ])
+  })
+
+  it('al cambiarlo conserva los entrenos futuros que tienen plan', async () => {
+    // Mañana, a las 19:00, con un ejercicio en su plan; pasado mañana, solo con objetivo
+    const [manana] = (await entrenosEntre(dia(1), dia(1))).filter((e) => e.hora === '19:00')
+    const [pasado] = (await entrenosEntre(dia(2), dia(2))).filter((e) => e.hora === '19:00')
+    const [ejercicio] = await db
+      .insert(ejercicios)
+      .values({ clubId: ids.club ?? '', nombre: 'Rondo' })
+      .returning()
+    await db
+      .insert(entrenoEjercicios)
+      .values({ entrenoId: manana?.id ?? '', ejercicioId: ejercicio?.id ?? '', orden: 0 })
+    await db
+      .update(tablaEntrenos)
+      .set({ objetivo: 'Presión' })
+      .where(eq(tablaEntrenos.id, pasado?.id ?? ''))
+
+    await pedir('PUT', `${base()}/horario`, 'delegado', {
+      desde: HOY,
+      hasta: dia(13),
+      sesiones: TODOS_LOS_DIAS('18:00'),
+    })
+    const quedan = (await entrenosEntre(dia(1), dia(2))).map((e) => `${e.fecha} ${e.hora}`).sort()
+    expect(quedan).toEqual([
+      `${dia(1)} 18:00`,
+      `${dia(1)} 19:00`,
+      `${dia(2)} 18:00`,
+      `${dia(2)} 19:00`,
+    ])
+
+    // Los siguientes tests ven el horario como antes: fuera los dos entrenos conservados
+    await db
+      .delete(tablaEntrenos)
+      .where(inArray(tablaEntrenos.id, [manana?.id ?? '', pasado?.id ?? '']))
   })
 
   it('valida el horario', async () => {
