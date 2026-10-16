@@ -3,6 +3,8 @@ import { PaginaLogin } from './auth/PaginaLogin'
 import { RequiereSesion } from './auth/RequiereSesion'
 import { PaginaConfiguracion } from './configuracion/PaginaConfiguracion'
 import { Aplicacion } from './diseno/Aplicacion'
+import { PaginaEjercicio } from './ejercicios/PaginaEjercicio'
+import { PaginaEjercicios } from './ejercicios/PaginaEjercicios'
 import { PaginaHistorial } from './entrenos/PaginaHistorial'
 import { PaginaHorario } from './entrenos/PaginaHorario'
 import { PaginaPasarLista } from './entrenos/PaginaPasarLista'
@@ -63,6 +65,8 @@ export const rutas = [
                   { index: true, element: <PaginaPasarLista /> },
                   { path: 'historial', element: <PaginaHistorial /> },
                   { path: 'horario', element: <PaginaHorario /> },
+                  { path: 'ejercicios', element: <PaginaEjercicios /> },
+                  { path: 'ejercicios/:ejercicioId', element: <PaginaEjercicio /> },
                 ],
               },
               { path: 'partidos', element: <PaginaPartidos /> },

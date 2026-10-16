@@ -1809,6 +1809,21 @@
           "urlMiniatura"
         ]
       },
+      "LimitesMedios": {
+        "type": "object",
+        "properties": {
+          "maxFotoBytes": {
+            "type": "integer"
+          },
+          "maxVideoBytes": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "maxFotoBytes",
+          "maxVideoBytes"
+        ]
+      },
       "MotivoMulta": {
         "type": "object",
         "properties": {
@@ -7398,6 +7413,37 @@
           },
           "415": {
             "description": "Tipo no admitido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/medios/limites": {
+      "get": {
+        "tags": [
+          "Ejercicios"
+        ],
+        "summary": "Tamaño máximo de las fotos y los vídeos",
+        "description": "Para comprobarlo antes de subir. Cualquier usuario con sesión.",
+        "responses": {
+          "200": {
+            "description": "Límites",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LimitesMedios"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
             "content": {
               "application/json": {
                 "schema": {

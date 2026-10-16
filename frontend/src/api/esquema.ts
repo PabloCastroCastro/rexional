@@ -4342,6 +4342,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/medios/limites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Tamaño máximo de las fotos y los vídeos
+         * @description Para comprobarlo antes de subir. Cualquier usuario con sesión.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Límites */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["LimitesMedios"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/medios/{mid}": {
         parameters: {
             query?: never;
@@ -5721,6 +5769,10 @@ export interface components {
             /** @example /api/medios/… */
             urlArchivo: string | null;
             urlMiniatura: string | null;
+        };
+        LimitesMedios: {
+            maxFotoBytes: number;
+            maxVideoBytes: number;
         };
         MotivoMulta: {
             /** Format: uuid */
