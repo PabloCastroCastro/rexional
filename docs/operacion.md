@@ -36,7 +36,7 @@ Las subidas no rotan: la copia incremental solo crece con lo que se sube.
 
 ### Registro y avisos
 
-Todo queda en `/opt/vestuario/backups/backup.log`, una línea por paso con fecha y hora. No hay avisos por mensaje: hay que mirar el registro de vez en cuando.
+Todo queda en `/opt/vestuario/backups/backup.log`, una línea por paso con fecha y hora. Por ahora no hay avisos por mensaje: hay que mirar el registro de vez en cuando. Los avisos por Telegram están pendientes en GH-120.
 
 - `ERROR: …`: la copia ha fallado y no se ha guardado nada a medias.
 - `AVISO: quedan N GB libres…`: hay menos de `VESTUARIO_MIN_LIBRE_GB` (5 por defecto) libres en el disco.

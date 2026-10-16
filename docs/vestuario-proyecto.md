@@ -1552,6 +1552,23 @@ Depende de GH-45.
 - [ ] Imágenes base con versión fijada
 - [ ] Procedimiento documentado para actualizar PostgreSQL de versión mayor
 
+
+#### GH-120
+**Título:** Avisos de operación por Telegram
+**Etiquetas:** feature, infra
+
+Hoy los fallos de las copias y el aviso de poco disco solo quedan en el registro del servidor (`/opt/vestuario/backups/backup.log`), y hay que mirarlo para enterarse. Que lleguen al móvil por Telegram. Depende de GH-45.
+
+**Criterios de aceptación**
+- [ ] Bot de Telegram creado con @BotFather; el token y el chat se guardan en el servidor, fuera del repositorio (con permisos 600)
+- [ ] Script común de aviso (`scripts/avisar.sh "mensaje"`) que envía el mensaje por la API de Telegram y, si no puede, lo deja en el registro
+- [ ] `backup.sh` avisa cuando una copia falla y cuando el espacio libre baja del umbral
+- [ ] `traer-copias.ps1` avisa cuando el PC no puede traer las copias
+- [ ] `deploy.sh` avisa cuando un despliegue falla
+- [ ] Aviso si no hay copia nueva en más de 36 horas (por ejemplo, si el cron deja de ejecutarse)
+- [ ] Sin avisos cuando todo va bien, salvo un resumen semanal opcional
+- [ ] Documentado en `docs/operacion.md`, también cómo crear el bot
+
 ---
 
 ### Milestone: Ciclo 9 · Roles en uso
