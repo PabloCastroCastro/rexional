@@ -22,6 +22,7 @@ import { PaginaAlineacion } from './partidos/PaginaAlineacion'
 import { PaginaConvocatoria } from './partidos/PaginaConvocatoria'
 import { PaginaPartido } from './partidos/PaginaPartido'
 import { PaginaPartidos } from './partidos/PaginaPartidos'
+import { PaginaPlan } from './planificacion/PaginaPlan'
 import { Inicio } from './plantillas/Inicio'
 import { PaginaElegirPlantilla } from './plantillas/PaginaElegirPlantilla'
 import { PlantillaActiva } from './plantillas/PlantillaActiva'
@@ -67,6 +68,7 @@ export const rutas = [
                   { path: 'horario', element: <PaginaHorario /> },
                   { path: 'ejercicios', element: <PaginaEjercicios /> },
                   { path: 'ejercicios/:ejercicioId', element: <PaginaEjercicio /> },
+                  { path: 'plan/:entrenoId', element: <PaginaPlan /> },
                 ],
               },
               { path: 'partidos', element: <PaginaPartidos /> },

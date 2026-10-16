@@ -25,6 +25,8 @@ import { EstadoVacio } from '../componentes/EstadoVacio'
 import { HojaInferior } from '../componentes/HojaInferior'
 import { nombreCompleto, puedeGestionarJugadores } from '../jugadores/datos'
 import { Dorsal } from '../jugadores/PaginaPlantilla'
+import { resumenPlan } from '../planificacion/datos'
+import { TarjetaPlan } from '../planificacion/TarjetaPlan'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
 import {
   CLAVE_ENTRENOS,
@@ -130,6 +132,8 @@ export function PaginaPasarLista() {
           )}
         </fieldset>
       )}
+
+      {elegida && <TarjetaPlan entreno={elegida} />}
 
       {delDia.isPending ? (
         <Cargando />
@@ -399,9 +403,14 @@ function CancelarEntreno({ entreno }: { entreno: ResumenEntreno }) {
       onClick={async () => {
         const confirmado = await confirmar({
           titulo: `¿Cancelar el entreno del ${cuando}?`,
-          mensaje: conAsistencia
-            ? 'Ya tiene la lista pasada: se borrará también su asistencia.'
-            : 'Desaparece del calendario. Si sale del horario, al cambiar el horario puede volver a crearse.',
+          mensaje: [
+            conAsistencia
+              ? 'Ya tiene la lista pasada: se borrará también su asistencia.'
+              : 'Desaparece del calendario. Si sale del horario, al cambiar el horario puede volver a crearse.',
+            resumenPlan(entreno) && 'También se pierde su plan.',
+          ]
+            .filter(Boolean)
+            .join(' '),
           textoConfirmar: 'Cancelar entreno',
           textoCancelar: 'Volver',
           peligrosa: true,

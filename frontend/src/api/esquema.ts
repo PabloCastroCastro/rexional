@@ -1734,8 +1734,8 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Cambiar la hora de un entreno
-         * @description Delegado o superior. Hora de inicio y de fin (null las quita). Un entreno del horario que se cambia a mano pasa a ser suelto: al cambiar el horario ya no se rehace.
+         * Cambiar la fecha o la hora de un entreno
+         * @description Delegado o superior. Fecha (opcional), hora de inicio y de fin (null las quita). Un entreno del horario que se cambia a mano pasa a ser suelto: al cambiar el horario ya no se rehace.
          */
         patch: {
             parameters: {
@@ -1750,6 +1750,8 @@ export interface paths {
             requestBody?: {
                 content: {
                     "application/json": {
+                        /** @example 2026-10-13 */
+                        fecha?: string;
                         /** @example 20:00 */
                         hora: string | null;
                         /** @example 20:00 */
@@ -4246,6 +4248,533 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/plantillas/{id}/entrenos/{eid}/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Plan de un entreno
+         * @description Cualquier miembro. Objetivo, notas y ejercicios en orden, con la duración total y la prevista.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    eid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Plan */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Plan"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        /**
+         * Guardar el plan de un entreno
+         * @description Delegado o superior. Objetivo, notas y la lista completa de ejercicios en orden, en una transacción. No toca la asistencia.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    eid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        objetivo?: string | null;
+                        notas?: string | null;
+                        ejercicios: {
+                            /** Format: uuid */
+                            ejercicioId: string;
+                            duracionMin?: number | null;
+                            indicaciones?: string | null;
+                        }[];
+                    };
+                };
+            };
+            responses: {
+                /** @description Plan guardado */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Plan"];
+                    };
+                };
+                /** @description Datos no válidos o ejercicio de otro club */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plantillas/{id}/entrenos/{eid}/plan/duplicar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Duplicar el plan en otra fecha
+         * @description Delegado o superior. Va al primer entreno de esa fecha que no tenga plan; si ese día no hay ninguno, se crea uno suelto con las mismas horas. Si todos los de ese día tienen plan, 409.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    eid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @example 2026-10-13 */
+                        fecha: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Plan copiado */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Plan"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Todos los entrenos de ese día ya tienen plan */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plantillas/{id}/entrenos/{eid}/plan/guardar-modelo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Guardar el plan como modelo del club
+         * @description Delegado o superior. El nombre no puede repetirse en el club (sin distinguir mayúsculas).
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    eid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        nombre: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Modelo guardado */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ModeloSesion"];
+                    };
+                };
+                /** @description Sin ejercicios en el plan */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Ya hay un modelo con ese nombre */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plantillas/{id}/entrenos/{eid}/plan/desde-modelo/{mid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Aplicar un modelo al entreno
+         * @description Delegado o superior. Sustituye el plan del entreno por el del modelo (objetivo, notas y ejercicios).
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    eid: string;
+                    mid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Plan del modelo aplicado */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Plan"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/clubes/{cid}/modelos-sesion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Modelos de sesión del club
+         * @description Cualquier miembro de una plantilla del club.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    cid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Modelos, por nombre */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ModeloSesion"][];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/clubes/{cid}/modelos-sesion/{mid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Borrar un modelo de sesión
+         * @description Delegado o superior en alguna plantilla del club. Los planes creados con él no cambian.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    cid: string;
+                    mid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Modelo borrado */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/clubes/{cid}/ejercicios/{eid}/medios": {
         parameters: {
             query?: never;
@@ -5452,6 +5981,12 @@ export interface components {
             horaFin: string | null;
             /** @description true si lo creó el horario; false si es suelto */
             deHorario: boolean;
+            /** @description Objetivo del plan de la sesión */
+            objetivo: string | null;
+            /** @description Ejercicios en su plan (0 si no tiene) */
+            ejerciciosPlan: number;
+            /** @description Suma de las duraciones de su plan, en minutos */
+            duracionPlan: number;
         };
         RecuentosAsistencia: {
             asiste: number;
@@ -5469,6 +6004,12 @@ export interface components {
             horaFin: string | null;
             /** @description true si lo creó el horario; false si es suelto */
             deHorario: boolean;
+            /** @description Objetivo del plan de la sesión */
+            objetivo: string | null;
+            /** @description Ejercicios en su plan (0 si no tiene) */
+            ejerciciosPlan: number;
+            /** @description Suma de las duraciones de su plan, en minutos */
+            duracionPlan: number;
             recuentos: components["schemas"]["RecuentosAsistencia"];
             jugadores: {
                 /** Format: uuid */
@@ -5769,6 +6310,39 @@ export interface components {
             /** @example /api/medios/… */
             urlArchivo: string | null;
             urlMiniatura: string | null;
+        };
+        Plan: {
+            /** Format: uuid */
+            entrenoId: string;
+            fecha: string;
+            hora: string | null;
+            horaFin: string | null;
+            objetivo: string | null;
+            notas: string | null;
+            /** @description Minutos de la hora de inicio a la de fin; null sin las dos */
+            duracionPrevista: number | null;
+            /** @description Suma de las duraciones de los ejercicios */
+            duracionTotal: number;
+            ejercicios: components["schemas"]["EjercicioPlan"][];
+        };
+        EjercicioPlan: {
+            /** Format: uuid */
+            ejercicioId: string;
+            nombre: string;
+            /** @enum {string|null} */
+            categoria: "calentamiento" | "tecnica" | "tactica" | "fisico" | "finalizacion" | "porteros" | "partido" | "vuelta_calma" | null;
+            archivado: boolean;
+            urlMiniatura: string | null;
+            duracionMin: number | null;
+            indicaciones: string | null;
+        };
+        ModeloSesion: {
+            /** Format: uuid */
+            id: string;
+            nombre: string;
+            objetivo: string | null;
+            ejercicios: number;
+            duracionTotal: number;
         };
         LimitesMedios: {
             maxFotoBytes: number;

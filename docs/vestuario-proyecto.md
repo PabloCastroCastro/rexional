@@ -637,7 +637,7 @@ Prefijo `/api`. JSON. Todas las rutas de la plantilla cuelgan de `/plantillas`, 
 | | `POST /clubes/:cid/ejercicios` · `PATCH/DELETE /clubes/:cid/ejercicios/:eid` (`archivado`; borrar solo si no se ha usado: 409) · `POST .../:eid/duplicar` (con copia de los archivos) | Delegado o superior en alguna plantilla del club |
 | | `POST /clubes/:cid/ejercicios/:eid/medios` (foto o vídeo, multipart en streaming) · `POST .../medios/enlace` · `PATCH/DELETE .../medios/:mid` (pie; borrar quita los archivos) · `PUT .../medios/orden` | Delegado o superior en alguna plantilla del club |
 | | `GET /medios/:mid` y `GET /medios/:mid/miniatura` (con `Range` para vídeo) | Miembro de alguna plantilla del club del medio |
-| Planificación | `GET /plantillas/:id/sesiones?desde=&hasta=` · `GET /plantillas/:id/entrenos/:eid/plan` | Miembro |
+| Planificación | `GET /plantillas/:id/entrenos?desde=&hasta=` (cada entreno con el resumen de su plan: objetivo, número de ejercicios y duración) · `GET /plantillas/:id/entrenos/:eid/plan` | Miembro |
 | | `PUT /plantillas/:id/entrenos/:eid/plan` (objetivo, notas y lista ordenada de ejercicios) · `POST .../plan/duplicar` (a otra fecha) · `POST .../plan/guardar-modelo` | Delegado |
 | | `GET /clubes/:cid/modelos-sesion` · `POST /plantillas/:id/entrenos/:eid/plan/desde-modelo/:mid` · `DELETE /clubes/:cid/modelos-sesion/:mid` | Miembro / Delegado |
 | Partidos | `GET /plantillas/:id/partidos?cuando=proximos|pasados` (con el número de convocados) · `POST /plantillas/:id/partidos` | Miembro / Delegado |
@@ -1506,7 +1506,7 @@ Depende de GH-41 y GH-42.
 **Criterios de aceptación**
 - [ ] Vista de próximas sesiones (lista o calendario semanal) accesible desde Entrenos
 - [ ] Editor de sesión: fecha, hora de inicio y de fin, objetivo y notas
-- [ ] Añadir ejercicios desde la biblioteca con buscador; reordenar arrastrando; duración e indicaciones por ejercicio
+- [ ] Añadir ejercicios desde la biblioteca con buscador; reordenar con botones de subir y bajar (más precisos que arrastrar en el móvil); duración e indicaciones por ejercicio
 - [ ] Duración total frente a la prevista, con aviso si se supera
 - [ ] Duplicar sesión, guardar como modelo y crear desde un modelo
 - [ ] El entreno planificado aparece en la pantalla de pasar lista de esa fecha

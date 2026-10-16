@@ -491,3 +491,10 @@
   gap: var(--espacio-3);
   grid-column: 1 / -1;
 }
+
+/* Resumen del plan bajo la fecha de un entreno próximo */
+.planResumen {
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-normal);
+}
