@@ -54,7 +54,9 @@ export const errores = {
   404: json(EsquemaError, 'No existe'),
 }
 
-const ParamPlantilla = z.object({ id: EsquemaUuid.openapi({ param: { name: 'id', in: 'path' } }) })
+export const ParamPlantilla = z.object({
+  id: EsquemaUuid.openapi({ param: { name: 'id', in: 'path' } }),
+})
 export const ParamPartido = ParamPlantilla.extend({
   pid: EsquemaUuid.openapi({ param: { name: 'pid', in: 'path' } }),
 })

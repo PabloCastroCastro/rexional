@@ -6,6 +6,7 @@ import { comprobarBaseDeDatos } from './db/cliente.js'
 import { manejarError, rutaNoEncontrada, soloMismoOrigen, validacionFallida } from './errores.js'
 import { registrarPeticiones } from './peticiones.js'
 import { rutasActas } from './rutas/actas.js'
+import { rutasCalendario } from './rutas/calendario.js'
 import { rutasClubes } from './rutas/clubes.js'
 import { rutasEjercicios } from './rutas/ejercicios.js'
 import { rutasEntrenos } from './rutas/entrenos.js'
@@ -58,6 +59,8 @@ export function crearApp(dependencias: Partial<Dependencias> = {}) {
   app.route('/', rutasJugadoresPlantilla())
   app.route('/', rutasJugadoresClub())
   app.route('/', rutasEntrenos())
+  // Antes que los partidos: en /partidos/calendario, «calendario» no es el id de un partido
+  app.route('/', rutasCalendario())
   app.route('/', rutasPartidos())
   app.route('/', rutasEstadisticas())
   app.route('/', rutasEstadisticasClub())

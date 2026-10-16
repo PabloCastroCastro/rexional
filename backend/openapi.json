@@ -704,6 +704,141 @@
           }
         ]
       },
+      "CalendarioLeido": {
+        "type": "object",
+        "properties": {
+          "competicion": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "TERCERA FUTGAL, A CORUÑA | GRUPO 1"
+          },
+          "temporada": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "2026-2027"
+          },
+          "equipos": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Los equipos de la competición"
+          },
+          "equipo": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "El equipo que se parece al club; null si no hay uno claro"
+          },
+          "jornadas": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "numero": {
+                  "type": "integer"
+                },
+                "fecha": {
+                  "type": "string"
+                },
+                "enfrentamientos": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "local": {
+                        "type": "string"
+                      },
+                      "visitante": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "local",
+                      "visitante"
+                    ]
+                  }
+                },
+                "descansa": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "numero",
+                "fecha",
+                "enfrentamientos",
+                "descansa"
+              ]
+            }
+          },
+          "existentes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "fecha": {
+                  "type": "string"
+                },
+                "rival": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "fecha",
+                "rival"
+              ]
+            },
+            "description": "Los partidos que ya tiene la plantilla, para no repetirlos"
+          }
+        },
+        "required": [
+          "competicion",
+          "temporada",
+          "equipos",
+          "equipo",
+          "jornadas",
+          "existentes"
+        ]
+      },
+      "CalendarioImportado": {
+        "type": "object",
+        "properties": {
+          "creados": {
+            "type": "integer"
+          },
+          "omitidos": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "fecha": {
+                  "type": "string"
+                },
+                "rival": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "fecha",
+                "rival"
+              ]
+            },
+            "description": "Los que ya estaban (mismo día, o rival parecido a pocos días)"
+          }
+        },
+        "required": [
+          "creados",
+          "omitidos"
+        ]
+      },
       "ResumenPartido": {
         "type": "object",
         "properties": {
@@ -4555,6 +4690,219 @@
                   "items": {
                     "$ref": "#/components/schemas/AsistenciaJugador"
                   }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/partidos/calendario/leer": {
+      "post": {
+        "tags": [
+          "Partidos"
+        ],
+        "summary": "Leer el calendario",
+        "description": "Delegado o superior. El calendario de la competición en PDF (como mucho 2 MB), en el campo `archivo`. Devuelve las jornadas leídas sin crear nada; el PDF no se guarda.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "archivo": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Calendario leído",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarioLeido"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "No es un PDF o no se puede leer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Pasa de 2 MB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/partidos/calendario": {
+      "post": {
+        "tags": [
+          "Partidos"
+        ],
+        "summary": "Importar el calendario",
+        "description": "Delegado o superior. Crea los partidos elegidos del calendario, programados y sin hora. Omite los que ya están: otro partido el mismo día, o contra un rival parecido con 3 días o menos de diferencia.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "partidos": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "fecha": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                          "example": "2026-10-13"
+                        },
+                        "rival": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 80
+                        },
+                        "local": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "fecha",
+                        "rival",
+                        "local"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "minItems": 1,
+                    "maxItems": 80
+                  }
+                },
+                "required": [
+                  "partidos"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Partidos creados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarioImportado"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }
