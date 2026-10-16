@@ -328,3 +328,18 @@
 .lista li + li {
   border-top: 1px solid var(--color-borde);
 }
+
+.botonCampo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: start;
+  gap: var(--espacio-2);
+  min-height: var(--altura-tactil);
+  padding: 0 var(--espacio-4);
+  border-radius: var(--radio-m);
+  background: var(--color-primario);
+  color: var(--color-sobre-primario);
+  font-weight: var(--peso-medio);
+  text-decoration: none;
+}

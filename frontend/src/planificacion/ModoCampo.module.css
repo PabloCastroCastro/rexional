@@ -1,0 +1,215 @@
+/* Modo campo: siempre oscuro y con alto contraste, también con el tema claro (se lee a pleno sol) */
+.campo {
+  --campo-fondo: #0b100e;
+  --campo-superficie: #18221e;
+  --campo-texto: #ffffff;
+  --campo-suave: #c9d4cf;
+  --campo-acento: #ffd34d;
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+  padding: env(safe-area-inset-top) 0 0;
+  overflow-y: auto;
+  background: var(--campo-fondo);
+  color: var(--campo-texto);
+  font-size: 1.125rem;
+}
+
+.barra {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--espacio-2) var(--espacio-3);
+  background: var(--campo-fondo);
+}
+
+.icono {
+  display: grid;
+  place-items: center;
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: var(--radio-m);
+  background: var(--campo-superficie);
+  color: var(--campo-texto);
+}
+
+.progreso {
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.sesion {
+  margin: 0;
+  padding: 0 var(--espacio-4);
+  color: var(--campo-suave);
+  font-size: 1rem;
+}
+
+.sesion::first-letter {
+  text-transform: uppercase;
+}
+
+.aviso {
+  margin: 0 var(--espacio-4);
+  padding: var(--espacio-2) var(--espacio-3);
+  border-radius: var(--radio-m);
+  background: var(--campo-superficie);
+  color: var(--campo-suave);
+  font-size: 0.95rem;
+}
+
+.paso {
+  display: grid;
+  flex: 1;
+  align-content: start;
+  gap: var(--espacio-4);
+  padding: 0 var(--espacio-4) var(--espacio-4);
+}
+
+.paso h1 {
+  margin: 0;
+  color: var(--campo-texto);
+  font-size: 2rem;
+  line-height: 1.15;
+}
+
+.detalles {
+  margin: 0;
+  color: var(--campo-acento);
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.indicaciones {
+  margin: 0;
+  padding: var(--espacio-3) var(--espacio-4);
+  border-left: 6px solid var(--campo-acento);
+  border-radius: var(--radio-m);
+  background: var(--campo-superficie);
+  font-size: 1.3rem;
+  line-height: 1.4;
+}
+
+.descripcion {
+  margin: 0;
+  line-height: 1.5;
+  white-space: pre-line;
+}
+
+.medios {
+  display: grid;
+  gap: var(--espacio-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.medios img,
+.medios video {
+  display: block;
+  width: 100%;
+  max-height: 60vh;
+  border-radius: var(--radio-l);
+  background: #000;
+  object-fit: contain;
+}
+
+.medios p {
+  margin: var(--espacio-1) 0 0;
+  color: var(--campo-suave);
+}
+
+.enlace {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  padding: var(--espacio-3) var(--espacio-4);
+  border-radius: var(--radio-l);
+  background: var(--campo-superficie);
+  color: var(--campo-texto);
+  text-decoration: none;
+}
+
+.cuentaAtras {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+  padding: var(--espacio-3) var(--espacio-4);
+  border-radius: var(--radio-l);
+  background: var(--campo-superficie);
+}
+
+.cuentaAtras output {
+  font-size: 3rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.cuentaAtras[data-terminado] output {
+  color: var(--campo-acento);
+}
+
+.cuentaAtras div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-2);
+}
+
+.cuentaAtras button,
+.navegacion button,
+.navegacion a,
+.botonGrande {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--espacio-2);
+  min-height: 3.5rem;
+  padding: 0 var(--espacio-4);
+  border: 2px solid var(--campo-texto);
+  border-radius: var(--radio-m);
+  background: transparent;
+  color: var(--campo-texto);
+  font: inherit;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.navegacion {
+  position: sticky;
+  bottom: 0;
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: var(--espacio-3);
+  padding: var(--espacio-3) var(--espacio-4) calc(var(--espacio-3) + env(safe-area-inset-bottom));
+  background: var(--campo-fondo);
+}
+
+.navegacion button:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.navegacion .principal {
+  border-color: var(--campo-acento);
+  background: var(--campo-acento);
+  color: #111;
+}
+
+.vacio {
+  display: grid;
+  gap: var(--espacio-4);
+  margin: auto;
+  padding: var(--espacio-4);
+  text-align: center;
+}

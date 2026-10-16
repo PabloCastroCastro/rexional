@@ -11,6 +11,7 @@ import {
   Plus,
   Save,
   Search,
+  Smartphone,
   Trash2,
   TriangleAlert,
 } from 'lucide-react'
@@ -32,6 +33,7 @@ import {
   CLAVE_MODELOS,
   type EjercicioPlan,
   type Plan,
+  rutaCampo,
   rutaPlan,
   useModelos,
   usePlan,
@@ -90,6 +92,18 @@ function Duracion({ total, prevista }: { total: number; prevista: number | null 
   )
 }
 
+// El modo campo usa el plan guardado: con ejercicios, siempre a mano
+function BotonCampo({ plan }: { plan: Plan }) {
+  const plantilla = usePlantillaActiva()
+  if (plan.ejercicios.length === 0) return null
+  return (
+    <Link to={rutaCampo(plantilla.id, plan.entrenoId)} className={estilos.botonCampo}>
+      <Smartphone aria-hidden size={20} />
+      Modo campo
+    </Link>
+  )
+}
+
 const enlaceEjercicio = (plantillaId: string, id: string) =>
   `/plantillas/${plantillaId}/entrenos/ejercicios/${id}`
 
@@ -111,6 +125,7 @@ function Lectura({ plan, volver }: { plan: Plan; volver: ReactNode }) {
     <div className={estilos.pagina}>
       {volver}
       {cabecera(plan)}
+      <BotonCampo plan={plan} />
       {!plan.objetivo && plan.ejercicios.length === 0 ? (
         <EstadoVacio titulo="Este entreno aún no tiene plan" />
       ) : (
@@ -260,6 +275,7 @@ function Editor({ plan, volver }: { plan: Plan; volver: ReactNode }) {
           Fecha y hora
         </Boton>
       </div>
+      <BotonCampo plan={plan} />
 
       <Campo
         etiqueta="Objetivo"
