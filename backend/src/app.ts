@@ -10,6 +10,7 @@ import { rutasClubes } from './rutas/clubes.js'
 import { rutasEntrenos } from './rutas/entrenos.js'
 import { rutasEstadisticas, rutasEstadisticasClub } from './rutas/estadisticas.js'
 import { rutasJugadoresClub, rutasJugadoresPlantilla } from './rutas/jugadores.js'
+import { rutasMedios, rutasMediosClub } from './rutas/medios.js'
 import { rutasMultas, rutasMultasJugadores } from './rutas/multas.js'
 import { rutasPartidos } from './rutas/partidos.js'
 import { rutasPlantillas } from './rutas/plantillas.js'
@@ -59,6 +60,8 @@ export function crearApp(dependencias: Partial<Dependencias> = {}) {
   app.route('/', rutasEstadisticas())
   app.route('/', rutasEstadisticasClub())
   app.route('/', rutasActas())
+  app.route('/', rutasMediosClub())
+  app.route('/', rutasMedios())
   app.route('/', rutasMultas())
   app.route('/', rutasMultasJugadores())
 

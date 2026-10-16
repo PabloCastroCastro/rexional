@@ -3456,6 +3456,334 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/clubes/{cid}/ejercicios/{eid}/medios": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Subir una foto o un vídeo
+         * @description Delegado o superior en alguna plantilla del club. Cuerpo `multipart/form-data` con el archivo en `archivo` y, opcional, `pie` (no se declara aquí: validarlo leería el cuerpo entero y la subida dejaría de ir en streaming). Fotos JPEG, PNG o WebP; vídeos MP4, MOV o WebM. Límites configurables (por defecto 15 MB por foto y 150 MB por vídeo). La foto se guarda reducida, en WebP y sin metadatos; el vídeo queda «procesando» hasta tener miniatura y, si hace falta, recodificarse a MP4 H.264.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    cid: string;
+                    eid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Medio añadido */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Medio"];
+                    };
+                };
+                /** @description Falta el archivo */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Supera el límite */
+                413: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Tipo no admitido */
+                415: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/clubes/{cid}/ejercicios/{eid}/medios/{mid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Quitar una foto, un vídeo o un enlace
+         * @description Delegado o superior en alguna plantilla del club. Borra también sus archivos.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    cid: string;
+                    eid: string;
+                    mid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Medio quitado */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/medios/{mid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Archivo de una foto o un vídeo
+         * @description Miembro de alguna plantilla del club del ejercicio. Admite Range (respuesta 206) para avanzar en los vídeos.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    mid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description El archivo */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/octet-stream": string;
+                    };
+                };
+                /** @description Un trozo del archivo */
+                206: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Rango no válido */
+                416: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/medios/{mid}/miniatura": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Miniatura de una foto o un vídeo
+         * @description Miembro de alguna plantilla del club del ejercicio. Admite Range (respuesta 206) para avanzar en los vídeos.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    mid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description El archivo */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/octet-stream": string;
+                    };
+                };
+                /** @description Un trozo del archivo */
+                206: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Rango no válido */
+                416: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/plantillas/{id}/motivos-multa": {
         parameters: {
             query?: never;
@@ -4618,6 +4946,27 @@ export interface components {
             minuto: number | null;
             /** @description A favor: gol en propia puerta del rival. En contra: de uno de los nuestros */
             enPropia: boolean;
+        };
+        Medio: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            tipo: "foto" | "video" | "enlace";
+            /**
+             * @description Un vídeo está «procesando» hasta que tiene miniatura (y, si hacía falta, se recodifica)
+             * @enum {string}
+             */
+            estado: "listo" | "procesando" | "error";
+            mime: string | null;
+            tamanoBytes: number | null;
+            duracionSeg: number | null;
+            pie: string | null;
+            orden: number;
+            /** @description Solo en los enlaces */
+            url: string | null;
+            /** @example /api/medios/… */
+            urlArchivo: string | null;
+            urlMiniatura: string | null;
         };
         MotivoMulta: {
             /** Format: uuid */
