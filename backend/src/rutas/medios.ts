@@ -3,6 +3,7 @@ import { stat } from 'node:fs/promises'
 import { Readable } from 'node:stream'
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
 import { and, eq, sql } from 'drizzle-orm'
+import { config } from '../config.js'
 import { db } from '../db/cliente.js'
 import { ejercicioMedios, ejercicios, estadoMedio, tipoMedio } from '../db/schema/index.js'
 import { ErrorApi, EsquemaError, validacionFallida } from '../errores.js'
@@ -286,6 +287,31 @@ async function responderArchivo(
 
 export const rutasMedios = () =>
   new OpenAPIHono<EnvSesion>({ defaultHook: validacionFallida })
+    .openapi(
+      createRoute({
+        method: 'get',
+        path: '/medios/limites',
+        tags: ['Ejercicios'],
+        summary: 'Tamaño máximo de las fotos y los vídeos',
+        description: 'Para comprobarlo antes de subir. Cualquier usuario con sesión.',
+        middleware: [requireSesion()] as const,
+        responses: {
+          200: json(
+            z.object({ maxFotoBytes: z.int(), maxVideoBytes: z.int() }).openapi('LimitesMedios'),
+            'Límites',
+          ),
+          401: json(EsquemaError, 'Sin sesión'),
+        },
+      }),
+      (c) =>
+        c.json(
+          {
+            maxFotoBytes: config.subidas.maxFotoBytes,
+            maxVideoBytes: config.subidas.maxVideoBytes,
+          },
+          200,
+        ),
+    )
     .openapi(
       servir('archivo'),
       (c) => responderArchivo(c, c.req.valid('param').mid, 'archivo') as never,

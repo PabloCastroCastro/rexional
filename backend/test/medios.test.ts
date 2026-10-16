@@ -225,6 +225,12 @@ describe('fotos', () => {
     ).toBe(404)
   })
 
+  it('los límites se consultan con sesión', async () => {
+    const res = await pedir('GET', '/medios/limites', 'jugador')
+    expect(await res.json()).toEqual({ maxFotoBytes: 1024 * 1024, maxVideoBytes: 2 * 1024 * 1024 })
+    expect((await pedir('GET', '/medios/limites')).status).toBe(401)
+  })
+
   it('al quitarlo se borran sus archivos', async () => {
     const medio = (await (await subir(fixture('foto-gps.jpg'), 'a.jpg')).json()) as Medio
     const fila = await filaMedio(medio.id)

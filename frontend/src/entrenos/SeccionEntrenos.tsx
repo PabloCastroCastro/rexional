@@ -1,7 +1,8 @@
 import { NavLink, Outlet } from 'react-router'
 import estilos from './Entrenos.module.css'
 
-// Pestaña Entrenos: pasar lista (índice), historial y horario, cada uno con su ruta
+// Pestaña Entrenos: pasar lista (índice), historial, horario y la biblioteca de ejercicios del club,
+// cada uno con su ruta
 export function SeccionEntrenos() {
   const clase = ({ isActive }: { isActive: boolean }) => (isActive ? estilos.activa : undefined)
   return (
@@ -16,6 +17,9 @@ export function SeccionEntrenos() {
         </NavLink>
         <NavLink to="horario" className={clase}>
           Horario
+        </NavLink>
+        <NavLink to="ejercicios" className={clase}>
+          Ejercicios
         </NavLink>
       </nav>
       <Outlet />
