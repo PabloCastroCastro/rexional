@@ -754,7 +754,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-.tarjeta {
+.tarjetaFalta {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -764,12 +764,12 @@
   font-size: var(--texto-sm);
 }
 
-.tarjeta[data-tipo="amarilla"] {
+.tarjetaFalta[data-tipo="amarilla"] {
   background: #f2c230;
   color: #1d1d1d;
 }
 
-.tarjeta[data-tipo="roja"] {
+.tarjetaFalta[data-tipo="roja"] {
   background: var(--color-peligro);
   color: #fff;
 }
