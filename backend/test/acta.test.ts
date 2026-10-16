@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { emparejar } from '../src/acta/emparejar.js'
-import { ActaNoLegible, type FichaActa, leerActa } from '../src/acta/leer.js'
+import { ActaNoLegible, extraer, type FichaActa, interpretar, leerActa } from '../src/acta/leer.js'
 
 // Lectura de la ficha del partido. La ficha de prueba copia la maquetación de una real de la
 // Federación Gallega con nombres inventados: el CD Proba Rival (local) pierde 1-7 con el CD Rexional.
@@ -77,6 +77,26 @@ describe('lectura de la ficha', () => {
       'v 90',
     ])
     expect(goles[1]).toEqual({ equipo: 'visitante', nombre: 'GÓMEZ GARCÍA, DANIEL', minuto: 40 })
+  })
+
+  // Otras fichas reales colocan los marcadores de los goles más a la izquierda que las etiquetas
+  // del centro, y los goles del descuento llevan "(90'+3)"
+  it('goles con los marcadores más a la izquierda y minutos del descuento', async () => {
+    const { textos, iconos } = await extraer(FICHA)
+    const movidos = textos.map((t) => {
+      if (/^d+ - d+$/.test(t.texto)) return { ...t, x: t.x - 4 }
+      if (['Árbitro', 'ESTADIO:', 'Ciudad:'].includes(t.texto)) return { ...t, x: t.x + 11 }
+      if (t.texto.endsWith("(90')")) return { ...t, texto: t.texto.replace("(90')", "(90'+3)") }
+      return t
+    })
+    const leida = interpretar({ textos: movidos, iconos })
+    expect(leida.goles).toHaveLength(8)
+    expect(leida.goles.at(-1)).toEqual({
+      equipo: 'visitante',
+      nombre: 'CARBALLO VARELA, ANXO',
+      minuto: 93,
+    })
+    expect(leida.local.titulares).toHaveLength(11)
   })
 
   it('rechaza lo que no es un PDF o no es una ficha', async () => {

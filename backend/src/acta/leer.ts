@@ -146,10 +146,12 @@ function nombreColor([r, g, b]: [number, number, number]): Color {
   return null
 }
 
-const MINUTO = /^(.*?)\s*\((\d+)'\)\s*$/
+// "(33')" o, en el descuento, "(90'+3)", que es el minuto 93
+const MINUTO = /^(.*?)\s*\((\d+)'(?:\s*\+\s*(\d+))?\)\s*$/
 const conMinuto = (texto: string) => {
   const m = texto.match(MINUTO)
-  return m ? { nombre: (m[1] ?? '').trim(), minuto: Number(m[2]) } : { nombre: texto, minuto: null }
+  if (!m) return { nombre: texto, minuto: null }
+  return { nombre: (m[1] ?? '').trim(), minuto: Number(m[2]) + Number(m[3] ?? 0) }
 }
 
 // Una fila: los textos a la misma altura (con un poco de margen), de izquierda a derecha
@@ -265,8 +267,12 @@ export function interpretar({ textos, iconos }: Elementos): FichaActa {
   if (!izquierda || !derecha || titulares.length !== 2) {
     throw new ActaNoLegible('No parece una ficha del partido de la Federación Gallega')
   }
-  const etiquetasCentro = textos.filter((t) =>
-    ['GOLES', 'ESTADIO:', 'ARBITROS:', 'ARBITRO'].includes(normalizar(t.texto)),
+  // El centro empieza en lo primero que es suyo: sus etiquetas o los marcadores de los goles, que
+  // según la ficha quedan más a la izquierda que las etiquetas
+  const etiquetasCentro = textos.filter(
+    (t) =>
+      ['GOLES', 'ESTADIO:', 'ARBITROS:', 'ARBITRO'].includes(normalizar(t.texto)) ||
+      MARCADOR.test(t.texto),
   )
   const inicioDerecha = derecha.x - 8
   const inicioCentro = Math.min(...etiquetasCentro.map((t) => t.x), inicioDerecha) - 8
