@@ -130,7 +130,7 @@ function Clasificaciones({ jugadores }: { jugadores: EstadisticasJugador[] }) {
                 {tabla === 'tarjetas' ? (
                   <>
                     {j.amarillas > 0 && (
-                      <span className={estilos.tarjeta} data-tipo="amarilla">
+                      <span className={estilos.tarjetaFalta} data-tipo="amarilla">
                         {j.amarillas}
                         <span className="solo-lectores">
                           {j.amarillas === 1 ? ' amarilla' : ' amarillas'}
@@ -138,7 +138,7 @@ function Clasificaciones({ jugadores }: { jugadores: EstadisticasJugador[] }) {
                       </span>
                     )}
                     {j.rojas > 0 && (
-                      <span className={estilos.tarjeta} data-tipo="roja">
+                      <span className={estilos.tarjetaFalta} data-tipo="roja">
                         {j.rojas}
                         <span className="solo-lectores">{j.rojas === 1 ? ' roja' : ' rojas'}</span>
                       </span>
