@@ -4,13 +4,15 @@ import { config } from './config.js'
 import { pool } from './db/cliente.js'
 import { migrar } from './db/migrar.js'
 import { logger } from './logger.js'
+import { iniciarMedios } from './medios/cola.js'
 
 // Las migraciones pendientes se aplican antes de aceptar peticiones
 try {
   await migrar()
   logger.info('Migraciones de la base de datos al día')
+  await iniciarMedios()
 } catch (error) {
-  logger.fatal({ err: error }, 'No se pudieron aplicar las migraciones')
+  logger.fatal({ err: error }, 'No se pudieron aplicar las migraciones o preparar las subidas')
   process.exit(1)
 }
 

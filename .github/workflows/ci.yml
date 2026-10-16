@@ -98,6 +98,8 @@ jobs:
         run: npm run build
 
       # Los siguientes scripts se ejecutan solo cuando el proyecto los define (ver CONTRIBUTING.md)
+      - name: ffmpeg (vídeos de los ejercicios)
+        run: sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends ffmpeg
       - name: Tests contra PostgreSQL
         run: npm run test --if-present
       - name: Sin migraciones pendientes de generar

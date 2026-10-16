@@ -29,6 +29,10 @@ const esquema = z.object({
     error: 'Debe ser una URL http(s), p. ej. https://servidor.tailnet.ts.net:8443',
   }),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
+  // Fotos y vídeos de los ejercicios: carpeta (el volumen uploads) y tamaño máximo de cada subida
+  SUBIDAS_DIR: z.string().min(1).default('uploads'),
+  MAX_FOTO_MB: z.coerce.number().int().min(1).max(100).default(15),
+  MAX_VIDEO_MB: z.coerce.number().int().min(1).max(2000).default(150),
 })
 
 export type Config = {
@@ -39,6 +43,7 @@ export type Config = {
   secretoAuth: string
   urlPublica: string
   nivelLog: z.infer<typeof esquema>['LOG_LEVEL']
+  subidas: { dir: string; maxFotoBytes: number; maxVideoBytes: number }
 }
 
 export class ErrorConfiguracion extends Error {
@@ -74,6 +79,11 @@ export function leerConfig(env: Record<string, string | undefined>): Config {
     // Sin barra final: es el origen que se compara con la cabecera Origin
     urlPublica: e.URL_PUBLICA.replace(/\/+$/, ''),
     nivelLog: e.LOG_LEVEL,
+    subidas: {
+      dir: e.SUBIDAS_DIR,
+      maxFotoBytes: e.MAX_FOTO_MB * 1024 * 1024,
+      maxVideoBytes: e.MAX_VIDEO_MB * 1024 * 1024,
+    },
   }
 }
 

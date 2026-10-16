@@ -45,6 +45,9 @@ services:
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Define BETTER_AUTH_SECRET en .env}
       URL_PUBLICA: ${URL_PUBLICA:?Define URL_PUBLICA en .env}
       TZ: ${TZ:-Europe/Madrid}
+      # Tamaño máximo de cada foto y vídeo de los ejercicios (MAX_SUBIDA del proxy debe cubrirlos)
+      MAX_FOTO_MB: ${MAX_FOTO_MB:-15}
+      MAX_VIDEO_MB: ${MAX_VIDEO_MB:-150}
     volumes:
       - uploads:/app/uploads
     depends_on:

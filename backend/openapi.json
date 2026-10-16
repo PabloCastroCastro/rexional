@@ -1571,6 +1571,92 @@
           "enPropia"
         ]
       },
+      "Medio": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "foto",
+              "video",
+              "enlace"
+            ]
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "listo",
+              "procesando",
+              "error"
+            ],
+            "description": "Un vídeo está «procesando» hasta que tiene miniatura (y, si hacía falta, se recodifica)"
+          },
+          "mime": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tamanoBytes": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "duracionSeg": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "pie": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "orden": {
+            "type": "integer"
+          },
+          "url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Solo en los enlaces"
+          },
+          "urlArchivo": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "/api/medios/…"
+          },
+          "urlMiniatura": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "tipo",
+          "estado",
+          "mime",
+          "tamanoBytes",
+          "duracionSeg",
+          "pie",
+          "orden",
+          "url",
+          "urlArchivo",
+          "urlMiniatura"
+        ]
+      },
       "MotivoMulta": {
         "type": "object",
         "properties": {
@@ -5983,6 +6069,318 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/clubes/{cid}/ejercicios/{eid}/medios": {
+      "post": {
+        "tags": [
+          "Ejercicios"
+        ],
+        "summary": "Subir una foto o un vídeo",
+        "description": "Delegado o superior en alguna plantilla del club. Cuerpo `multipart/form-data` con el archivo en `archivo` y, opcional, `pie` (no se declara aquí: validarlo leería el cuerpo entero y la subida dejaría de ir en streaming). Fotos JPEG, PNG o WebP; vídeos MP4, MOV o WebM. Límites configurables (por defecto 15 MB por foto y 150 MB por vídeo). La foto se guarda reducida, en WebP y sin metadatos; el vídeo queda «procesando» hasta tener miniatura y, si hace falta, recodificarse a MP4 H.264.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "cid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "eid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Medio añadido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Medio"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Falta el archivo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Supera el límite",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Tipo no admitido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/clubes/{cid}/ejercicios/{eid}/medios/{mid}": {
+      "delete": {
+        "tags": [
+          "Ejercicios"
+        ],
+        "summary": "Quitar una foto, un vídeo o un enlace",
+        "description": "Delegado o superior en alguna plantilla del club. Borra también sus archivos.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "cid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "eid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "mid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Medio quitado"
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/medios/{mid}": {
+      "get": {
+        "tags": [
+          "Ejercicios"
+        ],
+        "summary": "Archivo de una foto o un vídeo",
+        "description": "Miembro de alguna plantilla del club del ejercicio. Admite Range (respuesta 206) para avanzar en los vídeos.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "mid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "El archivo",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "206": {
+            "description": "Un trozo del archivo"
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "416": {
+            "description": "Rango no válido"
+          }
+        }
+      }
+    },
+    "/api/medios/{mid}/miniatura": {
+      "get": {
+        "tags": [
+          "Ejercicios"
+        ],
+        "summary": "Miniatura de una foto o un vídeo",
+        "description": "Miembro de alguna plantilla del club del ejercicio. Admite Range (respuesta 206) para avanzar en los vídeos.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "mid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "El archivo",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "206": {
+            "description": "Un trozo del archivo"
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "416": {
+            "description": "Rango no válido"
           }
         }
       }

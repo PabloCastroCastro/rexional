@@ -151,6 +151,22 @@ export const requireRol =
     await next()
   }
 
+// Rol efectivo de un usuario en un club: admin si administra el club; si no, el mayor de sus
+// plantillas del club; null si no tiene acceso
+export async function rolEnClub(usuarioId: string, clubId: string): Promise<Rol | null> {
+  const [admin] = await db
+    .select({ usuarioId: adminsClub.usuarioId })
+    .from(adminsClub)
+    .where(and(eq(adminsClub.clubId, clubId), eq(adminsClub.usuarioId, usuarioId)))
+  if (admin) return 'admin'
+  const roles = await db
+    .select({ rol: membresias.rol })
+    .from(membresias)
+    .innerJoin(plantillas, eq(plantillas.id, membresias.plantillaId))
+    .where(and(eq(plantillas.clubId, clubId), eq(membresias.usuarioId, usuarioId)))
+  return rolMayor(roles.map((r) => r.rol))
+}
+
 async function cargarAccesoClub(c: Context<EnvClub>, parametro: string) {
   const usuarioId = await cargarSesion(c)
   const clubId = c.req.param(parametro) ?? ''

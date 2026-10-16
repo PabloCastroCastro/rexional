@@ -1,8 +1,9 @@
 # syntax=docker/dockerfile:1
 
 FROM node:24-alpine AS base
-# tzdata para que TZ (Europe/Madrid) se aplique también fuera de Node
-RUN apk add --no-cache tzdata
+# tzdata para que TZ (Europe/Madrid) se aplique también fuera de Node; ffmpeg para los vídeos de
+# los ejercicios (miniatura, duración y recodificar los del iPhone)
+RUN apk add --no-cache tzdata ffmpeg
 WORKDIR /app
 
 # Dependencias completas, para desarrollo y compilación
