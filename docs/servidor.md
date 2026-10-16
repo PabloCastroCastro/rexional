@@ -139,28 +139,11 @@ Las migraciones no se deshacen: si la versión nueva cambió el esquema, además
 
 ## 6. Copias de seguridad
 
-`scripts/backup.sh pro` guarda un `pg_dump` comprimido en `/opt/vestuario/backups/vestuario-pro-AAAAMMDD-HHMMSS.sql.gz`, comprueba que está completo y borra las copias de más de 14 días. Además de antes de cada despliegue a producción, se hace cada día con un cron del usuario que despliega (`crontab -e`):
-
-```cron
-# Copia de seguridad diaria de producción, a las 3:30
-30 3 * * *  /opt/vestuario/pro/scripts/backup.sh pro >> /opt/vestuario/backups/backup.log 2>&1
-```
-
-Es provisional: las copias completas (también fotos y vídeos) y fuera del servidor llegan en el ciclo 8.
+`scripts/backup.sh pro` copia la base de datos y las subidas de producción cada día (cron a las 3:30) y antes de cada despliegue, con rotación de 7 diarias, 4 semanales y 6 mensuales. El PC se las trae cada día por Tailscale, para tener una copia fuera del servidor. Todo, con la instalación del cron y de la tarea del PC, está en [operacion.md](operacion.md).
 
 ## 7. Restaurar una copia
 
-Probado: la copia se restaura sin errores en una base de datos vacía.
-
-```bash
-cd /opt/vestuario/pro
-C="docker compose -p vestuario-pro -f docker-compose.yml -f docker-compose.servidor.yml"
-$C stop backend proxy
-$C exec db sh -c 'dropdb -U "$POSTGRES_USER" "$POSTGRES_DB" && createdb -U "$POSTGRES_USER" "$POSTGRES_DB"'
-gunzip -c /opt/vestuario/backups/vestuario-pro-AAAAMMDD-HHMMSS.sql.gz \
-  | $C exec -T db sh -c 'psql -q -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" "$POSTGRES_DB"'
-$C start backend proxy
-```
+`scripts/restaurar.sh pruebas|pro COPIA.sql.gz [--subidas DIRECTORIO] [--produccion]`. El procedimiento completo, incluido qué hacer si se pierde el servidor, está en [operacion.md](operacion.md#3-restaurar-una-copia).
 
 ## 8. Comprobaciones
 

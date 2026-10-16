@@ -1519,9 +1519,9 @@ Depende de GH-13; sustituye a su copia provisional.
 **Criterios de aceptación**
 - [ ] `pg_dump` diario de producción y copia incremental del volumen `uploads` (escudos, fotos y vídeos de ejercicios)
 - [ ] Rotación: 7 diarias, 4 semanales y 6 mensuales
-- [ ] Copia fuera del servidor (disco externo u otra máquina de la red)
-- [ ] Aviso si una copia falla
-- [ ] Aviso si el espacio libre en disco del servidor baja de un umbral configurable
+- [ ] Copia fuera del servidor (disco externo u otra máquina de la red): el PC se trae las copias cada día por Tailscale
+- [ ] Aviso si una copia falla (en el registro de las copias, por decisión del usuario)
+- [ ] Aviso si el espacio libre en disco del servidor baja de un umbral configurable (en el mismo registro)
 
 #### GH-46
 **Título:** Procedimiento de restauración probado
