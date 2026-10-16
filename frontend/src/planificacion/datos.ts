@@ -52,3 +52,6 @@ export function resumenPlan(e: {
 
 export const rutaPlan = (plantillaId: string, entrenoId: string) =>
   `/plantillas/${plantillaId}/entrenos/plan/${entrenoId}`
+
+export const rutaCampo = (plantillaId: string, entrenoId: string) =>
+  `/plantillas/${plantillaId}/campo/${entrenoId}`

@@ -22,6 +22,7 @@ import { PaginaAlineacion } from './partidos/PaginaAlineacion'
 import { PaginaConvocatoria } from './partidos/PaginaConvocatoria'
 import { PaginaPartido } from './partidos/PaginaPartido'
 import { PaginaPartidos } from './partidos/PaginaPartidos'
+import { ModoCampo } from './planificacion/ModoCampo'
 import { PaginaPlan } from './planificacion/PaginaPlan'
 import { Inicio } from './plantillas/Inicio'
 import { PaginaElegirPlantilla } from './plantillas/PaginaElegirPlantilla'
@@ -53,6 +54,8 @@ export const rutas = [
         path: 'plantillas/:plantillaId',
         element: <PlantillaActiva />,
         children: [
+          // A pantalla completa, sin la navegación de la aplicación
+          { path: 'campo/:entrenoId', element: <ModoCampo /> },
           {
             element: <Aplicacion />,
             children: [
