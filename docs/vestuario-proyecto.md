@@ -633,9 +633,9 @@ Prefijo `/api`. JSON. Todas las rutas de la plantilla cuelgan de `/plantillas`, 
 | | `GET /plantillas/:id/entrenos/:eid` | Miembro (jugador: solo su fila) |
 | | `PUT /plantillas/:id/entrenos/:eid/asistencias` (lista completa; no en entrenos futuros) | Delegado |
 | | `GET /plantillas/:id/asistencia/resumen` | Miembro (jugador: solo suyo) |
-| Ejercicios | `GET /clubes/:cid/ejercicios?categoria=&etiqueta=&q=&archivados=` · `GET /clubes/:cid/ejercicios/:eid` | Miembro de alguna plantilla del club |
-| | `POST/PATCH/DELETE /clubes/:cid/ejercicios/:eid` · `POST .../:eid/duplicar` | Delegado o superior en alguna plantilla del club |
-| | `POST /clubes/:cid/ejercicios/:eid/medios` (multipart o enlace) · `PATCH/DELETE .../medios/:mid` · `PUT .../medios/orden` | Delegado o superior en alguna plantilla del club |
+| Ejercicios | `GET /clubes/:cid/ejercicios?categoria=&etiqueta=&q=&archivados=no|si|todos` (búsqueda sin tildes) · `GET .../ejercicios/etiquetas` · `GET /clubes/:cid/ejercicios/:eid` (con sus medios y cuántos planes o modelos lo usan) | Miembro de alguna plantilla del club |
+| | `POST /clubes/:cid/ejercicios` · `PATCH/DELETE /clubes/:cid/ejercicios/:eid` (`archivado`; borrar solo si no se ha usado: 409) · `POST .../:eid/duplicar` (con copia de los archivos) | Delegado o superior en alguna plantilla del club |
+| | `POST /clubes/:cid/ejercicios/:eid/medios` (foto o vídeo, multipart en streaming) · `POST .../medios/enlace` · `PATCH/DELETE .../medios/:mid` (pie; borrar quita los archivos) · `PUT .../medios/orden` | Delegado o superior en alguna plantilla del club |
 | | `GET /medios/:mid` y `GET /medios/:mid/miniatura` (con `Range` para vídeo) | Miembro de alguna plantilla del club del medio |
 | Planificación | `GET /plantillas/:id/sesiones?desde=&hasta=` · `GET /plantillas/:id/entrenos/:eid/plan` | Miembro |
 | | `PUT /plantillas/:id/entrenos/:eid/plan` (objetivo, notas y lista ordenada de ejercicios) · `POST .../plan/duplicar` (a otra fecha) · `POST .../plan/guardar-modelo` | Delegado |
