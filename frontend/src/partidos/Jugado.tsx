@@ -54,6 +54,12 @@ export function SeccionPartido({ partido }: { partido: Partido }) {
   const [evento, setEvento] = useState(false)
   const convocados = partido.jugadores.filter((j) => j.convocado)
   const conAlineacion = convocados.some((j) => j.titular !== null)
+  // Goles a favor del resultado que aún no tienen autor en la línea de tiempo
+  const sinAutor =
+    (partido.golesFavor ?? 0) -
+    partido.eventos.filter(
+      (e) => e.tipo === 'gol' || (e.tipo === 'gol_propia' && e.jugadorId === null),
+    ).length
   // Un partido futuro sin nada registrado aún no tiene esta sección
   if (partido.fecha > hoy() && partido.estado === 'programado' && partido.eventos.length === 0) {
     return null
@@ -89,6 +95,12 @@ export function SeccionPartido({ partido }: { partido: Partido }) {
             Añadir
           </Boton>
         </div>
+      )}
+      {gestiona && sinAutor > 0 && convocados.length > 0 && (
+        <p className={estilos.avisoGoles} role="note">
+          {sinAutor === 1 ? 'Falta 1 gol por asignar' : `Faltan ${sinAutor} goles por asignar`}:
+          pulsa «Añadir», elige «Gol» y quién lo marcó.
+        </p>
       )}
       <LineaTiempo partido={partido} gestiona={gestiona} />
       <HojaResultado partido={partido} abierta={resultado} alCerrar={() => setResultado(false)} />
