@@ -71,6 +71,13 @@
       "when": 1792083115009,
       "tag": "0009_actas_partido",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1792137320815,
+      "tag": "0010_planificacion_entrenos",
+      "breakpoints": true
     }
   ]
 }

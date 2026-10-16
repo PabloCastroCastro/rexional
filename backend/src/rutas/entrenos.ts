@@ -3,6 +3,7 @@ import { and, asc, desc, eq, gte, inArray, lte, notExists, or, sql } from 'drizz
 import { db } from '../db/cliente.js'
 import {
   asistencias,
+  entrenoEjercicios,
   entrenos,
   estadoAsistencia,
   fichas,
@@ -247,7 +248,20 @@ function sesionesDelHorario(horario: { hasta: string; sesiones: SesionHorario[] 
   return resultado
 }
 
-// Borra los entrenos futuros del horario que aún no tienen asistencia (los que la tienen se conservan)
+// Sin plan: ni ejercicios ni objetivo (ciclo 7)
+const sinPlan = () =>
+  and(
+    sql`${entrenos.objetivo} is null`,
+    notExists(
+      db
+        .select({ uno: sql`1` })
+        .from(entrenoEjercicios)
+        .where(eq(entrenoEjercicios.entrenoId, entrenos.id)),
+    ),
+  )
+
+// Borra los entrenos futuros del horario que aún no tienen asistencia ni plan (los que tienen algo se
+// conservan)
 async function borrarFuturosDelHorario(
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
   plantillaId: string,
@@ -260,6 +274,7 @@ async function borrarFuturosDelHorario(
         eq(entrenos.deHorario, true),
         gte(entrenos.fecha, hoy()),
         sinAsistencias(),
+        sinPlan(),
       ),
     )
     .returning({ id: entrenos.id })

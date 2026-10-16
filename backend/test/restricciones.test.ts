@@ -1,15 +1,20 @@
-import { and, eq, sql } from 'drizzle-orm'
+import { and, eq, inArray, sql } from 'drizzle-orm'
 import { afterAll, describe, expect, it } from 'vitest'
 import { db, pool } from '../src/db/cliente.js'
 import {
   asistencias,
   clubes,
   convocados,
+  ejercicioMedios,
+  ejercicios,
+  entrenoEjercicios,
   entrenos,
   eventosPartido,
   fichas,
   horarios,
   jugadores,
+  modeloEjercicios,
+  modelosSesion,
   motivosMulta,
   multas,
   participaciones,
@@ -855,5 +860,152 @@ describe('estadísticas de partido', () => {
       await tx.insert(eventosPartido).values({ partidoId: b.partido.id, tipo: 'gol_propia' })
       await tx.delete(partidos).where(eq(partidos.id, b.partido.id))
       expect(await tx.$count(eventosPartido, eq(eventosPartido.partidoId, b.partido.id))).toBe(0)
+    }))
+})
+
+describe('planificación de entrenos', () => {
+  // Un ejercicio del club y un entreno del Senior 2026-27 que lo usa en su plan
+  async function conPlan(tx: Tx) {
+    const b = await base(tx)
+    const [ejercicio] = await tx
+      .insert(ejercicios)
+      .values({ clubId: b.club.id, nombre: 'Rondo 4 contra 1', categoria: 'calentamiento' })
+      .returning()
+    const [entreno] = await tx
+      .insert(entrenos)
+      .values({ plantillaId: b.senior26.id, fecha: '2026-10-20', objetivo: 'Salida de balón' })
+      .returning()
+    if (!ejercicio || !entreno) throw new Error('Datos incompletos')
+    await tx
+      .insert(entrenoEjercicios)
+      .values({ entrenoId: entreno.id, ejercicioId: ejercicio.id, orden: 0, duracionMin: 10 })
+    return { ...b, ejercicio, entreno }
+  }
+
+  it('un ejercicio nuevo no está archivado y no tiene etiquetas', () =>
+    enTransaccion(async (tx) => {
+      const b = await base(tx)
+      const [ejercicio] = await tx
+        .insert(ejercicios)
+        .values({ clubId: b.club.id, nombre: 'Rondo' })
+        .returning()
+      expect(ejercicio).toMatchObject({ archivado: false, etiquetas: [] })
+    }))
+
+  it.each([
+    [{ nombre: '  ' }, 'ejercicios_nombre_no_vacio'],
+    [{ nombre: 'Rondo', duracionMin: 0 }, 'ejercicios_duracion_valida'],
+    [{ nombre: 'Rondo', duracionMin: 241 }, 'ejercicios_duracion_valida'],
+  ] as const)('rechaza el ejercicio %o', (datos, restriccion) =>
+    enTransaccion(async (tx) => {
+      const b = await base(tx)
+      const r = await restriccionViolada(
+        tx.insert(ejercicios).values({ clubId: b.club.id, ...datos }),
+      )
+      expect(r).toBe(restriccion)
+    }),
+  )
+
+  it.each([
+    [{ tipo: 'enlace', url: 'https://youtube.com/watch?v=x' }, null],
+    [{ tipo: 'foto', archivo: 'ejercicios/a.webp' }, null],
+    [{ tipo: 'video', archivo: 'ejercicios/a.mp4', duracionSeg: 30 }, null],
+    [
+      { tipo: 'enlace', archivo: 'ejercicios/a.webp', url: 'https://x.es' },
+      'ejercicio_medios_tipo_coherente',
+    ],
+    [{ tipo: 'enlace' }, 'ejercicio_medios_tipo_coherente'],
+    [{ tipo: 'foto' }, 'ejercicio_medios_tipo_coherente'],
+    [{ tipo: 'foto', archivo: 'a.webp', url: 'https://x.es' }, 'ejercicio_medios_tipo_coherente'],
+    [{ tipo: 'enlace', url: 'javascript:alert(1)' }, 'ejercicio_medios_url_web'],
+    [{ tipo: 'foto', archivo: 'a.webp', duracionSeg: 3 }, 'ejercicio_medios_duracion_solo_video'],
+  ] as const)('medio %o → %s', (medio, restriccion) =>
+    enTransaccion(async (tx) => {
+      const b = await conPlan(tx)
+      const r = await restriccionViolada(
+        tx.insert(ejercicioMedios).values({ ejercicioId: b.ejercicio.id, orden: 0, ...medio }),
+      )
+      expect(r).toBe(restriccion ?? undefined)
+    }),
+  )
+
+  it('un ejercicio usado en un plan no se borra; sin usar, sí', () =>
+    enTransaccion(async (tx) => {
+      const b = await conPlan(tx)
+      // La clave es diferida (se comprueba al confirmar): aquí se comprueba en el momento
+      await tx.execute(sql`set constraints all immediate`)
+      const [libre] = await tx
+        .insert(ejercicios)
+        .values({ clubId: b.club.id, nombre: 'Sin usar' })
+        .returning()
+      await tx.delete(ejercicios).where(eq(ejercicios.id, libre?.id ?? ''))
+      const r = await restriccionViolada(
+        tx.delete(ejercicios).where(eq(ejercicios.id, b.ejercicio.id)),
+      )
+      expect(r).toBe('entreno_ejercicios_ejercicio_id_ejercicios_id_fk')
+    }))
+
+  it('no admite dos ejercicios en la misma posición del plan', () =>
+    enTransaccion(async (tx) => {
+      const b = await conPlan(tx)
+      const r = await restriccionViolada(
+        tx
+          .insert(entrenoEjercicios)
+          .values({ entrenoId: b.entreno.id, ejercicioId: b.ejercicio.id, orden: 0 }),
+      )
+      expect(r).toBe('entreno_ejercicios_orden_unico')
+    }))
+
+  it('los modelos del club no repiten nombre, sin distinguir mayúsculas', () =>
+    enTransaccion(async (tx) => {
+      const b = await base(tx)
+      await tx.insert(modelosSesion).values({ clubId: b.club.id, nombre: 'Sesión de martes' })
+      // En otro club, sí
+      await tx.insert(modelosSesion).values({ clubId: b.otroClub.id, nombre: 'Sesión de martes' })
+      const r = await restriccionViolada(
+        tx.insert(modelosSesion).values({ clubId: b.club.id, nombre: 'SESIÓN DE MARTES' }),
+      )
+      expect(r).toBe('modelos_sesion_nombre_unico')
+    }))
+
+  it('confirmar el borrado de un club con planes funciona; el de un ejercicio usado, no', async () => {
+    let clubesCreados: string[] = []
+    await db.transaction(async (tx) => {
+      const b = await conPlan(tx)
+      clubesCreados = [b.club.id, b.otroClub.id]
+    })
+    await expect(
+      db.transaction(async (tx) => {
+        const [usado] = await tx
+          .select({ id: ejercicios.id })
+          .from(ejercicios)
+          .where(eq(ejercicios.clubId, clubesCreados[0] ?? ''))
+        await tx.delete(ejercicios).where(eq(ejercicios.id, usado?.id ?? ''))
+      }),
+    ).rejects.toThrow()
+    await db.transaction(async (tx) => {
+      await tx.delete(clubes).where(inArray(clubes.id, clubesCreados))
+    })
+    expect(await db.$count(clubes, inArray(clubes.id, clubesCreados))).toBe(0)
+    await db.delete(jugadores).where(inArray(jugadores.clubId, clubesCreados))
+  })
+
+  it('al borrar el entreno se va su plan; al borrar el club, todo, aunque haya ejercicios usados', () =>
+    enTransaccion(async (tx) => {
+      const b = await conPlan(tx)
+      const [modelo] = await tx
+        .insert(modelosSesion)
+        .values({ clubId: b.club.id, nombre: 'Modelo' })
+        .returning()
+      await tx
+        .insert(modeloEjercicios)
+        .values({ modeloId: modelo?.id ?? '', ejercicioId: b.ejercicio.id, orden: 0 })
+      await tx.delete(entrenos).where(eq(entrenos.id, b.entreno.id))
+      expect(await tx.$count(entrenoEjercicios)).toBe(0)
+
+      const otro = await conPlan(tx)
+      await tx.delete(clubes).where(eq(clubes.id, otro.club.id))
+      expect(await tx.$count(ejercicios, eq(ejercicios.clubId, otro.club.id))).toBe(0)
+      expect(await tx.$count(modelosSesion, eq(modelosSesion.clubId, b.club.id))).toBe(1)
     }))
 })

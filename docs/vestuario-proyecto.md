@@ -157,10 +157,10 @@ Este documento recoge todas las decisiones funcionales, técnicas y de organizac
 - Ejercicio: nombre, descripción, objetivo o categoría (calentamiento, técnica, táctica, físico, finalización, porteros, partido, vuelta a la calma), duración orientativa en minutos, número de jugadores, material necesario y etiquetas libres.
 - **Medios adjuntos** a cada ejercicio, varios por ejercicio y ordenables:
   - Fotos (JPEG, PNG, WebP; se admiten las fotos del móvil, incluidas HEIC si es viable convertirlas). Se redimensionan y se genera miniatura.
-  - Vídeos (MP4 y WebM; se admiten los grabados con el móvil, incluidos los `.mov`/HEVC del iPhone, que se recodifican a MP4 H.264 en segundo plano porque no se reproducen en Android ni en Chrome). Los MP4 H.264 y WebM se guardan tal cual. Tamaño máximo configurable; se genera miniatura y se reproducen en la app con avance y retroceso.
+  - Vídeos (MP4 y WebM; se admiten los grabados con el móvil, incluidos los `.mov`/HEVC del iPhone, que se recodifican a MP4 H.264 en segundo plano porque no se reproducen en Android ni en Chrome). Los MP4 H.264 y WebM se guardan tal cual. Tamaño máximo configurable (por defecto, 15 MB por foto y 150 MB por vídeo; para vídeos largos, mejor un enlace); se genera miniatura y se reproducen en la app con avance y retroceso.
   - Enlaces a vídeos externos (por ejemplo, YouTube) como alternativa que no ocupa espacio en el servidor.
   - Cada medio puede llevar un pie o comentario.
-- Búsqueda y filtro por categoría y etiquetas. Duplicar un ejercicio para crear variantes. Copiar ejercicios a otro club al que tenga acceso el entrenador.
+- Búsqueda y filtro por categoría y etiquetas. Duplicar un ejercicio para crear variantes. (Copiar ejercicios a otro club queda para cuando haya más de un club.)
 - Archivar ejercicios en lugar de borrarlos si ya se han usado en alguna sesión.
 
 **Sesiones planificadas**: cada entreno (la misma entidad en la que se pasa lista) puede tener un plan:
@@ -168,7 +168,8 @@ Este documento recoge todas las decisiones funcionales, técnicas y de organizac
 - Datos de la sesión: fecha, hora de inicio y de fin (la duración prevista se calcula), objetivo principal y notas.
 - Lista **ordenada** de ejercicios de la biblioteca, cada uno con duración, indicaciones específicas para esa sesión y organización de grupos si se quiere.
 - Duración total calculada y comparada con la prevista.
-- Duplicar una sesión en otra fecha y guardar sesiones como **modelo** para reutilizarlas.
+- Duplicar una sesión en otra fecha y guardar sesiones como **modelo** para reutilizarlas. Los modelos son del club, como la biblioteca: sirven de una temporada a otra.
+- Un entreno con plan cuenta como entreno con contenido: al cambiar el horario no se rehace, y cancelarlo avisa de que se pierde el plan.
 - Calendario o lista de próximas sesiones planificadas.
 - **Modo campo**: ver la sesión ejercicio a ejercicio en el móvil durante el entreno, con sus fotos y vídeos, y acceso directo a pasar lista.
 
@@ -202,12 +203,12 @@ Además, a nivel de club existe el **administrador del club**. Quien crea un clu
 | Registrar y cobrar multas, editar catálogo | Sí | Sí | Sí | No |
 | Registrar estadísticas de partido | Sí | Sí | Sí | No |
 | Ver ejercicios y sesiones planificadas | Sí | Sí | Sí | Sí |
-| Gestionar biblioteca de ejercicios, medios y planificación | Sí | Sí | No | No |
+| Gestionar biblioteca de ejercicios, medios y planificación | Sí | Sí | Sí | No |
 | Editar datos de la plantilla (nombre, categoría) | Sí | Sí | No | No |
 | Invitar, cambiar roles y revocar accesos | Sí | No | No | No |
 | Crear y borrar plantillas; identidad del club (escudo, colores); administradores del club | Solo administrador del club | No | No | No |
 
-La biblioteca de ejercicios es del club: la consulta cualquier miembro de una plantilla del club y la gestiona quien sea entrenador o admin en alguna de ellas.
+La biblioteca de ejercicios es del club: la consulta cualquier miembro de una plantilla del club y la gestiona quien sea delegado o superior en alguna de ellas (los segundos entrenadores y preparadores físicos se dan de alta como delegados).
 
 Los permisos se aplican **siempre en el backend**. El frontend solo oculta lo que el usuario no puede hacer, por comodidad.
 
@@ -413,17 +414,15 @@ La participación de un jugador en una plantilla (una temporada).
 |---|---|---|
 | id | uuid | PK |
 | plantilla_id | uuid → plantillas | cascade |
-| fecha | date | En `Europe/Madrid`. Varios entrenos por día (doble sesión), pero no dos a la misma hora ni dos sin hora: único `(plantilla_id, fecha, hora)` con `NULLS NOT DISTINCT`. Desde el ciclo 7, nullable solo si `es_modelo` |
+| fecha | date | En `Europe/Madrid`. Varios entrenos por día (doble sesión), pero no dos a la misma hora ni dos sin hora: único `(plantilla_id, fecha, hora)` con `NULLS NOT DISTINCT` |
 | hora | time | opcional |
 | hora_fin | time | opcional; exige `hora` y es posterior a ella (`CHECK`). Con la hora de inicio da la duración prevista de la sesión |
 | de_horario | boolean | por defecto false. true si lo creó el horario: al cambiar el horario se rehacen estos |
-| objetivo | text | opcional (ciclo 7) |
-| es_modelo | boolean | por defecto false. Sesión guardada como modelo, sin fecha (ciclo 7). Los modelos no cuentan en el historial ni en el porcentaje de asistencia |
-| nombre_modelo | text | obligatorio si `es_modelo` (ciclo 7) |
+| objetivo | text | opcional; objetivo principal de la sesión (ciclo 7) |
 | notas | text | opcional |
 | created_at | timestamptz | |
 
-Las columnas marcadas como ciclo 7 se añaden con su propia migración en GH-38.
+La columna marcada como ciclo 7 se añade con su propia migración en GH-38. Los modelos de sesión no son entrenos: van en sus propias tablas (`modelos_sesion`), para no mezclarlos con el horario, el historial ni el porcentaje de asistencia.
 
 ### horarios
 Horario semanal de entrenos de una plantilla (uno por plantilla).
@@ -566,6 +565,27 @@ Horario semanal de entrenos de una plantilla (uno por plantilla).
 | duracion_min | smallint | puede diferir de la orientativa |
 | indicaciones | text | específicas para esta sesión |
 
+### modelos_sesion (ciclo 7)
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| club_id | uuid → clubes | cascade. Del club, como la biblioteca |
+| nombre | text | obligatorio, único en el club sin distinguir mayúsculas |
+| objetivo | text | opcional |
+| notas | text | opcional |
+| creado_por | uuid → user | set null |
+| created_at / updated_at | timestamptz | |
+
+### modelo_ejercicios (ciclo 7)
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| modelo_id | uuid → modelos_sesion | cascade |
+| ejercicio_id | uuid → ejercicios | restrict |
+| orden | smallint | |
+| duracion_min | smallint | |
+| indicaciones | text | |
+
 ### invitaciones (ciclo 9)
 | Campo | Tipo | Notas |
 |---|---|---|
@@ -614,12 +634,12 @@ Prefijo `/api`. JSON. Todas las rutas de la plantilla cuelgan de `/plantillas`, 
 | | `PUT /plantillas/:id/entrenos/:eid/asistencias` (lista completa; no en entrenos futuros) | Delegado |
 | | `GET /plantillas/:id/asistencia/resumen` | Miembro (jugador: solo suyo) |
 | Ejercicios | `GET /clubes/:cid/ejercicios?categoria=&etiqueta=&q=&archivados=` · `GET /clubes/:cid/ejercicios/:eid` | Miembro de alguna plantilla del club |
-| | `POST/PATCH/DELETE /clubes/:cid/ejercicios/:eid` · `POST .../:eid/duplicar` · `POST .../:eid/copiar` (a otro club) | Entrenador en alguna plantilla del club |
-| | `POST /clubes/:cid/ejercicios/:eid/medios` (multipart o enlace) · `PATCH/DELETE .../medios/:mid` · `PUT .../medios/orden` | Entrenador en alguna plantilla del club |
+| | `POST/PATCH/DELETE /clubes/:cid/ejercicios/:eid` · `POST .../:eid/duplicar` | Delegado o superior en alguna plantilla del club |
+| | `POST /clubes/:cid/ejercicios/:eid/medios` (multipart o enlace) · `PATCH/DELETE .../medios/:mid` · `PUT .../medios/orden` | Delegado o superior en alguna plantilla del club |
 | | `GET /medios/:mid` y `GET /medios/:mid/miniatura` (con `Range` para vídeo) | Miembro de alguna plantilla del club del medio |
-| Planificación | `GET /plantillas/:id/sesiones?desde=&hasta=` · `GET /plantillas/:id/sesiones/modelos` | Miembro |
-| | `PUT /plantillas/:id/entrenos/:eid/plan` (datos de sesión y lista ordenada de ejercicios) | Entrenador |
-| | `POST /plantillas/:id/entrenos/:eid/duplicar` · `POST .../guardar-modelo` · `POST /plantillas/:id/sesiones/modelos/:mid/aplicar` | Entrenador |
+| Planificación | `GET /plantillas/:id/sesiones?desde=&hasta=` · `GET /plantillas/:id/entrenos/:eid/plan` | Miembro |
+| | `PUT /plantillas/:id/entrenos/:eid/plan` (objetivo, notas y lista ordenada de ejercicios) · `POST .../plan/duplicar` (a otra fecha) · `POST .../plan/guardar-modelo` | Delegado |
+| | `GET /clubes/:cid/modelos-sesion` · `POST /plantillas/:id/entrenos/:eid/plan/desde-modelo/:mid` · `DELETE /clubes/:cid/modelos-sesion/:mid` | Miembro / Delegado |
 | Partidos | `GET /plantillas/:id/partidos?cuando=proximos|pasados` (con el número de convocados) · `POST /plantillas/:id/partidos` | Miembro / Delegado |
 | | `GET /plantillas/:id/partidos/:pid` (lista para convocar con titular y minutos de cada uno, y eventos) · `PATCH/DELETE /plantillas/:id/partidos/:pid` (`estado: aplazado|programado` quita el resultado) | Miembro / Delegado |
 | | `PUT /plantillas/:id/partidos/:pid/convocados` (lista completa; ficha activa para los nuevos; no se quita a quien tiene estadísticas: 409) | Delegado |
@@ -1412,25 +1432,24 @@ Subir al partido la ficha en PDF que publica la Federación Gallega y registrar 
 **Criterios de aceptación**
 - [ ] Tablas `ejercicios`, `ejercicio_medios` y `entreno_ejercicios` según la sección 6
 - [ ] La biblioteca (`ejercicios`) es del club (`club_id`), compartida por todas sus plantillas y temporadas
-- [ ] Nuevos campos en `entrenos`: `objetivo`, `es_modelo` y `nombre_modelo`; `fecha` nullable solo en modelos de sesión y unicidad de fecha mediante índice parcial que los excluye
-- [ ] Los modelos de sesión no aparecen en el historial ni cuentan para el porcentaje de asistencia
+- [ ] Nuevo campo `objetivo` en `entrenos`
+- [ ] Tablas `modelos_sesion` y `modelo_ejercicios`, del club (los modelos no son entrenos: no tocan el horario, el historial ni el porcentaje de asistencia)
 - [ ] Un ejercicio usado en alguna sesión no se puede borrar, solo archivar
-- [ ] Ajuste de GH-15: un entreno con planificación no se elimina al quedar sin asistencias
+- [ ] Un entreno con plan no se rehace al cambiar el horario (como uno con asistencia) y al cancelarlo se avisa de que se pierde el plan
 - [ ] Migración y seed con ejercicios y una sesión de ejemplo
 
 #### GH-39
 **Título:** Almacenamiento y servicio de fotos y vídeos
 **Etiquetas:** feature, backend, infra, seguridad
 
-Servicio común de medios para los ejercicios. Depende de GH-28 y GH-38.
+Servicio común de medios para los ejercicios; más adelante lo usará también el escudo de GH-28. Depende de GH-38.
 
 **Criterios de aceptación**
 - [ ] Subida multipart en streaming (p. ej. `busboy`), sin cargar el archivo entero en memoria
 - [ ] Tipos permitidos comprobando el contenido real: fotos JPEG, PNG, WebP (y HEIC convertido si es viable: los binarios precompilados de `sharp` no incluyen HEIC); vídeos MP4, WebM y MOV
-- [ ] Límites configurables por `.env` para foto y vídeo; `client_max_body_size` de nginx configurado con el mismo límite y tiempos de espera suficientes para subidas lentas desde el móvil
+- [ ] Límites configurables por `.env` para foto y vídeo (por defecto 15 MB y 150 MB); `client_max_body_size` de nginx configurado con el mismo límite y tiempos de espera suficientes para subidas lentas desde el móvil
 - [ ] Fotos: eliminación de metadatos EXIF (incluida la ubicación), redimensionado y miniatura
 - [ ] Vídeos: miniatura y duración extraídas con ffmpeg. Los MP4 H.264 y WebM se guardan tal cual; los MOV o HEVC (iPhone) se recodifican a MP4 H.264 en segundo plano, con estado "procesando" visible
-- [ ] La subida del escudo de GH-28 pasa a usar este servicio común
 - [ ] Nombres de archivo generados; nunca se usa el nombre original en disco
 - [ ] Servido solo a miembros de alguna plantilla del club, con caché y soporte de `Range` para avanzar en los vídeos
 - [ ] Al borrar un medio o un ejercicio se eliminan sus archivos
@@ -1445,9 +1464,9 @@ Depende de GH-38 y GH-39.
 **Criterios de aceptación**
 - [ ] Listar con búsqueda por texto y filtros por categoría, etiqueta y archivados
 - [ ] Crear, editar, archivar y borrar (si no se ha usado)
-- [ ] Duplicar ejercicio con sus medios y copiarlo a otro club en el que el usuario sea entrenador o admin
+- [ ] Duplicar ejercicio con sus medios (copiarlo a otro club queda para cuando haya más de un club)
 - [ ] Añadir medios (archivo o enlace externo), editar pie, reordenar y borrar
-- [ ] Gestión para quien sea entrenador o admin en alguna plantilla del club; lectura para cualquier miembro de una plantilla del club
+- [ ] Gestión para quien sea delegado o superior en alguna plantilla del club; lectura para cualquier miembro de una plantilla del club
 - [ ] Tests
 
 #### GH-41
@@ -1457,10 +1476,10 @@ Depende de GH-38 y GH-39.
 Depende de GH-38.
 
 **Criterios de aceptación**
-- [ ] `PUT /api/plantillas/:id/entrenos/:eid/plan` guarda en una transacción los datos de la sesión y la lista ordenada de ejercicios
+- [ ] `PUT /api/plantillas/:id/entrenos/:eid/plan` guarda en una transacción los datos de la sesión y la lista ordenada de ejercicios (por id: puede haber dos entrenos el mismo día)
 - [ ] Listado de sesiones por rango de fechas con duración total y número de ejercicios
 - [ ] Duplicar una sesión en otra fecha
-- [ ] Guardar una sesión como modelo y aplicar un modelo a una fecha
+- [ ] Guardar una sesión como modelo del club y aplicar un modelo a un entreno
 - [ ] La planificación y la asistencia de un mismo entreno conviven sin interferir
 - [ ] Tests
 
@@ -1476,7 +1495,7 @@ Depende de GH-40.
 - [ ] Formulario de ejercicio con subida de fotos y vídeos desde la galería o la cámara del móvil
 - [ ] Barra de progreso de subida, posibilidad de cancelar y mensaje claro si el archivo supera el límite
 - [ ] Reordenar medios y editar su pie
-- [ ] Duplicar, copiar a otro club y archivar
+- [ ] Duplicar y archivar
 
 #### GH-43
 **Título:** Pantalla de planificación de sesión

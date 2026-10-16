@@ -19,8 +19,8 @@ import { creadoEn, id } from './comun.js'
 
 // Entrenos de una plantilla, su horario semanal y la asistencia de sus jugadores (sección 6). Los
 // entrenos se planifican antes de pasar lista: los crea el horario o se crean sueltos, y un día puede
-// tener varios (doble sesión). El resto de la planificación (objetivo, modelos de sesión) llega en el
-// ciclo 7.
+// tener varios (doble sesión). El plan de cada entreno (sus ejercicios) y los modelos de sesión están
+// en ejercicios.ts.
 
 export const estadoAsistencia = pgEnum('estado_asistencia', ['asiste', 'justificada', 'falta'])
 
@@ -38,6 +38,8 @@ export const entrenos = pgTable(
     horaFin: time('hora_fin'),
     // true si lo creó el horario de la plantilla: al cambiar el horario se rehacen estos
     deHorario: boolean('de_horario').notNull().default(false),
+    // Objetivo principal de la sesión planificada (ciclo 7)
+    objetivo: text('objetivo'),
     notas: text('notas'),
     createdAt: creadoEn(),
   },
