@@ -735,7 +735,7 @@ Una issue está terminada cuando: cumple sus criterios de aceptación en el ento
 | 6 · Estadísticas | Resultado, participaciones, eventos, estadísticas de temporada y trayectoria de cada jugador | v1.1.0; GH-134 se añadió después, pendiente |
 | 7 · Planificación de entrenos | Biblioteca de ejercicios con fotos y vídeos, y sesiones planificadas | v1.2.0 |
 | 8 · Operación | Backups automáticos, restauración, logs y actualizaciones | en parte en v1.2.0, con GH-45 y GH-46; el resto, pendiente |
-| 9 · Exportar y compartir | Exportar y compartir sesiones y multas en PDF o texto, importar sesiones desde una plantilla y asistencia desde WhatsApp | v1.3.0, prevista |
+| 9 · Exportar y compartir | Exportar y compartir sesiones y multas en PDF o texto y asistencia desde WhatsApp | v1.3.0, prevista |
 | 10 · Roles en uso | Invitaciones, delegados y jugadores | v1.4.0, prevista |
 | 11 · Exposición pública | Servidor aislado, red, cortafuegos, dominio y HTTPS público | v2.0.0, prevista |
 | 12 · Asistente de ejercicios | Claves de API, diagrama táctico del ejercicio y generación de imágenes, animación y PDF en el servidor | v2.1.0, prevista |
@@ -772,7 +772,7 @@ Versión publicada en los ciclos ya cerrados y prevista en el resto. Los ciclos 
 | Ciclo 6 · Estadísticas | Resultado, participaciones, eventos, estadísticas de temporada y trayectoria de cada jugador (v1.1.0; GH-134 se añadió después, pendiente) |
 | Ciclo 7 · Planificación de entrenos | Biblioteca de ejercicios con fotos y vídeos, y sesiones planificadas (v1.2.0) |
 | Ciclo 8 · Operación | Backups automáticos, restauración, logs y actualizaciones (en parte en v1.2.0, con GH-45 y GH-46; el resto, pendiente) |
-| Ciclo 9 · Exportar y compartir | Exportar y compartir sesiones y multas en PDF o texto, importar sesiones desde una plantilla y asistencia desde WhatsApp (v1.3.0, prevista) |
+| Ciclo 9 · Exportar y compartir | Exportar y compartir sesiones y multas en PDF o texto y asistencia desde WhatsApp (v1.3.0, prevista) |
 | Ciclo 10 · Roles en uso | Invitaciones, delegados y jugadores (v1.4.0, prevista) |
 | Ciclo 11 · Exposición pública | Servidor aislado, red, cortafuegos, dominio y HTTPS público (v2.0.0, prevista) |
 | Ciclo 12 · Asistente de ejercicios | Claves de API, diagrama táctico del ejercicio y generación de imágenes, animación y PDF en el servidor (v2.1.0, prevista) |
@@ -1646,21 +1646,6 @@ Informe de lo que ha pagado y lo que debe cada jugador, para compartirlo por Wha
 - [ ] Permisos según la visibilidad de la sección 3: el informe con todos los jugadores solo para quien ve todas las deudas
 - [ ] Tests
 
-#### GH-139
-**Título:** Importar una sesión de entrenamiento desde una plantilla
-**Etiquetas:** feature, backend, frontend
-
-Crear una sesión de entrenamiento y sus ejercicios a partir de un documento rellenado fuera de la app (sale de la parte de importar de GH-131).
-
-**Criterios de aceptación**
-- [ ] Formato de la plantilla decidido y documentado. Propuesta: hoja de cálculo (`.xlsx`) con los datos de la sesión arriba y una fila por ejercicio, más fiable de leer que un Word o un PDF
-- [ ] Plantilla descargable desde la app, con un ejemplo rellenado
-- [ ] Al subirla se ve una vista previa antes de crear nada: datos de la sesión, ejercicios que ya están en la biblioteca (por nombre, sin tildes ni mayúsculas) y los que se darán de alta
-- [ ] Errores por fila claros (duración no válida, categoría desconocida…), sin crear nada a medias
-- [ ] Al confirmar se crean en una transacción los ejercicios nuevos y el plan del entreno elegido; el archivo no se guarda
-- [ ] Delegado o superior
-- [ ] Tests con una plantilla de ejemplo (sin datos reales en el repositorio)
-
 #### GH-133
 **Título:** Asistencia a los entrenos desde las encuestas de WhatsApp
 **Etiquetas:** investigacion
@@ -1889,3 +1874,20 @@ Depende de GH-24 y GH-33.
 - [ ] Al registrar una amarilla o roja, la app propone los motivos activos del catálogo con ese `tipo_evento`; si no hay ninguno, no propone nada
 - [ ] El entrenador confirma, edita o descarta; nunca se crea sola
 - [ ] La multa queda vinculada al evento (`evento_id`); al borrar el evento se avisa de la multa asociada
+
+#### GH-139
+**Título:** Importar una sesión de entrenamiento desde una plantilla
+**Etiquetas:** feature, backend, frontend
+
+Aparcada el 2026-10-20 (estaba en el ciclo 9): no convence una plantilla de Excel ni que no se puedan subir las imágenes de los ejercicios. Se retoma cuando surja la necesidad y esté más definido el alcance.
+
+Crear una sesión de entrenamiento y sus ejercicios a partir de un documento rellenado fuera de la app (sale de la parte de importar de GH-131).
+
+**Criterios de aceptación**
+- [ ] Formato de la plantilla decidido y documentado. Propuesta: hoja de cálculo (`.xlsx`) con los datos de la sesión arriba y una fila por ejercicio, más fiable de leer que un Word o un PDF
+- [ ] Plantilla descargable desde la app, con un ejemplo rellenado
+- [ ] Al subirla se ve una vista previa antes de crear nada: datos de la sesión, ejercicios que ya están en la biblioteca (por nombre, sin tildes ni mayúsculas) y los que se darán de alta
+- [ ] Errores por fila claros (duración no válida, categoría desconocida…), sin crear nada a medias
+- [ ] Al confirmar se crean en una transacción los ejercicios nuevos y el plan del entreno elegido; el archivo no se guarda
+- [ ] Delegado o superior
+- [ ] Tests con una plantilla de ejemplo (sin datos reales en el repositorio)
