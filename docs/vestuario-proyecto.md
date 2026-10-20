@@ -1582,12 +1582,10 @@ Depende de GH-45.
 **Título:** Logs estructurados y rotación
 **Etiquetas:** feature, backend, infra
 
-pino ya está (`backend/src/logger.ts`), pero solo registra el arranque y los errores. La rotación de logs de los contenedores ya está configurada en los compose (`max-size: 10m`).
+Casi todo está hecho desde GH-4: logs en JSON con pino (`backend/src/logger.ts`), una línea por petición con método, ruta, estado y duración, sin cuerpos, cabeceras ni parámetros de consulta (`backend/src/peticiones.ts`), y el healthcheck a nivel `debug`. Los estáticos los sirve nginx. La rotación de logs de los contenedores está configurada en los compose (`max-size: 10m`).
 
 **Criterios de aceptación**
-- [ ] Una línea JSON por petición con nivel, método, ruta, estado y duración, sin datos sensibles (ni cookies, ni cabeceras de autenticación, ni cuerpos)
-- [ ] Sin ruido: la comprobación de salud y los estáticos no se registran o van a nivel `debug`
-- [ ] Comando documentado en `docs/operacion.md` para consultar errores recientes
+- [ ] Comando documentado en `docs/operacion.md` para consultar los errores y avisos recientes del backend en el servidor (por entorno), y los de nginx
 
 #### GH-48
 **Título:** Mantenimiento y actualizaciones
