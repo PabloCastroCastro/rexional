@@ -770,6 +770,7 @@ Una issue está terminada cuando: cumple sus criterios de aceptación en el ento
 | Ciclo 8 · Operación | Backups automáticos, restauración, logs y actualizaciones (v1.4.0) |
 | Ciclo 9 · Roles en uso | Invitaciones, delegados y jugadores (v1.5.0) |
 | Ciclo 10 · Exposición pública | Servidor aislado, red, cortafuegos, dominio y HTTPS público (v2.0.0) |
+| Ciclo 11 · Asistente de ejercicios | Claves de API, diagrama táctico del ejercicio y generación de imágenes, animación y PDF en el servidor |
 
 ### 11.3 Issues
 
@@ -1734,3 +1735,55 @@ Depende de GH-54 a GH-58.
 - [ ] Verificación completa de funcionalidades
 - [ ] Usuarios avisados del nuevo enlace y reinstalación de la PWA si cambia el dominio
 - [ ] Release `v2.0.0`
+
+---
+
+### Milestone: Ciclo 11 · Asistente de ejercicios
+
+#### GH-135
+**Título:** Claves de API para acceso externo
+**Etiquetas:** feature, db, backend, frontend, seguridad
+
+Que un programa externo (el MCP del asistente de ejercicios) pueda llamar a la API en nombre de un usuario sin su cookie de sesión. La clave actúa como su usuario: tiene sus mismos roles y clubes, y los permisos actuales (`requireRolEnClub`) no cambian.
+
+**Criterios de aceptación**
+- [ ] Plugin `apiKey` de Better Auth: una petición con `x-api-key` válida devuelve la sesión de su usuario en `getSession`
+- [ ] En la base de datos solo se guarda el hash; la clave completa se muestra una única vez al crearla
+- [ ] En el perfil: crear una clave con nombre y caducidad (por defecto 90 días), ver la lista con la fecha de último uso y revocarla
+- [ ] Una clave revocada o caducada responde 401 al momento
+- [ ] Límite de peticiones por clave
+- [ ] La clave no aparece en los logs (ni de la app ni de nginx)
+- [ ] nginx deja pasar la cabecera `x-api-key`
+- [ ] Tests: clave válida, revocada, caducada, de un usuario sin permiso en el club y de otro club
+- [ ] Documentado en `docs/operacion.md`: cómo crear una clave y usarla
+
+#### GH-136
+**Título:** Diagrama y datos tácticos del ejercicio
+**Etiquetas:** feature, db, backend, frontend
+
+Guardar en el ejercicio la disposición en el campo y sus pasos (la «ficha» del asistente de ejercicios) y los datos tácticos, para poder generar a partir de ellos imágenes, animación y PDF (GH-137). La categoría de edad no es un campo: se usa una etiqueta (por ejemplo `alevín`).
+
+**Criterios de aceptación**
+- [ ] Columna `diagrama` (jsonb, opcional) con un formato versionado (`version: 1`): campo en metros con origen abajo a la izquierda; elementos (jugador con equipo y etiqueta, cono, pica, balón, portería, miniportería, zona); pasos con movimientos (`pase`, `conduccion`, `desplazamiento`, `tiro`)
+- [ ] Significado de los pasos documentado: los movimientos de un paso son simultáneos, las posiciones se acumulan de un paso al siguiente, el pase y la conducción mueven el balón
+- [ ] Validación con Zod en la API, incluido que cada id usado en un paso exista en los elementos
+- [ ] Paleta de colores de equipo cerrada (nombre → color)
+- [ ] Campos nuevos opcionales: `objetivo` (texto), `organizacion` (texto), `reglas`, `puntos_clave` y `variantes` (listas de textos)
+- [ ] Un formato de versión antigua se sigue leyendo
+- [ ] Pantalla de biblioteca (GH-42): el formulario edita los campos nuevos y la ficha del ejercicio los muestra; el modo campo (GH-44) muestra los puntos clave
+- [ ] Migración, seed con un ejercicio con diagrama (rondo 4v2) y tests
+
+#### GH-137
+**Título:** Generar el diagrama, la animación y el PDF del ejercicio
+**Etiquetas:** feature, backend, frontend
+
+A partir del diagrama (GH-136), el servidor dibuja una imagen por paso, una animación y una ficha en PDF, con un estilo fijo. Así el asistente de ejercicios, o cualquier otro cliente, solo manda datos y no necesita instalar nada. Depende de GH-136. Conviene compartir el motor de PDF con la exportación de entrenos (#131).
+
+**Criterios de aceptación**
+- [ ] Imagen por paso: SVG dibujado en el servidor y convertido a PNG/WebP con `sharp`. Césped, líneas, conos, jugadores con color y etiqueta; flecha continua para el pase, discontinua para el desplazamiento y ondulada para la conducción
+- [ ] Animación MP4 con ffmpeg que interpola las posiciones entre pasos, en segundo plano y con el estado «procesando» de GH-39
+- [ ] PDF de la ficha: nombre, objetivo, datos rápidos, organización, reglas, diagramas por paso, puntos clave, variantes y QR al ejercicio en la app
+- [ ] Lo generado se guarda como medios del ejercicio, marcados como generados, y se rehace al cambiar el diagrama (sin tocar las fotos y vídeos subidos a mano)
+- [ ] En la ficha del ejercicio: botón «Descargar PDF» y aviso si lo generado está desactualizado
+- [ ] Lo generado se ve también en el modo campo (GH-44)
+- [ ] Tests: el SVG de un diagrama de ejemplo se compara con uno de referencia
