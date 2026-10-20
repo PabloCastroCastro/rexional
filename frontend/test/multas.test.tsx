@@ -379,3 +379,80 @@ describe('multas desactivadas en la plantilla', () => {
     ])
   })
 })
+
+describe('exportar la caja', () => {
+  const TEXTO =
+    '💰 *CD Rexional · Senior*\nMultas pendientes a 14/10/2026\n\n1 · Brais Iglesias: *6,50 €* (2)'
+  const conExportar = () => {
+    conMultas()
+    manejadores['GET /api/plantillas/p1/multas/mensaje'] = () =>
+      json({ texto: TEXTO, whatsapp: `https://wa.me/?text=${encodeURIComponent(TEXTO)}` })
+    manejadores['GET /api/plantillas/p1/multas/informe.pdf'] = () =>
+      new Response('%PDF-1.7', { headers: { 'content-type': 'application/pdf' } })
+  }
+  const pedidas = () =>
+    vi
+      .mocked(globalThis.fetch)
+      .mock.calls.map(([entrada]) => String(entrada instanceof Request ? entrada.url : entrada))
+      .filter((url) => url.includes('/multas/informe.pdf'))
+
+  afterEach(() => {
+    for (const propiedad of ['clipboard', 'share', 'canShare']) {
+      Reflect.deleteProperty(navigator, propiedad)
+    }
+    Reflect.deleteProperty(URL, 'createObjectURL')
+    Reflect.deleteProperty(URL, 'revokeObjectURL')
+  })
+
+  it('muestra el mensaje para WhatsApp y lo copia', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+    conExportar()
+    abrir('/plantillas/p1/multas')
+    await userEvent.click(await screen.findByRole('button', { name: 'Exportar' }))
+    const hoja = screen.getByRole('dialog', { name: 'Exportar multas' })
+    expect(await within(hoja).findByTestId('mensaje')).toHaveTextContent(
+      'Brais Iglesias: *6,50 €* (2)',
+    )
+    await userEvent.click(within(hoja).getByRole('button', { name: 'Copiar' }))
+    expect(writeText).toHaveBeenCalledWith(TEXTO)
+  })
+
+  it('descarga el PDF con las fechas y el detalle elegidos', async () => {
+    Object.defineProperty(URL, 'createObjectURL', {
+      value: vi.fn(() => 'blob:pdf'),
+      configurable: true,
+    })
+    Object.defineProperty(URL, 'revokeObjectURL', { value: vi.fn(), configurable: true })
+    const clic = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    conExportar()
+    abrir('/plantillas/p1/multas')
+    await userEvent.click(await screen.findByRole('button', { name: 'Exportar' }))
+    const hoja = screen.getByRole('dialog', { name: 'Exportar multas' })
+
+    await userEvent.click(within(hoja).getByRole('button', { name: 'Descargar PDF' }))
+    await waitFor(() => expect(clic).toHaveBeenCalledTimes(1))
+    expect(clic.mock.contexts[0]).toHaveAttribute('download', 'multas-2026-10-14.pdf')
+
+    await userEvent.type(within(hoja).getByLabelText('Desde'), '2026-09-01')
+    await userEvent.type(within(hoja).getByLabelText('Hasta'), '2026-09-30')
+    await userEvent.click(within(hoja).getByLabelText('Con el detalle de cada multa'))
+    await userEvent.click(within(hoja).getByRole('button', { name: 'Descargar PDF' }))
+    await waitFor(() => expect(clic).toHaveBeenCalledTimes(2))
+    expect(pedidas().map((url) => new URL(url, 'http://localhost').search)).toEqual([
+      '',
+      '?desde=2026-09-01&hasta=2026-09-30&detalle=true',
+    ])
+  })
+
+  it('no deja sacar el PDF con un rango al revés', async () => {
+    conExportar()
+    abrir('/plantillas/p1/multas')
+    await userEvent.click(await screen.findByRole('button', { name: 'Exportar' }))
+    const hoja = screen.getByRole('dialog', { name: 'Exportar multas' })
+    await userEvent.type(within(hoja).getByLabelText('Desde'), '2026-10-10')
+    await userEvent.type(within(hoja).getByLabelText('Hasta'), '2026-10-01')
+    expect(within(hoja).getByText('No puede ser anterior a «Desde»')).toBeInTheDocument()
+    expect(within(hoja).getByRole('button', { name: 'Descargar PDF' })).toBeDisabled()
+  })
+})

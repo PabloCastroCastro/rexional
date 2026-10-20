@@ -1,10 +1,12 @@
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
-import { and, asc, count, desc, eq, isNotNull, isNull, lte, type SQL, sql } from 'drizzle-orm'
+import { and, asc, count, desc, eq, gte, isNotNull, isNull, lte, type SQL, sql } from 'drizzle-orm'
 import type { MiddlewareHandler } from 'hono'
 import { db } from '../db/cliente.js'
-import { fichas, jugadores, motivosMulta, multas, tipoTarjeta } from '../db/schema/index.js'
+import { clubes, fichas, jugadores, motivosMulta, multas, tipoTarjeta } from '../db/schema/index.js'
 import { ErrorApi, EsquemaError, validacionFallida } from '../errores.js'
 import { hoy } from '../fechas.js'
+import { euros, fechaCorta } from '../formato.js'
+import { pdfMultas } from '../pdf/multas.js'
 import { type EnvPlantilla, requireRol, rolAlcanza } from '../permisos.js'
 import { EsquemaFecha, EsquemaTexto, EsquemaUuid, restriccionViolada } from '../validacion.js'
 import { porNombre } from './jugadores.js'
@@ -356,6 +358,74 @@ const CuerpoMultaLibre = z
   .strict()
   .openapi({ title: 'Multa con motivo libre' })
 
+// --- Exportar (GH-132) ---
+
+export type RangoMultas = { desde?: string; hasta?: string }
+
+// Por jugador de la plantilla, lo puesto, lo pagado y lo pendiente de las multas del rango (por su
+// fecha). Salen todos los de ficha activa, aunque no tengan multas, y los dados de baja que tengan
+// alguna. Primero el que más debe.
+export async function informeMultas(plantillaId: string, { desde, hasta }: RangoMultas) {
+  const pendiente = sumaCentimos(sql`${multas.fechaPago} is null`)
+  const jugadoresInforme = await db
+    .select({
+      jugadorId: jugadores.id,
+      nombre: jugadores.nombre,
+      apellidos: jugadores.apellidos,
+      dorsal: fichas.dorsal,
+      activo: fichas.activo,
+      multas: count(multas.id),
+      multasPendientes: sql<number>`count(${multas.id}) filter (where ${multas.fechaPago} is null)::int`,
+      totalCentimos: sql<number>`coalesce(sum(${multas.importeCentimos}), 0)::int`,
+      pagadoCentimos: sumaCentimos(sql`${multas.fechaPago} is not null`),
+      pendienteCentimos: pendiente,
+    })
+    .from(fichas)
+    .innerJoin(jugadores, eq(jugadores.id, fichas.jugadorId))
+    .leftJoin(
+      multas,
+      and(
+        eq(multas.plantillaId, fichas.plantillaId),
+        eq(multas.jugadorId, fichas.jugadorId),
+        desde ? gte(multas.fecha, desde) : undefined,
+        hasta ? lte(multas.fecha, hasta) : undefined,
+      ),
+    )
+    .where(eq(fichas.plantillaId, plantillaId))
+    .groupBy(jugadores.id, fichas.plantillaId, fichas.jugadorId)
+    .having(sql`${fichas.activo} or count(${multas.id}) > 0`)
+    .orderBy(desc(pendiente), ...porNombre, asc(jugadores.id))
+  const suma = (campo: 'totalCentimos' | 'pagadoCentimos' | 'pendienteCentimos') =>
+    jugadoresInforme.reduce((total, j) => total + j[campo], 0)
+  return {
+    totalCentimos: suma('totalCentimos'),
+    cajaCentimos: suma('pagadoCentimos'),
+    pendienteCentimos: suma('pendienteCentimos'),
+    jugadores: jugadoresInforme,
+  }
+}
+
+export type InformeMultas = Awaited<ReturnType<typeof informeMultas>>
+export type MultaInforme = Awaited<ReturnType<typeof consultaMultas>>[number]
+
+// Quién debe hoy, con el formato de WhatsApp (*negrita*), para pegarlo en el grupo
+export function mensajeMultas(club: string, plantilla: string, informe: InformeMultas) {
+  const lineas = [`💰 *${club} · ${plantilla}*`, `Multas pendientes a ${fechaCorta(hoy())}`, '']
+  const deudores = informe.jugadores.filter((j) => j.pendienteCentimos > 0)
+  if (deudores.length === 0) lineas.push('Nadie debe nada 🎉')
+  for (const j of deudores) {
+    const nombre = j.apellidos ? `${j.nombre} ${j.apellidos}` : j.nombre
+    lineas.push(
+      `${j.dorsal ?? '–'} · ${nombre}: *${euros(j.pendienteCentimos)}* (${j.multasPendientes})`,
+    )
+  }
+  lineas.push(
+    '',
+    `*Pendiente: ${euros(informe.pendienteCentimos)}* · En caja: ${euros(informe.cajaCentimos)}`,
+  )
+  return lineas.join('\n')
+}
+
 export const rutasMultasJugadores = () =>
   new OpenAPIHono<EnvPlantilla>({ defaultHook: validacionFallida })
     .openapi(
@@ -672,5 +742,100 @@ export const rutasMultasJugadores = () =>
           },
           200,
         )
+      },
+    )
+    .openapi(
+      createRoute({
+        method: 'get',
+        path: '/plantillas/{id}/multas/informe.pdf',
+        tags: ['Multas'],
+        summary: 'Informe de multas en PDF',
+        description:
+          'Delegado o superior. Totales y, por jugador (todos los de la plantilla, también sin multas), lo puesto, lo pagado y lo pendiente. Con `detalle=true`, cada multa. El rango filtra por la fecha de la multa; sin él, toda la temporada.',
+        middleware: [requireRol('delegado')] as const,
+        request: {
+          params: ParamPlantilla,
+          query: z.object({
+            desde: EsquemaFecha.optional().openapi({ param: { name: 'desde', in: 'query' } }),
+            hasta: EsquemaFecha.optional().openapi({ param: { name: 'hasta', in: 'query' } }),
+            detalle: z
+              .enum(['true', 'false'])
+              .default('false')
+              .openapi({ param: { name: 'detalle', in: 'query' } }),
+          }),
+        },
+        responses: {
+          200: {
+            description: 'El PDF',
+            content: { 'application/pdf': { schema: z.string().openapi({ format: 'binary' }) } },
+          },
+          400: json(EsquemaError, 'Rango no válido'),
+          ...errores,
+        },
+      }),
+      async (c) => {
+        const { desde, hasta, detalle } = c.req.valid('query')
+        if (desde && hasta && desde > hasta) {
+          throw errorCampo(
+            400,
+            'validacion',
+            'hasta',
+            'La fecha final no puede ser anterior a la inicial',
+          )
+        }
+        const plantilla = c.var.plantilla
+        const rango = { desde, hasta }
+        const informe = await informeMultas(plantilla.id, rango)
+        const lista =
+          detalle === 'true'
+            ? await consultaMultas(
+                plantilla.id,
+                desde ? gte(multas.fecha, desde) : undefined,
+                hasta ? lte(multas.fecha, hasta) : undefined,
+              )
+            : null
+        const { pdf, nombre } = await pdfMultas(plantilla, informe, lista, rango)
+        return c.body(new Uint8Array(pdf), 200, {
+          'content-type': 'application/pdf',
+          'content-disposition': `inline; filename="${nombre}"`,
+          'cache-control': 'private, no-store',
+        }) as never
+      },
+    )
+    .openapi(
+      createRoute({
+        method: 'get',
+        path: '/plantillas/{id}/multas/mensaje',
+        tags: ['Multas'],
+        summary: 'Mensaje de deudas para WhatsApp',
+        description:
+          'Delegado o superior. Quién debe hoy y cuánto, con lo pendiente y lo que hay en caja, con el formato de WhatsApp y el enlace wa.me para compartirlo.',
+        middleware: [requireRol('delegado')] as const,
+        request: { params: ParamPlantilla },
+        responses: {
+          200: json(
+            z
+              .object({
+                texto: z.string(),
+                whatsapp: z.string().openapi({ example: 'https://wa.me/?text=…' }),
+              })
+              .openapi('MensajeMultas'),
+            'Mensaje',
+          ),
+          ...errores,
+        },
+      }),
+      async (c) => {
+        const plantilla = c.var.plantilla
+        const [club] = await db
+          .select({ nombre: clubes.nombre })
+          .from(clubes)
+          .where(eq(clubes.id, plantilla.clubId))
+        const texto = mensajeMultas(
+          club?.nombre ?? '',
+          plantilla.nombre,
+          await informeMultas(plantilla.id, {}),
+        )
+        return c.json({ texto, whatsapp: `https://wa.me/?text=${encodeURIComponent(texto)}` }, 200)
       },
     )

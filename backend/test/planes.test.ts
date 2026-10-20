@@ -17,7 +17,7 @@ import {
   user,
 } from '../src/db/schema/index.js'
 import { absoluta } from '../src/medios/almacen.js'
-import { crearUsuario, iniciarSesion, ORIGEN } from './utilidades.js'
+import { crearUsuario, iniciarSesion, ORIGEN, textoPdf } from './utilidades.js'
 
 // Planificación de sesiones: el plan de cada entreno, duplicarlo y los modelos del club
 
@@ -306,25 +306,6 @@ describe('modelos de sesión', () => {
     ).toHaveLength(2)
   })
 })
-
-// Texto de un PDF, página a página, para comprobar lo que lleva. pdfmake escribe cada palabra por
-// separado: los espacios se normalizan
-async function textoPdf(res: Response) {
-  const datos = new Uint8Array(await res.arrayBuffer())
-  const documento = await getDocument({ data: datos, verbosity: 0, isEvalSupported: false }).promise
-  const paginas: string[] = []
-  for (let n = 1; n <= documento.numPages; n++) {
-    const contenido = await (await documento.getPage(n)).getTextContent()
-    paginas.push(
-      contenido.items
-        .map((i) => ('str' in i ? i.str : ''))
-        .join(' ')
-        .replace(/\s+/g, ' '),
-    )
-  }
-  await documento.destroy()
-  return paginas.join('\n')
-}
 
 describe('plan en PDF', () => {
   const pdf = (eid: string) => `${entrenosDe()}/${eid}/plan.pdf`
