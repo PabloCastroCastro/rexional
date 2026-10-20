@@ -727,16 +727,20 @@ Una issue está terminada cuando: cumple sus criterios de aceptación en el ento
 
 | Ciclo | Objetivo | Versión |
 |---|---|---|
-| 1 · Base y plantilla | Tres proyectos funcionando, login, clubes, plantillas por temporada, selector de plantilla, jugadores y CI | v0.1.0 |
-| 2 · Entrenos | Pasar lista, historial y porcentaje de asistencia | v0.2.0 |
-| 3 · Convocatorias | Partidos, convocados y mensaje de WhatsApp | v0.3.0 |
+| 1 · Base y plantilla | Tres proyectos funcionando, login, clubes, plantillas por temporada, selector de plantilla, jugadores y CI | v1.0.0 |
+| 2 · Entrenos | Pasar lista, historial y porcentaje de asistencia | v1.0.0 |
+| 3 · Convocatorias | Partidos, convocados y mensaje de WhatsApp | v1.0.0 |
 | 4 · Multas | Catálogo, registro, cobro, deudas y caja. Paridad con el MVP y primer despliegue en el servidor | v1.0.0 |
-| 5 · Personalización y temporadas | Escudo y colores por club, y cambio de temporada | v1.1.0 |
-| 6 · Estadísticas | Resultado, participaciones, eventos, estadísticas de temporada y trayectoria de cada jugador | v1.2.0 |
-| 7 · Planificación de entrenos | Biblioteca de ejercicios con fotos y vídeos, y sesiones planificadas | v1.3.0 |
-| 8 · Operación | Backups automáticos, restauración, logs, actualizaciones | v1.4.0 |
-| 9 · Roles en uso | Invitaciones, delegados y jugadores | v1.5.0 |
-| 10 · Exposición pública | Servidor aislado, red, cortafuegos, dominio y HTTPS público | v2.0.0 |
+| 5 · Personalización y temporadas | Escudo y colores por club, y cambio de temporada | en parte en v1.1.0, con GH-101 y GH-102; el resto, pendiente |
+| 6 · Estadísticas | Resultado, participaciones, eventos, estadísticas de temporada y trayectoria de cada jugador | v1.1.0; GH-134 se añadió después, pendiente |
+| 7 · Planificación de entrenos | Biblioteca de ejercicios con fotos y vídeos, y sesiones planificadas | v1.2.0 |
+| 8 · Operación | Backups automáticos, restauración, logs y actualizaciones | en parte en v1.2.0, con GH-45 y GH-46; el resto, pendiente |
+| 9 · Exportar y compartir | Exportar y compartir sesiones y multas en PDF o texto, importar sesiones desde una plantilla y asistencia desde WhatsApp | v1.3.0, prevista |
+| 10 · Roles en uso | Invitaciones, delegados y jugadores | v1.4.0, prevista |
+| 11 · Exposición pública | Servidor aislado, red, cortafuegos, dominio y HTTPS público | v2.0.0, prevista |
+| 12 · Asistente de ejercicios | Claves de API, diagrama táctico del ejercicio y generación de imágenes, animación y PDF en el servidor | v2.1.0, prevista |
+
+Versión publicada en los ciclos ya cerrados y prevista en el resto. Los ciclos 1 a 3 no tuvieron release propia: se publicaron juntos en la v1.0.0. Lo que queda abierto de un ciclo ya publicado sale en la release siguiente a terminarlo.
 
 ---
 
@@ -760,18 +764,18 @@ Una issue está terminada cuando: cumple sus criterios de aceptación en el ento
 
 | Título | Descripción |
 |---|---|
-| Ciclo 1 · Base y plantilla | Tres proyectos funcionando, login, clubes, plantillas por temporada, selector de plantilla, jugadores y CI (v0.1.0) |
-| Ciclo 2 · Entrenos | Pasar lista, historial y porcentaje de asistencia (v0.2.0) |
-| Ciclo 3 · Convocatorias | Partidos, convocados y mensaje de WhatsApp (v0.3.0) |
+| Ciclo 1 · Base y plantilla | Tres proyectos funcionando, login, clubes, plantillas por temporada, selector de plantilla, jugadores y CI (v1.0.0) |
+| Ciclo 2 · Entrenos | Pasar lista, historial y porcentaje de asistencia (v1.0.0) |
+| Ciclo 3 · Convocatorias | Partidos, convocados y mensaje de WhatsApp (v1.0.0) |
 | Ciclo 4 · Multas | Catálogo, registro, cobro, deudas y caja. Paridad con el MVP y primer despliegue en el servidor (v1.0.0) |
-| Ciclo 5 · Personalización y temporadas | Escudo y colores por club, y cambio de temporada (v1.1.0) |
-| Ciclo 6 · Estadísticas | Resultado, participaciones, eventos, estadísticas de temporada y trayectoria de cada jugador (v1.2.0) |
-| Ciclo 7 · Planificación de entrenos | Biblioteca de ejercicios con fotos y vídeos, y sesiones planificadas (v1.3.0) |
-| Ciclo 8 · Operación | Backups automáticos, restauración, logs y actualizaciones (v1.4.0) |
-| Ciclo 9 · Exportar y compartir | Exportar y compartir sesiones y multas en PDF o texto, importar sesiones desde una plantilla y asistencia desde WhatsApp |
-| Ciclo 10 · Roles en uso | Invitaciones, delegados y jugadores (v1.5.0) |
-| Ciclo 11 · Exposición pública | Servidor aislado, red, cortafuegos, dominio y HTTPS público (v2.0.0) |
-| Ciclo 12 · Asistente de ejercicios | Claves de API, diagrama táctico del ejercicio y generación de imágenes, animación y PDF en el servidor |
+| Ciclo 5 · Personalización y temporadas | Escudo y colores por club, y cambio de temporada (en parte en v1.1.0, con GH-101 y GH-102; el resto, pendiente) |
+| Ciclo 6 · Estadísticas | Resultado, participaciones, eventos, estadísticas de temporada y trayectoria de cada jugador (v1.1.0; GH-134 se añadió después, pendiente) |
+| Ciclo 7 · Planificación de entrenos | Biblioteca de ejercicios con fotos y vídeos, y sesiones planificadas (v1.2.0) |
+| Ciclo 8 · Operación | Backups automáticos, restauración, logs y actualizaciones (en parte en v1.2.0, con GH-45 y GH-46; el resto, pendiente) |
+| Ciclo 9 · Exportar y compartir | Exportar y compartir sesiones y multas en PDF o texto, importar sesiones desde una plantilla y asistencia desde WhatsApp (v1.3.0, prevista) |
+| Ciclo 10 · Roles en uso | Invitaciones, delegados y jugadores (v1.4.0, prevista) |
+| Ciclo 11 · Exposición pública | Servidor aislado, red, cortafuegos, dominio y HTTPS público (v2.0.0, prevista) |
+| Ciclo 12 · Asistente de ejercicios | Claves de API, diagrama táctico del ejercicio y generación de imágenes, animación y PDF en el servidor (v2.1.0, prevista) |
 
 ### 11.3 Issues
 
