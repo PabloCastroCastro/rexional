@@ -341,7 +341,11 @@ describe('plan en PDF', () => {
     })
     await db
       .update(ejercicios)
-      .set({ material: 'Conos y petos' })
+      .set({
+        material: 'Conos y petos',
+        jugadores: '5 por grupo',
+        descripcion: 'Cuatro fuera mantienen el balón; el del centro roba.',
+      })
       .where(eq(ejercicios.id, ids.Rondo ?? ''))
 
     const res = await pedir('GET', pdf(eid), 'jugador')
@@ -359,7 +363,9 @@ describe('plan en PDF', () => {
       'Salida de balón',
       'Traer petos',
       'Material: Conos y petos',
-      'A dos toques',
+      'Jugadores: 5 por grupo',
+      'Cuatro fuera mantienen el balón; el del centro roba.',
+      'En esta sesión: A dos toques',
       "40' de ejercicios · el entreno dura 90'",
     ]) {
       expect(texto).toContain(esperado)
@@ -367,7 +373,7 @@ describe('plan en PDF', () => {
     expect(texto.indexOf('Rondo')).toBeLessThan(texto.indexOf('Partido'))
   })
 
-  it('incluye la miniatura del primer medio del ejercicio y avisa si no hay ejercicios', async () => {
+  it('lleva hasta cuatro fotos, los enlaces y el aviso de vídeo; avisa si no hay ejercicios', async () => {
     const relativa = `ejercicios/${ids.club}/miniatura-pdf.webp`
     await mkdir(absoluta(`ejercicios/${ids.club}`), { recursive: true })
     await sharp({
@@ -375,14 +381,26 @@ describe('plan en PDF', () => {
     })
       .webp()
       .toFile(absoluta(relativa))
-    await db.insert(ejercicioMedios).values({
-      ejercicioId: ids['Salida de balón'] ?? '',
-      tipo: 'foto',
-      archivo: relativa,
-      miniatura: relativa,
-      mime: 'image/webp',
-      orden: 0,
-    })
+    const ejercicioId = ids['Salida de balón'] ?? ''
+    // Cinco fotos (solo salen cuatro), un enlace y un vídeo
+    await db.insert(ejercicioMedios).values([
+      ...[0, 1, 2, 3, 4].map((orden) => ({
+        ejercicioId,
+        tipo: 'foto' as const,
+        archivo: relativa,
+        miniatura: relativa,
+        mime: 'image/webp',
+        orden,
+      })),
+      {
+        ejercicioId,
+        tipo: 'enlace',
+        url: 'https://youtu.be/salida',
+        pie: 'Salida del Celta',
+        orden: 5,
+      },
+      { ejercicioId, tipo: 'video', archivo: relativa, mime: 'video/mp4', orden: 6 },
+    ])
     const conFoto = await nuevoEntreno('2026-11-04')
     await guardar(conFoto, { ejercicios: [{ ejercicioId: ids['Salida de balón'] }] })
     const documento = await getDocument({
@@ -390,8 +408,21 @@ describe('plan en PDF', () => {
       verbosity: 0,
       isEvalSupported: false,
     }).promise
-    const operaciones = await (await documento.getPage(1)).getOperatorList()
-    expect(operaciones.fnArray).toContain(OPS.paintImageXObject)
+    const pagina = await documento.getPage(1)
+    const operaciones = await pagina.getOperatorList()
+    expect(operaciones.fnArray.filter((op) => op === OPS.paintImageXObject)).toHaveLength(4)
+    // pdfmake pone un enlace por palabra: cuentan las URL distintas
+    const enlaces = [...new Set((await pagina.getAnnotations()).map((a) => a.url))]
+    expect(enlaces).toEqual([
+      'https://youtu.be/salida',
+      `http://localhost:5173/plantillas/${ids.plantilla}/entrenos/ejercicios/${ejercicioId}`,
+    ])
+    const textoFotos = (await pagina.getTextContent()).items
+      .map((i) => ('str' in i ? i.str : ''))
+      .join(' ')
+      .replace(/\s+/g, ' ')
+    expect(textoFotos).toContain('Vídeo: Salida del Celta')
+    expect(textoFotos).toContain('Tiene vídeo: verlo en la app')
     await documento.destroy()
 
     const vacio = await nuevoEntreno('2026-11-05', null, null)

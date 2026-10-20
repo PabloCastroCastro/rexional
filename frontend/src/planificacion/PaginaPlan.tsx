@@ -22,7 +22,7 @@ import { useAvisos } from '../componentes/Avisos'
 import { Boton } from '../componentes/Boton'
 import { Campo } from '../componentes/Campo'
 import { Cargando } from '../componentes/Cargando'
-import { BotonCompartirPdf } from '../componentes/CompartirPdf'
+import { BotonesPdf } from '../componentes/CompartirPdf'
 import { useConfirmacion } from '../componentes/Confirmacion'
 import { EstadoVacio } from '../componentes/EstadoVacio'
 import { HojaInferior } from '../componentes/HojaInferior'
@@ -105,11 +105,11 @@ function BotonCampo({ plan }: { plan: Plan }) {
   )
 }
 
-// El PDF sale del plan guardado: para imprimirlo o mandarlo por WhatsApp
+// El PDF sale del plan guardado: para imprimirlo, guardarlo o mandarlo por WhatsApp
 function CompartirPlan({ plan, disabled }: { plan: Plan; disabled?: boolean }) {
   const plantilla = usePlantillaActiva()
   return (
-    <BotonCompartirPdf
+    <BotonesPdf
       url={`/api/plantillas/${plantilla.id}/entrenos/${plan.entrenoId}/plan.pdf`}
       nombre={`entreno-${plan.fecha}.pdf`}
       titulo="Sesión de entrenamiento"

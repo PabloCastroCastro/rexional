@@ -249,11 +249,24 @@ describe('lectura y resúmenes', () => {
   })
 })
 
-describe('compartir el plan en PDF', () => {
+describe('compartir y descargar el plan en PDF', () => {
   const PDF = `${RUTA}.pdf`
   const conPdf = () => {
     manejadores[`GET ${PDF}`] = () =>
       new Response('%PDF-1.7 de prueba', { headers: { 'content-type': 'application/pdf' } })
+  }
+  const enElMovil = () => {
+    const share = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'share', { value: share, configurable: true })
+    Object.defineProperty(navigator, 'canShare', { value: () => true, configurable: true })
+    return share
+  }
+  const simularDescarga = () => {
+    const crearUrl = vi.fn().mockReturnValue('blob:pdf')
+    Object.defineProperty(URL, 'createObjectURL', { value: crearUrl, configurable: true })
+    Object.defineProperty(URL, 'revokeObjectURL', { value: vi.fn(), configurable: true })
+    const clic = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    return { crearUrl, clic }
   }
 
   afterEach(() => {
@@ -264,9 +277,7 @@ describe('compartir el plan en PDF', () => {
   })
 
   it('en el móvil lo comparte con el archivo adjunto', async () => {
-    const share = vi.fn().mockResolvedValue(undefined)
-    Object.defineProperty(navigator, 'share', { value: share, configurable: true })
-    Object.defineProperty(navigator, 'canShare', { value: () => true, configurable: true })
+    const share = enElMovil()
     conPlan(plantilla('p1', 'Senior', '2026-27', { rol: 'jugador', esAdminClub: false }))
     conPdf()
     abrir('/plantillas/p1/entrenos/plan/e1')
@@ -278,15 +289,24 @@ describe('compartir el plan en PDF', () => {
     })
   })
 
-  it('si el navegador no comparte archivos, lo descarga', async () => {
-    const crearUrl = vi.fn().mockReturnValue('blob:pdf')
-    Object.defineProperty(URL, 'createObjectURL', { value: crearUrl, configurable: true })
-    Object.defineProperty(URL, 'revokeObjectURL', { value: vi.fn(), configurable: true })
-    const clic = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+  it('en el móvil también se puede descargar, sin pasar por el menú de compartir', async () => {
+    const share = enElMovil()
+    const { clic } = simularDescarga()
     conPlan()
     conPdf()
     abrir('/plantillas/p1/entrenos/plan/e1')
-    await userEvent.click(await screen.findByRole('button', { name: 'Compartir PDF' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Descargar PDF' }))
+    await waitFor(() => expect(clic).toHaveBeenCalled())
+    expect(share).not.toHaveBeenCalled()
+  })
+
+  it('si el navegador no comparte archivos, solo ofrece descargarlo', async () => {
+    const { crearUrl, clic } = simularDescarga()
+    conPlan()
+    conPdf()
+    abrir('/plantillas/p1/entrenos/plan/e1')
+    await userEvent.click(await screen.findByRole('button', { name: 'Descargar PDF' }))
+    expect(screen.queryByRole('button', { name: 'Compartir PDF' })).not.toBeInTheDocument()
     await waitFor(() => expect(clic).toHaveBeenCalled())
     expect(crearUrl).toHaveBeenCalledWith(
       expect.objectContaining({ name: 'entreno-2026-10-20.pdf' }),
@@ -294,7 +314,7 @@ describe('compartir el plan en PDF', () => {
     expect(clic.mock.contexts[0]).toHaveAttribute('download', 'entreno-2026-10-20.pdf')
   })
 
-  it('avisa si no se puede generar y no deja compartirlo con cambios sin guardar', async () => {
+  it('avisa si no se puede generar y no deja sacarlo con cambios sin guardar', async () => {
     conPlan()
     manejadores[`GET ${PDF}`] = () =>
       json(
@@ -302,7 +322,7 @@ describe('compartir el plan en PDF', () => {
         404,
       )
     abrir('/plantillas/p1/entrenos/plan/e1')
-    const boton = await screen.findByRole('button', { name: 'Compartir PDF' })
+    const boton = await screen.findByRole('button', { name: 'Descargar PDF' })
     await userEvent.click(boton)
     expect(await screen.findByText('No existe ese entreno en la plantilla')).toBeInTheDocument()
 

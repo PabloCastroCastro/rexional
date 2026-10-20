@@ -1,11 +1,16 @@
-import { Share2 } from 'lucide-react'
+import { Download, Share2 } from 'lucide-react'
 import { useState } from 'react'
 import { useAvisos } from './Avisos'
 import { Boton } from './Boton'
 
-// Pide un PDF a la API y lo comparte con el menú del sistema: en el móvil, con el archivo adjunto
-// (WhatsApp, correo…). Si el navegador no comparte archivos, o no deja hacerlo tras la espera, se
-// descarga.
+// Botones para un PDF que genera la API: «Compartir PDF» abre el menú del sistema con el archivo
+// adjunto (WhatsApp, correo…) y «Descargar PDF» lo guarda. Compartir solo aparece si el navegador
+// comparte archivos (en el móvil sí; en el ordenador, casi nunca).
+
+const puedeCompartirArchivos = () =>
+  navigator.canShare?.({
+    files: [new File([''], 'prueba.pdf', { type: 'application/pdf' })],
+  }) ?? false
 
 function descargar(archivo: File) {
   const url = URL.createObjectURL(archivo)
@@ -29,7 +34,7 @@ async function mensajeDeError(respuesta: Response) {
   return 'No se ha podido preparar el PDF. Inténtalo de nuevo.'
 }
 
-export function BotonCompartirPdf({
+export function BotonesPdf({
   url,
   nombre,
   titulo,
@@ -44,46 +49,70 @@ export function BotonCompartirPdf({
   disabled?: boolean
 }) {
   const { avisar } = useAvisos()
-  const [cargando, setCargando] = useState(false)
+  const [enCurso, setEnCurso] = useState<'compartir' | 'descargar' | null>(null)
+  const [compartible] = useState(puedeCompartirArchivos)
 
-  async function compartir() {
-    setCargando(true)
+  // Pide el PDF; null si falla (ya avisado)
+  async function pedirPdf() {
     try {
       const respuesta = await globalThis.fetch(url, { credentials: 'same-origin' })
       if (!respuesta.ok) {
         avisar({ tipo: 'error', mensaje: await mensajeDeError(respuesta) })
-        return
+        return null
       }
-      const archivo = new File([await respuesta.blob()], nombre, { type: 'application/pdf' })
-      if (navigator.canShare?.({ files: [archivo] })) {
-        try {
-          await navigator.share({ files: [archivo], title: titulo })
-          return
-        } catch (error) {
-          // Cerrar el menú de compartir no es un error; si el navegador no lo deja, se descarga
-          if (error instanceof DOMException && error.name === 'AbortError') return
-        }
-      }
-      descargar(archivo)
+      return new File([await respuesta.blob()], nombre, { type: 'application/pdf' })
     } catch {
       avisar({
         tipo: 'error',
         mensaje: 'No se ha podido conectar con el servidor. Inténtalo de nuevo.',
       })
+      return null
+    }
+  }
+
+  async function accion(cual: 'compartir' | 'descargar') {
+    setEnCurso(cual)
+    try {
+      const archivo = await pedirPdf()
+      if (!archivo) return
+      if (cual === 'compartir') {
+        try {
+          await navigator.share({ files: [archivo], title: titulo })
+          return
+        } catch (error) {
+          // Cerrar el menú de compartir no es un error; si el navegador no lo deja tras la espera,
+          // se descarga
+          if (error instanceof DOMException && error.name === 'AbortError') return
+        }
+      }
+      descargar(archivo)
     } finally {
-      setCargando(false)
+      setEnCurso(null)
     }
   }
 
   return (
-    <Boton
-      variante="secundario"
-      icono={<Share2 aria-hidden size={18} />}
-      cargando={cargando}
-      disabled={disabled}
-      onClick={compartir}
-    >
-      Compartir PDF
-    </Boton>
+    <>
+      {compartible && (
+        <Boton
+          variante="secundario"
+          icono={<Share2 aria-hidden size={18} />}
+          cargando={enCurso === 'compartir'}
+          disabled={disabled || enCurso !== null}
+          onClick={() => accion('compartir')}
+        >
+          Compartir PDF
+        </Boton>
+      )}
+      <Boton
+        variante="secundario"
+        icono={<Download aria-hidden size={18} />}
+        cargando={enCurso === 'descargar'}
+        disabled={disabled || enCurso !== null}
+        onClick={() => accion('descargar')}
+      >
+        Descargar PDF
+      </Boton>
+    </>
   )
 }
