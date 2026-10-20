@@ -286,7 +286,7 @@ Móvil / PC (Tailscale)
 - Sirve la PWA con redirección de rutas a `index.html`, compresión y caché: larga para los recursos con hash, sin caché para `index.html` y el service worker.
 - Redirige `/api` al backend, conservando las cabeceras `Range` para los vídeos y la IP real del cliente (`X-Forwarded-For`, `X-Forwarded-Proto`).
 - `client_max_body_size` acorde al límite de subida de vídeo (por defecto nginx admite solo 1 MB).
-- HTTPS con los certificados montados como volumen: de Tailscale en la fase inicial y de Let's Encrypt (certbot) en el ciclo 10.
+- HTTPS con los certificados montados como volumen: de Tailscale en la fase inicial y de Let's Encrypt (certbot) en el ciclo 11.
 - Cabeceras de seguridad y limitación de peticiones (`limit_req`) para el login y las invitaciones.
 - Configuración parametrizada por variables de entorno mediante las plantillas de la imagen oficial (`/etc/nginx/templates`).
 
@@ -324,7 +324,7 @@ Cada entorno es un clon del repositorio con su `.env`, su nombre de proyecto de 
 
 - **Fase inicial:** Tailscale instalado en el servidor (fuera de Docker) y en los dispositivos del entrenador. Acceso solo desde la red privada, con HTTPS mediante certificado de Tailscale (necesario para instalar la PWA). El certificado se genera en el servidor con `tailscale cert`, se monta en el contenedor de nginx y un cron lo renueva y recarga nginx, porque caduca a los 90 días.
 - Si en el servidor ya hay otro nginx ocupando los puertos 80/443, el proxy de cada entorno escucha en su propio puerto (p. ej. 8443 pruebas y 9443 producción).
-- **Fase final (ciclo 10):** servidor separado y bastionado, red aislada, cortafuegos, dominio (DuckDNS), apertura de puertos 80/443 en el router hacia nginx y certificados de Let's Encrypt obtenidos y renovados con certbot.
+- **Fase final (ciclo 11):** servidor separado y bastionado, red aislada, cortafuegos, dominio (DuckDNS), apertura de puertos 80/443 en el router hacia nginx y certificados de Let's Encrypt obtenidos y renovados con certbot.
 
 ### 5.4 Despliegue y copias de seguridad
 
@@ -586,7 +586,7 @@ Horario semanal de entrenos de una plantilla (uno por plantilla).
 | duracion_min | smallint | |
 | indicaciones | text | |
 
-### invitaciones (ciclo 9)
+### invitaciones (ciclo 10)
 | Campo | Tipo | Notas |
 |---|---|---|
 | id | uuid | PK |
@@ -681,7 +681,7 @@ Pasar lista y convocar se guardan como lista completa en una sola petición.
 - Configuración: datos de la plantilla, plantillas y administradores del club y nombre del club (ciclo 1); escudo y colores con vista previa y asistente de temporada nueva (ciclo 5).
 - Partido jugado (ciclo 6): resultado, titulares, registro de eventos por minuto.
 - Estadísticas (ciclo 6): tablas de la temporada de la plantilla y trayectoria de cada jugador.
-- Miembros e invitaciones (ciclo 9).
+- Miembros e invitaciones (ciclo 10).
 
 **Criterios transversales:** diseño adaptable (móvil primero), foco visible y navegación por teclado, respeto a `prefers-reduced-motion`, modo claro/oscuro, estados vacíos que invitan a actuar, mensajes de error que indican qué pasó y cómo resolverlo.
 
@@ -768,9 +768,10 @@ Una issue está terminada cuando: cumple sus criterios de aceptación en el ento
 | Ciclo 6 · Estadísticas | Resultado, participaciones, eventos, estadísticas de temporada y trayectoria de cada jugador (v1.2.0) |
 | Ciclo 7 · Planificación de entrenos | Biblioteca de ejercicios con fotos y vídeos, y sesiones planificadas (v1.3.0) |
 | Ciclo 8 · Operación | Backups automáticos, restauración, logs y actualizaciones (v1.4.0) |
-| Ciclo 9 · Roles en uso | Invitaciones, delegados y jugadores (v1.5.0) |
-| Ciclo 10 · Exposición pública | Servidor aislado, red, cortafuegos, dominio y HTTPS público (v2.0.0) |
-| Ciclo 11 · Asistente de ejercicios | Claves de API, diagrama táctico del ejercicio y generación de imágenes, animación y PDF en el servidor |
+| Ciclo 9 · Exportar y compartir | Exportar y compartir sesiones y multas en PDF o texto, importar sesiones desde una plantilla y asistencia desde WhatsApp |
+| Ciclo 10 · Roles en uso | Invitaciones, delegados y jugadores (v1.5.0) |
+| Ciclo 11 · Exposición pública | Servidor aislado, red, cortafuegos, dominio y HTTPS público (v2.0.0) |
+| Ciclo 12 · Asistente de ejercicios | Claves de API, diagrama táctico del ejercicio y generación de imágenes, animación y PDF en el servidor |
 
 ### 11.3 Issues
 
@@ -1238,12 +1239,11 @@ Comprobar que la aplicación cubre todo lo que hacía el MVP inicial antes de pu
 **Título:** API de configuración visual del club
 **Etiquetas:** feature, backend
 
-Depende de GH-7.
+Depende de GH-7. Ya existe `PATCH /api/clubes/:cid` para el nombre (solo administradores del club), y los colores ya se guardan con valores por defecto y se incluyen en `GET /api/plantillas`.
 
 **Criterios de aceptación**
-- [ ] `PATCH /api/clubes/:cid` acepta `nombre`, `color_principal` y `color_secundario`, con los colores validados como hex
-- [ ] Solo para administradores del club
-- [ ] Los datos visuales del club se incluyen en `GET /api/plantillas` para aplicar el tema sin peticiones adicionales
+- [ ] `PATCH /api/clubes/:cid` acepta también `colorPrincipal` y `colorSecundario`, validados como hex
+- [ ] Se pueden restablecer los colores por defecto
 - [ ] Tests
 
 #### GH-28
@@ -1254,6 +1254,7 @@ Depende de GH-7.
 
 **Criterios de aceptación**
 - [ ] `PUT /api/clubes/:cid/escudo` (solo administradores del club) con multipart; solo PNG y WebP, comprobando el contenido real y no solo la extensión
+- [ ] Reutiliza el servicio de medios de GH-39 (almacenamiento, comprobación del tipo real y procesado con `sharp`), sin un segundo sistema de subidas
 - [ ] Tamaño máximo configurable; imagen redimensionada y normalizada en el servidor
 - [ ] Guardado en el volumen `uploads` con nombre generado; el anterior se elimina
 - [ ] Servido con caché y cabeceras adecuadas
@@ -1394,17 +1395,6 @@ Depende de GH-33.
 - [ ] Resultados de la temporada de la plantilla (ganados, empatados, perdidos, goles)
 - [ ] Trayectoria del jugador por temporadas en su vista
 
-#### GH-36
-**Título:** Propuesta de multa al registrar una tarjeta
-**Etiquetas:** feature, backend, frontend
-
-Depende de GH-24 y GH-33.
-
-**Criterios de aceptación**
-- [ ] Al registrar una amarilla o roja, la app propone los motivos activos del catálogo con ese `tipo_evento`; si no hay ninguno, no propone nada
-- [ ] El entrenador confirma, edita o descarta; nunca se crea sola
-- [ ] La multa queda vinculada al evento (`evento_id`); al borrar el evento se avisa de la multa asociada
-
 #### GH-37
 **Título:** Importación desde la ficha del partido (PDF)
 **Etiquetas:** feature, db, backend, frontend
@@ -1421,6 +1411,19 @@ Subir al partido la ficha en PDF que publica la Federación Gallega y registrar 
 - [ ] Confirmar registra con la fuente `acta`: la convocatoria pasa a ser la del acta, y se guardan resultado, participaciones con minutos y eventos; competición y lugar se rellenan si estaban vacíos. Volver a confirmar sustituye lo importado antes
 - [ ] Pantalla de revisión: subir el PDF, ver lo leído, elegir los jugadores sin emparejar, corregir el tipo de tarjeta y confirmar
 - [ ] Tests con una ficha de ejemplo
+
+#### GH-134
+**Título:** Enlaces de vídeo en los partidos
+**Etiquetas:** feature, db, backend, frontend
+
+Algunos partidos se graban: enlazar el vídeo (YouTube, Drive…) con el partido. Enlazar cada evento (goles, cambios) con su minuto del vídeo queda para otra issue, cuando se vea cómo se usa.
+
+**Criterios de aceptación**
+- [ ] Uno o varios enlaces por partido (p. ej. primera y segunda parte), con título opcional; solo URLs http o https
+- [ ] Añadir, editar y quitar desde la pantalla del partido (GH-34), delegado o superior; los ve cualquier miembro de la plantilla
+- [ ] El enlace se abre fuera de la app
+- [ ] Migración y tests
+- [ ] Anotado en la issue qué haría falta para saltar al minuto de cada evento (YouTube admite `?t=`) y si compensa
 
 ---
 
@@ -1573,22 +1576,25 @@ Depende de GH-45.
 
 #### GH-47
 **Título:** Logs estructurados y rotación
-**Etiquetas:** feature, infra, backend
+**Etiquetas:** feature, backend, infra
+
+pino ya está (`backend/src/logger.ts`), pero solo registra el arranque y los errores. La rotación de logs de los contenedores ya está configurada en los compose (`max-size: 10m`).
 
 **Criterios de aceptación**
-- [ ] Logs del backend en JSON con nivel, ruta, estado y duración, sin datos sensibles
-- [ ] Rotación de logs de los contenedores configurada
-- [ ] Comando documentado para consultar errores recientes
+- [ ] Una línea JSON por petición con nivel, método, ruta, estado y duración, sin datos sensibles (ni cookies, ni cabeceras de autenticación, ni cuerpos)
+- [ ] Sin ruido: la comprobación de salud y los estáticos no se registran o van a nivel `debug`
+- [ ] Comando documentado en `docs/operacion.md` para consultar errores recientes
 
 #### GH-48
 **Título:** Mantenimiento y actualizaciones
 **Etiquetas:** feature, infra, seguridad
 
-**Criterios de aceptación**
-- [ ] Dependabot para dependencias npm, imágenes Docker y GitHub Actions, con pull requests contra `develop`
-- [ ] Imágenes base con versión fijada
-- [ ] Procedimiento documentado para actualizar PostgreSQL de versión mayor
+Las imágenes base ya tienen fijada la versión mayor (`node:24-alpine`, `postgres:18-alpine`, `nginx-unprivileged:1.30-alpine`).
 
+**Criterios de aceptación**
+- [ ] Dependabot para npm (los tres proyectos), imágenes Docker y GitHub Actions, con pull requests agrupadas contra `develop`
+- [ ] Decidido y aplicado el nivel de fijación de las imágenes base (versión menor o digest), de modo que Dependabot proponga las actualizaciones
+- [ ] Procedimiento documentado para actualizar PostgreSQL de versión mayor
 
 #### GH-120
 **Título:** Avisos de operación por Telegram
@@ -1608,7 +1614,70 @@ Hoy los fallos de las copias y el aviso de poco disco solo quedan en el registro
 
 ---
 
-### Milestone: Ciclo 9 · Roles en uso
+### Milestone: Ciclo 9 · Exportar y compartir
+
+#### GH-131
+**Título:** Exportar la sesión de entrenamiento en PDF
+**Etiquetas:** feature, backend, frontend
+
+Poder imprimir o compartir (por WhatsApp u otras vías) el plan de un entreno. Es la primera issue que genera PDF en el servidor: deja el motor común que reutilizarán GH-132 (multas) y GH-137 (ficha del ejercicio). Importar sesiones queda en GH-139.
+
+**Criterios de aceptación**
+- [ ] Motor de PDF común en el backend (librería por decidir, p. ej. `pdfkit` o `pdfmake`): cabecera con el nombre, el escudo si lo hay y los colores del club, y pie con la fecha de generación
+- [ ] `GET /api/plantillas/:id/entrenos/:eid/plan.pdf`: fecha, hora de inicio y de fin, objetivo, notas y los ejercicios en orden con duración, indicaciones, material y la miniatura de su primera foto; duración total
+- [ ] Mismo permiso de lectura que el plan del entreno
+- [ ] En la sesión planificada (GH-43): botón «Compartir PDF» que usa la Web Share API con el archivo en el móvil y lo descarga si el navegador no la admite
+- [ ] Legible impreso en A4 y en blanco y negro
+- [ ] Tests: el PDF se genera y contiene los textos del plan
+
+#### GH-132
+**Título:** Exportar el estado de las multas
+**Etiquetas:** feature, backend, frontend
+
+Informe de lo que ha pagado y lo que debe cada jugador, para compartirlo por WhatsApp u otras vías o imprimirlo. Reutiliza el motor de PDF de GH-131.
+
+**Criterios de aceptación**
+- [ ] PDF de la plantilla: por jugador, total de multas, pagado y pendiente; totales de la caja. Opción de detalle con cada multa (fecha, motivo, importe y si está pagada)
+- [ ] Rango de fechas, por defecto la temporada
+- [ ] Resumen en texto para WhatsApp (deudas por jugador), como el mensaje de convocatoria de GH-21, para pegarlo en el grupo sin adjuntar archivos
+- [ ] Botón «Compartir» con la Web Share API (PDF o texto) y descarga o copiar como alternativa
+- [ ] Permisos según la visibilidad de la sección 3: el informe con todos los jugadores solo para quien ve todas las deudas
+- [ ] Tests
+
+#### GH-139
+**Título:** Importar una sesión de entrenamiento desde una plantilla
+**Etiquetas:** feature, backend, frontend
+
+Crear una sesión de entrenamiento y sus ejercicios a partir de un documento rellenado fuera de la app (sale de la parte de importar de GH-131).
+
+**Criterios de aceptación**
+- [ ] Formato de la plantilla decidido y documentado. Propuesta: hoja de cálculo (`.xlsx`) con los datos de la sesión arriba y una fila por ejercicio, más fiable de leer que un Word o un PDF
+- [ ] Plantilla descargable desde la app, con un ejemplo rellenado
+- [ ] Al subirla se ve una vista previa antes de crear nada: datos de la sesión, ejercicios que ya están en la biblioteca (por nombre, sin tildes ni mayúsculas) y los que se darán de alta
+- [ ] Errores por fila claros (duración no válida, categoría desconocida…), sin crear nada a medias
+- [ ] Al confirmar se crean en una transacción los ejercicios nuevos y el plan del entreno elegido; el archivo no se guarda
+- [ ] Delegado o superior
+- [ ] Tests con una plantilla de ejemplo (sin datos reales en el repositorio)
+
+#### GH-133
+**Título:** Asistencia a los entrenos desde las encuestas de WhatsApp
+**Etiquetas:** investigacion
+
+La asistencia a los entrenos se pregunta con encuestas de WhatsApp en el grupo y después se pasa a mano. Investigar cómo llevar esas respuestas a la app sin teclearlas. El resultado es una propuesta y, si se aprueba, las issues para implementarla.
+
+**Criterios de aceptación**
+- [ ] Aclarado qué se quiere rellenar: la intención de ir (la respuesta a la encuesta, antes del entreno) o la asistencia real (pasar lista), y si la app necesita guardar la primera
+- [ ] Analizadas estas opciones, con ventajas, coste y riesgos:
+  - Importar el chat exportado de WhatsApp (`.txt`), si las encuestas y sus votos aparecen en él
+  - Bot sobre WhatsApp Web con librerías no oficiales: riesgo de bloqueo del número y va contra las condiciones de WhatsApp
+  - API oficial de WhatsApp Business: si admite grupos y encuestas, y su coste
+  - Sustituir la encuesta por un enlace a la app en el que cada jugador marca si va (necesita el rol jugador, GH-52) y la app prepara el resumen para el grupo
+- [ ] Prueba de concepto de la opción elegida, con datos inventados
+- [ ] Propuesta escrita en la issue y, si se aprueba, issues nuevas
+
+---
+
+### Milestone: Ciclo 10 · Roles en uso
 
 #### GH-49
 **Título:** Modelo y API de invitaciones
@@ -1658,6 +1727,8 @@ Depende de GH-50.
 **Título:** Tests de la matriz de permisos
 **Etiquetas:** feature, backend, seguridad
 
+`backend/test/permisos.test.ts` ya cubre la sesión, el rol en `/plantillas/:id` y las rutas de club. Completarlo con la tabla de la sección 3 cuando existan las invitaciones y el rol jugador (GH-49 a GH-52).
+
 **Criterios de aceptación**
 - [ ] Test por cada fila de la tabla de la sección 3 y cada rol
 - [ ] Casos de acceso a una plantilla ajena y a datos de otro jugador
@@ -1666,7 +1737,7 @@ Depende de GH-50.
 
 ---
 
-### Milestone: Ciclo 10 · Exposición pública
+### Milestone: Ciclo 11 · Exposición pública
 
 #### GH-54
 **Título:** Servidor dedicado bastionado
@@ -1706,12 +1777,12 @@ Depende de GH-55.
 **Título:** HTTPS público y cabeceras de seguridad
 **Etiquetas:** feature, infra, seguridad
 
-Depende de GH-56.
+Depende de GH-56. `X-Content-Type-Options` y `Referrer-Policy` ya se envían (`proxy/templates/vestuario.inc.template`).
 
 **Criterios de aceptación**
 - [ ] nginx con certificado de Let's Encrypt obtenido con certbot (desafío HTTP-01 por el puerto 80) y renovación automática que recarga nginx
 - [ ] Redirección HTTP → HTTPS y HSTS
-- [ ] Cabeceras: Content-Security-Policy, X-Content-Type-Options, Referrer-Policy, Permissions-Policy
+- [ ] Cabeceras que faltan: Content-Security-Policy y Permissions-Policy
 - [ ] Calificación A o superior en una prueba externa de TLS
 
 #### GH-58
@@ -1723,6 +1794,7 @@ Depende de GH-56.
 - [ ] Bloqueo de IPs abusivas (CrowdSec o fail2ban) a partir de los logs de nginx
 - [ ] Revisión de dependencias con vulnerabilidades conocidas
 - [ ] Revisión de la configuración de cookies y CSRF para acceso público
+- [ ] Si ya existen las claves de API (GH-135): límite de peticiones, caducidad y que no aparezcan en los logs
 
 #### GH-59
 **Título:** Migración de producción al servidor público
@@ -1738,7 +1810,7 @@ Depende de GH-54 a GH-58.
 
 ---
 
-### Milestone: Ciclo 11 · Asistente de ejercicios
+### Milestone: Ciclo 12 · Asistente de ejercicios
 
 #### GH-135
 **Título:** Claves de API para acceso externo
@@ -1787,3 +1859,20 @@ A partir del diagrama (GH-136), el servidor dibuja una imagen por paso, una anim
 - [ ] En la ficha del ejercicio: botón «Descargar PDF» y aviso si lo generado está desactualizado
 - [ ] Lo generado se ve también en el modo campo (GH-44)
 - [ ] Tests: el SVG de un diagrama de ejemplo se compara con uno de referencia
+
+---
+
+### Sin milestone
+
+Issues aparcadas: no se retoman hasta que se decida.
+
+#### GH-36
+**Título:** Propuesta de multa al registrar una tarjeta
+**Etiquetas:** feature, backend, frontend
+
+Depende de GH-24 y GH-33.
+
+**Criterios de aceptación**
+- [ ] Al registrar una amarilla o roja, la app propone los motivos activos del catálogo con ese `tipo_evento`; si no hay ninguno, no propone nada
+- [ ] El entrenador confirma, edita o descarta; nunca se crea sola
+- [ ] La multa queda vinculada al evento (`evento_id`); al borrar el evento se avisa de la multa asociada

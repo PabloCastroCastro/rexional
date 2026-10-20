@@ -28,7 +28,7 @@ Un repositorio con tres proyectos independientes, cada uno con sus dependencias 
 | Backend | `backend/` | Node.js LTS + TypeScript, Hono, Drizzle ORM, Zod, Better Auth y PostgreSQL |
 | Proxy | `proxy/` | nginx: sirve la PWA y redirige `/api` al backend |
 
-El acceso se hace inicialmente por Tailscale. La exposición pública a internet está prevista para el ciclo 10.
+El acceso se hace inicialmente por Tailscale. La exposición pública a internet está prevista para el ciclo 11.
 
 ## Hoja de ruta
 
