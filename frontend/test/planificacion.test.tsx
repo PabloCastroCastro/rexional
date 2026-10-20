@@ -1,6 +1,6 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { ResumenEjercicio } from '../src/ejercicios/datos'
 import type { ResumenEntreno } from '../src/entrenos/datos'
 import type { Plan } from '../src/planificacion/datos'
@@ -246,5 +246,70 @@ describe('lectura y resúmenes', () => {
     expect(enlaces[0]).toHaveTextContent("Presión · 4 ejercicios · 75'")
     expect(enlaces[0]).toHaveAttribute('href', '/plantillas/p1/entrenos/plan/e1')
     expect(enlaces[1]).toHaveTextContent('Sin plan')
+  })
+})
+
+describe('compartir el plan en PDF', () => {
+  const PDF = `${RUTA}.pdf`
+  const conPdf = () => {
+    manejadores[`GET ${PDF}`] = () =>
+      new Response('%PDF-1.7 de prueba', { headers: { 'content-type': 'application/pdf' } })
+  }
+
+  afterEach(() => {
+    // Solo existen en los tests que los simulan
+    for (const propiedad of ['share', 'canShare']) Reflect.deleteProperty(navigator, propiedad)
+    Reflect.deleteProperty(URL, 'createObjectURL')
+    Reflect.deleteProperty(URL, 'revokeObjectURL')
+  })
+
+  it('en el móvil lo comparte con el archivo adjunto', async () => {
+    const share = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'share', { value: share, configurable: true })
+    Object.defineProperty(navigator, 'canShare', { value: () => true, configurable: true })
+    conPlan(plantilla('p1', 'Senior', '2026-27', { rol: 'jugador', esAdminClub: false }))
+    conPdf()
+    abrir('/plantillas/p1/entrenos/plan/e1')
+    await userEvent.click(await screen.findByRole('button', { name: 'Compartir PDF' }))
+    await waitFor(() => expect(share).toHaveBeenCalled())
+    expect(share).toHaveBeenCalledWith({
+      title: 'Sesión de entrenamiento',
+      files: [expect.objectContaining({ name: 'entreno-2026-10-20.pdf', type: 'application/pdf' })],
+    })
+  })
+
+  it('si el navegador no comparte archivos, lo descarga', async () => {
+    const crearUrl = vi.fn().mockReturnValue('blob:pdf')
+    Object.defineProperty(URL, 'createObjectURL', { value: crearUrl, configurable: true })
+    Object.defineProperty(URL, 'revokeObjectURL', { value: vi.fn(), configurable: true })
+    const clic = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    conPlan()
+    conPdf()
+    abrir('/plantillas/p1/entrenos/plan/e1')
+    await userEvent.click(await screen.findByRole('button', { name: 'Compartir PDF' }))
+    await waitFor(() => expect(clic).toHaveBeenCalled())
+    expect(crearUrl).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'entreno-2026-10-20.pdf' }),
+    )
+    expect(clic.mock.contexts[0]).toHaveAttribute('download', 'entreno-2026-10-20.pdf')
+  })
+
+  it('avisa si no se puede generar y no deja compartirlo con cambios sin guardar', async () => {
+    conPlan()
+    manejadores[`GET ${PDF}`] = () =>
+      json(
+        { error: { codigo: 'no_encontrado', mensaje: 'No existe ese entreno en la plantilla' } },
+        404,
+      )
+    abrir('/plantillas/p1/entrenos/plan/e1')
+    const boton = await screen.findByRole('button', { name: 'Compartir PDF' })
+    await userEvent.click(boton)
+    expect(await screen.findByText('No existe ese entreno en la plantilla')).toBeInTheDocument()
+
+    await userEvent.type(screen.getByLabelText('Objetivo'), ' y presión')
+    expect(boton).toBeDisabled()
+    expect(
+      screen.getByText('Guarda el plan para compartirlo, duplicarlo o guardarlo como modelo.'),
+    ).toBeInTheDocument()
   })
 })
