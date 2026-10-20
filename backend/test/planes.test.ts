@@ -1,9 +1,14 @@
-import { inArray } from 'drizzle-orm'
+import { randomUUID } from 'node:crypto'
+import { mkdir } from 'node:fs/promises'
+import { eq, inArray } from 'drizzle-orm'
+import { getDocument, OPS } from 'pdfjs-dist/legacy/build/pdf.mjs'
+import sharp from 'sharp'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { crearApp } from '../src/app.js'
 import { db, pool } from '../src/db/cliente.js'
 import {
   clubes,
+  ejercicioMedios,
   ejercicios,
   entrenos,
   fichas,
@@ -11,6 +16,7 @@ import {
   membresias,
   user,
 } from '../src/db/schema/index.js'
+import { absoluta } from '../src/medios/almacen.js'
 import { crearUsuario, iniciarSesion, ORIGEN } from './utilidades.js'
 
 // Planificación de sesiones: el plan de cada entreno, duplicarlo y los modelos del club
@@ -76,7 +82,7 @@ const guardar = (eid: string, cuerpo: unknown, quien = 'delegado') =>
   pedir('PUT', plan(eid), quien, cuerpo)
 
 beforeAll(async () => {
-  for (const clave of ['admin', 'delegado', 'jugador']) await usuario(clave)
+  for (const clave of ['admin', 'delegado', 'jugador', 'ajeno']) await usuario(clave)
   const club = await (await pedir('POST', '/clubes', 'admin', { nombre: 'CD Planes' })).json()
   const otro = await (
     await pedir('POST', '/clubes', 'admin', { nombre: 'Otro club de planes' })
@@ -298,5 +304,137 @@ describe('modelos de sesión', () => {
     expect(
       ((await (await pedir('GET', plan(otro), 'jugador')).json()) as Plan).ejercicios,
     ).toHaveLength(2)
+  })
+})
+
+// Texto de un PDF, página a página, para comprobar lo que lleva. pdfmake escribe cada palabra por
+// separado: los espacios se normalizan
+async function textoPdf(res: Response) {
+  const datos = new Uint8Array(await res.arrayBuffer())
+  const documento = await getDocument({ data: datos, verbosity: 0, isEvalSupported: false }).promise
+  const paginas: string[] = []
+  for (let n = 1; n <= documento.numPages; n++) {
+    const contenido = await (await documento.getPage(n)).getTextContent()
+    paginas.push(
+      contenido.items
+        .map((i) => ('str' in i ? i.str : ''))
+        .join(' ')
+        .replace(/\s+/g, ' '),
+    )
+  }
+  await documento.destroy()
+  return paginas.join('\n')
+}
+
+describe('plan en PDF', () => {
+  const pdf = (eid: string) => `${entrenosDe()}/${eid}/plan.pdf`
+
+  it('lleva la fecha, el objetivo, las notas y los ejercicios en orden', async () => {
+    const eid = await nuevoEntreno('2026-11-03', '18:00', '19:30')
+    await guardar(eid, {
+      objetivo: 'Salida de balón',
+      notas: 'Traer petos',
+      ejercicios: [
+        { ejercicioId: ids.Rondo, duracionMin: 15, indicaciones: 'A dos toques' },
+        { ejercicioId: ids.Partido, duracionMin: 25 },
+      ],
+    })
+    await db
+      .update(ejercicios)
+      .set({
+        material: 'Conos y petos',
+        jugadores: '5 por grupo',
+        descripcion: 'Cuatro fuera mantienen el balón; el del centro roba.',
+      })
+      .where(eq(ejercicios.id, ids.Rondo ?? ''))
+
+    const res = await pedir('GET', pdf(eid), 'jugador')
+    expect(res.status).toBe(200)
+    expect(res.headers.get('content-type')).toBe('application/pdf')
+    expect(res.headers.get('content-disposition')).toBe('inline; filename="entreno-2026-11-03.pdf"')
+    expect(res.headers.get('cache-control')).toBe('private, no-store')
+    const texto = await textoPdf(res)
+    for (const esperado of [
+      'CD Planes',
+      'Senior · Temporada 2026-27',
+      'Sesión de entrenamiento',
+      'Martes, 3 de noviembre de 2026',
+      '18:00 – 19:30',
+      'Salida de balón',
+      'Traer petos',
+      'Material: Conos y petos',
+      'Jugadores: 5 por grupo',
+      'Cuatro fuera mantienen el balón; el del centro roba.',
+      'En esta sesión: A dos toques',
+      "40' de ejercicios · el entreno dura 90'",
+    ]) {
+      expect(texto).toContain(esperado)
+    }
+    expect(texto.indexOf('Rondo')).toBeLessThan(texto.indexOf('Partido'))
+  })
+
+  it('lleva hasta cuatro fotos, los enlaces y el aviso de vídeo; avisa si no hay ejercicios', async () => {
+    const relativa = `ejercicios/${ids.club}/miniatura-pdf.webp`
+    await mkdir(absoluta(`ejercicios/${ids.club}`), { recursive: true })
+    await sharp({
+      create: { width: 320, height: 180, channels: 3, background: '#14553d' },
+    })
+      .webp()
+      .toFile(absoluta(relativa))
+    const ejercicioId = ids['Salida de balón'] ?? ''
+    // Cinco fotos (solo salen cuatro), un enlace y un vídeo
+    await db.insert(ejercicioMedios).values([
+      ...[0, 1, 2, 3, 4].map((orden) => ({
+        ejercicioId,
+        tipo: 'foto' as const,
+        archivo: relativa,
+        miniatura: relativa,
+        mime: 'image/webp',
+        orden,
+      })),
+      {
+        ejercicioId,
+        tipo: 'enlace',
+        url: 'https://youtu.be/salida',
+        pie: 'Salida del Celta',
+        orden: 5,
+      },
+      { ejercicioId, tipo: 'video', archivo: relativa, mime: 'video/mp4', orden: 6 },
+    ])
+    const conFoto = await nuevoEntreno('2026-11-04')
+    await guardar(conFoto, { ejercicios: [{ ejercicioId: ids['Salida de balón'] }] })
+    const documento = await getDocument({
+      data: new Uint8Array(await (await pedir('GET', pdf(conFoto), 'jugador')).arrayBuffer()),
+      verbosity: 0,
+      isEvalSupported: false,
+    }).promise
+    const pagina = await documento.getPage(1)
+    const operaciones = await pagina.getOperatorList()
+    expect(operaciones.fnArray.filter((op) => op === OPS.paintImageXObject)).toHaveLength(4)
+    // pdfmake pone un enlace por palabra: cuentan las URL distintas
+    const enlaces = [...new Set((await pagina.getAnnotations()).map((a) => a.url))]
+    expect(enlaces).toEqual([
+      'https://youtu.be/salida',
+      `http://localhost:5173/plantillas/${ids.plantilla}/entrenos/ejercicios/${ejercicioId}`,
+    ])
+    const textoFotos = (await pagina.getTextContent()).items
+      .map((i) => ('str' in i ? i.str : ''))
+      .join(' ')
+      .replace(/\s+/g, ' ')
+    expect(textoFotos).toContain('Vídeo: Salida del Celta')
+    expect(textoFotos).toContain('Tiene vídeo: verlo en la app')
+    await documento.destroy()
+
+    const vacio = await nuevoEntreno('2026-11-05', null, null)
+    const texto = await textoPdf(await pedir('GET', pdf(vacio), 'jugador'))
+    expect(texto).toContain('Este entreno aún no tiene ejercicios.')
+    expect(texto).toContain('Sin hora')
+  })
+
+  it('pide sesión y acceso a la plantilla', async () => {
+    const eid = await nuevoEntreno('2026-11-06')
+    expect((await pedir('GET', pdf(eid))).status).toBe(401)
+    expect((await pedir('GET', pdf(eid), 'ajeno')).status).toBe(403)
+    expect((await pedir('GET', pdf(randomUUID()), 'jugador')).status).toBe(404)
   })
 })

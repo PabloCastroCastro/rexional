@@ -22,6 +22,7 @@ import { useAvisos } from '../componentes/Avisos'
 import { Boton } from '../componentes/Boton'
 import { Campo } from '../componentes/Campo'
 import { Cargando } from '../componentes/Cargando'
+import { BotonesPdf } from '../componentes/CompartirPdf'
 import { useConfirmacion } from '../componentes/Confirmacion'
 import { EstadoVacio } from '../componentes/EstadoVacio'
 import { HojaInferior } from '../componentes/HojaInferior'
@@ -104,6 +105,19 @@ function BotonCampo({ plan }: { plan: Plan }) {
   )
 }
 
+// El PDF sale del plan guardado: para imprimirlo, guardarlo o mandarlo por WhatsApp
+function CompartirPlan({ plan, disabled }: { plan: Plan; disabled?: boolean }) {
+  const plantilla = usePlantillaActiva()
+  return (
+    <BotonesPdf
+      url={`/api/plantillas/${plantilla.id}/entrenos/${plan.entrenoId}/plan.pdf`}
+      nombre={`entreno-${plan.fecha}.pdf`}
+      titulo="Sesión de entrenamiento"
+      disabled={disabled}
+    />
+  )
+}
+
 const enlaceEjercicio = (plantillaId: string, id: string) =>
   `/plantillas/${plantillaId}/entrenos/ejercicios/${id}`
 
@@ -150,6 +164,9 @@ function Lectura({ plan, volver }: { plan: Plan; volver: ReactNode }) {
               </li>
             ))}
           </ol>
+          <div className={estilos.acciones}>
+            <CompartirPlan plan={plan} />
+          </div>
         </>
       )}
     </div>
@@ -377,6 +394,10 @@ function Editor({ plan, volver }: { plan: Plan; volver: ReactNode }) {
       </section>
 
       <div className={estilos.acciones}>
+        <CompartirPlan
+          plan={plan}
+          disabled={cambiado || (!plan.objetivo && plan.ejercicios.length === 0)}
+        />
         <Boton
           variante="secundario"
           icono={<Copy aria-hidden size={18} />}
@@ -403,7 +424,7 @@ function Editor({ plan, volver }: { plan: Plan; volver: ReactNode }) {
       </div>
       {cambiado && (
         <p className={estilos.secundario}>
-          Guarda el plan para duplicarlo o guardarlo como modelo.
+          Guarda el plan para compartirlo, duplicarlo o guardarlo como modelo.
         </p>
       )}
 

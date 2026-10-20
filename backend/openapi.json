@@ -8076,6 +8076,78 @@
         }
       }
     },
+    "/api/plantillas/{id}/entrenos/{eid}/plan.pdf": {
+      "get": {
+        "tags": [
+          "Planificación"
+        ],
+        "summary": "Plan de un entreno en PDF",
+        "description": "Cualquier miembro. Para imprimirlo o compartirlo: fecha, horas, objetivo, notas y ejercicios con su miniatura, material, indicaciones y duración. Se genera al pedirlo, con el plan guardado.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "eid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "El PDF",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/plantillas/{id}/entrenos/{eid}/plan/duplicar": {
       "post": {
         "tags": [
