@@ -348,7 +348,7 @@ export interface paths {
         put?: never;
         /**
          * Añadir un administrador
-         * @description El usuario debe existir. Las invitaciones por email llegan en el ciclo 9.
+         * @description El usuario debe existir. Las invitaciones por email llegan en el ciclo 10.
          */
         post: {
             parameters: {
