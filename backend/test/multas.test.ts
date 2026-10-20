@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { crearApp } from '../src/app.js'
 import { db, pool } from '../src/db/cliente.js'
 import { clubes, fichas, jugadores, membresias, multas, user } from '../src/db/schema/index.js'
-import { crearUsuario, iniciarSesion, ORIGEN } from './utilidades.js'
+import { crearUsuario, iniciarSesion, ORIGEN, textoPdf } from './utilidades.js'
 
 const app = crearApp()
 const usuarios: string[] = []
@@ -475,5 +475,139 @@ describe('multas desactivadas en la plantilla', () => {
       temporada: '2026-27',
     })
     expect(await nueva.json()).toMatchObject({ multasActivas: true })
+  })
+})
+
+describe('exportar las multas', () => {
+  const de = (ruta: string) => `/plantillas/${ids.juvenil}/multas/${ruta}`
+  // Los importes llevan espacio duro antes del €
+  const normal = (texto: string) => texto.replace(/ /g, ' ')
+
+  beforeAll(async () => {
+    const [plantilla] = await db
+      .select({ clubId: fichas.clubId })
+      .from(fichas)
+      .where(eq(fichas.plantillaId, ids.senior ?? ''))
+    const clubId = plantilla?.clubId ?? ''
+    const nuevos = await db
+      .insert(jugadores)
+      .values([
+        { clubId, nombre: 'Ana', apellidos: 'Souto' },
+        { clubId, nombre: 'Bruno' },
+        { clubId, nombre: 'Carla', apellidos: 'Vidal' },
+        { clubId, nombre: 'Dani' },
+      ])
+      .returning()
+    for (const j of nuevos) ids[j.nombre] = j.id
+    await db.insert(fichas).values(
+      nuevos.map((j, i) => ({
+        plantillaId: ids.juvenil ?? '',
+        jugadorId: j.id,
+        clubId,
+        temporada: '2026-27',
+        dorsal: i + 1,
+        // Carla y Dani, de baja
+        activo: i < 2,
+      })),
+    )
+    const multa = (
+      jugador: string,
+      motivo: string,
+      importe: number,
+      fecha: string,
+      pago?: string,
+    ) => ({
+      plantillaId: ids.juvenil ?? '',
+      jugadorId: ids[jugador] ?? '',
+      motivo,
+      importeCentimos: importe,
+      fecha,
+      fechaPago: pago ?? null,
+    })
+    await db
+      .insert(multas)
+      .values([
+        multa('Ana', 'Llegar tarde', 500, '2026-09-10', '2026-09-20'),
+        multa('Ana', 'Olvidar la equipación', 300, '2026-10-05'),
+        multa('Carla', 'Faltar sin avisar', 200, '2026-09-15'),
+      ])
+  })
+
+  it('el mensaje dice quién debe hoy, lo pendiente y lo que hay en caja', async () => {
+    const res = await pedir('GET', de('mensaje'), 'admin')
+    expect(res.status).toBe(200)
+    const { texto, whatsapp } = await res.json()
+    const hoy = new Intl.DateTimeFormat('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      timeZone: 'Europe/Madrid',
+    }).format(new Date())
+    expect(normal(texto)).toBe(
+      [
+        '💰 *CD Multas · Juvenil*',
+        `Multas pendientes a ${hoy}`,
+        '',
+        '1 · Ana Souto: *3,00 €* (1)',
+        '3 · Carla Vidal: *2,00 €* (1)',
+        '',
+        '*Pendiente: 5,00 €* · En caja: 5,00 €',
+      ].join('\n'),
+    )
+    expect(whatsapp).toBe(`https://wa.me/?text=${encodeURIComponent(texto)}`)
+  })
+
+  it('el PDF lleva los totales y a todos los jugadores, también sin multas', async () => {
+    const res = await pedir('GET', de('informe.pdf'), 'admin')
+    expect(res.status).toBe(200)
+    expect(res.headers.get('content-type')).toBe('application/pdf')
+    expect(res.headers.get('content-disposition')).toMatch(
+      /^inline; filename="multas-\d{4}-\d{2}-\d{2}\.pdf"$/,
+    )
+    const texto = normal(await textoPdf(res))
+    for (const esperado of [
+      'CD Multas',
+      'Juvenil · Temporada 2026-27',
+      'Toda la temporada',
+      'Puesto 10,00 €',
+      'Cobrado (en caja) 5,00 €',
+      'Pendiente 5,00 €',
+      '1 · Ana Souto 2 8,00 € 5,00 € 3,00 €',
+      '2 · Bruno 0 0,00 € 0,00 € 0,00 €',
+      '3 · Carla Vidal (baja) 1 2,00 € 0,00 € 2,00 €',
+      'Total 3 10,00 € 5,00 € 5,00 €',
+    ]) {
+      expect(texto).toContain(esperado)
+    }
+    // De baja y sin multas, no sale
+    expect(texto).not.toContain('Dani')
+    expect(texto).not.toContain('Detalle por jugador')
+  })
+
+  it('con rango y detalle, solo las multas de esas fechas y cada una', async () => {
+    const res = await pedir('GET', de('informe.pdf?desde=2026-10-01&detalle=true'), 'admin')
+    const texto = normal(await textoPdf(res))
+    expect(texto).toContain('Desde el 1 de octubre de 2026')
+    expect(texto).toContain('1 · Ana Souto 1 3,00 € 0,00 € 3,00 €')
+    expect(texto).not.toContain('Carla')
+    expect(texto).toContain('Detalle por jugador')
+    expect(texto).toContain('05/10/2026 Olvidar la equipación 3,00 € Pendiente')
+    expect(texto).not.toContain('Llegar tarde')
+
+    const todo = normal(await textoPdf(await pedir('GET', de('informe.pdf?detalle=true'), 'admin')))
+    expect(todo).toContain('10/09/2026 Llegar tarde 5,00 € 20/09/2026')
+    expect(todo.indexOf('Llegar tarde')).toBeLessThan(todo.indexOf('Olvidar la equipación'))
+  })
+
+  it('valida el rango y es solo para delegado o superior', async () => {
+    expect(
+      (await pedir('GET', de('informe.pdf?desde=2026-10-10&hasta=2026-10-01'), 'admin')).status,
+    ).toBe(400)
+    const senior = `/plantillas/${ids.senior}/multas`
+    expect((await pedir('GET', `${senior}/informe.pdf`, 'jugador')).status).toBe(403)
+    expect((await pedir('GET', `${senior}/mensaje`, 'jugador')).status).toBe(403)
+    expect((await pedir('GET', `${senior}/mensaje`)).status).toBe(401)
+    expect((await pedir('GET', `${senior}/informe.pdf`, 'ajeno')).status).toBe(403)
+    expect((await pedir('GET', `${senior}/informe.pdf`, 'delegado')).status).toBe(200)
   })
 })

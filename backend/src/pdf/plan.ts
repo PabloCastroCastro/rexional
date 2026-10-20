@@ -2,9 +2,9 @@ import { and, asc, eq, inArray } from 'drizzle-orm'
 import type { Content, TableCell } from 'pdfmake'
 import { config } from '../config.js'
 import { db } from '../db/cliente.js'
-import { clubes, ejercicioMedios, ejercicios } from '../db/schema/index.js'
+import { ejercicioMedios, ejercicios } from '../db/schema/index.js'
 import type { leerPlan } from '../rutas/planes.js'
-import { generarPdf, imagenPng } from './documento.js'
+import { clubPdf, generarPdf, imagenPng } from './documento.js'
 
 // PDF del plan de un entreno (GH-131), para imprimirlo o compartirlo: fecha y horas, objetivo, notas
 // y los ejercicios en orden con lo que hay en la biblioteca (categoría, jugadores, material,
@@ -98,15 +98,7 @@ export async function pdfPlan(
   plantilla: { id: string; clubId: string; nombre: string; temporada: string },
   plan: Awaited<ReturnType<typeof leerPlan>>,
 ) {
-  const [club] = await db
-    .select({
-      nombre: clubes.nombre,
-      colorPrincipal: clubes.colorPrincipal,
-      escudo: clubes.escudo,
-    })
-    .from(clubes)
-    .where(eq(clubes.id, plantilla.clubId))
-  if (!club) throw new Error('El club de la plantilla no existe')
+  const club = await clubPdf(plantilla.clubId)
 
   const detalles = await detallesEjercicios([...new Set(plan.ejercicios.map((e) => e.ejercicioId))])
   // Las fotos se convierten una vez por ejercicio aunque se repita en el plan

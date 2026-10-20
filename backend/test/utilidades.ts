@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs'
 import type { App } from '../src/app.js'
 import { auth } from '../src/auth.js'
 import { db } from '../src/db/cliente.js'
@@ -43,4 +44,23 @@ export async function iniciarSesion(app: App, email: string) {
   const cookie = res.headers.getSetCookie().find((c) => c.includes('vestuario.session_token='))
   if (!cookie) throw new Error('Sin cookie de sesión')
   return cookie.split(';')[0] ?? ''
+}
+
+// Texto de un PDF, página a página, para comprobar lo que lleva. pdfmake escribe cada palabra por
+// separado y los importes llevan espacio duro: los espacios se normalizan
+export async function textoPdf(res: Response) {
+  const datos = new Uint8Array(await res.arrayBuffer())
+  const documento = await getDocument({ data: datos, verbosity: 0, isEvalSupported: false }).promise
+  const paginas: string[] = []
+  for (let n = 1; n <= documento.numPages; n++) {
+    const contenido = await (await documento.getPage(n)).getTextContent()
+    paginas.push(
+      contenido.items
+        .map((i) => ('str' in i ? i.str : ''))
+        .join(' ')
+        .replace(/\s+/g, ' '),
+    )
+  }
+  await documento.destroy()
+  return paginas.join('\n')
 }

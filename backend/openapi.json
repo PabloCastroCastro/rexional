@@ -2334,6 +2334,22 @@
           "pendienteCentimos",
           "multasPendientes"
         ]
+      },
+      "MensajeMultas": {
+        "type": "object",
+        "properties": {
+          "texto": {
+            "type": "string"
+          },
+          "whatsapp": {
+            "type": "string",
+            "example": "https://wa.me/?text=…"
+          }
+        },
+        "required": [
+          "texto",
+          "whatsapp"
+        ]
       }
     },
     "parameters": {}
@@ -9749,6 +9765,174 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ResumenMultas"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/multas/informe.pdf": {
+      "get": {
+        "tags": [
+          "Multas"
+        ],
+        "summary": "Informe de multas en PDF",
+        "description": "Delegado o superior. Totales y, por jugador (todos los de la plantilla, también sin multas), lo puesto, lo pagado y lo pendiente. Con `detalle=true`, cada multa. El rango filtra por la fecha de la multa; sin él, toda la temporada.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2026-10-13"
+            },
+            "required": false,
+            "name": "desde",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2026-10-13"
+            },
+            "required": false,
+            "name": "hasta",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ],
+              "default": "false"
+            },
+            "required": false,
+            "name": "detalle",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "El PDF",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Rango no válido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/multas/mensaje": {
+      "get": {
+        "tags": [
+          "Multas"
+        ],
+        "summary": "Mensaje de deudas para WhatsApp",
+        "description": "Delegado o superior. Quién debe hoy y cuánto, con lo pendiente y lo que hay en caja, con el formato de WhatsApp y el enlace wa.me para compartirlo.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Mensaje",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MensajeMultas"
                 }
               }
             }

@@ -267,17 +267,6 @@
 }
 
 /* Vista previa del mensaje, tal cual se enviará */
-.mensaje {
-  margin: 0;
-  padding: var(--espacio-4);
-  border-radius: var(--radio-l);
-  background: color-mix(in srgb, var(--color-exito) 10%, var(--color-superficie));
-  font-family: var(--fuente);
-  font-size: var(--texto-sm);
-  line-height: 1.5;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
 
 /* Elegir convocados */
 .barraConvocatoria {

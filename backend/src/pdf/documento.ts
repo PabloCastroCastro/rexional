@@ -1,8 +1,11 @@
 import { createRequire } from 'node:module'
 import { dirname, join, resolve, sep } from 'node:path'
+import { eq } from 'drizzle-orm'
 import type { Content } from 'pdfmake'
 import pdfmake from 'pdfmake'
 import sharp from 'sharp'
+import { db } from '../db/cliente.js'
+import { clubes } from '../db/schema/index.js'
 import { absoluta } from '../medios/almacen.js'
 
 // Motor común de los PDF que genera la aplicación (GH-131): la sesión de entrenamiento y, más
@@ -33,6 +36,20 @@ pdfmake.setLocalAccessPolicy((ruta) => resolve(ruta).startsWith(carpetaFuentes +
 type Documento = Parameters<typeof pdfmake.createPdf>[0]
 
 export type ClubPdf = { nombre: string; colorPrincipal: string; escudo: string | null }
+
+// Lo que la cabecera necesita del club
+export async function clubPdf(clubId: string): Promise<ClubPdf> {
+  const [club] = await db
+    .select({
+      nombre: clubes.nombre,
+      colorPrincipal: clubes.colorPrincipal,
+      escudo: clubes.escudo,
+    })
+    .from(clubes)
+    .where(eq(clubes.id, clubId))
+  if (!club) throw new Error('El club no existe')
+  return club
+}
 
 // Una imagen de la carpeta de subidas (webp) como PNG, que es lo que entiende pdfmake. Si falta o no
 // se puede leer, el documento sale sin ella.

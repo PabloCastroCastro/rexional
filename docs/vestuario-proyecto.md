@@ -1677,6 +1677,17 @@ La asistencia a los entrenos se pregunta con encuestas de WhatsApp en el grupo y
 - [ ] Prueba de concepto de la opción elegida, con datos inventados
 - [ ] Propuesta escrita en la issue y, si se aprueba, issues nuevas
 
+#### GH-145
+**Título:** Elegir si el mensaje y el informe de multas muestran la caja
+**Etiquetas:** feature, backend, frontend
+
+Continuación de GH-132. El mensaje de multas para WhatsApp y el informe en PDF muestran siempre lo que hay en caja (lo cobrado). En algunos equipos no interesa que todo el grupo vea ese dato, así que el delegado debería poder decidir si sale o no.
+
+**Criterios de aceptación**
+- [ ] Opción en la hoja «Exportar multas» para incluir o no lo que hay en caja, tanto en el mensaje como en el PDF (por defecto, incluido, como ahora)
+- [ ] Valorar si la elección se recuerda por plantilla (ajuste guardado) o basta con la casilla en cada exportación
+- [ ] Tests
+
 ---
 
 ### Milestone: Ciclo 10 · Roles en uso
