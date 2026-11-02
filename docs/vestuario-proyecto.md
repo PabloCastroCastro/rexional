@@ -732,7 +732,7 @@ Una issue está terminada cuando: cumple sus criterios de aceptación en el ento
 | 3 · Convocatorias | Partidos, convocados y mensaje de WhatsApp | v1.0.0 |
 | 4 · Multas | Catálogo, registro, cobro, deudas y caja. Paridad con el MVP y primer despliegue en el servidor | v1.0.0 |
 | 5 · Personalización y temporadas | Escudo y colores por club, y cambio de temporada | en parte en v1.1.0, con GH-101 y GH-102; el resto, pendiente |
-| 6 · Estadísticas | Resultado, participaciones, eventos, estadísticas de temporada y trayectoria de cada jugador | v1.1.0; GH-134, GH-151, GH-153, GH-154 y GH-155 se añadieron después, pendientes |
+| 6 · Estadísticas | Resultado, participaciones, eventos, estadísticas de temporada y trayectoria de cada jugador | v1.1.0; después se añadieron GH-151, GH-153 y GH-155, hechas, y GH-134, GH-147, GH-149 y GH-154, pendientes |
 | 7 · Planificación de entrenos | Biblioteca de ejercicios con fotos y vídeos, y sesiones planificadas | v1.2.0 |
 | 8 · Operación | Backups automáticos, restauración, logs y actualizaciones | en parte en v1.2.0, con GH-45 y GH-46; el resto, pendiente |
 | 9 · Exportar y compartir | Exportar y compartir sesiones y multas en PDF o texto y asistencia desde WhatsApp | v1.3.0, prevista |
@@ -769,7 +769,7 @@ Versión publicada en los ciclos ya cerrados y prevista en el resto. Los ciclos 
 | Ciclo 3 · Convocatorias | Partidos, convocados y mensaje de WhatsApp (v1.0.0) |
 | Ciclo 4 · Multas | Catálogo, registro, cobro, deudas y caja. Paridad con el MVP y primer despliegue en el servidor (v1.0.0) |
 | Ciclo 5 · Personalización y temporadas | Escudo y colores por club, y cambio de temporada (en parte en v1.1.0, con GH-101 y GH-102; el resto, pendiente) |
-| Ciclo 6 · Estadísticas | Resultado, participaciones, eventos, estadísticas de temporada y trayectoria de cada jugador (v1.1.0; GH-134, GH-151, GH-153, GH-154 y GH-155 se añadieron después, pendientes) |
+| Ciclo 6 · Estadísticas | Resultado, participaciones, eventos, estadísticas de temporada y trayectoria de cada jugador (v1.1.0; después se añadieron GH-151, GH-153 y GH-155, hechas, y GH-134, GH-147, GH-149 y GH-154, pendientes) |
 | Ciclo 7 · Planificación de entrenos | Biblioteca de ejercicios con fotos y vídeos, y sesiones planificadas (v1.2.0) |
 | Ciclo 8 · Operación | Backups automáticos, restauración, logs y actualizaciones (en parte en v1.2.0, con GH-45 y GH-46; el resto, pendiente) |
 | Ciclo 9 · Exportar y compartir | Exportar y compartir sesiones y multas en PDF o texto y asistencia desde WhatsApp (v1.3.0, prevista) |
@@ -1484,6 +1484,34 @@ Cuánto entrena cada jugador para los minutos que juega: minutos jugados entre e
 - [ ] El rol jugador no ve la clasificación, como el resto: lo suyo sale en «Tus estadísticas»; no se añade a la ficha del jugador
 - [ ] Tests
 
+#### GH-147
+**Título:** Planificación de partidos
+**Etiquetas:** feature, db, backend, frontend
+
+Subir al partido los archivos con su planificación (la charla, el plan táctico, el rival…) para tenerlos a mano antes y durante el partido.
+
+**Criterios de aceptación**
+- [ ] Uno o varios archivos por partido, con título opcional: PDF o imagen, con un tamaño máximo como el de las fotos de los ejercicios
+- [ ] Subir, renombrar y quitar desde la pantalla del partido (GH-34), delegado o superior
+- [ ] Solo el cuerpo técnico los ve y descarga; el rol jugador no
+- [ ] Al borrar el partido se borran sus archivos
+- [ ] Migración y tests
+
+#### GH-149
+**Título:** Anotaciones del partido
+**Etiquetas:** feature, db, backend, frontend
+
+Apuntar en el partido, mientras se juega, notas sobre detalles tácticos, incidencias u otras cosas, para revisarlas después.
+
+**Criterios de aceptación**
+- [ ] Cada nota tiene texto libre, un tipo (táctica, incidencia u otra), un minuto opcional, quién la escribió y cuándo
+- [ ] Botón «Anotar» en la pantalla del partido (GH-34), rápido de usar durante el partido: campo de texto, tipo y minuto propuesto
+- [ ] Las notas se listan aparte de la línea de tiempo de goles, cambios y tarjetas, ordenadas por minuto
+- [ ] Solo el cuerpo técnico (delegado o superior) las crea, edita, borra y ve; el rol jugador no las ve
+- [ ] Migración y tests
+
+Fuera de esta issue: anotar sin conexión (se envían al recuperarla) y saltar desde una nota al minuto del vídeo (GH-134).
+
 ---
 
 ### Milestone: Ciclo 7 · Planificación de entrenos
@@ -1728,6 +1756,19 @@ Continuación de GH-132. El mensaje de multas para WhatsApp y el informe en PDF 
 - [ ] Valorar si la elección se recuerda por plantilla (ajuste guardado) o basta con la casilla en cada exportación
 - [ ] Tests
 
+#### GH-148
+**Título:** Informe del jugador
+**Etiquetas:** feature, backend, frontend
+
+Un informe con todo lo de un jugador en la temporada, no solo los partidos: asistencia a los entrenos con sus faltas y ausencias justificadas, minutos, goles, tarjetas y multas. Aparte de la ficha del jugador, para no llenarla.
+
+**Criterios de aceptación**
+- [ ] Informe en PDF de un jugador y una plantilla, con el motor de PDF común (GH-131): partidos y estadísticas, asistencia (porcentaje, faltas y justificadas con su motivo) y multas
+- [ ] Se descarga o se comparte desde la ficha del jugador con el botón común de compartir; delegado o superior, y el jugador el suyo
+- [ ] Tests
+
+Por decidir al empezar: qué apartados entran y si también se hace el informe de toda la plantilla.
+
 ---
 
 ### Milestone: Ciclo 10 · Roles en uso
@@ -1912,6 +1953,17 @@ A partir del diagrama (GH-136), el servidor dibuja una imagen por paso, una anim
 - [ ] En la ficha del ejercicio: botón «Descargar PDF» y aviso si lo generado está desactualizado
 - [ ] Lo generado se ve también en el modo campo (GH-44)
 - [ ] Tests: el SVG de un diagrama de ejemplo se compara con uno de referencia
+
+#### GH-150
+**Título:** Integración con biblioteca de ejercicios
+**Etiquetas:** investigacion
+
+Investigar si hay bibliotecas de ejercicios de fútbol disponibles (abiertas o con API) y si se pueden usar para traer ejercicios a la biblioteca del club (ciclo 7).
+
+**Criterios de aceptación**
+- [ ] Lista de bibliotecas o servicios encontrados, con qué ofrecen (texto, diagramas, vídeo), su formato y cómo se accede
+- [ ] Licencia y condiciones de uso de cada una: si se pueden copiar o solo enlazar
+- [ ] Recomendación anotada en la issue: si compensa integrar alguna, cómo (importar o enlazar) y en qué ciclo
 
 ---
 
