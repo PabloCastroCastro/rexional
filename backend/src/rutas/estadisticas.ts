@@ -2,6 +2,7 @@ import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
 import { and, asc, eq, inArray, sql } from 'drizzle-orm'
 import { db } from '../db/cliente.js'
 import {
+  asistencias,
   convocados,
   eventosPartido,
   fichas,
@@ -96,6 +97,9 @@ const EsquemaEstadisticasJugador = z
     dorsal: z.int().nullable(),
     activo: z.boolean(),
     ...datosEstadisticas,
+    entrenos: z.int().openapi({
+      description: 'Entrenos de la plantilla a los que ha ido (solo se pasa lista hasta hoy)',
+    }),
   })
   .openapi('EstadisticasJugador')
 
@@ -429,7 +433,7 @@ export const rutasEstadisticas = () =>
         tags: ['Estadísticas'],
         summary: 'Estadísticas de la temporada',
         description:
-          'Resultados del equipo y, por jugador, partidos, titularidades, minutos, goles, asistencias y tarjetas en los partidos jugados de la plantilla. El rol jugador solo ve su fila.',
+          'Resultados del equipo y, por jugador, partidos, titularidades, minutos, goles, asistencias y tarjetas en los partidos jugados de la plantilla, y los entrenos a los que ha ido. El rol jugador solo ve su fila.',
         middleware: [requireRol('jugador')] as const,
         request: { params: ParamPartido.pick({ id: true }) },
         responses: { 200: json(EsquemaEstadisticasPlantilla, 'Estadísticas'), ...errores },
@@ -450,6 +454,16 @@ export const rutasEstadisticas = () =>
           .where(and(eq(partidos.plantillaId, plantillaId), eq(partidos.estado, 'jugado')))
 
         const a = acumulados({ plantillaId })
+        // Entrenos a los que ha ido cada jugador en la plantilla (GH-155)
+        const asistidos = db
+          .select({
+            jugadorId: sql<string>`${asistencias.jugadorId}`.as('as_jugador'),
+            entrenos: sql<number>`count(*)`.as('entrenos'),
+          })
+          .from(asistencias)
+          .where(and(eq(asistencias.plantillaId, plantillaId), eq(asistencias.estado, 'asiste')))
+          .groupBy(asistencias.jugadorId)
+          .as('asistidos')
         const filas = await db
           .select({
             jugadorId: jugadores.id,
@@ -458,9 +472,11 @@ export const rutasEstadisticas = () =>
             dorsal: fichas.dorsal,
             activo: fichas.activo,
             ...a.columnas,
+            entrenos: sql<number>`coalesce(${asistidos.entrenos}, 0)::int`,
           })
           .from(fichas)
           .innerJoin(jugadores, eq(jugadores.id, fichas.jugadorId))
+          .leftJoin(asistidos, eq(asistidos.jugadorId, fichas.jugadorId))
           .leftJoin(
             a.enCampo,
             and(
