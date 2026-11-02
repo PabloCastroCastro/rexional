@@ -27,6 +27,7 @@ import { CLAVE_PARTIDOS, type Partido, textoLocal, usePartido } from './datos'
 import { FormularioPartido } from './FormularioPartido'
 import { SeccionPartido } from './Jugado'
 import { Mensaje } from './Mensaje'
+import { SeccionNotas } from './Notas'
 import estilos from './Partidos.module.css'
 import { SeccionVideos } from './Videos'
 
@@ -115,6 +116,8 @@ export function PaginaPartido() {
       )}
 
       <SeccionPartido partido={p} />
+
+      <SeccionNotas partido={p} />
 
       <section className={estilos.seccion} aria-labelledby="convocatoria">
         <h2 id="convocatoria">

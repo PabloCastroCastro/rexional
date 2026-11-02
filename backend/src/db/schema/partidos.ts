@@ -20,7 +20,7 @@ import {
 } from 'drizzle-orm/pg-core'
 import { user } from './auth.js'
 import { fichas, plantillas } from './clubes.js'
-import { creadoEn, id } from './comun.js'
+import { actualizadoEn, creadoEn, id } from './comun.js'
 
 // Partidos de una plantilla, sus convocados y sus estadísticas: resultado, participaciones y eventos
 // (sección 6)
@@ -211,5 +211,33 @@ export const videosPartido = pgTable(
     index('videos_partido_partido_idx').on(t.partidoId),
     check('videos_partido_url_web', sql`${t.url} ~* '^https?://'`),
     check('videos_partido_titulo_no_vacio', sql`${t.titulo} IS NULL OR btrim(${t.titulo}) <> ''`),
+  ],
+)
+
+export const tipoNota = pgEnum('tipo_nota', ['tactica', 'incidencia', 'otra'])
+
+// Notas del cuerpo técnico durante el partido, para repasarlas después (GH-149). Solo las ve el
+// cuerpo técnico; van aparte de los eventos y no cuentan en las estadísticas
+export const notasPartido = pgTable(
+  'notas_partido',
+  {
+    id: id(),
+    partidoId: uuid('partido_id')
+      .notNull()
+      .references(() => partidos.id, { onDelete: 'cascade' }),
+    tipo: tipoNota('tipo').notNull(),
+    texto: text('texto').notNull(),
+    minuto: smallint('minuto'),
+    autorId: uuid('autor_id').references(() => user.id, { onDelete: 'set null' }),
+    createdAt: creadoEn(),
+    updatedAt: actualizadoEn(),
+  },
+  (t) => [
+    index('notas_partido_partido_idx').on(t.partidoId),
+    check(
+      'notas_partido_texto_valido',
+      sql`btrim(${t.texto}) <> '' AND length(${t.texto}) <= 1000`,
+    ),
+    check('notas_partido_minuto_valido', sql`${t.minuto} BETWEEN 0 AND 150`),
   ],
 )
