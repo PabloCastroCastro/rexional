@@ -1148,7 +1148,8 @@
               "roja",
               "entra",
               "sale",
-              "gol_propia"
+              "gol_propia",
+              "gol_rival"
             ]
           },
           "minuto": {
@@ -1209,7 +1210,8 @@
               "roja",
               "entra",
               "sale",
-              "gol_propia"
+              "gol_propia",
+              "gol_rival"
             ]
           },
           "minuto": {

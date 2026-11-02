@@ -72,6 +72,10 @@ export function comprobar(datos: DatosEstadisticas, convocadosPartido: Set<strin
   if (lista.filter((p) => p.titular).length > 11) return 'No puede haber más de 11 titulares'
 
   for (const e of eventos) {
+    if (e.tipo === 'gol_rival') {
+      if (e.jugadorId !== null) return 'Un gol del rival no lleva jugador'
+      continue
+    }
     if (e.jugadorId === null) {
       if (e.tipo !== 'gol_propia') return 'Falta el jugador del evento'
       continue
@@ -136,6 +140,10 @@ export function comprobar(datos: DatosEstadisticas, convocadosPartido: Set<strin
   }
   if (resultado && enPropia > resultado.golesContra) {
     return `Hay ${enPropia} goles en propia puerta y el resultado dice ${resultado.golesContra} en contra`
+  }
+  const enContra = enPropia + cuantos((e) => e.tipo === 'gol_rival')
+  if (resultado && enContra > resultado.golesContra) {
+    return `Hay ${enContra} goles en contra registrados y el resultado dice ${resultado.golesContra}`
   }
   return null
 }

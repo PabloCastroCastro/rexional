@@ -128,6 +128,8 @@ export const tipoEvento = pgEnum('tipo_evento', [
   'entra',
   'sale',
   'gol_propia',
+  // Gol del rival, sin jugador: solo para saber el minuto (GH-151)
+  'gol_rival',
 ])
 
 // De dónde viene una estadística: a mano, del acta del partido o de la federación
@@ -141,8 +143,9 @@ export const eventosPartido = pgTable(
     partidoId: uuid('partido_id')
       .notNull()
       .references(() => partidos.id, { onDelete: 'cascade' }),
-    // Siempre un convocado. Sin jugador solo el gol en propia puerta del rival a nuestro favor;
-    // gol_propia con jugador es un gol en propia de uno de los nuestros
+    // Siempre un convocado. Sin jugador solo el gol en propia puerta del rival a nuestro favor y el
+    // gol del rival, que nunca lleva jugador; gol_propia con jugador es un gol en propia de uno de
+    // los nuestros
     jugadorId: uuid('jugador_id'),
     tipo: tipoEvento('tipo').notNull(),
     minuto: smallint('minuto'),
@@ -157,7 +160,12 @@ export const eventosPartido = pgTable(
     }).onDelete('cascade'),
     index('eventos_partido_partido_idx').on(t.partidoId),
     index('eventos_partido_jugador_idx').on(t.jugadorId),
-    check('eventos_partido_jugador', sql`${t.jugadorId} IS NOT NULL OR ${t.tipo} = 'gol_propia'`),
+    // El tipo se compara como texto: un valor nuevo de un enum no se puede usar en la misma
+    // transacción que lo añade, y las migraciones pendientes se aplican juntas
+    check(
+      'eventos_partido_jugador',
+      sql`CASE ${t.tipo}::text WHEN 'gol_propia' THEN true WHEN 'gol_rival' THEN ${t.jugadorId} IS NULL ELSE ${t.jugadorId} IS NOT NULL END`,
+    ),
     check('eventos_partido_minuto_valido', sql`${t.minuto} BETWEEN 0 AND 150`),
   ],
 )

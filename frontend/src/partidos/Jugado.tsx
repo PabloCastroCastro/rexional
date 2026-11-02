@@ -128,6 +128,8 @@ function textoEvento(e: Evento, nombre: (id: string | null) => string) {
       return e.jugadorId
         ? `Gol en propia de ${nombre(e.jugadorId)}`
         : 'Gol en propia puerta del rival'
+    case 'gol_rival':
+      return 'Gol del rival'
   }
 }
 
@@ -139,6 +141,7 @@ const ICONOS: Record<Evento['tipo'], typeof Goal> = {
   entra: ArrowUpRight,
   sale: ArrowDownLeft,
   gol_propia: Goal,
+  gol_rival: Goal,
 }
 
 function LineaTiempo({ partido, gestiona }: { partido: Partido; gestiona: boolean }) {
