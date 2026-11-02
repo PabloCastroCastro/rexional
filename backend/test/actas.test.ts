@@ -239,9 +239,9 @@ describe('confirmar el acta', () => {
     expect(tipos.filter((t) => t === 'entra')).toHaveLength(5)
     expect(tipos.filter((t) => t === 'amarilla')).toHaveLength(1)
     // El gol del rival, sin jugador y con su minuto
-    expect(
-      (partido.eventos as { tipo: string }[]).filter((e) => e.tipo === 'gol_rival'),
-    ).toEqual([expect.objectContaining({ jugadorId: null, minuto: expect.any(Number) })])
+    expect((partido.eventos as { tipo: string }[]).filter((e) => e.tipo === 'gol_rival')).toEqual([
+      expect.objectContaining({ jugadorId: null, minuto: expect.any(Number) }),
+    ])
     expect(new Set((partido.eventos as { origen: string }[]).map((e) => e.origen))).toEqual(
       new Set(['acta']),
     )
@@ -339,7 +339,10 @@ describe('completar los goles del rival de los partidos ya registrados', () => {
     const delPartido = (r: ResultadoPartido[]) => r.find((p) => p.partidoId === pid)
 
     const simulado = await completarGolesRival(db, { aplicar: false })
-    expect(delPartido(simulado)).toMatchObject({ estado: 'anadidos', minutos: [expect.any(Number)] })
+    expect(delPartido(simulado)).toMatchObject({
+      estado: 'anadidos',
+      minutos: [expect.any(Number)],
+    })
     expect(await db.select().from(eventosPartido).where(delRival)).toHaveLength(0)
 
     const aplicado = await completarGolesRival(db, { aplicar: true })
