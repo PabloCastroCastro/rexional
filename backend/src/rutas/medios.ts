@@ -7,7 +7,7 @@ import { config } from '../config.js'
 import { db } from '../db/cliente.js'
 import { ejercicioMedios, ejercicios, estadoMedio, tipoMedio } from '../db/schema/index.js'
 import { ErrorApi, EsquemaError, validacionFallida } from '../errores.js'
-import { absoluta, borrar, mover, nueva } from '../medios/almacen.js'
+import { absoluta, borrar, carpetaDeClub, mover, nueva } from '../medios/almacen.js'
 import { encolar } from '../medios/cola.js'
 import { procesarFoto } from '../medios/procesar.js'
 import { recibirArchivo } from '../medios/subida.js'
@@ -145,7 +145,7 @@ export const rutasMediosClub = () =>
             tipo: 'foto',
             pie,
             orden,
-            ...(await procesarFoto(subida.temporal, cid)),
+            ...(await procesarFoto(subida.temporal, carpetaDeClub(cid))),
           }
         } else {
           const pendiente = nueva('pendientes', subida.tipo.extension)

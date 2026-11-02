@@ -241,3 +241,31 @@ export const notasPartido = pgTable(
     check('notas_partido_minuto_valido', sql`${t.minuto} BETWEEN 0 AND 150`),
   ],
 )
+
+// Archivos con la planificación de un partido: la charla, el plan táctico, el rival… (GH-147). PDF tal
+// cual o foto reducida a WebP, en la carpeta de subidas del partido. Solo los ve el cuerpo técnico
+export const archivosPartido = pgTable(
+  'archivos_partido',
+  {
+    id: id(),
+    partidoId: uuid('partido_id')
+      .notNull()
+      .references(() => partidos.id, { onDelete: 'cascade' }),
+    titulo: text('titulo'),
+    // El nombre con que se subió, solo para mostrarlo; en disco el nombre se genera
+    nombreOriginal: text('nombre_original').notNull(),
+    // Ruta dentro del volumen de subidas
+    archivo: text('archivo').notNull(),
+    mime: text('mime').notNull(),
+    tamanoBytes: integer('tamano_bytes').notNull(),
+    subidoPor: uuid('subido_por').references(() => user.id, { onDelete: 'set null' }),
+    createdAt: creadoEn(),
+  },
+  (t) => [
+    index('archivos_partido_partido_idx').on(t.partidoId),
+    check('archivos_partido_titulo_no_vacio', noVacioOpcional(t.titulo)),
+    check('archivos_partido_nombre_no_vacio', sql`btrim(${t.nombreOriginal}) <> ''`),
+    check('archivos_partido_mime', sql`${t.mime} IN ('application/pdf', 'image/webp')`),
+    check('archivos_partido_tamano', sql`${t.tamanoBytes} > 0`),
+  ],
+)

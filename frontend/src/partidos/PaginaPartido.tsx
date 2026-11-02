@@ -29,6 +29,7 @@ import { SeccionPartido } from './Jugado'
 import { Mensaje } from './Mensaje'
 import { SeccionNotas } from './Notas'
 import estilos from './Partidos.module.css'
+import { SeccionPlanificacion } from './Planificacion'
 import { SeccionVideos } from './Videos'
 
 // Ficha de un partido: sus datos, editar y borrar, y la convocatoria
@@ -116,6 +117,8 @@ export function PaginaPartido() {
       )}
 
       <SeccionPartido partido={p} />
+
+      <SeccionPlanificacion partido={p} />
 
       <SeccionNotas partido={p} />
 

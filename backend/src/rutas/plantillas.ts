@@ -4,6 +4,7 @@ import { crearCatalogo } from '../catalogoMultas.js'
 import { db } from '../db/cliente.js'
 import { adminsClub, clubes, membresias, plantillas } from '../db/schema/index.js'
 import { ErrorApi, EsquemaError, validacionFallida } from '../errores.js'
+import { borrarCarpeta, carpetaDePlantilla } from '../medios/almacen.js'
 import { type EnvPlantilla, type Rol, requireRol, requireSesion } from '../permisos.js'
 import { EsquemaTemporada, EsquemaTexto, EsquemaUuid, restriccionViolada } from '../validacion.js'
 
@@ -352,6 +353,8 @@ export const rutasPlantillas = () =>
           )
         }
         await db.delete(plantillas).where(eq(plantillas.id, c.var.plantilla.id))
+        // La planificación de sus partidos (GH-147)
+        await borrarCarpeta(carpetaDePlantilla(c.var.plantilla.id))
         return c.body(null, 204)
       },
     )

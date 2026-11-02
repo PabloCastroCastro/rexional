@@ -1,11 +1,12 @@
 import { randomUUID } from 'node:crypto'
-import { mkdir, readdir, rename, stat, unlink } from 'node:fs/promises'
+import { mkdir, readdir, rename, rm, stat, unlink } from 'node:fs/promises'
 import { join, relative, resolve, sep } from 'node:path'
 import { config } from '../config.js'
 
 // Archivos de los medios en la carpeta de subidas (el volumen uploads). En la base de datos se
 // guarda la ruta relativa; los nombres se generan, nunca se usa el nombre original:
 //   ejercicios/<club>/<uuid>.webp|mp4|webm   fotos, vídeos y miniaturas
+//   partidos/<plantilla>/<partido>/<uuid>.pdf|webp   planificación de un partido (GH-147)
 //   pendientes/<uuid>.<ext>                  vídeos subidos que esperan su procesado
 //   tmp/<uuid>                               subidas en curso
 
@@ -24,6 +25,15 @@ export const nueva = (carpeta: string, extension: string) =>
   `${carpeta}/${randomUUID()}.${extension}`
 
 export const carpetaDeClub = (clubId: string) => `ejercicios/${clubId}`
+
+// Los archivos de un partido van en su carpeta: al borrar el partido o la plantilla se borra entera
+export const carpetaDePlantilla = (plantillaId: string) => `partidos/${plantillaId}`
+export const carpetaDePartido = (plantillaId: string, partidoId: string) =>
+  `${carpetaDePlantilla(plantillaId)}/${partidoId}`
+
+// Borra una carpeta entera; si no existe, no pasa nada
+export const borrarCarpeta = (relativa: string) =>
+  rm(absoluta(relativa), { recursive: true, force: true })
 
 export async function preparar() {
   for (const carpeta of ['ejercicios', 'pendientes', 'tmp']) {
