@@ -15,6 +15,7 @@ Es un proyecto independiente: tiene sus propias dependencias y no importa códig
 | `npm run format` | Aplica el formato y las correcciones seguras de Biome |
 | `npm run typecheck` | Comprueba los tipos sin compilar |
 | `npm run crear-admin` | Crea un usuario y su club, del que queda como administrador (ver [Autenticación](#autenticación)) |
+| `npm run goles-rival` | Completa los goles del rival de los partidos registrados con acta antes de GH-151; sin `-- --aplicar` solo enseña lo que haría |
 | `npm test` | Tests con Vitest contra PostgreSQL (ver [Tests](#tests)) |
 | `npm run openapi` | Exporta el contrato a `openapi.json` |
 | `npm run openapi:check` | Falla si `openapi.json` no coincide con la API (lo ejecuta la CI) |

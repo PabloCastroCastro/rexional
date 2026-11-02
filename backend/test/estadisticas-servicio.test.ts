@@ -63,10 +63,11 @@ describe('coherencia del partido', () => {
   it('un partido completo y coherente pasa', () => {
     const problema = comprobar(
       datos({
-        resultado: { golesFavor: 2, golesContra: 1 },
+        resultado: { golesFavor: 2, golesContra: 2 },
         eventos: [
           ev('gol', 'a', 10),
           ev('asistencia', 'b', 10),
+          ev('gol_rival', null, 30),
           ev('sale', 'b', 60),
           ev('entra', 'c', 60),
           ev('gol', 'c', 75),
@@ -132,6 +133,15 @@ describe('coherencia del partido', () => {
       'más goles en propia que goles en contra',
       { resultado: { golesFavor: 0, golesContra: 0 }, eventos: [ev('gol_propia', 'a')] },
       /propia puerta/,
+    ],
+    ['un gol del rival con jugador', { eventos: [ev('gol_rival', 'a', 30)] }, /no lleva jugador/],
+    [
+      'más goles del rival y en propia que goles en contra',
+      {
+        resultado: { golesFavor: 0, golesContra: 2 },
+        eventos: [ev('gol_rival', null, 10), ev('gol_rival', null, 50), ev('gol_propia', 'a', 70)],
+      },
+      /3 goles en contra/,
     ],
   ])('rechaza %s', (_, cambios, mensaje) => {
     expect(comprobar(datos(cambios), CONVOCADOS)).toMatch(mensaje)

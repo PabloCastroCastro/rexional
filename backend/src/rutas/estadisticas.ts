@@ -53,8 +53,11 @@ type NuevoEvento = z.infer<typeof EsquemaNuevoEvento>
 async function anadirEventos(partidoId: string, eventos: NuevoEvento[]) {
   await db.transaction(async (tx) => {
     await bloquearPartido(tx, partidoId)
-    if (eventos.some((e) => !e.jugadorId && e.tipo !== 'gol_propia')) {
+    if (eventos.some((e) => !e.jugadorId && e.tipo !== 'gol_propia' && e.tipo !== 'gol_rival')) {
       throw new ErrorApi(400, 'estadisticas_incoherentes', 'Falta el jugador del evento')
+    }
+    if (eventos.some((e) => e.jugadorId && e.tipo === 'gol_rival')) {
+      throw new ErrorApi(400, 'estadisticas_incoherentes', 'Un gol del rival no lleva jugador')
     }
     await comprobarConvocados(
       tx,

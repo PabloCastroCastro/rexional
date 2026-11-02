@@ -481,8 +481,8 @@ Horario semanal de entrenos de una plantilla (uno por plantilla).
 |---|---|---|
 | id | uuid | PK |
 | partido_id | uuid → partidos | cascade |
-| jugador_id | uuid | FK compuesta `(partido_id, jugador_id) → convocados`, cascade. Solo puede faltar en `gol_propia` (gol en propia puerta del rival a nuestro favor) |
-| tipo | enum `gol, asistencia, amarilla, roja, entra, sale, gol_propia` | `gol_propia` con jugador = gol en propia de uno de los nuestros; sin jugador = gol en propia del rival |
+| jugador_id | uuid | FK compuesta `(partido_id, jugador_id) → convocados`, cascade. Puede faltar en `gol_propia` (gol en propia puerta del rival a nuestro favor) y falta siempre en `gol_rival` |
+| tipo | enum `gol, asistencia, amarilla, roja, entra, sale, gol_propia, gol_rival` | `gol_propia` con jugador = gol en propia de uno de los nuestros; sin jugador = gol en propia del rival. `gol_rival` = gol en contra, sin jugador, para saber su minuto (GH-151) |
 | minuto | smallint | opcional, 0–150 |
 | origen | enum `manual, acta, federacion` | fuente del dato; por defecto manual |
 | created_at | timestamptz | |
@@ -732,7 +732,7 @@ Una issue está terminada cuando: cumple sus criterios de aceptación en el ento
 | 3 · Convocatorias | Partidos, convocados y mensaje de WhatsApp | v1.0.0 |
 | 4 · Multas | Catálogo, registro, cobro, deudas y caja. Paridad con el MVP y primer despliegue en el servidor | v1.0.0 |
 | 5 · Personalización y temporadas | Escudo y colores por club, y cambio de temporada | en parte en v1.1.0, con GH-101 y GH-102; el resto, pendiente |
-| 6 · Estadísticas | Resultado, participaciones, eventos, estadísticas de temporada y trayectoria de cada jugador | v1.1.0; GH-134 se añadió después, pendiente |
+| 6 · Estadísticas | Resultado, participaciones, eventos, estadísticas de temporada y trayectoria de cada jugador | v1.1.0; GH-134 y GH-151 se añadieron después, pendientes |
 | 7 · Planificación de entrenos | Biblioteca de ejercicios con fotos y vídeos, y sesiones planificadas | v1.2.0 |
 | 8 · Operación | Backups automáticos, restauración, logs y actualizaciones | en parte en v1.2.0, con GH-45 y GH-46; el resto, pendiente |
 | 9 · Exportar y compartir | Exportar y compartir sesiones y multas en PDF o texto y asistencia desde WhatsApp | v1.3.0, prevista |
@@ -769,7 +769,7 @@ Versión publicada en los ciclos ya cerrados y prevista en el resto. Los ciclos 
 | Ciclo 3 · Convocatorias | Partidos, convocados y mensaje de WhatsApp (v1.0.0) |
 | Ciclo 4 · Multas | Catálogo, registro, cobro, deudas y caja. Paridad con el MVP y primer despliegue en el servidor (v1.0.0) |
 | Ciclo 5 · Personalización y temporadas | Escudo y colores por club, y cambio de temporada (en parte en v1.1.0, con GH-101 y GH-102; el resto, pendiente) |
-| Ciclo 6 · Estadísticas | Resultado, participaciones, eventos, estadísticas de temporada y trayectoria de cada jugador (v1.1.0; GH-134 se añadió después, pendiente) |
+| Ciclo 6 · Estadísticas | Resultado, participaciones, eventos, estadísticas de temporada y trayectoria de cada jugador (v1.1.0; GH-134 y GH-151 se añadieron después, pendientes) |
 | Ciclo 7 · Planificación de entrenos | Biblioteca de ejercicios con fotos y vídeos, y sesiones planificadas (v1.2.0) |
 | Ciclo 8 · Operación | Backups automáticos, restauración, logs y actualizaciones (en parte en v1.2.0, con GH-45 y GH-46; el resto, pendiente) |
 | Ciclo 9 · Exportar y compartir | Exportar y compartir sesiones y multas en PDF o texto y asistencia desde WhatsApp (v1.3.0, prevista) |
@@ -1428,6 +1428,21 @@ Algunos partidos se graban: enlazar el vídeo (YouTube, Drive…) con el partido
 - [ ] El enlace se abre fuera de la app
 - [ ] Migración y tests
 - [ ] Anotado en la issue qué haría falta para saltar al minuto de cada evento (YouTube admite `?t=`) y si compensa
+
+#### GH-151
+**Título:** Guardar los goles del rival con su minuto
+**Etiquetas:** feature, db, backend
+
+Al confirmar el acta (GH-37) se leen los goles del rival con su minuto, pero solo se guardan los goles en propia puerta de los nuestros: el resto se descarta y del partido solo queda el total `goles_contra`. Sin el minuto no se puede saber cuántos goles encaja cada jugador mientras está en el campo.
+
+**Criterios de aceptación**
+- [ ] Nuevo tipo de evento `gol_rival`, sin jugador y con el minuto; el gol en propia de uno de los nuestros sigue siendo `gol_propia` con jugador
+- [ ] Validación del partido: los `gol_rival` más los goles en propia de los nuestros no superan `goles_contra`
+- [ ] Al confirmar un acta se guardan sus goles del rival con la fuente `acta`
+- [ ] Script de una sola vez para los partidos ya registrados con acta: vuelve a leer el PDF guardado y añade sus `gol_rival` sin tocar el resto de estadísticas; se puede repetir sin duplicar y tiene un modo que solo enseña lo que haría
+- [ ] Migración y tests
+
+Fuera de esta issue: apuntar a mano un gol del rival en los partidos sin acta y mostrar en la app los goles encajados en el campo por jugador.
 
 ---
 

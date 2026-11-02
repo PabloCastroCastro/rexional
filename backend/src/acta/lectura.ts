@@ -161,8 +161,16 @@ export function construirLectura(
   }
 }
 
+// Los goles en contra que no se guardan como gol en propia de uno de los nuestros: los del rival y
+// los de un jugador nuestro que no se ha emparejado. Se guardan sin jugador, por su minuto (GH-151)
+export function golesDelRival(lectura: Lectura): Evento[] {
+  return lectura.golesEnContra
+    .filter((g) => !(g.enPropia && g.jugadorId))
+    .map((g) => ({ jugadorId: null, tipo: 'gol_rival', minuto: g.minuto }))
+}
+
 // Las estadísticas que se registran con la fuente «acta». Lo que no tiene jugador de la plantilla
-// no se registra (salvo los goles en propia del rival, que no lo necesitan).
+// no se registra, salvo los goles en propia del rival y los goles del rival, que no lo necesitan.
 export function aEstadisticas(lectura: Lectura): DatosEstadisticas {
   const eventos: Evento[] = []
   for (const c of lectura.cambios) {
@@ -175,6 +183,7 @@ export function aEstadisticas(lectura: Lectura): DatosEstadisticas {
     if (g.enPropia) eventos.push({ jugadorId: null, tipo: 'gol_propia', minuto: g.minuto })
     else if (g.jugadorId) eventos.push({ jugadorId: g.jugadorId, tipo: 'gol', minuto: g.minuto })
   }
+  eventos.push(...golesDelRival(lectura))
   for (const g of lectura.golesEnContra) {
     if (g.enPropia && g.jugadorId) {
       eventos.push({ jugadorId: g.jugadorId, tipo: 'gol_propia', minuto: g.minuto })

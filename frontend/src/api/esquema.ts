@@ -6551,7 +6551,7 @@ export interface components {
              */
             jugadorId: string | null;
             /** @enum {string} */
-            tipo: "gol" | "asistencia" | "amarilla" | "roja" | "entra" | "sale" | "gol_propia";
+            tipo: "gol" | "asistencia" | "amarilla" | "roja" | "entra" | "sale" | "gol_propia" | "gol_rival";
             minuto: number | null;
             /** @enum {string} */
             origen: "manual" | "acta" | "federacion";
@@ -6565,7 +6565,7 @@ export interface components {
             /** Format: uuid */
             jugadorId?: string | null;
             /** @enum {string} */
-            tipo: "gol" | "asistencia" | "amarilla" | "roja" | "entra" | "sale" | "gol_propia";
+            tipo: "gol" | "asistencia" | "amarilla" | "roja" | "entra" | "sale" | "gol_propia" | "gol_rival";
             minuto?: number | null;
         };
         EstadisticasPlantilla: {

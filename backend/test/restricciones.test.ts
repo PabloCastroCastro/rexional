@@ -791,6 +791,10 @@ describe('estadísticas de partido', () => {
       expect(gol?.origen).toBe('manual')
       // Gol en propia puerta del rival: sin jugador
       await tx.insert(eventosPartido).values({ partidoId: b.partido.id, tipo: 'gol_propia' })
+      // Gol del rival: sin jugador, por su minuto
+      await tx
+        .insert(eventosPartido)
+        .values({ partidoId: b.partido.id, tipo: 'gol_rival', minuto: 55 })
     }))
 
   it('rechaza la participación de un jugador no convocado', () =>
@@ -817,6 +821,7 @@ describe('estadísticas de partido', () => {
 
   it.each([
     [{ tipo: 'gol', conJugador: false }, 'eventos_partido_jugador'],
+    [{ tipo: 'gol_rival', conJugador: true }, 'eventos_partido_jugador'],
     [{ tipo: 'amarilla', conJugador: true, minuto: 151 }, 'eventos_partido_minuto_valido'],
     [{ tipo: 'sale', conJugador: true, minuto: -1 }, 'eventos_partido_minuto_valido'],
   ] as const)('rechaza el evento %o', ({ conJugador, ...evento }, restriccion) =>

@@ -1,9 +1,17 @@
 import { readFileSync } from 'node:fs'
-import { inArray } from 'drizzle-orm'
+import { and, eq, inArray } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { completarGolesRival, type ResultadoPartido } from '../src/acta/goles-rival.js'
 import { crearApp } from '../src/app.js'
 import { db, pool } from '../src/db/cliente.js'
-import { clubes, fichas, jugadores, membresias, user } from '../src/db/schema/index.js'
+import {
+  clubes,
+  eventosPartido,
+  fichas,
+  jugadores,
+  membresias,
+  user,
+} from '../src/db/schema/index.js'
 import { crearUsuario, iniciarSesion, ORIGEN } from './utilidades.js'
 
 // Acta del partido: el CD Rexional (visitante en la ficha de prueba) gana 1-7 al CD Proba Rival
@@ -230,6 +238,10 @@ describe('confirmar el acta', () => {
     expect(tipos.filter((t) => t === 'gol')).toHaveLength(7)
     expect(tipos.filter((t) => t === 'entra')).toHaveLength(5)
     expect(tipos.filter((t) => t === 'amarilla')).toHaveLength(1)
+    // El gol del rival, sin jugador y con su minuto
+    expect(
+      (partido.eventos as { tipo: string }[]).filter((e) => e.tipo === 'gol_rival'),
+    ).toEqual([expect.objectContaining({ jugadorId: null, minuto: expect.any(Number) })])
     expect(new Set((partido.eventos as { origen: string }[]).map((e) => e.origen))).toEqual(
       new Set(['acta']),
     )
@@ -284,6 +296,24 @@ describe('confirmar el acta', () => {
     expect((partido.eventos as { tipo: string }[]).filter((e) => e.tipo === 'gol')).toHaveLength(2)
   })
 
+  it('un gol del rival a mano no lleva jugador', async () => {
+    const pid = await crearPartido()
+    await subir(pid, FICHA)
+    await pedir('POST', ruta(pid, '/acta/confirmar'), 'delegado', {})
+    const conJugador = await pedir('POST', ruta(pid, '/eventos'), 'delegado', {
+      jugadorId: ids['#8'],
+      tipo: 'gol_rival',
+      minuto: 20,
+    })
+    expect(conJugador.status).toBe(400)
+    // El resultado dice 1 en contra y el acta ya trae ese gol
+    const deMas = await pedir('POST', ruta(pid, '/eventos'), 'delegado', {
+      tipo: 'gol_rival',
+      minuto: 20,
+    })
+    expect((await deMas.json()).error.mensaje).toMatch(/2 goles en contra/)
+  })
+
   it('quitar el acta conserva lo registrado', async () => {
     const pid = await crearPartido()
     await subir(pid, FICHA)
@@ -292,5 +322,35 @@ describe('confirmar el acta', () => {
     const partido = await (await pedir('GET', ruta(pid), 'jugador')).json()
     expect(partido).toMatchObject({ acta: null, estado: 'jugado', golesFavor: 7 })
     expect((await pedir('DELETE', ruta(pid, '/acta'), 'delegado')).status).toBe(404)
+  })
+})
+
+describe('completar los goles del rival de los partidos ya registrados', () => {
+  it('relee el acta guardada, simula sin guardar y no duplica al repetir', async () => {
+    const pid = await crearPartido()
+    await subir(pid, FICHA)
+    await pedir('POST', ruta(pid, '/acta/confirmar'), 'delegado', {
+      jugadores: [{ nombre: 'BARREIRO NÚÑEZ, NOEL', jugadorId: ids['#33'] }],
+    })
+    // Como un partido registrado antes de GH-151: sin goles del rival
+    const delRival = and(eq(eventosPartido.partidoId, pid), eq(eventosPartido.tipo, 'gol_rival'))
+    await db.delete(eventosPartido).where(delRival)
+    const antes = await db.select().from(eventosPartido).where(eq(eventosPartido.partidoId, pid))
+    const delPartido = (r: ResultadoPartido[]) => r.find((p) => p.partidoId === pid)
+
+    const simulado = await completarGolesRival(db, { aplicar: false })
+    expect(delPartido(simulado)).toMatchObject({ estado: 'anadidos', minutos: [expect.any(Number)] })
+    expect(await db.select().from(eventosPartido).where(delRival)).toHaveLength(0)
+
+    const aplicado = await completarGolesRival(db, { aplicar: true })
+    expect(delPartido(aplicado)?.estado).toBe('anadidos')
+    expect(await db.select().from(eventosPartido).where(delRival)).toEqual([
+      expect.objectContaining({ jugadorId: null, origen: 'acta' }),
+    ])
+    // El resto de eventos sigue igual
+    const despues = await db.select().from(eventosPartido).where(eq(eventosPartido.partidoId, pid))
+    expect(despues).toHaveLength(antes.length + 1)
+
+    expect(delPartido(await completarGolesRival(db, { aplicar: true }))?.estado).toBe('ya_tenia')
   })
 })
