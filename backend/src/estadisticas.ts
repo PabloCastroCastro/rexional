@@ -60,6 +60,24 @@ export function calcularMinutos(lista: Participacion[], eventos: Evento[]) {
   )
 }
 
+// Goles en contra con cada participante en el campo (GH-153): los del rival y los de los nuestros en
+// propia puerta. Un gol en el minuto de un cambio cuenta para quien sale, no para quien entra. null
+// si el partido no tiene todos sus goles en contra con minuto: entonces no se puede saber.
+export function calcularEncajados(lista: Participacion[], eventos: Evento[], golesContra: number) {
+  const enContra = eventos.filter(
+    (e) => e.tipo === 'gol_rival' || (e.tipo === 'gol_propia' && e.jugadorId !== null),
+  )
+  if (enContra.length !== golesContra || enContra.some((e) => e.minuto === null)) return null
+  return new Map(
+    lista.map((p) => {
+      const t = tramo(p, eventos)
+      if (!t) return [p.jugadorId, 0]
+      const enCampo = (m: number) => (t.inicio === 0 ? m >= 0 : m > t.inicio) && m <= t.fin
+      return [p.jugadorId, enContra.filter((e) => enCampo(e.minuto ?? -1)).length]
+    }),
+  )
+}
+
 // El primer problema del partido en conjunto, o null si todo cuadra
 export function comprobar(datos: DatosEstadisticas, convocadosPartido: Set<string>): string | null {
   const { resultado, participaciones: lista, eventos } = datos

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  calcularEncajados,
   calcularMinutos,
   comprobar,
   type DatosEstadisticas,
@@ -56,6 +57,54 @@ describe('minutos jugados', () => {
   it('quien entra y sale juega el tramo entre los dos', () => {
     const minutos = calcularMinutos([suplente('c')], [ev('entra', 'c', 46), ev('sale', 'c', 80)])
     expect(minutos.get('c')).toBe(34)
+  })
+})
+
+describe('goles encajados en el campo', () => {
+  const lista = [titular('a'), titular('b'), suplente('c'), suplente('d')]
+
+  it('cada gol en contra cuenta para quien está en el campo; en el minuto del cambio, para quien sale', () => {
+    const encajados = calcularEncajados(
+      lista,
+      [
+        ev('gol_rival', null, 20),
+        ev('sale', 'b', 65),
+        ev('entra', 'c', 65),
+        ev('gol_rival', null, 65),
+        ev('gol_propia', 'a', 80),
+        // El descuento cuenta: sigue en el campo
+        ev('gol_rival', null, 92),
+      ],
+      4,
+    )
+    expect(Object.fromEntries(encajados ?? [])).toEqual({ a: 4, b: 2, c: 2, d: 0 })
+  })
+
+  it('una roja termina el tramo, como un cambio', () => {
+    const encajados = calcularEncajados(
+      [titular('a'), titular('b')],
+      [ev('roja', 'b', 30), ev('gol_rival', null, 30), ev('gol_rival', null, 31)],
+      2,
+    )
+    expect(Object.fromEntries(encajados ?? [])).toEqual({ a: 2, b: 1 })
+  })
+
+  it('sin goles en contra, todos a cero', () => {
+    expect(Object.fromEntries(calcularEncajados(lista, [], 0) ?? [])).toEqual({
+      a: 0,
+      b: 0,
+      c: 0,
+      d: 0,
+    })
+  })
+
+  it.each<[string, Evento[], number]>([
+    ['faltan goles en contra por registrar', [ev('gol_rival', null, 20)], 2],
+    ['un gol en contra sin minuto', [ev('gol_rival', null)], 1],
+    // Un gol en propia del rival es a favor: no suple a uno en contra
+    ['un gol en propia del rival', [ev('gol_propia', null, 10)], 1],
+  ])('no se sabe si %s', (_, eventos, golesContra) => {
+    expect(calcularEncajados(lista, eventos, golesContra)).toBeNull()
   })
 })
 

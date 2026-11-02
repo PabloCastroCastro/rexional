@@ -1251,6 +1251,10 @@
               },
               "golesContra": {
                 "type": "integer"
+              },
+              "sinMinutoEnContra": {
+                "type": "integer",
+                "description": "Partidos jugados a los que les falta el minuto de algún gol en contra: no cuentan para los goles encajados"
               }
             },
             "required": [
@@ -1259,7 +1263,8 @@
               "empatados",
               "perdidos",
               "golesFavor",
-              "golesContra"
+              "golesContra",
+              "sinMinutoEnContra"
             ]
           },
           "jugadores": {
@@ -1328,6 +1333,14 @@
           "entrenos": {
             "type": "integer",
             "description": "Entrenos de la plantilla a los que ha ido (solo se pasa lista hasta hoy)"
+          },
+          "golesEncajados": {
+            "type": "integer",
+            "description": "Goles en contra con el jugador en el campo, en los partidos con todos sus goles en contra con minuto"
+          },
+          "minutosConEncajados": {
+            "type": "integer",
+            "description": "Minutos jugados en esos mismos partidos: la base de los goles encajados por 90"
           }
         },
         "required": [
@@ -1344,7 +1357,9 @@
           "amarillas",
           "rojas",
           "golesPropia",
-          "entrenos"
+          "entrenos",
+          "golesEncajados",
+          "minutosConEncajados"
         ]
       },
       "TrayectoriaEstadisticas": {
@@ -6226,7 +6241,7 @@
           "Estadísticas"
         ],
         "summary": "Estadísticas de la temporada",
-        "description": "Resultados del equipo y, por jugador, partidos, titularidades, minutos, goles, asistencias y tarjetas en los partidos jugados de la plantilla, y los entrenos a los que ha ido. El rol jugador solo ve su fila.",
+        "description": "Resultados del equipo y, por jugador, partidos, titularidades, minutos, goles, asistencias y tarjetas en los partidos jugados de la plantilla, los entrenos a los que ha ido y los goles en contra con él en el campo. El rol jugador solo ve su fila.",
         "parameters": [
           {
             "schema": {

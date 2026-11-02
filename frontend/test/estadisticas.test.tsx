@@ -26,11 +26,21 @@ const fila = (
   rojas: 0,
   golesPropia: 0,
   entrenos: 0,
+  golesEncajados: 0,
+  minutosConEncajados: 0,
   ...datos,
 })
 
 const ESTADISTICAS: EstadisticasPlantilla = {
-  equipo: { jugados: 6, ganados: 4, empatados: 1, perdidos: 1, golesFavor: 16, golesContra: 7 },
+  equipo: {
+    jugados: 6,
+    ganados: 4,
+    empatados: 1,
+    perdidos: 1,
+    golesFavor: 16,
+    golesContra: 7,
+    sinMinutoEnContra: 0,
+  },
   jugadores: [
     fila('j1', 'Íker', 1, { partidos: 6, titularidades: 6, minutos: 540 }),
     fila('j2', 'Brais', 7, { partidos: 5, titularidades: 4, minutos: 410, goles: 2, amarillas: 3 }),
@@ -103,6 +113,43 @@ describe('estadísticas de la temporada', () => {
     ])
   })
 
+  it('goles en contra: de menos a más por 90, con los mismos primero quien más juega, y el aviso de los partidos sin minuto', async () => {
+    conEstadisticas(senior26, {
+      equipo: { ...ESTADISTICAS.equipo, sinMinutoEnContra: 2 },
+      jugadores: [
+        fila('j1', 'Íker', 1, { minutos: 630, golesEncajados: 5, minutosConEncajados: 630 }),
+        fila('j2', 'Brais', 7, { minutos: 302, golesEncajados: 1, minutosConEncajados: 302 }),
+        fila('j3', 'Zoe', 9, { minutos: 40, golesEncajados: 0, minutosConEncajados: 40 }),
+        fila('j4', 'Noa', 13, { minutos: 90, golesEncajados: 0, minutosConEncajados: 90 }),
+        // Solo jugó partidos sin el minuto de los goles en contra: no sale
+        fila('j5', 'Leo', 20, { minutos: 90 }),
+      ],
+    })
+    abrir('/plantillas/p1/partidos?ver=estadisticas')
+    await userEvent.click(await screen.findByRole('button', { name: 'Goles en contra' }))
+    expect(filas('Goles en contra')).toEqual([
+      "13Dorsal 13Noa · 0 en 90'0,00",
+      "9Dorsal 9Zoe · 0 en 40'0,00",
+      "7Dorsal 7Brais · 1 en 302'0,30",
+      "1Dorsal 1Íker · 5 en 630'0,71",
+    ])
+    expect(screen.getByRole('note')).toHaveTextContent(
+      '2 partidos no cuentan: les falta el minuto de algún gol en contra.',
+    )
+  })
+
+  it('goles en contra sin ningún partido con el minuto lo explica', async () => {
+    conEstadisticas(senior26, {
+      ...ESTADISTICAS,
+      equipo: { ...ESTADISTICAS.equipo, sinMinutoEnContra: 6 },
+    })
+    abrir('/plantillas/p1/partidos?ver=estadisticas')
+    await userEvent.click(await screen.findByRole('button', { name: 'Goles en contra' }))
+    expect(
+      screen.getByText('Todavía no hay partidos con el minuto de los goles en contra.'),
+    ).toBeInTheDocument()
+  })
+
   it('minutos por entreno sin haber pasado lista lo explica', async () => {
     conEstadisticas()
     abrir('/plantillas/p1/partidos?ver=estadisticas')
@@ -112,7 +159,15 @@ describe('estadísticas de la temporada', () => {
 
   it('sin partidos jugados lo explica', async () => {
     conEstadisticas(senior26, {
-      equipo: { jugados: 0, ganados: 0, empatados: 0, perdidos: 0, golesFavor: 0, golesContra: 0 },
+      equipo: {
+        jugados: 0,
+        ganados: 0,
+        empatados: 0,
+        perdidos: 0,
+        golesFavor: 0,
+        golesContra: 0,
+        sinMinutoEnContra: 0,
+      },
       jugadores: [],
     })
     abrir('/plantillas/p1/partidos?ver=estadisticas')
@@ -122,12 +177,20 @@ describe('estadísticas de la temporada', () => {
   it('un jugador ve los resultados y las suyas', async () => {
     conEstadisticas(plantilla('p1', 'Senior', '2026-27', { rol: 'jugador', esAdminClub: false }), {
       ...ESTADISTICAS,
-      jugadores: [{ ...(ESTADISTICAS.jugadores[1] as EstadisticasJugador), entrenos: 20 }],
+      jugadores: [
+        {
+          ...(ESTADISTICAS.jugadores[1] as EstadisticasJugador),
+          entrenos: 20,
+          golesEncajados: 3,
+          minutosConEncajados: 300,
+        },
+      ],
     })
     abrir('/plantillas/p1/partidos?ver=estadisticas')
     const mias = await screen.findByRole('region', { name: 'Tus estadísticas' })
     expect(mias).toHaveTextContent("5 partidos (4 de titular) · 410' · 2 goles · 3 amarillas")
     expect(mias).toHaveTextContent("20,5 minutos por entreno (410' en 20 entrenos)")
+    expect(mias).toHaveTextContent("0,90 goles en contra por 90' con él en el campo (3 en 300')")
     expect(screen.queryByRole('button', { name: 'Goleadores' })).not.toBeInTheDocument()
   })
 })
