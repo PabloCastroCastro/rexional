@@ -2,7 +2,7 @@
 // navegador). Solo se admiten las fotos y los vídeos que la aplicación sabe mostrar.
 
 export type TipoArchivo = {
-  tipo: 'foto' | 'video'
+  tipo: 'foto' | 'video' | 'pdf'
   mime: string
   extension: string
 }
@@ -15,6 +15,10 @@ const ascii = (b: Buffer, desde: number, hasta: number) =>
 
 // Bytes necesarios para decidir
 export const BYTES_CABECERA = 16
+
+// Un PDF empieza por «%PDF-». Solo lo admiten las subidas que lo piden (la planificación de un
+// partido, GH-147); para los medios de un ejercicio no es un tipo válido
+export const esPdf = (b: Buffer) => ascii(b, 0, 5) === '%PDF-'
 
 // 'heic' si es una foto HEIC/HEIF (no se puede procesar); null si no es un tipo admitido
 export function detectarTipo(b: Buffer): TipoArchivo | 'heic' | null {

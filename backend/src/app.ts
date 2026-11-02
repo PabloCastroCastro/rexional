@@ -17,6 +17,7 @@ import { rutasMultas, rutasMultasJugadores } from './rutas/multas.js'
 import { rutasNotas } from './rutas/notas.js'
 import { rutasPartidos } from './rutas/partidos.js'
 import { rutasModelosSesion, rutasPlanes } from './rutas/planes.js'
+import { rutasPlanificacion } from './rutas/planificacion.js'
 import { rutasPlantillas } from './rutas/plantillas.js'
 import { rutasSalud } from './rutas/salud.js'
 import { rutasVideos } from './rutas/videos.js'
@@ -69,6 +70,7 @@ export function crearApp(dependencias: Partial<Dependencias> = {}) {
   app.route('/', rutasActas())
   app.route('/', rutasVideos())
   app.route('/', rutasNotas())
+  app.route('/', rutasPlanificacion())
   app.route('/', rutasEjercicios())
   app.route('/', rutasPlanes())
   app.route('/', rutasModelosSesion())

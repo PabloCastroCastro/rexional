@@ -867,3 +867,23 @@
   font-weight: var(--peso-normal);
   resize: vertical;
 }
+
+/* Planificación del partido (GH-147) */
+.textoArchivo {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.elegirArchivo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-2);
+}
+
+.progreso {
+  width: 100%;
+  accent-color: var(--color-primario);
+}

@@ -79,23 +79,24 @@ export const textoDetalles = (e: { categoria: Categoria | null; duracionMin: num
 
 export const textoMb = (bytes: number) => `${Math.round(bytes / 1024 / 1024)} MB`
 
-// Sube una foto o un vídeo con progreso y se puede cancelar (fetch no informa del progreso de la
-// subida). Resuelve con el medio creado o rechaza con un ErrorApi.
-export function subirMedio(
-  clubId: string,
-  ejercicioId: string,
+// Sube un archivo en un formulario (campo «archivo» y los demás campos) con progreso y se puede
+// cancelar (fetch no informa del progreso de la subida). Resuelve con la respuesta o rechaza con un
+// ErrorApi.
+export function subirConProgreso<T>(
+  url: string,
   archivo: File,
   alProgresar: (fraccion: number) => void,
+  campos: Record<string, string> = {},
 ) {
   const peticion = new XMLHttpRequest()
-  const promesa = new Promise<Medio>((resolver, rechazar) => {
-    peticion.open('POST', `/api/clubes/${clubId}/ejercicios/${ejercicioId}/medios`)
+  const promesa = new Promise<T>((resolver, rechazar) => {
+    peticion.open('POST', url)
     peticion.responseType = 'json'
     peticion.upload.onprogress = (e) => {
       if (e.lengthComputable) alProgresar(e.loaded / e.total)
     }
     peticion.onload = () => {
-      if (peticion.status === 201) return resolver(peticion.response as Medio)
+      if (peticion.status === 201) return resolver(peticion.response as T)
       const cuerpo = peticion.response as { error?: { codigo?: string; mensaje?: string } } | null
       rechazar(
         new ErrorApi(
@@ -109,11 +110,25 @@ export function subirMedio(
       rechazar(new ErrorApi(0, 'red', 'Se ha cortado la conexión: inténtalo de nuevo'))
     peticion.onabort = () => rechazar(new ErrorApi(0, 'cancelada', 'Subida cancelada'))
     const formulario = new FormData()
+    for (const [nombre, valor] of Object.entries(campos)) formulario.append(nombre, valor)
     formulario.append('archivo', archivo)
     peticion.send(formulario)
   })
   return { promesa, cancelar: () => peticion.abort() }
 }
+
+// Una foto o un vídeo de un ejercicio; resuelve con el medio creado
+export const subirMedio = (
+  clubId: string,
+  ejercicioId: string,
+  archivo: File,
+  alProgresar: (fraccion: number) => void,
+) =>
+  subirConProgreso<Medio>(
+    `/api/clubes/${clubId}/ejercicios/${ejercicioId}/medios`,
+    archivo,
+    alProgresar,
+  )
 
 // Dominio de un enlace, para mostrarlo: «youtube.com»
 export function dominio(url: string) {

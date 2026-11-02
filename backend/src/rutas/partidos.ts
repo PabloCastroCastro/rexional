@@ -30,6 +30,7 @@ import {
 } from '../db/schema/index.js'
 import { ErrorApi, EsquemaError, validacionFallida } from '../errores.js'
 import { hoy, textoDia } from '../fechas.js'
+import { borrarCarpeta, carpetaDePartido } from '../medios/almacen.js'
 import { type EnvPlantilla, requireRol } from '../permisos.js'
 import {
   EsquemaFecha,
@@ -439,7 +440,7 @@ export const rutasPartidos = () =>
         path: '/plantillas/{id}/partidos/{pid}',
         tags: ['Partidos'],
         summary: 'Borrar un partido',
-        description: 'Delegado o superior. Borra también su convocatoria.',
+        description: 'Delegado o superior. Borra también su convocatoria y su planificación.',
         middleware: [requireRol('delegado')] as const,
         request: { params: ParamPartido },
         responses: { 204: { description: 'Partido borrado' }, ...errores },
@@ -451,6 +452,8 @@ export const rutasPartidos = () =>
           .where(and(eq(partidos.id, pid), eq(partidos.plantillaId, c.var.plantilla.id)))
           .returning({ id: partidos.id })
         if (borrados.length === 0) throw noEncontrado()
+        // Los archivos de su planificación (GH-147)
+        await borrarCarpeta(carpetaDePartido(c.var.plantilla.id, pid))
         return c.body(null, 204)
       },
     )

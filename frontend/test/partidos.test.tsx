@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { components } from '../src/api/esquema'
 import type { Partido, ResumenPartido } from '../src/partidos/datos'
 import { minutoPropuesto } from '../src/partidos/Notas'
+import { type ArchivoPartido, MAXIMO_ARCHIVOS } from '../src/partidos/Planificacion'
 import {
   abrir,
   conDatos,
@@ -498,5 +499,143 @@ describe('minuto propuesto', () => {
   it('sin hora u otro día, ninguno', () => {
     expect(minutoPropuesto({ ...partido, hora: null }, a('11:30'))).toBeNull()
     expect(minutoPropuesto({ ...partido, fecha: '2026-10-13' }, a('11:30'))).toBeNull()
+  })
+})
+
+describe('planificación del partido', () => {
+  const archivo = (id: string, extra: Partial<ArchivoPartido>): ArchivoPartido => ({
+    id,
+    titulo: null,
+    nombreOriginal: 'charla.pdf',
+    tipo: 'pdf',
+    tamanoBytes: 240 * 1024,
+    subidoPor: 'Ana Entrenadora',
+    subidoEn: '2026-10-14T10:00:00.000Z',
+    ...extra,
+  })
+  let actuales: ArchivoPartido[] = []
+  const conArchivos = (p = senior26, archivos: ArchivoPartido[] = []) => {
+    conPartidos(p)
+    actuales = archivos
+    manejadores['GET /api/plantillas/p1/partidos/p1/archivos'] = () => json(actuales)
+    manejadores['GET /api/medios/limites'] = () =>
+      json({ maxFotoBytes: 15 * 1024 * 1024, maxVideoBytes: 150 * 1024 * 1024 })
+  }
+
+  it('el jugador no ve la sección ni pide los archivos', async () => {
+    conArchivos(plantilla('p1', 'Senior', '2026-27', { rol: 'jugador', esAdminClub: false }))
+    abrir('/plantillas/p1/partidos/p1')
+    expect(await screen.findByRole('heading', { name: 'en SD Compostela' })).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Planificación' })).not.toBeInTheDocument()
+    expect(peticiones.some((p) => p.clave.endsWith('/archivos'))).toBe(false)
+  })
+
+  it('se abren en otra pestaña; sin título se ve el nombre del archivo', async () => {
+    conArchivos(senior26, [
+      archivo('a1', { titulo: 'Charla', nombreOriginal: 'Charla técnica.pdf' }),
+      archivo('a2', { tipo: 'imagen', nombreOriginal: 'pizarra.jpg', tamanoBytes: 2516582 }),
+    ])
+    abrir('/plantillas/p1/partidos/p1')
+    const lista = await screen.findByRole('list', { name: 'Archivos de planificación' })
+    const filas = within(lista).getAllByRole('listitem')
+    expect(filas.map((f) => f.textContent)).toEqual([
+      'CharlaCharla técnica.pdf · 240 KB',
+      'pizarra.jpg2,4 MB',
+    ])
+    const enlace = within(lista).getByRole('link', { name: /^Charla/ })
+    expect(enlace).toHaveAttribute('href', '/api/plantillas/p1/partidos/p1/archivos/a1')
+    expect(enlace).toHaveAttribute('target', '_blank')
+    expect(within(filas[1] as HTMLElement).getByRole('img', { name: 'Imagen' })).toBeVisible()
+  })
+
+  it('sube con título; antes avisa de lo que no se admite', async () => {
+    const envios: FormData[] = []
+    class SubidaFalsa {
+      upload: {
+        onprogress?: (e: { lengthComputable: boolean; loaded: number; total: number }) => void
+      } = {}
+      onload?: () => void
+      status = 201
+      response: ArchivoPartido[] = []
+      responseType = ''
+      url = ''
+      open(_metodo: string, url: string) {
+        this.url = url
+      }
+      abort() {}
+      send(cuerpo: FormData) {
+        envios.push(cuerpo)
+        actuales = [archivo('a9', { titulo: 'Rival', nombreOriginal: 'rival.pdf' })]
+        this.response = actuales
+        this.upload.onprogress?.({ lengthComputable: true, loaded: 1, total: 1 })
+        setTimeout(() => this.onload?.(), 0)
+      }
+    }
+    vi.stubGlobal('XMLHttpRequest', SubidaFalsa)
+    conArchivos()
+    abrir('/plantillas/p1/partidos/p1')
+    await userEvent.click(await screen.findByRole('button', { name: 'Subir archivo' }))
+    const hoja = screen.getByRole('dialog', { name: 'Subir archivo' })
+    await userEvent.click(within(hoja).getByRole('button', { name: 'Subir' }))
+    expect(within(hoja).getByText('Elige un PDF o una foto')).toBeInTheDocument()
+
+    const entrada = within(hoja).getByLabelText('Archivo (PDF o foto)')
+    const video = new File(['x'], 'partido.mp4', { type: 'video/mp4' })
+    await userEvent.upload(entrada, video, { applyAccept: false })
+    await userEvent.click(within(hoja).getByRole('button', { name: 'Subir' }))
+    expect(within(hoja).getByText('Solo se admiten PDF o fotos JPEG, PNG o WebP')).toBeVisible()
+
+    const pdf = new File(['%PDF-'], 'rival.pdf', { type: 'application/pdf' })
+    await userEvent.upload(entrada, pdf)
+    await userEvent.type(within(hoja).getByLabelText('Título'), ' Rival ')
+    await userEvent.click(within(hoja).getByRole('button', { name: 'Subir' }))
+    expect(await screen.findByText('Archivo subido')).toBeInTheDocument()
+    expect(envios).toHaveLength(1)
+    expect(((envios[0] as FormData).get('archivo') as File).name).toBe('rival.pdf')
+    expect((envios[0] as FormData).get('titulo')).toBe('Rival')
+    expect(screen.getByRole('link', { name: /^Rival/ })).toBeInTheDocument()
+    vi.unstubAllGlobals()
+  })
+
+  it('cambiar el título y quitar con confirmación', async () => {
+    conArchivos(senior26, [archivo('a1', {})])
+    manejadores['PATCH /api/plantillas/p1/partidos/p1/archivos/a1'] = async (peticion) => {
+      const { titulo } = await peticion.json()
+      actuales = [archivo('a1', { titulo })]
+      return json(actuales)
+    }
+    manejadores['DELETE /api/plantillas/p1/partidos/p1/archivos/a1'] = () => {
+      actuales = []
+      return json(actuales)
+    }
+    abrir('/plantillas/p1/partidos/p1')
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Cambiar el título: charla.pdf' }),
+    )
+    const hoja = screen.getByRole('dialog', { name: 'Cambiar título' })
+    await userEvent.type(within(hoja).getByLabelText('Título'), 'Charla')
+    await userEvent.click(within(hoja).getByRole('button', { name: 'Guardar' }))
+    expect(await screen.findByText('Título cambiado')).toBeInTheDocument()
+    expect(enviado('PATCH /api/plantillas/p1/partidos/p1/archivos/a1')).toEqual([
+      { titulo: 'Charla' },
+    ])
+
+    await userEvent.click(screen.getByRole('button', { name: 'Quitar: Charla' }))
+    const confirmacion = screen.getByRole('alertdialog', { name: '¿Quitar este archivo?' })
+    await userEvent.click(within(confirmacion).getByRole('button', { name: 'Quitar' }))
+    expect(await screen.findByText('Archivo quitado')).toBeInTheDocument()
+    expect(
+      screen.queryByRole('list', { name: 'Archivos de planificación' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it(`con ${MAXIMO_ARCHIVOS} archivos no deja subir más`, async () => {
+    conArchivos(
+      senior26,
+      Array.from({ length: MAXIMO_ARCHIVOS }, (_, i) => archivo(`a${i}`, {})),
+    )
+    abrir('/plantillas/p1/partidos/p1')
+    expect(await screen.findByText(/quita alguno para subir otro/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Subir archivo' })).not.toBeInTheDocument()
   })
 })
