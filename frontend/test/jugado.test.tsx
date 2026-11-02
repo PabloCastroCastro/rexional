@@ -49,6 +49,7 @@ const PARTIDO: Partido = {
     { id: 'e2', jugadorId: 'j1', tipo: 'amarilla', minuto: 30, origen: 'manual' },
   ],
   acta: null,
+  videos: [],
 }
 
 const enviado = (clave: string) => peticiones.filter((p) => p.clave === clave).map((p) => p.cuerpo)

@@ -28,6 +28,7 @@ import { FormularioPartido } from './FormularioPartido'
 import { SeccionPartido } from './Jugado'
 import { Mensaje } from './Mensaje'
 import estilos from './Partidos.module.css'
+import { SeccionVideos } from './Videos'
 
 // Ficha de un partido: sus datos, editar y borrar, y la convocatoria
 export function PaginaPartido() {
@@ -165,6 +166,8 @@ export function PaginaPartido() {
       </section>
 
       <SeccionActa partido={p} />
+
+      <SeccionVideos partido={p} />
 
       <section className={estilos.seccion} aria-labelledby="mensaje">
         <h2 id="mensaje">

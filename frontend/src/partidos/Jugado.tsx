@@ -32,7 +32,7 @@ type Evento = Partido['eventos'][number]
 type NuevoEvento = { jugadorId: string | null; tipo: Evento['tipo']; minuto: number | null }
 
 // Guarda un cambio del partido y deja el detalle al día con la respuesta
-function useCambioPartido(partido: Partido) {
+export function useCambioPartido(partido: Partido) {
   const plantilla = usePlantillaActiva()
   const cliente = useQueryClient()
   return async (peticion: Promise<Partido>) => {

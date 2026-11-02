@@ -18,6 +18,7 @@ import { rutasPartidos } from './rutas/partidos.js'
 import { rutasModelosSesion, rutasPlanes } from './rutas/planes.js'
 import { rutasPlantillas } from './rutas/plantillas.js'
 import { rutasSalud } from './rutas/salud.js'
+import { rutasVideos } from './rutas/videos.js'
 
 export const infoOpenApi = {
   openapi: '3.1.0',
@@ -65,6 +66,7 @@ export function crearApp(dependencias: Partial<Dependencias> = {}) {
   app.route('/', rutasEstadisticas())
   app.route('/', rutasEstadisticasClub())
   app.route('/', rutasActas())
+  app.route('/', rutasVideos())
   app.route('/', rutasEjercicios())
   app.route('/', rutasPlanes())
   app.route('/', rutasModelosSesion())

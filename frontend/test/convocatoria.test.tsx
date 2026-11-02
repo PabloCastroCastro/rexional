@@ -51,6 +51,7 @@ const PARTIDO: Partido = {
   golesContra: null,
   eventos: [],
   acta: null,
+  videos: [],
   jugadores: [
     jugador('j1', 'Íker', 1, true),
     jugador('j2', 'Brais', 7, true),

@@ -76,6 +76,7 @@ const detalle = (r: ResumenPartido, convocados: string[] = []): Partido => {
     })),
     eventos: [],
     acta: null,
+    videos: [],
   }
 }
 
@@ -255,5 +256,104 @@ describe('ficha del partido', () => {
     expect(await screen.findByRole('heading', { name: 'en SD Compostela' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Editar' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Borrar' })).not.toBeInTheDocument()
+  })
+})
+
+describe('vídeos del partido', () => {
+  const VIDEOS = [
+    { id: 'v1', url: 'https://www.youtube.com/watch?v=abc', titulo: '1ª parte' },
+    { id: 'v2', url: 'https://drive.google.com/file/d/xyz', titulo: null },
+  ]
+  // El partido guarda sus vídeos: lo que cambian POST y DELETE se ve al volver a pedirlo
+  let actuales: Partido['videos'] = []
+  const conVideo = () => ({
+    ...detalle(PROXIMOS[0] as ResumenPartido, ['j1', 'j2']),
+    videos: actuales,
+  })
+  const conVideos = (p = senior26, videos = VIDEOS) => {
+    conPartidos(p)
+    actuales = videos
+    manejadores['GET /api/plantillas/p1/partidos/p1'] = () => json(conVideo())
+  }
+
+  it('se abren fuera de la app; sin título se ve el dominio', async () => {
+    conVideos(plantilla('p1', 'Senior', '2026-27', { rol: 'jugador', esAdminClub: false }))
+    abrir('/plantillas/p1/partidos/p1')
+    const lista = await screen.findByRole('list', { name: 'Vídeos' })
+    const enlaces = within(lista).getAllByRole('link')
+    expect(enlaces.map((a) => a.textContent)).toEqual(['1ª parte', 'drive.google.com'])
+    expect(enlaces[0]).toHaveAttribute('href', 'https://www.youtube.com/watch?v=abc')
+    expect(enlaces[0]).toHaveAttribute('target', '_blank')
+    // El jugador no los gestiona
+    expect(screen.queryByRole('button', { name: 'Añadir vídeo' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Quitar:/ })).not.toBeInTheDocument()
+  })
+
+  it('sin vídeos, el jugador no ve la sección', async () => {
+    conVideos(plantilla('p1', 'Senior', '2026-27', { rol: 'jugador', esAdminClub: false }), [])
+    abrir('/plantillas/p1/partidos/p1')
+    expect(await screen.findByRole('heading', { name: 'en SD Compostela' })).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Vídeos' })).not.toBeInTheDocument()
+  })
+
+  it('el cuerpo técnico añade uno y se comprueba la dirección', async () => {
+    conVideos(senior26, [])
+    manejadores['POST /api/plantillas/p1/partidos/p1/videos'] = async (peticion) => {
+      actuales = [...actuales, { id: 'v9', ...(await peticion.json()) }]
+      return json(conVideo(), 201)
+    }
+    abrir('/plantillas/p1/partidos/p1')
+    await userEvent.click(await screen.findByRole('button', { name: 'Añadir vídeo' }))
+    const hoja = screen.getByRole('dialog', { name: 'Añadir vídeo' })
+    await userEvent.type(within(hoja).getByLabelText(/Dirección del vídeo/), 'youtube')
+    await userEvent.click(within(hoja).getByRole('button', { name: 'Añadir' }))
+    expect(within(hoja).getByText('Pega la dirección del vídeo (https://…)')).toBeInTheDocument()
+    expect(enviado('POST /api/plantillas/p1/partidos/p1/videos')).toEqual([])
+
+    await userEvent.clear(within(hoja).getByLabelText(/Dirección del vídeo/))
+    await userEvent.type(within(hoja).getByLabelText(/Dirección del vídeo/), 'https://youtu.be/abc')
+    await userEvent.type(within(hoja).getByLabelText('Título'), '2ª parte')
+    await userEvent.click(within(hoja).getByRole('button', { name: 'Añadir' }))
+    expect(await screen.findByText('Vídeo añadido')).toBeInTheDocument()
+    expect(enviado('POST /api/plantillas/p1/partidos/p1/videos')).toEqual([
+      { url: 'https://youtu.be/abc', titulo: '2ª parte' },
+    ])
+    expect(screen.getByRole('link', { name: /2ª parte/ })).toBeInTheDocument()
+  })
+
+  it('cambiar un vídeo abre la hoja con sus datos', async () => {
+    conVideos()
+    manejadores['PATCH /api/plantillas/p1/partidos/p1/videos/v2'] = async (peticion) => {
+      const cambios = await peticion.json()
+      actuales = actuales.map((v) => (v.id === 'v2' ? { ...v, ...cambios } : v))
+      return json(conVideo())
+    }
+    abrir('/plantillas/p1/partidos/p1')
+    await userEvent.click(await screen.findByRole('button', { name: 'Cambiar: drive.google.com' }))
+    const hoja = screen.getByRole('dialog', { name: 'Cambiar vídeo' })
+    expect(within(hoja).getByLabelText(/Dirección del vídeo/)).toHaveValue(
+      'https://drive.google.com/file/d/xyz',
+    )
+    await userEvent.type(within(hoja).getByLabelText('Título'), '2ª parte')
+    await userEvent.click(within(hoja).getByRole('button', { name: 'Guardar' }))
+    expect(await screen.findByText('Vídeo cambiado')).toBeInTheDocument()
+    expect(enviado('PATCH /api/plantillas/p1/partidos/p1/videos/v2')).toEqual([
+      { url: 'https://drive.google.com/file/d/xyz', titulo: '2ª parte' },
+    ])
+    expect(screen.getByRole('link', { name: /2ª parte/ })).toBeInTheDocument()
+  })
+
+  it('quitar pide confirmación', async () => {
+    conVideos()
+    manejadores['DELETE /api/plantillas/p1/partidos/p1/videos/v1'] = () => {
+      actuales = actuales.filter((v) => v.id !== 'v1')
+      return json(conVideo())
+    }
+    abrir('/plantillas/p1/partidos/p1')
+    await userEvent.click(await screen.findByRole('button', { name: 'Quitar: 1ª parte' }))
+    const confirmacion = screen.getByRole('alertdialog', { name: '¿Quitar este vídeo?' })
+    await userEvent.click(within(confirmacion).getByRole('button', { name: 'Quitar' }))
+    expect(await screen.findByText('Vídeo quitado')).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /1ª parte/ })).not.toBeInTheDocument()
   })
 })
