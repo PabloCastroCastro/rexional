@@ -26,6 +26,7 @@ import {
   participaciones,
   partidos,
   tipoEvento,
+  videosPartido,
 } from '../db/schema/index.js'
 import { ErrorApi, EsquemaError, validacionFallida } from '../errores.js'
 import { hoy, textoDia } from '../fechas.js'
@@ -121,6 +122,13 @@ export const EsquemaPartido = z
       .object({ nombreArchivo: z.string(), tamano: z.int(), subidaEn: z.string() })
       .nullable()
       .openapi({ description: 'La ficha del partido en PDF, si se ha subido' }),
+    videos: z
+      .array(
+        z
+          .object({ id: z.uuid(), url: z.string(), titulo: z.string().nullable() })
+          .openapi('VideoPartido'),
+      )
+      .openapi({ description: 'Enlaces al vídeo del partido, por orden de alta (GH-134)' }),
   })
   .openapi('Partido')
 
@@ -212,11 +220,17 @@ export async function detallePartido(plantillaId: string, partidoId: string) {
     })
     .from(actasPartido)
     .where(eq(actasPartido.partidoId, partido.id))
+  const videos = await db
+    .select({ id: videosPartido.id, url: videosPartido.url, titulo: videosPartido.titulo })
+    .from(videosPartido)
+    .where(eq(videosPartido.partidoId, partido.id))
+    .orderBy(asc(videosPartido.createdAt), asc(videosPartido.id))
   return {
     ...partido,
     jugadores: filas,
     eventos,
     acta: acta ? { ...acta, subidaEn: acta.subidaEn.toISOString() } : null,
+    videos,
   }
 }
 

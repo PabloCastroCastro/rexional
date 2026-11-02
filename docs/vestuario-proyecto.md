@@ -497,6 +497,16 @@ Horario semanal de entrenos de una plantilla (uno por plantilla).
 | subida_por | uuid → user | set null |
 | subida_en | timestamptz | |
 
+### videos_partido
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| partido_id | uuid → partidos | cascade; como mucho 10 por partido (lo controla la API) |
+| url | text | solo `http` o `https`; el vídeo está fuera de la app (GH-134) |
+| titulo | text | opcional, no vacío; p. ej. «1ª parte» |
+| creado_por | uuid → user | set null |
+| created_at | timestamptz | orden de la lista |
+
 ### motivos_multa
 | Campo | Tipo | Notas |
 |---|---|---|

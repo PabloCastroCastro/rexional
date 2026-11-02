@@ -192,3 +192,24 @@ export const actasPartido = pgTable(
     check('actas_partido_nombre_no_vacio', sql`btrim(${t.nombreArchivo}) <> ''`),
   ],
 )
+
+// Enlaces al vídeo de un partido (YouTube, Drive…), p. ej. uno por parte (GH-134). Solo se guarda
+// la URL: el vídeo está fuera de la app
+export const videosPartido = pgTable(
+  'videos_partido',
+  {
+    id: id(),
+    partidoId: uuid('partido_id')
+      .notNull()
+      .references(() => partidos.id, { onDelete: 'cascade' }),
+    url: text('url').notNull(),
+    titulo: text('titulo'),
+    creadoPor: uuid('creado_por').references(() => user.id, { onDelete: 'set null' }),
+    createdAt: creadoEn(),
+  },
+  (t) => [
+    index('videos_partido_partido_idx').on(t.partidoId),
+    check('videos_partido_url_web', sql`${t.url} ~* '^https?://'`),
+    check('videos_partido_titulo_no_vacio', sql`${t.titulo} IS NULL OR btrim(${t.titulo}) <> ''`),
+  ],
+)
