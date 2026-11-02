@@ -3149,7 +3149,7 @@ export interface paths {
         };
         /**
          * Estadísticas de la temporada
-         * @description Resultados del equipo y, por jugador, partidos, titularidades, minutos, goles, asistencias y tarjetas en los partidos jugados de la plantilla, los entrenos a los que ha ido y los goles en contra con él en el campo. El rol jugador solo ve su fila.
+         * @description Resultados del equipo y, por jugador, partidos, titularidades, minutos, goles, asistencias y tarjetas en los partidos jugados de la plantilla, los entrenos a los que ha ido y los goles a favor y en contra con él en el campo. El rol jugador solo ve su fila.
          */
         get: {
             parameters: {
@@ -7436,6 +7436,8 @@ export interface components {
                 golesContra: number;
                 /** @description Partidos jugados a los que les falta el minuto de algún gol en contra: no cuentan para los goles encajados */
                 sinMinutoEnContra: number;
+                /** @description Partidos jugados a los que les falta el minuto de algún gol a favor: no cuentan para los goles a favor en el campo */
+                sinMinutoAFavor: number;
             };
             jugadores: components["schemas"]["EstadisticasJugador"][];
         };
@@ -7462,6 +7464,10 @@ export interface components {
             golesEncajados: number;
             /** @description Minutos jugados en esos mismos partidos: la base de los goles encajados por 90 */
             minutosConEncajados: number;
+            /** @description Goles a favor con el jugador en el campo, en los partidos con todos sus goles a favor con minuto */
+            golesFavorEnCampo: number;
+            /** @description Minutos jugados en esos mismos partidos: la base de los goles a favor por 90 */
+            minutosConFavor: number;
         };
         TrayectoriaEstadisticas: {
             /** Format: uuid */

@@ -1286,6 +1286,10 @@
               "sinMinutoEnContra": {
                 "type": "integer",
                 "description": "Partidos jugados a los que les falta el minuto de algún gol en contra: no cuentan para los goles encajados"
+              },
+              "sinMinutoAFavor": {
+                "type": "integer",
+                "description": "Partidos jugados a los que les falta el minuto de algún gol a favor: no cuentan para los goles a favor en el campo"
               }
             },
             "required": [
@@ -1295,7 +1299,8 @@
               "perdidos",
               "golesFavor",
               "golesContra",
-              "sinMinutoEnContra"
+              "sinMinutoEnContra",
+              "sinMinutoAFavor"
             ]
           },
           "jugadores": {
@@ -1372,6 +1377,14 @@
           "minutosConEncajados": {
             "type": "integer",
             "description": "Minutos jugados en esos mismos partidos: la base de los goles encajados por 90"
+          },
+          "golesFavorEnCampo": {
+            "type": "integer",
+            "description": "Goles a favor con el jugador en el campo, en los partidos con todos sus goles a favor con minuto"
+          },
+          "minutosConFavor": {
+            "type": "integer",
+            "description": "Minutos jugados en esos mismos partidos: la base de los goles a favor por 90"
           }
         },
         "required": [
@@ -1390,7 +1403,9 @@
           "golesPropia",
           "entrenos",
           "golesEncajados",
-          "minutosConEncajados"
+          "minutosConEncajados",
+          "golesFavorEnCampo",
+          "minutosConFavor"
         ]
       },
       "TrayectoriaEstadisticas": {
@@ -6378,7 +6393,7 @@
           "Estadísticas"
         ],
         "summary": "Estadísticas de la temporada",
-        "description": "Resultados del equipo y, por jugador, partidos, titularidades, minutos, goles, asistencias y tarjetas en los partidos jugados de la plantilla, los entrenos a los que ha ido y los goles en contra con él en el campo. El rol jugador solo ve su fila.",
+        "description": "Resultados del equipo y, por jugador, partidos, titularidades, minutos, goles, asistencias y tarjetas en los partidos jugados de la plantilla, los entrenos a los que ha ido y los goles a favor y en contra con él en el campo. El rol jugador solo ve su fila.",
         "parameters": [
           {
             "schema": {

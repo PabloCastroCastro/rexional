@@ -464,6 +464,8 @@ describe('estadísticas acumuladas', () => {
       golesContra: 1,
       // El gol en contra aún no tiene minuto
       sinMinutoEnContra: 1,
+      // Los dos goles a favor tienen minuto
+      sinMinutoAFavor: 0,
     })
     expect(datos.jugadores).toEqual([
       expect.objectContaining({
@@ -474,6 +476,8 @@ describe('estadísticas acumuladas', () => {
         goles: 2,
         entrenos: 2,
         golesEncajados: 0,
+        golesFavorEnCampo: 2,
+        minutosConFavor: 90,
         minutosConEncajados: 0,
       }),
       expect.objectContaining({
@@ -483,6 +487,9 @@ describe('estadísticas acumuladas', () => {
         amarillas: 1,
         goles: 0,
         entrenos: 1,
+        // Los dos goles llegan antes de que salga
+        golesFavorEnCampo: 2,
+        minutosConFavor: 60,
       }),
     ])
 

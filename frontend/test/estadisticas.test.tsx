@@ -28,6 +28,8 @@ const fila = (
   entrenos: 0,
   golesEncajados: 0,
   minutosConEncajados: 0,
+  golesFavorEnCampo: 0,
+  minutosConFavor: 0,
   ...datos,
 })
 
@@ -40,6 +42,7 @@ const ESTADISTICAS: EstadisticasPlantilla = {
     golesFavor: 16,
     golesContra: 7,
     sinMinutoEnContra: 0,
+    sinMinutoAFavor: 0,
   },
   jugadores: [
     fila('j1', 'Íker', 1, { partidos: 6, titularidades: 6, minutos: 540 }),
@@ -61,34 +64,80 @@ function conEstadisticas(p = senior26, estadisticas = ESTADISTICAS) {
   manejadores['GET /api/plantillas/p1/partidos'] = () => json([])
 }
 
+// Filas de la tabla, celda a celda
 const filas = (nombre: string) =>
-  within(screen.getByRole('list', { name: nombre }))
-    .getAllByRole('listitem')
-    .map((li) => li.textContent)
+  within(screen.getByRole('table', { name: nombre }))
+    .getAllByRole('row')
+    .slice(1)
+    .map((fila) => [...fila.querySelectorAll('td, th')].map((celda) => celda.textContent))
+
+const elegir = (estadistica: string) =>
+  userEvent.selectOptions(screen.getByRole('combobox', { name: 'Estadística' }), estadistica)
+
+const abrirEstadisticas = async () => {
+  abrir('/plantillas/p1/partidos?ver=estadisticas')
+  await screen.findByRole('combobox', { name: 'Estadística' })
+}
 
 describe('estadísticas de la temporada', () => {
-  it('resultados del equipo y clasificaciones, solo con quien tiene algo', async () => {
+  it('resultados del equipo y una tabla por estadística, solo con quien tiene algo', async () => {
     conEstadisticas()
     abrir('/plantillas/p1/partidos?ver=estadisticas')
     const resultados = await screen.findByRole('region', { name: 'Resultados' })
     expect(within(resultados).getByText('Ganados').nextSibling).toHaveTextContent('4')
     expect(resultados).toHaveTextContent('Goles: 16 a favor y 7 en contra (+9)')
 
-    expect(filas('Goleadores')).toEqual(['9Dorsal 9Zoe5', '7Dorsal 7Brais2'])
-    await userEvent.click(screen.getByRole('button', { name: 'Minutos' }))
-    expect(filas('Minutos')).toEqual([
-      "1Dorsal 1Íker540'",
-      "9Dorsal 9Zoe520'",
-      "7Dorsal 7Brais410'",
+    // Un desplegable, no un botón por estadística
+    expect(screen.queryByRole('button', { name: 'Minutos' })).not.toBeInTheDocument()
+    expect(filas('Goles')).toEqual([
+      ['9Dorsal 9', 'Zoe', '5'],
+      ['7Dorsal 7', 'Brais', '2'],
     ])
-    await userEvent.click(screen.getByRole('button', { name: 'Tarjetas' }))
+    await elegir('Minutos')
+    expect(filas('Minutos')).toEqual([
+      ['1Dorsal 1', 'Íker', "540'"],
+      ['9Dorsal 9', 'Zoe', "520'"],
+      ['7Dorsal 7', 'Brais', "410'"],
+    ])
+    await elegir('Tarjetas')
     // Una roja pesa más que tres amarillas
-    expect(filas('Tarjetas')).toEqual(['9Dorsal 9Zoe1 roja', '7Dorsal 7Brais3 amarillas'])
-    await userEvent.click(screen.getByRole('button', { name: 'Asistencias' }))
+    expect(filas('Tarjetas')).toEqual([
+      ['9Dorsal 9', 'Zoe', '0', '1'],
+      ['7Dorsal 7', 'Brais', '3', '0'],
+    ])
+    await elegir('Asistencias')
     expect(screen.getByRole('link', { name: 'Zoe' })).toHaveAttribute(
       'href',
       '/plantillas/p1/jugadores/j3',
     )
+  })
+
+  it('se ordena por cualquier columna, de mayor a menor o al revés', async () => {
+    conEstadisticas()
+    await abrirEstadisticas()
+    await elegir('Minutos')
+    const cabecera = (nombre: string) =>
+      screen.getByRole('columnheader', { name: new RegExp(`^${nombre}`) })
+    expect(cabecera('Minutos')).toHaveAttribute('aria-sort', 'descending')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Minutos' }))
+    expect(cabecera('Minutos')).toHaveAttribute('aria-sort', 'ascending')
+    expect(filas('Minutos').map((f) => f[1])).toEqual(['Brais', 'Zoe', 'Íker'])
+
+    // Otra columna: el nombre, de la A a la Z; otra vez, al revés
+    await userEvent.click(screen.getByRole('button', { name: 'Jugador' }))
+    expect(cabecera('Minutos')).not.toHaveAttribute('aria-sort')
+    expect(cabecera('Jugador')).toHaveAttribute('aria-sort', 'ascending')
+    expect(filas('Minutos').map((f) => f[1])).toEqual(['Brais', 'Íker', 'Zoe'])
+    await userEvent.click(screen.getByRole('button', { name: 'Jugador' }))
+    expect(filas('Minutos').map((f) => f[1])).toEqual(['Zoe', 'Íker', 'Brais'])
+
+    await userEvent.click(screen.getByRole('button', { name: 'Dorsal' }))
+    expect(filas('Minutos').map((f) => f[0])).toEqual(['1Dorsal 1', '7Dorsal 7', '9Dorsal 9'])
+
+    // Al cambiar de estadística vuelve su orden
+    await elegir('Goles')
+    expect(cabecera('Goles')).toHaveAttribute('aria-sort', 'descending')
   })
 
   it('minutos por entreno: de más a menos, sin mínimo de minutos y sin entrenos al final', async () => {
@@ -103,17 +152,20 @@ describe('estadísticas de la temporada', () => {
         fila('j5', 'Leo', 20),
       ],
     })
-    abrir('/plantillas/p1/partidos?ver=estadisticas')
-    await userEvent.click(await screen.findByRole('button', { name: 'Minutos por entreno' }))
+    await abrirEstadisticas()
+    await elegir('Minutos por entreno')
     expect(filas('Minutos por entreno')).toEqual([
-      "7Dorsal 7Brais · 340' en 9 entrenos37,8",
-      "1Dorsal 1Íker · 540' en 29 entrenos18,6",
-      "13Dorsal 13Noa · 0' en 15 entrenos0,0",
-      "9Dorsal 9Zoe · 40' en 0 entrenos—",
+      ['7Dorsal 7', 'Brais', "340'", '9', '37,8'],
+      ['1Dorsal 1', 'Íker', "540'", '29', '18,6'],
+      ['13Dorsal 13', 'Noa', "0'", '15', '0,0'],
+      ['9Dorsal 9', 'Zoe', "40'", '0', '—'],
     ])
+    // Sin entrenos, al final también de menos a más
+    await userEvent.click(screen.getByRole('button', { name: 'Minutos por entreno' }))
+    expect(filas('Minutos por entreno').map((f) => f[1])).toEqual(['Noa', 'Íker', 'Brais', 'Zoe'])
   })
 
-  it('goles en contra: de menos a más por 90, con los mismos primero quien más juega, y el aviso de los partidos sin minuto', async () => {
+  it('goles en contra: de menos a más por 90, y el aviso de los partidos sin minuto', async () => {
     conEstadisticas(senior26, {
       equipo: { ...ESTADISTICAS.equipo, sinMinutoEnContra: 2 },
       jugadores: [
@@ -125,16 +177,39 @@ describe('estadísticas de la temporada', () => {
         fila('j5', 'Leo', 20, { minutos: 90 }),
       ],
     })
-    abrir('/plantillas/p1/partidos?ver=estadisticas')
-    await userEvent.click(await screen.findByRole('button', { name: 'Goles en contra' }))
-    expect(filas('Goles en contra')).toEqual([
-      "13Dorsal 13Noa · 0 en 90'0,00",
-      "9Dorsal 9Zoe · 0 en 40'0,00",
-      "7Dorsal 7Brais · 1 en 302'0,30",
-      "1Dorsal 1Íker · 5 en 630'0,71",
+    await abrirEstadisticas()
+    await elegir('Goles en contra en el campo')
+    expect(filas('Goles en contra en el campo')).toEqual([
+      ['13Dorsal 13', 'Noa', '0', "90'", '0,00'],
+      ['9Dorsal 9', 'Zoe', '0', "40'", '0,00'],
+      ['7Dorsal 7', 'Brais', '1', "302'", '0,30'],
+      ['1Dorsal 1', 'Íker', '5', "630'", '0,71'],
     ])
     expect(screen.getByRole('note')).toHaveTextContent(
       '2 partidos no cuentan: les falta el minuto de algún gol en contra.',
+    )
+  })
+
+  it('goles a favor: de más a menos por 90, y el aviso de los partidos sin minuto', async () => {
+    conEstadisticas(senior26, {
+      equipo: { ...ESTADISTICAS.equipo, sinMinutoAFavor: 1 },
+      jugadores: [
+        fila('j1', 'Íker', 1, { golesFavorEnCampo: 9, minutosConFavor: 450 }),
+        fila('j2', 'Brais', 7, { golesFavorEnCampo: 4, minutosConFavor: 120 }),
+        fila('j3', 'Zoe', 9, { golesFavorEnCampo: 0, minutosConFavor: 30 }),
+        // Solo jugó partidos sin el minuto de los goles a favor: no sale
+        fila('j4', 'Noa', 13, { minutos: 90 }),
+      ],
+    })
+    await abrirEstadisticas()
+    await elegir('Goles a favor en el campo')
+    expect(filas('Goles a favor en el campo')).toEqual([
+      ['7Dorsal 7', 'Brais', '4', "120'", '3,00'],
+      ['1Dorsal 1', 'Íker', '9', "450'", '1,80'],
+      ['9Dorsal 9', 'Zoe', '0', "30'", '0,00'],
+    ])
+    expect(screen.getByRole('note')).toHaveTextContent(
+      '1 partido no cuenta: le falta el minuto de algún gol a favor.',
     )
   })
 
@@ -143,8 +218,8 @@ describe('estadísticas de la temporada', () => {
       ...ESTADISTICAS,
       equipo: { ...ESTADISTICAS.equipo, sinMinutoEnContra: 6 },
     })
-    abrir('/plantillas/p1/partidos?ver=estadisticas')
-    await userEvent.click(await screen.findByRole('button', { name: 'Goles en contra' }))
+    await abrirEstadisticas()
+    await elegir('Goles en contra en el campo')
     expect(
       screen.getByText('Todavía no hay partidos con el minuto de los goles en contra.'),
     ).toBeInTheDocument()
@@ -152,8 +227,8 @@ describe('estadísticas de la temporada', () => {
 
   it('minutos por entreno sin haber pasado lista lo explica', async () => {
     conEstadisticas()
-    abrir('/plantillas/p1/partidos?ver=estadisticas')
-    await userEvent.click(await screen.findByRole('button', { name: 'Minutos por entreno' }))
+    await abrirEstadisticas()
+    await elegir('Minutos por entreno')
     expect(screen.getByText('Todavía no se ha pasado lista en ningún entreno.')).toBeInTheDocument()
   })
 
@@ -167,6 +242,7 @@ describe('estadísticas de la temporada', () => {
         golesFavor: 0,
         golesContra: 0,
         sinMinutoEnContra: 0,
+        sinMinutoAFavor: 0,
       },
       jugadores: [],
     })
@@ -183,6 +259,8 @@ describe('estadísticas de la temporada', () => {
           entrenos: 20,
           golesEncajados: 3,
           minutosConEncajados: 300,
+          golesFavorEnCampo: 5,
+          minutosConFavor: 360,
         },
       ],
     })
@@ -190,8 +268,9 @@ describe('estadísticas de la temporada', () => {
     const mias = await screen.findByRole('region', { name: 'Tus estadísticas' })
     expect(mias).toHaveTextContent("5 partidos (4 de titular) · 410' · 2 goles · 3 amarillas")
     expect(mias).toHaveTextContent("20,5 minutos por entreno (410' en 20 entrenos)")
+    expect(mias).toHaveTextContent("1,25 goles a favor por 90' con él en el campo (5 en 360')")
     expect(mias).toHaveTextContent("0,90 goles en contra por 90' con él en el campo (3 en 300')")
-    expect(screen.queryByRole('button', { name: 'Goleadores' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('combobox', { name: 'Estadística' })).not.toBeInTheDocument()
   })
 })
 
