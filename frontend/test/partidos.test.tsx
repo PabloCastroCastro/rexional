@@ -1,7 +1,9 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { components } from '../src/api/esquema'
 import type { Partido, ResumenPartido } from '../src/partidos/datos'
+import { minutoPropuesto } from '../src/partidos/Notas'
 import {
   abrir,
   conDatos,
@@ -355,5 +357,146 @@ describe('vídeos del partido', () => {
     await userEvent.click(within(confirmacion).getByRole('button', { name: 'Quitar' }))
     expect(await screen.findByText('Vídeo quitado')).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /1ª parte/ })).not.toBeInTheDocument()
+  })
+})
+
+describe('notas del partido', () => {
+  type Nota = components['schemas']['NotaPartido']
+  const nota = (id: string, extra: Partial<Nota>): Nota => ({
+    id,
+    tipo: 'tactica',
+    texto: 'Presionar arriba',
+    minuto: null,
+    autor: 'Ana Entrenadora',
+    autorId: 'u1',
+    creadaEn: '2026-10-14T10:00:00.000Z',
+    editadaEn: '2026-10-14T10:00:00.000Z',
+    ...extra,
+  })
+  // Las notas que guarda el servidor: lo que cambian POST, PATCH y DELETE se devuelve entero
+  let actuales: Nota[] = []
+  const conNotas = (p = senior26, notas: Nota[] = []) => {
+    conPartidos(p)
+    actuales = notas
+    manejadores['GET /api/plantillas/p1/partidos/p1/notas'] = () => json(actuales)
+  }
+
+  it('el jugador no ve la sección ni pide las notas', async () => {
+    conNotas(plantilla('p1', 'Senior', '2026-27', { rol: 'jugador', esAdminClub: false }))
+    abrir('/plantillas/p1/partidos/p1')
+    expect(await screen.findByRole('heading', { name: 'en SD Compostela' })).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Notas' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Anotar' })).not.toBeInTheDocument()
+    expect(peticiones.some((p) => p.clave.endsWith('/notas'))).toBe(false)
+  })
+
+  it('el cuerpo técnico ve las notas con su minuto, tipo y autor', async () => {
+    conNotas(senior26, [
+      nota('n1', { tipo: 'incidencia', texto: 'Golpe del 7', minuto: 12 }),
+      nota('n2', { texto: 'Revisar el calentamiento', tipo: 'otra', autor: null }),
+    ])
+    abrir('/plantillas/p1/partidos/p1')
+    const lista = await screen.findByRole('list', { name: 'Notas' })
+    const filas = within(lista).getAllByRole('listitem')
+    expect(filas.map((f) => f.textContent)).toEqual([
+      "12'Golpe del 7Ana Entrenadora",
+      '–Revisar el calentamiento',
+    ])
+    expect(within(filas[0] as HTMLElement).getByRole('img', { name: 'Incidencia' })).toBeVisible()
+  })
+
+  it('anotar envía texto, tipo y minuto, y la nota aparece', async () => {
+    conNotas()
+    manejadores['POST /api/plantillas/p1/partidos/p1/notas'] = async (peticion) => {
+      actuales = [...actuales, nota('n9', await peticion.json())]
+      return json(actuales, 201)
+    }
+    abrir('/plantillas/p1/partidos/p1')
+    await userEvent.click(await screen.findByRole('button', { name: 'Anotar' }))
+    const hoja = screen.getByRole('dialog', { name: 'Anotar' })
+    // Sin texto no se envía
+    await userEvent.click(within(hoja).getByRole('button', { name: 'Guardar' }))
+    expect(within(hoja).getByText('Escribe la nota')).toBeInTheDocument()
+
+    await userEvent.type(within(hoja).getByLabelText('Nota'), '  El lateral sube mucho ')
+    await userEvent.click(within(hoja).getByRole('button', { name: 'Incidencia' }))
+    await userEvent.type(within(hoja).getByLabelText(/Minuto/), '33')
+    await userEvent.click(within(hoja).getByRole('button', { name: 'Guardar' }))
+    expect(await screen.findByText('Nota guardada')).toBeInTheDocument()
+    expect(enviado('POST /api/plantillas/p1/partidos/p1/notas')).toEqual([
+      { tipo: 'incidencia', texto: 'El lateral sube mucho', minuto: 33 },
+    ])
+    expect(
+      within(screen.getByRole('list', { name: 'Notas' })).getByText('El lateral sube mucho'),
+    ).toBeInTheDocument()
+  })
+
+  it('cambiar abre la hoja con sus datos; borrar pide confirmación', async () => {
+    conNotas(senior26, [nota('n1', { minuto: 20 })])
+    manejadores['PATCH /api/plantillas/p1/partidos/p1/notas/n1'] = async (peticion) => {
+      const cambios = await peticion.json()
+      actuales = actuales.map((n) => (n.id === 'n1' ? { ...n, ...cambios } : n))
+      return json(actuales)
+    }
+    manejadores['DELETE /api/plantillas/p1/partidos/p1/notas/n1'] = () => {
+      actuales = []
+      return json(actuales)
+    }
+    abrir('/plantillas/p1/partidos/p1')
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Cambiar la nota: Presionar arriba' }),
+    )
+    const hoja = screen.getByRole('dialog', { name: 'Cambiar nota' })
+    expect(within(hoja).getByLabelText(/Minuto/)).toHaveValue(20)
+    await userEvent.clear(within(hoja).getByLabelText(/Minuto/))
+    await userEvent.type(within(hoja).getByLabelText('Nota'), ' y juntar líneas')
+    await userEvent.click(within(hoja).getByRole('button', { name: 'Guardar' }))
+    expect(await screen.findByText('Nota cambiada')).toBeInTheDocument()
+    expect(enviado('PATCH /api/plantillas/p1/partidos/p1/notas/n1')).toEqual([
+      { tipo: 'tactica', texto: 'Presionar arriba y juntar líneas', minuto: null },
+    ])
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Borrar la nota: Presionar arriba y juntar líneas' }),
+    )
+    const confirmacion = screen.getByRole('alertdialog', { name: '¿Borrar esta nota?' })
+    await userEvent.click(within(confirmacion).getByRole('button', { name: 'Borrar' }))
+    expect(await screen.findByText('Nota borrada')).toBeInTheDocument()
+    expect(screen.queryByRole('list', { name: 'Notas' })).not.toBeInTheDocument()
+  })
+
+  it('el día del partido propone el minuto de juego', async () => {
+    // Hoy a las 12:00 en Madrid; el partido empezó a las 11:30
+    vi.setSystemTime(new Date('2026-10-14T10:00:00Z'))
+    const enJuego = resumen('p1', '2026-10-14', 'SD Compostela', { hora: '11:30' })
+    conPartidos(senior26, [enJuego], [])
+    manejadores['GET /api/plantillas/p1/partidos/p1/notas'] = () => json([])
+    abrir('/plantillas/p1/partidos/p1')
+    await userEvent.click(await screen.findByRole('button', { name: 'Anotar' }))
+    expect(within(screen.getByRole('dialog')).getByLabelText(/Minuto/)).toHaveValue(30)
+  })
+})
+
+describe('minuto propuesto', () => {
+  const partido = { fecha: '2026-10-14', hora: '11:00' }
+  const a = (hora: string) => new Date(`2026-10-14T${hora}:00+02:00`)
+
+  it.each([
+    ['10:59', null],
+    ['11:00', 0],
+    ['11:44', 44],
+    ['11:50', 45],
+    ['12:00', 45],
+    ['12:01', 46],
+    ['12:35', 80],
+    ['13:30', 90],
+    ['14:01', null],
+  ])('a las %s, %s', (hora, esperado) => {
+    expect(minutoPropuesto(partido, a(hora))).toBe(esperado)
+  })
+
+  it('sin hora u otro día, ninguno', () => {
+    expect(minutoPropuesto({ ...partido, hora: null }, a('11:30'))).toBeNull()
+    expect(minutoPropuesto({ ...partido, fecha: '2026-10-13' }, a('11:30'))).toBeNull()
   })
 })

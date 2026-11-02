@@ -810,3 +810,60 @@
   color: var(--color-texto-suave);
   font-size: var(--texto-sm);
 }
+
+/* Notas del partido (GH-149): como la línea de tiempo, con el texto completo y su autor */
+.nota {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espacio-2);
+  min-height: var(--altura-tactil);
+  padding: var(--espacio-2) var(--espacio-2) var(--espacio-2) var(--espacio-4);
+}
+
+.nota + .nota {
+  border-top: 1px solid var(--color-borde);
+}
+
+.nota .minuto,
+.nota .iconoEvento {
+  margin-top: 2px;
+}
+
+.nota[data-tipo="incidencia"] .iconoEvento {
+  color: var(--color-aviso);
+}
+
+.textoNota {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+
+.textoNota p {
+  margin: 0;
+}
+
+.autorNota {
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
+}
+
+.areaTexto {
+  display: grid;
+  gap: var(--espacio-1);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
+}
+
+.areaTexto textarea {
+  padding: var(--espacio-2) var(--espacio-3);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-m);
+  background: var(--color-superficie);
+  color: var(--color-texto);
+  font: inherit;
+  font-size: var(--texto-base);
+  font-weight: var(--peso-normal);
+  resize: vertical;
+}

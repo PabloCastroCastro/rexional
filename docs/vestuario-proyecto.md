@@ -507,6 +507,19 @@ Horario semanal de entrenos de una plantilla (uno por plantilla).
 | creado_por | uuid → user | set null |
 | created_at | timestamptz | orden de la lista |
 
+### notas_partido
+Notas del cuerpo técnico durante el partido (GH-149). Solo las ve y gestiona el delegado o superior: van en sus propias rutas, no en el detalle del partido.
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| partido_id | uuid → partidos | cascade; como mucho 200 por partido (lo controla la API) |
+| tipo | enum | `tactica`, `incidencia`, `otra` |
+| texto | text | no vacío, hasta 1000 caracteres |
+| minuto | smallint | opcional, 0–150; la lista va por minuto y las que no tienen, al final |
+| autor_id | uuid → user | set null |
+| created_at, updated_at | timestamptz | |
+
 ### motivos_multa
 | Campo | Tipo | Notas |
 |---|---|---|
@@ -742,7 +755,7 @@ Una issue está terminada cuando: cumple sus criterios de aceptación en el ento
 | 3 · Convocatorias | Partidos, convocados y mensaje de WhatsApp | v1.0.0 |
 | 4 · Multas | Catálogo, registro, cobro, deudas y caja. Paridad con el MVP y primer despliegue en el servidor | v1.0.0 |
 | 5 · Personalización y temporadas | Escudo y colores por club, y cambio de temporada | en parte en v1.1.0, con GH-101 y GH-102; el resto, pendiente |
-| 6 · Estadísticas | Resultado, participaciones, eventos, estadísticas de temporada y trayectoria de cada jugador | v1.1.0; después se añadieron GH-151, GH-153 y GH-155, hechas, y GH-134, GH-147, GH-149 y GH-154, pendientes |
+| 6 · Estadísticas | Resultado, participaciones, eventos, estadísticas de temporada y trayectoria de cada jugador | v1.1.0; después se añadieron GH-134, GH-149, GH-151, GH-153 y GH-155, hechas, y GH-147 y GH-154, pendientes |
 | 7 · Planificación de entrenos | Biblioteca de ejercicios con fotos y vídeos, y sesiones planificadas | v1.2.0 |
 | 8 · Operación | Backups automáticos, restauración, logs y actualizaciones | en parte en v1.2.0, con GH-45 y GH-46; el resto, pendiente |
 | 9 · Exportar y compartir | Exportar y compartir sesiones y multas en PDF o texto y asistencia desde WhatsApp | v1.3.0, prevista |
@@ -779,7 +792,7 @@ Versión publicada en los ciclos ya cerrados y prevista en el resto. Los ciclos 
 | Ciclo 3 · Convocatorias | Partidos, convocados y mensaje de WhatsApp (v1.0.0) |
 | Ciclo 4 · Multas | Catálogo, registro, cobro, deudas y caja. Paridad con el MVP y primer despliegue en el servidor (v1.0.0) |
 | Ciclo 5 · Personalización y temporadas | Escudo y colores por club, y cambio de temporada (en parte en v1.1.0, con GH-101 y GH-102; el resto, pendiente) |
-| Ciclo 6 · Estadísticas | Resultado, participaciones, eventos, estadísticas de temporada y trayectoria de cada jugador (v1.1.0; después se añadieron GH-151, GH-153 y GH-155, hechas, y GH-134, GH-147, GH-149 y GH-154, pendientes) |
+| Ciclo 6 · Estadísticas | Resultado, participaciones, eventos, estadísticas de temporada y trayectoria de cada jugador (v1.1.0; después se añadieron GH-134, GH-149, GH-151, GH-153 y GH-155, hechas, y GH-147 y GH-154, pendientes) |
 | Ciclo 7 · Planificación de entrenos | Biblioteca de ejercicios con fotos y vídeos, y sesiones planificadas (v1.2.0) |
 | Ciclo 8 · Operación | Backups automáticos, restauración, logs y actualizaciones (en parte en v1.2.0, con GH-45 y GH-46; el resto, pendiente) |
 | Ciclo 9 · Exportar y compartir | Exportar y compartir sesiones y multas en PDF o texto y asistencia desde WhatsApp (v1.3.0, prevista) |

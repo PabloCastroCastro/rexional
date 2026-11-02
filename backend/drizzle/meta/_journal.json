@@ -92,6 +92,13 @@
       "when": 1793639943611,
       "tag": "0012_videos_partido",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793646270506,
+      "tag": "0013_notas_partido",
+      "breakpoints": true
     }
   ]
 }
