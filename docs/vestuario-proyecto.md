@@ -1455,7 +1455,7 @@ Con los goles del rival guardados por su minuto (GH-151) se sabe qué goles entr
 - [ ] Un gol en el mismo minuto de un cambio cuenta para quien sale, no para quien entra
 - [ ] Los partidos con goles en contra sin minuto (sin acta y sin registrar a mano) no cuentan para este dato, y la tabla lo indica
 - [ ] En Partidos → Estadísticas, la clasificación «Goles en contra»: minutos, goles encajados en el campo y por cada 90 minutos, de menos a más; sin mínimo de minutos
-- [ ] El rol jugador ve la clasificación del equipo y lo suyo, como el resto de estadísticas; no se añade a la ficha del jugador
+- [ ] El rol jugador no ve la clasificación, como el resto: lo suyo sale en «Tus estadísticas»; no se añade a la ficha del jugador
 - [ ] Tests
 
 #### GH-154
@@ -1481,7 +1481,7 @@ Cuánto entrena cada jugador para los minutos que juega: minutos jugados entre e
 - [ ] `GET /api/plantillas/:id/estadisticas` devuelve, por jugador, los entrenamientos de la plantilla a los que ha ido (asistencia `asiste`), hasta hoy
 - [ ] En Partidos → Estadísticas, la clasificación «Minutos por entreno»: minutos, entrenos y minutos por entreno, de más a menos; sin mínimo de minutos
 - [ ] Quien no ha ido a ningún entreno sale con «—» y al final; si la plantilla no tiene asistencia registrada, la tabla lo indica
-- [ ] El rol jugador ve la clasificación del equipo y lo suyo, como el resto de estadísticas; no se añade a la ficha del jugador
+- [ ] El rol jugador no ve la clasificación, como el resto: lo suyo sale en «Tus estadísticas»; no se añade a la ficha del jugador
 - [ ] Tests
 
 ---
