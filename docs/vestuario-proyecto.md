@@ -732,7 +732,7 @@ Una issue está terminada cuando: cumple sus criterios de aceptación en el ento
 | 3 · Convocatorias | Partidos, convocados y mensaje de WhatsApp | v1.0.0 |
 | 4 · Multas | Catálogo, registro, cobro, deudas y caja. Paridad con el MVP y primer despliegue en el servidor | v1.0.0 |
 | 5 · Personalización y temporadas | Escudo y colores por club, y cambio de temporada | en parte en v1.1.0, con GH-101 y GH-102; el resto, pendiente |
-| 6 · Estadísticas | Resultado, participaciones, eventos, estadísticas de temporada y trayectoria de cada jugador | v1.1.0; GH-134 y GH-151 se añadieron después, pendientes |
+| 6 · Estadísticas | Resultado, participaciones, eventos, estadísticas de temporada y trayectoria de cada jugador | v1.1.0; GH-134, GH-151, GH-153 y GH-154 se añadieron después, pendientes |
 | 7 · Planificación de entrenos | Biblioteca de ejercicios con fotos y vídeos, y sesiones planificadas | v1.2.0 |
 | 8 · Operación | Backups automáticos, restauración, logs y actualizaciones | en parte en v1.2.0, con GH-45 y GH-46; el resto, pendiente |
 | 9 · Exportar y compartir | Exportar y compartir sesiones y multas en PDF o texto y asistencia desde WhatsApp | v1.3.0, prevista |
@@ -769,7 +769,7 @@ Versión publicada en los ciclos ya cerrados y prevista en el resto. Los ciclos 
 | Ciclo 3 · Convocatorias | Partidos, convocados y mensaje de WhatsApp (v1.0.0) |
 | Ciclo 4 · Multas | Catálogo, registro, cobro, deudas y caja. Paridad con el MVP y primer despliegue en el servidor (v1.0.0) |
 | Ciclo 5 · Personalización y temporadas | Escudo y colores por club, y cambio de temporada (en parte en v1.1.0, con GH-101 y GH-102; el resto, pendiente) |
-| Ciclo 6 · Estadísticas | Resultado, participaciones, eventos, estadísticas de temporada y trayectoria de cada jugador (v1.1.0; GH-134 y GH-151 se añadieron después, pendientes) |
+| Ciclo 6 · Estadísticas | Resultado, participaciones, eventos, estadísticas de temporada y trayectoria de cada jugador (v1.1.0; GH-134, GH-151, GH-153 y GH-154 se añadieron después, pendientes) |
 | Ciclo 7 · Planificación de entrenos | Biblioteca de ejercicios con fotos y vídeos, y sesiones planificadas (v1.2.0) |
 | Ciclo 8 · Operación | Backups automáticos, restauración, logs y actualizaciones (en parte en v1.2.0, con GH-45 y GH-46; el resto, pendiente) |
 | Ciclo 9 · Exportar y compartir | Exportar y compartir sesiones y multas en PDF o texto y asistencia desde WhatsApp (v1.3.0, prevista) |
@@ -1442,7 +1442,34 @@ Al confirmar el acta (GH-37) se leen los goles del rival con su minuto, pero sol
 - [ ] Script de una sola vez para los partidos ya registrados con acta: vuelve a leer el PDF guardado y añade sus `gol_rival` sin tocar el resto de estadísticas; se puede repetir sin duplicar y tiene un modo que solo enseña lo que haría
 - [ ] Migración y tests
 
-Fuera de esta issue: apuntar a mano un gol del rival en los partidos sin acta y mostrar en la app los goles encajados en el campo por jugador.
+Fuera de esta issue: apuntar a mano un gol del rival en los partidos sin acta (GH-154) y mostrar en la app los goles encajados en el campo por jugador (GH-153).
+
+#### GH-153
+**Título:** Goles encajados con cada jugador en el campo
+**Etiquetas:** feature, backend, frontend
+
+Con los goles del rival guardados por su minuto (GH-151) se sabe qué goles entraron con cada jugador en el campo. Mostrarlo en la app, junto al resto de estadísticas de la temporada. Depende de GH-151.
+
+**Criterios de aceptación**
+- [ ] `GET /api/plantillas/:id/estadisticas` y la trayectoria del jugador devuelven los goles encajados con el jugador en el campo (`gol_rival` y `gol_propia` de los nuestros cuyo minuto cae en su tramo) y cuántos partidos los tienen con minuto
+- [ ] Un gol en el mismo minuto de un cambio cuenta para quien sale, no para quien entra
+- [ ] Los partidos con goles en contra sin minuto (sin acta y sin registrar a mano) no cuentan para este dato, y la pantalla lo indica
+- [ ] En la pantalla de estadísticas de temporada (GH-35), una tabla de goles encajados en el campo y por cada 90 minutos, ordenable; también en la ficha de estadísticas del jugador
+- [ ] El rol jugador solo ve los suyos, como el resto de estadísticas
+- [ ] Tests
+
+#### GH-154
+**Título:** Apuntar a mano los goles del rival
+**Etiquetas:** feature, frontend
+
+En un partido sin acta, los goles del rival solo quedan en el resultado. Poder apuntarlos a mano con su minuto desde la pantalla del partido, como el resto de eventos. Depende de GH-151.
+
+**Criterios de aceptación**
+- [ ] En «Añadir» de la pantalla del partido (GH-34), la opción «Gol del rival» con el minuto y sin jugador; delegado o superior
+- [ ] El aviso de goles por asignar cuenta también los goles en contra sin registrar
+- [ ] No se pueden apuntar más goles en contra de los que dice el resultado (ya lo valida la API desde GH-151)
+- [ ] Se borran desde la línea de tiempo como cualquier evento
+- [ ] Tests
 
 ---
 
