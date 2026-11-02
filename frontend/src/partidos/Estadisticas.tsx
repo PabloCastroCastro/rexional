@@ -9,25 +9,45 @@ import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
 import {
   type EstadisticasJugador,
   type EstadisticasPlantilla,
+  minutosPorEntreno,
   resumenEstadisticas,
+  textoPorEntreno,
   useEstadisticas,
 } from './datos'
 import estilos from './Partidos.module.css'
 
 // Estadísticas de la temporada (solo partidos jugados): resultados del equipo y clasificaciones de
-// goleadores, asistencias, minutos y tarjetas. Un jugador ve las del equipo y las suyas.
+// goleadores, asistencias, minutos, minutos por entreno y tarjetas. Un jugador ve las del equipo y
+// las suyas.
 
-type Tabla = 'goles' | 'asistencias' | 'minutos' | 'tarjetas'
+type Tabla = 'goles' | 'asistencias' | 'minutos' | 'porEntreno' | 'tarjetas'
 const TABLAS: { tabla: Tabla; texto: string; vacio: string }[] = [
   { tabla: 'goles', texto: 'Goleadores', vacio: 'Nadie ha marcado todavía.' },
   { tabla: 'asistencias', texto: 'Asistencias', vacio: 'Todavía no hay asistencias.' },
   { tabla: 'minutos', texto: 'Minutos', vacio: 'Todavía no hay minutos registrados.' },
+  {
+    tabla: 'porEntreno',
+    texto: 'Minutos por entreno',
+    vacio: 'Todavía no se ha pasado lista en ningún entreno.',
+  },
   { tabla: 'tarjetas', texto: 'Tarjetas', vacio: 'Ninguna tarjeta. ¡Así da gusto!' },
 ]
 
-// Valor por el que se ordena cada tabla: en tarjetas, una roja pesa más que cualquier amarilla
-const valor = (j: EstadisticasJugador, tabla: Tabla) =>
-  tabla === 'tarjetas' ? j.rojas * 100 + j.amarillas : j[tabla]
+// Valor por el que se ordena cada tabla: en tarjetas, una roja pesa más que cualquier amarilla; en
+// minutos por entreno, quien no ha ido a ningún entreno va al final
+function valor(j: EstadisticasJugador, tabla: Tabla) {
+  if (tabla === 'tarjetas') return j.rojas * 100 + j.amarillas
+  if (tabla === 'porEntreno') return minutosPorEntreno(j) ?? -1
+  return j[tabla]
+}
+
+// Quién sale en cada tabla: en minutos por entreno, quien ha jugado o ha entrenado, y solo si se ha
+// pasado lista alguna vez
+function enTabla(jugadores: EstadisticasJugador[], tabla: Tabla) {
+  if (tabla !== 'porEntreno') return jugadores.filter((j) => valor(j, tabla) > 0)
+  if (!jugadores.some((j) => j.entrenos > 0)) return []
+  return jugadores.filter((j) => j.minutos > 0 || j.entrenos > 0)
+}
 
 export function Estadisticas() {
   const plantilla = usePlantillaActiva()
@@ -92,9 +112,9 @@ function Clasificaciones({ jugadores }: { jugadores: EstadisticasJugador[] }) {
   const plantilla = usePlantillaActiva()
   const [tabla, setTabla] = useState<Tabla>('goles')
   const actual = TABLAS.find((t) => t.tabla === tabla) ?? TABLAS[0]
-  const lista = jugadores
-    .filter((j) => valor(j, tabla) > 0)
-    .sort((a, b) => valor(b, tabla) - valor(a, tabla) || a.nombre.localeCompare(b.nombre, 'es'))
+  const lista = enTabla(jugadores, tabla).sort(
+    (a, b) => valor(b, tabla) - valor(a, tabla) || a.nombre.localeCompare(b.nombre, 'es'),
+  )
 
   return (
     <section className={estilos.seccion} aria-labelledby="clasificaciones">
@@ -125,6 +145,12 @@ function Clasificaciones({ jugadores }: { jugadores: EstadisticasJugador[] }) {
               >
                 {nombreCompleto(j)}
                 {!j.activo && <span className={estilos.secundario}> · baja</span>}
+                {tabla === 'porEntreno' && (
+                  <span className={estilos.secundario}>
+                    {' '}
+                    · {j.minutos}' en {j.entrenos === 1 ? '1 entreno' : `${j.entrenos} entrenos`}
+                  </span>
+                )}
               </Link>
               <span className={estilos.valorClasificacion}>
                 {tabla === 'tarjetas' ? (
@@ -146,6 +172,8 @@ function Clasificaciones({ jugadores }: { jugadores: EstadisticasJugador[] }) {
                   </>
                 ) : tabla === 'minutos' ? (
                   `${j.minutos}'`
+                ) : tabla === 'porEntreno' ? (
+                  textoPorEntreno(j)
                 ) : (
                   j[tabla]
                 )}
@@ -165,6 +193,12 @@ function Mias({ jugador }: { jugador: EstadisticasJugador | undefined }) {
       <p className={estilos.secundario}>
         {jugador ? resumenEstadisticas(jugador) : 'No tienes ficha en esta plantilla.'}
       </p>
+      {jugador && jugador.entrenos > 0 && (
+        <p className={estilos.secundario}>
+          {textoPorEntreno(jugador)} minutos por entreno ({jugador.minutos}' en{' '}
+          {jugador.entrenos === 1 ? '1 entreno' : `${jugador.entrenos} entrenos`})
+        </p>
+      )}
     </section>
   )
 }

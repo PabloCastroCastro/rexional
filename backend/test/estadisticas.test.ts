@@ -424,6 +424,33 @@ describe('estadísticas acumuladas', () => {
     const sinJugar = await partidoConvocado([1], 'senior25', '2025-10-12')
     await evento(sinJugar, { jugadorId: J(1), tipo: 'gol', minuto: 5 }, 'senior25')
 
+    // Entrenos: J1 va a los dos y J2 a uno; una falta o una ausencia justificada no cuentan
+    for (const [fecha, estadoJ2] of [
+      ['2025-10-01', 'asiste'],
+      ['2025-10-03', 'justificada'],
+    ]) {
+      const entreno = await pedir('POST', `/plantillas/${ids.senior25}/entrenos`, 'delegado', {
+        fecha,
+      })
+      const { id } = await entreno.json()
+      const lista = await pedir(
+        'PUT',
+        `/plantillas/${ids.senior25}/entrenos/${id}/asistencias`,
+        'delegado',
+        {
+          asistencias: [
+            { jugadorId: J(1), estado: 'asiste' },
+            {
+              jugadorId: J(2),
+              estado: estadoJ2,
+              motivo: estadoJ2 === 'justificada' ? 'Estudios' : undefined,
+            },
+          ],
+        },
+      )
+      expect(lista.status).toBe(200)
+    }
+
     const res = await pedir('GET', `/plantillas/${ids.senior25}/estadisticas`, 'delegado')
     expect(res.status).toBe(200)
     const datos = await res.json()
@@ -442,6 +469,7 @@ describe('estadísticas acumuladas', () => {
         titularidades: 1,
         minutos: 90,
         goles: 2,
+        entrenos: 2,
       }),
       expect.objectContaining({
         nombre: 'J2',
@@ -449,6 +477,7 @@ describe('estadísticas acumuladas', () => {
         asistencias: 1,
         amarillas: 1,
         goles: 0,
+        entrenos: 1,
       }),
     ])
 

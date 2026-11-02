@@ -3149,7 +3149,7 @@ export interface paths {
         };
         /**
          * Estadísticas de la temporada
-         * @description Resultados del equipo y, por jugador, partidos, titularidades, minutos, goles, asistencias y tarjetas en los partidos jugados de la plantilla. El rol jugador solo ve su fila.
+         * @description Resultados del equipo y, por jugador, partidos, titularidades, minutos, goles, asistencias y tarjetas en los partidos jugados de la plantilla, y los entrenos a los que ha ido. El rol jugador solo ve su fila.
          */
         get: {
             parameters: {
@@ -6596,6 +6596,8 @@ export interface components {
             rojas: number;
             /** @description Goles en propia puerta */
             golesPropia: number;
+            /** @description Entrenos de la plantilla a los que ha ido (solo se pasa lista hasta hoy) */
+            entrenos: number;
         };
         TrayectoriaEstadisticas: {
             /** Format: uuid */

@@ -25,6 +25,7 @@ const fila = (
   amarillas: 0,
   rojas: 0,
   golesPropia: 0,
+  entrenos: 0,
   ...datos,
 })
 
@@ -80,6 +81,35 @@ describe('estadísticas de la temporada', () => {
     )
   })
 
+  it('minutos por entreno: de más a menos, sin mínimo de minutos y sin entrenos al final', async () => {
+    conEstadisticas(senior26, {
+      ...ESTADISTICAS,
+      jugadores: [
+        fila('j1', 'Íker', 1, { partidos: 6, minutos: 540, entrenos: 29 }),
+        fila('j2', 'Brais', 7, { partidos: 5, minutos: 340, entrenos: 9 }),
+        fila('j3', 'Zoe', 9, { partidos: 1, minutos: 40, entrenos: 0 }),
+        fila('j4', 'Noa', 13, { entrenos: 15 }),
+        // Ni juega ni entrena: no sale
+        fila('j5', 'Leo', 20),
+      ],
+    })
+    abrir('/plantillas/p1/partidos?ver=estadisticas')
+    await userEvent.click(await screen.findByRole('button', { name: 'Minutos por entreno' }))
+    expect(filas('Minutos por entreno')).toEqual([
+      "7Dorsal 7Brais · 340' en 9 entrenos37,8",
+      "1Dorsal 1Íker · 540' en 29 entrenos18,6",
+      "13Dorsal 13Noa · 0' en 15 entrenos0,0",
+      "9Dorsal 9Zoe · 40' en 0 entrenos—",
+    ])
+  })
+
+  it('minutos por entreno sin haber pasado lista lo explica', async () => {
+    conEstadisticas()
+    abrir('/plantillas/p1/partidos?ver=estadisticas')
+    await userEvent.click(await screen.findByRole('button', { name: 'Minutos por entreno' }))
+    expect(screen.getByText('Todavía no se ha pasado lista en ningún entreno.')).toBeInTheDocument()
+  })
+
   it('sin partidos jugados lo explica', async () => {
     conEstadisticas(senior26, {
       equipo: { jugados: 0, ganados: 0, empatados: 0, perdidos: 0, golesFavor: 0, golesContra: 0 },
@@ -92,11 +122,12 @@ describe('estadísticas de la temporada', () => {
   it('un jugador ve los resultados y las suyas', async () => {
     conEstadisticas(plantilla('p1', 'Senior', '2026-27', { rol: 'jugador', esAdminClub: false }), {
       ...ESTADISTICAS,
-      jugadores: [ESTADISTICAS.jugadores[1] as EstadisticasJugador],
+      jugadores: [{ ...(ESTADISTICAS.jugadores[1] as EstadisticasJugador), entrenos: 20 }],
     })
     abrir('/plantillas/p1/partidos?ver=estadisticas')
     const mias = await screen.findByRole('region', { name: 'Tus estadísticas' })
     expect(mias).toHaveTextContent("5 partidos (4 de titular) · 410' · 2 goles · 3 amarillas")
+    expect(mias).toHaveTextContent("20,5 minutos por entreno (410' en 20 entrenos)")
     expect(screen.queryByRole('button', { name: 'Goleadores' })).not.toBeInTheDocument()
   })
 })
