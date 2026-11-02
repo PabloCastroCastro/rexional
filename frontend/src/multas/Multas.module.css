@@ -302,3 +302,27 @@
 .total[data-tipo="caja"] strong {
   color: var(--color-exito);
 }
+
+/* Fila de botones alineada a la izquierda (la de los formularios, .acciones, va a la derecha) */
+.botones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-2);
+}
+
+/* Hoja de exportar: el informe en PDF y el mensaje para WhatsApp */
+.exportar {
+  display: grid;
+  gap: var(--espacio-6);
+}
+
+.exportar h3 {
+  margin: 0;
+  font-size: var(--texto-base);
+}
+
+.fechas {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--espacio-3);
+}

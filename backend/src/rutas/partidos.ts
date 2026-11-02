@@ -26,9 +26,11 @@ import {
   participaciones,
   partidos,
   tipoEvento,
+  videosPartido,
 } from '../db/schema/index.js'
 import { ErrorApi, EsquemaError, validacionFallida } from '../errores.js'
 import { hoy, textoDia } from '../fechas.js'
+import { borrarCarpeta, carpetaDePartido } from '../medios/almacen.js'
 import { type EnvPlantilla, requireRol } from '../permisos.js'
 import {
   EsquemaFecha,
@@ -121,6 +123,13 @@ export const EsquemaPartido = z
       .object({ nombreArchivo: z.string(), tamano: z.int(), subidaEn: z.string() })
       .nullable()
       .openapi({ description: 'La ficha del partido en PDF, si se ha subido' }),
+    videos: z
+      .array(
+        z
+          .object({ id: z.uuid(), url: z.string(), titulo: z.string().nullable() })
+          .openapi('VideoPartido'),
+      )
+      .openapi({ description: 'Enlaces al vídeo del partido, por orden de alta (GH-134)' }),
   })
   .openapi('Partido')
 
@@ -212,11 +221,17 @@ export async function detallePartido(plantillaId: string, partidoId: string) {
     })
     .from(actasPartido)
     .where(eq(actasPartido.partidoId, partido.id))
+  const videos = await db
+    .select({ id: videosPartido.id, url: videosPartido.url, titulo: videosPartido.titulo })
+    .from(videosPartido)
+    .where(eq(videosPartido.partidoId, partido.id))
+    .orderBy(asc(videosPartido.createdAt), asc(videosPartido.id))
   return {
     ...partido,
     jugadores: filas,
     eventos,
     acta: acta ? { ...acta, subidaEn: acta.subidaEn.toISOString() } : null,
+    videos,
   }
 }
 
@@ -425,7 +440,7 @@ export const rutasPartidos = () =>
         path: '/plantillas/{id}/partidos/{pid}',
         tags: ['Partidos'],
         summary: 'Borrar un partido',
-        description: 'Delegado o superior. Borra también su convocatoria.',
+        description: 'Delegado o superior. Borra también su convocatoria y su planificación.',
         middleware: [requireRol('delegado')] as const,
         request: { params: ParamPartido },
         responses: { 204: { description: 'Partido borrado' }, ...errores },
@@ -437,6 +452,8 @@ export const rutasPartidos = () =>
           .where(and(eq(partidos.id, pid), eq(partidos.plantillaId, c.var.plantilla.id)))
           .returning({ id: partidos.id })
         if (borrados.length === 0) throw noEncontrado()
+        // Los archivos de su planificación (GH-147)
+        await borrarCarpeta(carpetaDePartido(c.var.plantilla.id, pid))
         return c.body(null, 204)
       },
     )

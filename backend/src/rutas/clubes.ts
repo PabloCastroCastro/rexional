@@ -204,7 +204,7 @@ export const rutasClubes = () =>
         path: '/clubes/{cid}/admins',
         tags: ['Clubes'],
         summary: 'Añadir un administrador',
-        description: 'El usuario debe existir. Las invitaciones por email llegan en el ciclo 9.',
+        description: 'El usuario debe existir. Las invitaciones por email llegan en el ciclo 10.',
         middleware: [requireAdminClub()] as const,
         request: {
           params: ParamClub,

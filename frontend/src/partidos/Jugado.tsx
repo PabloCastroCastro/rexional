@@ -32,7 +32,7 @@ type Evento = Partido['eventos'][number]
 type NuevoEvento = { jugadorId: string | null; tipo: Evento['tipo']; minuto: number | null }
 
 // Guarda un cambio del partido y deja el detalle al día con la respuesta
-function useCambioPartido(partido: Partido) {
+export function useCambioPartido(partido: Partido) {
   const plantilla = usePlantillaActiva()
   const cliente = useQueryClient()
   return async (peticion: Promise<Partido>) => {
@@ -128,6 +128,8 @@ function textoEvento(e: Evento, nombre: (id: string | null) => string) {
       return e.jugadorId
         ? `Gol en propia de ${nombre(e.jugadorId)}`
         : 'Gol en propia puerta del rival'
+    case 'gol_rival':
+      return 'Gol del rival'
   }
 }
 
@@ -139,6 +141,7 @@ const ICONOS: Record<Evento['tipo'], typeof Goal> = {
   entra: ArrowUpRight,
   sale: ArrowDownLeft,
   gol_propia: Goal,
+  gol_rival: Goal,
 }
 
 function LineaTiempo({ partido, gestiona }: { partido: Partido; gestiona: boolean }) {

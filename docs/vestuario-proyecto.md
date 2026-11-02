@@ -286,7 +286,7 @@ Móvil / PC (Tailscale)
 - Sirve la PWA con redirección de rutas a `index.html`, compresión y caché: larga para los recursos con hash, sin caché para `index.html` y el service worker.
 - Redirige `/api` al backend, conservando las cabeceras `Range` para los vídeos y la IP real del cliente (`X-Forwarded-For`, `X-Forwarded-Proto`).
 - `client_max_body_size` acorde al límite de subida de vídeo (por defecto nginx admite solo 1 MB).
-- HTTPS con los certificados montados como volumen: de Tailscale en la fase inicial y de Let's Encrypt (certbot) en el ciclo 10.
+- HTTPS con los certificados montados como volumen: de Tailscale en la fase inicial y de Let's Encrypt (certbot) en el ciclo 11.
 - Cabeceras de seguridad y limitación de peticiones (`limit_req`) para el login y las invitaciones.
 - Configuración parametrizada por variables de entorno mediante las plantillas de la imagen oficial (`/etc/nginx/templates`).
 
@@ -324,7 +324,7 @@ Cada entorno es un clon del repositorio con su `.env`, su nombre de proyecto de 
 
 - **Fase inicial:** Tailscale instalado en el servidor (fuera de Docker) y en los dispositivos del entrenador. Acceso solo desde la red privada, con HTTPS mediante certificado de Tailscale (necesario para instalar la PWA). El certificado se genera en el servidor con `tailscale cert`, se monta en el contenedor de nginx y un cron lo renueva y recarga nginx, porque caduca a los 90 días.
 - Si en el servidor ya hay otro nginx ocupando los puertos 80/443, el proxy de cada entorno escucha en su propio puerto (p. ej. 8443 pruebas y 9443 producción).
-- **Fase final (ciclo 10):** servidor separado y bastionado, red aislada, cortafuegos, dominio (DuckDNS), apertura de puertos 80/443 en el router hacia nginx y certificados de Let's Encrypt obtenidos y renovados con certbot.
+- **Fase final (ciclo 11):** servidor separado y bastionado, red aislada, cortafuegos, dominio (DuckDNS), apertura de puertos 80/443 en el router hacia nginx y certificados de Let's Encrypt obtenidos y renovados con certbot.
 
 ### 5.4 Despliegue y copias de seguridad
 
@@ -481,8 +481,8 @@ Horario semanal de entrenos de una plantilla (uno por plantilla).
 |---|---|---|
 | id | uuid | PK |
 | partido_id | uuid → partidos | cascade |
-| jugador_id | uuid | FK compuesta `(partido_id, jugador_id) → convocados`, cascade. Solo puede faltar en `gol_propia` (gol en propia puerta del rival a nuestro favor) |
-| tipo | enum `gol, asistencia, amarilla, roja, entra, sale, gol_propia` | `gol_propia` con jugador = gol en propia de uno de los nuestros; sin jugador = gol en propia del rival |
+| jugador_id | uuid | FK compuesta `(partido_id, jugador_id) → convocados`, cascade. Puede faltar en `gol_propia` (gol en propia puerta del rival a nuestro favor) y falta siempre en `gol_rival` |
+| tipo | enum `gol, asistencia, amarilla, roja, entra, sale, gol_propia, gol_rival` | `gol_propia` con jugador = gol en propia de uno de los nuestros; sin jugador = gol en propia del rival. `gol_rival` = gol en contra, sin jugador, para saber su minuto (GH-151) |
 | minuto | smallint | opcional, 0–150 |
 | origen | enum `manual, acta, federacion` | fuente del dato; por defecto manual |
 | created_at | timestamptz | |
@@ -496,6 +496,44 @@ Horario semanal de entrenos de una plantilla (uno por plantilla).
 | tamano | integer | bytes, entre 1 y 2 MB |
 | subida_por | uuid → user | set null |
 | subida_en | timestamptz | |
+
+### videos_partido
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| partido_id | uuid → partidos | cascade; como mucho 10 por partido (lo controla la API) |
+| url | text | solo `http` o `https`; el vídeo está fuera de la app (GH-134) |
+| titulo | text | opcional, no vacío; p. ej. «1ª parte» |
+| creado_por | uuid → user | set null |
+| created_at | timestamptz | orden de la lista |
+
+### notas_partido
+Notas del cuerpo técnico durante el partido (GH-149). Solo las ve y gestiona el delegado o superior: van en sus propias rutas, no en el detalle del partido.
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| partido_id | uuid → partidos | cascade; como mucho 200 por partido (lo controla la API) |
+| tipo | enum | `tactica`, `incidencia`, `otra` |
+| texto | text | no vacío, hasta 1000 caracteres |
+| minuto | smallint | opcional, 0–150; la lista va por minuto y las que no tienen, al final |
+| autor_id | uuid → user | set null |
+| created_at, updated_at | timestamptz | |
+
+### archivos_partido
+Planificación de un partido (GH-147): la charla, el plan táctico, el rival… Solo la ve y gestiona el delegado o superior, en sus propias rutas. El archivo va en el volumen `uploads`, en `partidos/<plantilla>/<partido>/`: al borrar el partido o la plantilla se borra la carpeta.
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| partido_id | uuid → partidos | cascade; como mucho 10 por partido (lo controla la API) |
+| titulo | text | opcional, no vacío; sin título se ve el nombre original |
+| nombre_original | text | no vacío; solo para mostrarlo y como nombre al descargarlo |
+| archivo | text | ruta en el volumen, con nombre generado |
+| mime | text | `application/pdf` (el PDF tal cual) o `image/webp` (la foto, reducida a 1920 px y sin metadatos) |
+| tamano_bytes | integer | > 0; el máximo es el de las fotos (`MAX_FOTO_MB`, 15 MB por defecto) |
+| subido_por | uuid → user | set null |
+| created_at | timestamptz | orden de la lista |
 
 ### motivos_multa
 | Campo | Tipo | Notas |
@@ -586,7 +624,7 @@ Horario semanal de entrenos de una plantilla (uno por plantilla).
 | duracion_min | smallint | |
 | indicaciones | text | |
 
-### invitaciones (ciclo 9)
+### invitaciones (ciclo 10)
 | Campo | Tipo | Notas |
 |---|---|---|
 | id | uuid | PK |
@@ -681,7 +719,7 @@ Pasar lista y convocar se guardan como lista completa en una sola petición.
 - Configuración: datos de la plantilla, plantillas y administradores del club y nombre del club (ciclo 1); escudo y colores con vista previa y asistente de temporada nueva (ciclo 5).
 - Partido jugado (ciclo 6): resultado, titulares, registro de eventos por minuto.
 - Estadísticas (ciclo 6): tablas de la temporada de la plantilla y trayectoria de cada jugador.
-- Miembros e invitaciones (ciclo 9).
+- Miembros e invitaciones (ciclo 10).
 
 **Criterios transversales:** diseño adaptable (móvil primero), foco visible y navegación por teclado, respeto a `prefers-reduced-motion`, modo claro/oscuro, estados vacíos que invitan a actuar, mensajes de error que indican qué pasó y cómo resolverlo.
 
@@ -727,16 +765,20 @@ Una issue está terminada cuando: cumple sus criterios de aceptación en el ento
 
 | Ciclo | Objetivo | Versión |
 |---|---|---|
-| 1 · Base y plantilla | Tres proyectos funcionando, login, clubes, plantillas por temporada, selector de plantilla, jugadores y CI | v0.1.0 |
-| 2 · Entrenos | Pasar lista, historial y porcentaje de asistencia | v0.2.0 |
-| 3 · Convocatorias | Partidos, convocados y mensaje de WhatsApp | v0.3.0 |
+| 1 · Base y plantilla | Tres proyectos funcionando, login, clubes, plantillas por temporada, selector de plantilla, jugadores y CI | v1.0.0 |
+| 2 · Entrenos | Pasar lista, historial y porcentaje de asistencia | v1.0.0 |
+| 3 · Convocatorias | Partidos, convocados y mensaje de WhatsApp | v1.0.0 |
 | 4 · Multas | Catálogo, registro, cobro, deudas y caja. Paridad con el MVP y primer despliegue en el servidor | v1.0.0 |
-| 5 · Personalización y temporadas | Escudo y colores por club, y cambio de temporada | v1.1.0 |
-| 6 · Estadísticas | Resultado, participaciones, eventos, estadísticas de temporada y trayectoria de cada jugador | v1.2.0 |
-| 7 · Planificación de entrenos | Biblioteca de ejercicios con fotos y vídeos, y sesiones planificadas | v1.3.0 |
-| 8 · Operación | Backups automáticos, restauración, logs, actualizaciones | v1.4.0 |
-| 9 · Roles en uso | Invitaciones, delegados y jugadores | v1.5.0 |
-| 10 · Exposición pública | Servidor aislado, red, cortafuegos, dominio y HTTPS público | v2.0.0 |
+| 5 · Personalización y temporadas | Escudo y colores por club, y cambio de temporada | en parte en v1.1.0, con GH-101 y GH-102; el resto, pendiente |
+| 6 · Estadísticas | Resultado, participaciones, eventos, estadísticas de temporada y trayectoria de cada jugador | v1.1.0; después se añadieron GH-134, GH-147, GH-149, GH-151, GH-153 y GH-155, en v1.3.0, y GH-154, pendiente |
+| 7 · Planificación de entrenos | Biblioteca de ejercicios con fotos y vídeos, y sesiones planificadas | v1.2.0 |
+| 8 · Operación | Backups automáticos, restauración, logs y actualizaciones | en parte en v1.2.0, con GH-45 y GH-46; el resto, pendiente |
+| 9 · Exportar y compartir | Exportar y compartir sesiones y multas en PDF o texto y asistencia desde WhatsApp | en parte en v1.3.0, con GH-131 y GH-132; el resto, pendiente |
+| 10 · Roles en uso | Invitaciones, delegados y jugadores | v1.4.0, prevista |
+| 11 · Exposición pública | Servidor aislado, red, cortafuegos, dominio y HTTPS público | v2.0.0, prevista |
+| 12 · Asistente de ejercicios | Claves de API, diagrama táctico del ejercicio y generación de imágenes, animación y PDF en el servidor | v2.1.0, prevista |
+
+Versión publicada en los ciclos ya cerrados y prevista en el resto. Los ciclos 1 a 3 no tuvieron release propia: se publicaron juntos en la v1.0.0. Lo que queda abierto de un ciclo ya publicado sale en la release siguiente a terminarlo.
 
 ---
 
@@ -760,16 +802,18 @@ Una issue está terminada cuando: cumple sus criterios de aceptación en el ento
 
 | Título | Descripción |
 |---|---|
-| Ciclo 1 · Base y plantilla | Tres proyectos funcionando, login, clubes, plantillas por temporada, selector de plantilla, jugadores y CI (v0.1.0) |
-| Ciclo 2 · Entrenos | Pasar lista, historial y porcentaje de asistencia (v0.2.0) |
-| Ciclo 3 · Convocatorias | Partidos, convocados y mensaje de WhatsApp (v0.3.0) |
+| Ciclo 1 · Base y plantilla | Tres proyectos funcionando, login, clubes, plantillas por temporada, selector de plantilla, jugadores y CI (v1.0.0) |
+| Ciclo 2 · Entrenos | Pasar lista, historial y porcentaje de asistencia (v1.0.0) |
+| Ciclo 3 · Convocatorias | Partidos, convocados y mensaje de WhatsApp (v1.0.0) |
 | Ciclo 4 · Multas | Catálogo, registro, cobro, deudas y caja. Paridad con el MVP y primer despliegue en el servidor (v1.0.0) |
-| Ciclo 5 · Personalización y temporadas | Escudo y colores por club, y cambio de temporada (v1.1.0) |
-| Ciclo 6 · Estadísticas | Resultado, participaciones, eventos, estadísticas de temporada y trayectoria de cada jugador (v1.2.0) |
-| Ciclo 7 · Planificación de entrenos | Biblioteca de ejercicios con fotos y vídeos, y sesiones planificadas (v1.3.0) |
-| Ciclo 8 · Operación | Backups automáticos, restauración, logs y actualizaciones (v1.4.0) |
-| Ciclo 9 · Roles en uso | Invitaciones, delegados y jugadores (v1.5.0) |
-| Ciclo 10 · Exposición pública | Servidor aislado, red, cortafuegos, dominio y HTTPS público (v2.0.0) |
+| Ciclo 5 · Personalización y temporadas | Escudo y colores por club, y cambio de temporada (en parte en v1.1.0, con GH-101 y GH-102; el resto, pendiente) |
+| Ciclo 6 · Estadísticas | Resultado, participaciones, eventos, estadísticas de temporada y trayectoria de cada jugador (v1.1.0; después se añadieron GH-134, GH-147, GH-149, GH-151, GH-153 y GH-155, en v1.3.0, y GH-154, pendiente) |
+| Ciclo 7 · Planificación de entrenos | Biblioteca de ejercicios con fotos y vídeos, y sesiones planificadas (v1.2.0) |
+| Ciclo 8 · Operación | Backups automáticos, restauración, logs y actualizaciones (en parte en v1.2.0, con GH-45 y GH-46; el resto, pendiente) |
+| Ciclo 9 · Exportar y compartir | Exportar y compartir sesiones y multas en PDF o texto y asistencia desde WhatsApp (en parte en v1.3.0, con GH-131 y GH-132; el resto, pendiente) |
+| Ciclo 10 · Roles en uso | Invitaciones, delegados y jugadores (v1.4.0, prevista) |
+| Ciclo 11 · Exposición pública | Servidor aislado, red, cortafuegos, dominio y HTTPS público (v2.0.0, prevista) |
+| Ciclo 12 · Asistente de ejercicios | Claves de API, diagrama táctico del ejercicio y generación de imágenes, animación y PDF en el servidor (v2.1.0, prevista) |
 
 ### 11.3 Issues
 
@@ -1237,12 +1281,11 @@ Comprobar que la aplicación cubre todo lo que hacía el MVP inicial antes de pu
 **Título:** API de configuración visual del club
 **Etiquetas:** feature, backend
 
-Depende de GH-7.
+Depende de GH-7. Ya existe `PATCH /api/clubes/:cid` para el nombre (solo administradores del club), y los colores ya se guardan con valores por defecto y se incluyen en `GET /api/plantillas`.
 
 **Criterios de aceptación**
-- [ ] `PATCH /api/clubes/:cid` acepta `nombre`, `color_principal` y `color_secundario`, con los colores validados como hex
-- [ ] Solo para administradores del club
-- [ ] Los datos visuales del club se incluyen en `GET /api/plantillas` para aplicar el tema sin peticiones adicionales
+- [ ] `PATCH /api/clubes/:cid` acepta también `colorPrincipal` y `colorSecundario`, validados como hex
+- [ ] Se pueden restablecer los colores por defecto
 - [ ] Tests
 
 #### GH-28
@@ -1253,6 +1296,7 @@ Depende de GH-7.
 
 **Criterios de aceptación**
 - [ ] `PUT /api/clubes/:cid/escudo` (solo administradores del club) con multipart; solo PNG y WebP, comprobando el contenido real y no solo la extensión
+- [ ] Reutiliza el servicio de medios de GH-39 (almacenamiento, comprobación del tipo real y procesado con `sharp`), sin un segundo sistema de subidas
 - [ ] Tamaño máximo configurable; imagen redimensionada y normalizada en el servidor
 - [ ] Guardado en el volumen `uploads` con nombre generado; el anterior se elimina
 - [ ] Servido con caché y cabeceras adecuadas
@@ -1393,17 +1437,6 @@ Depende de GH-33.
 - [ ] Resultados de la temporada de la plantilla (ganados, empatados, perdidos, goles)
 - [ ] Trayectoria del jugador por temporadas en su vista
 
-#### GH-36
-**Título:** Propuesta de multa al registrar una tarjeta
-**Etiquetas:** feature, backend, frontend
-
-Depende de GH-24 y GH-33.
-
-**Criterios de aceptación**
-- [ ] Al registrar una amarilla o roja, la app propone los motivos activos del catálogo con ese `tipo_evento`; si no hay ninguno, no propone nada
-- [ ] El entrenador confirma, edita o descarta; nunca se crea sola
-- [ ] La multa queda vinculada al evento (`evento_id`); al borrar el evento se avisa de la multa asociada
-
 #### GH-37
 **Título:** Importación desde la ficha del partido (PDF)
 **Etiquetas:** feature, db, backend, frontend
@@ -1420,6 +1453,102 @@ Subir al partido la ficha en PDF que publica la Federación Gallega y registrar 
 - [ ] Confirmar registra con la fuente `acta`: la convocatoria pasa a ser la del acta, y se guardan resultado, participaciones con minutos y eventos; competición y lugar se rellenan si estaban vacíos. Volver a confirmar sustituye lo importado antes
 - [ ] Pantalla de revisión: subir el PDF, ver lo leído, elegir los jugadores sin emparejar, corregir el tipo de tarjeta y confirmar
 - [ ] Tests con una ficha de ejemplo
+
+#### GH-134
+**Título:** Enlaces de vídeo en los partidos
+**Etiquetas:** feature, db, backend, frontend
+
+Algunos partidos se graban: enlazar el vídeo (YouTube, Drive…) con el partido. Enlazar cada evento (goles, cambios) con su minuto del vídeo queda para otra issue, cuando se vea cómo se usa.
+
+**Criterios de aceptación**
+- [ ] Uno o varios enlaces por partido (p. ej. primera y segunda parte), con título opcional; solo URLs http o https
+- [ ] Añadir, editar y quitar desde la pantalla del partido (GH-34), delegado o superior; los ve cualquier miembro de la plantilla
+- [ ] El enlace se abre fuera de la app
+- [ ] Migración y tests
+- [ ] Anotado en la issue qué haría falta para saltar al minuto de cada evento (YouTube admite `?t=`) y si compensa
+
+#### GH-151
+**Título:** Guardar los goles del rival con su minuto
+**Etiquetas:** feature, db, backend
+
+Al confirmar el acta (GH-37) se leen los goles del rival con su minuto, pero solo se guardan los goles en propia puerta de los nuestros: el resto se descarta y del partido solo queda el total `goles_contra`. Sin el minuto no se puede saber cuántos goles encaja cada jugador mientras está en el campo.
+
+**Criterios de aceptación**
+- [ ] Nuevo tipo de evento `gol_rival`, sin jugador y con el minuto; el gol en propia de uno de los nuestros sigue siendo `gol_propia` con jugador
+- [ ] Validación del partido: los `gol_rival` más los goles en propia de los nuestros no superan `goles_contra`
+- [ ] Al confirmar un acta se guardan sus goles del rival con la fuente `acta`
+- [ ] Script de una sola vez para los partidos ya registrados con acta: vuelve a leer el PDF guardado y añade sus `gol_rival` sin tocar el resto de estadísticas; se puede repetir sin duplicar y tiene un modo que solo enseña lo que haría
+- [ ] Migración y tests
+
+Fuera de esta issue: apuntar a mano un gol del rival en los partidos sin acta (GH-154) y mostrar en la app los goles encajados en el campo por jugador (GH-153).
+
+#### GH-153
+**Título:** Goles encajados con cada jugador en el campo
+**Etiquetas:** feature, backend, frontend
+
+Con los goles del rival guardados por su minuto (GH-151) se sabe qué goles entraron con cada jugador en el campo. Mostrarlo como una clasificación más en las estadísticas de la temporada (GH-35). Depende de GH-151.
+
+**Criterios de aceptación**
+- [ ] `GET /api/plantillas/:id/estadisticas` devuelve, por jugador, los goles encajados con él en el campo (`gol_rival` y `gol_propia` de los nuestros cuyo minuto cae en su tramo)
+- [ ] Un gol en el mismo minuto de un cambio cuenta para quien sale, no para quien entra
+- [ ] Los partidos con goles en contra sin minuto (sin acta y sin registrar a mano) no cuentan para este dato, y la tabla lo indica
+- [ ] En Partidos → Estadísticas, la clasificación «Goles en contra»: minutos, goles encajados en el campo y por cada 90 minutos, de menos a más; sin mínimo de minutos
+- [ ] El rol jugador no ve la clasificación, como el resto: lo suyo sale en «Tus estadísticas»; no se añade a la ficha del jugador
+- [ ] Tests
+
+#### GH-154
+**Título:** Apuntar a mano los goles del rival
+**Etiquetas:** feature, frontend
+
+En un partido sin acta, los goles del rival solo quedan en el resultado. Poder apuntarlos a mano con su minuto desde la pantalla del partido, como el resto de eventos. Depende de GH-151.
+
+**Criterios de aceptación**
+- [ ] En «Añadir» de la pantalla del partido (GH-34), la opción «Gol del rival» con el minuto y sin jugador; delegado o superior
+- [ ] El aviso de goles por asignar cuenta también los goles en contra sin registrar
+- [ ] No se pueden apuntar más goles en contra de los que dice el resultado (ya lo valida la API desde GH-151)
+- [ ] Se borran desde la línea de tiempo como cualquier evento
+- [ ] Tests
+
+#### GH-155
+**Título:** Minutos jugados por entrenamiento
+**Etiquetas:** feature, backend, frontend
+
+Cuánto entrena cada jugador para los minutos que juega: minutos jugados entre entrenamientos a los que ha ido. Una clasificación más en las estadísticas de la temporada (GH-35).
+
+**Criterios de aceptación**
+- [ ] `GET /api/plantillas/:id/estadisticas` devuelve, por jugador, los entrenamientos de la plantilla a los que ha ido (asistencia `asiste`), hasta hoy
+- [ ] En Partidos → Estadísticas, la clasificación «Minutos por entreno»: minutos, entrenos y minutos por entreno, de más a menos; sin mínimo de minutos
+- [ ] Quien no ha ido a ningún entreno sale con «—» y al final; si la plantilla no tiene asistencia registrada, la tabla lo indica
+- [ ] El rol jugador no ve la clasificación, como el resto: lo suyo sale en «Tus estadísticas»; no se añade a la ficha del jugador
+- [ ] Tests
+
+#### GH-147
+**Título:** Planificación de partidos
+**Etiquetas:** feature, db, backend, frontend
+
+Subir al partido los archivos con su planificación (la charla, el plan táctico, el rival…) para tenerlos a mano antes y durante el partido.
+
+**Criterios de aceptación**
+- [ ] Uno o varios archivos por partido, con título opcional: PDF o imagen, con un tamaño máximo como el de las fotos de los ejercicios
+- [ ] Subir, renombrar y quitar desde la pantalla del partido (GH-34), delegado o superior
+- [ ] Solo el cuerpo técnico los ve y descarga; el rol jugador no
+- [ ] Al borrar el partido se borran sus archivos
+- [ ] Migración y tests
+
+#### GH-149
+**Título:** Anotaciones del partido
+**Etiquetas:** feature, db, backend, frontend
+
+Apuntar en el partido, mientras se juega, notas sobre detalles tácticos, incidencias u otras cosas, para revisarlas después.
+
+**Criterios de aceptación**
+- [ ] Cada nota tiene texto libre, un tipo (táctica, incidencia u otra), un minuto opcional, quién la escribió y cuándo
+- [ ] Botón «Anotar» en la pantalla del partido (GH-34), rápido de usar durante el partido: campo de texto, tipo y minuto propuesto
+- [ ] Las notas se listan aparte de la línea de tiempo de goles, cambios y tarjetas, ordenadas por minuto
+- [ ] Solo el cuerpo técnico (delegado o superior) las crea, edita, borra y ve; el rol jugador no las ve
+- [ ] Migración y tests
+
+Fuera de esta issue: anotar sin conexión (se envían al recuperarla) y saltar desde una nota al minuto del vídeo (GH-134).
 
 ---
 
@@ -1553,7 +1682,7 @@ Crear de una vez todos los partidos de la temporada a partir del calendario en P
 Depende de GH-13; sustituye a su copia provisional.
 
 **Criterios de aceptación**
-- [ ] `pg_dump` diario de producción y copia incremental del volumen `uploads` (escudos, fotos y vídeos de ejercicios)
+- [ ] `pg_dump` diario de producción y copia incremental del volumen `uploads` (escudos, fotos y vídeos de ejercicios, planificación de los partidos)
 - [ ] Rotación: 7 diarias, 4 semanales y 6 mensuales
 - [ ] Copia fuera del servidor (disco externo u otra máquina de la red): el PC se trae las copias cada día por Tailscale
 - [ ] Aviso si una copia falla (en el registro de las copias, por decisión del usuario)
@@ -1572,22 +1701,23 @@ Depende de GH-45.
 
 #### GH-47
 **Título:** Logs estructurados y rotación
-**Etiquetas:** feature, infra, backend
+**Etiquetas:** feature, backend, infra
+
+Casi todo está hecho desde GH-4: logs en JSON con pino (`backend/src/logger.ts`), una línea por petición con método, ruta, estado y duración, sin cuerpos, cabeceras ni parámetros de consulta (`backend/src/peticiones.ts`), y el healthcheck a nivel `debug`. Los estáticos los sirve nginx. La rotación de logs de los contenedores está configurada en los compose (`max-size: 10m`).
 
 **Criterios de aceptación**
-- [ ] Logs del backend en JSON con nivel, ruta, estado y duración, sin datos sensibles
-- [ ] Rotación de logs de los contenedores configurada
-- [ ] Comando documentado para consultar errores recientes
+- [ ] Comando documentado en `docs/operacion.md` para consultar los errores y avisos recientes del backend en el servidor (por entorno), y los de nginx
 
 #### GH-48
 **Título:** Mantenimiento y actualizaciones
 **Etiquetas:** feature, infra, seguridad
 
-**Criterios de aceptación**
-- [ ] Dependabot para dependencias npm, imágenes Docker y GitHub Actions, con pull requests contra `develop`
-- [ ] Imágenes base con versión fijada
-- [ ] Procedimiento documentado para actualizar PostgreSQL de versión mayor
+Las imágenes base ya tienen fijada la versión mayor (`node:24-alpine`, `postgres:18-alpine`, `nginx-unprivileged:1.30-alpine`).
 
+**Criterios de aceptación**
+- [ ] Dependabot para npm (los tres proyectos), imágenes Docker y GitHub Actions, con pull requests agrupadas contra `develop`
+- [ ] Decidido y aplicado el nivel de fijación de las imágenes base (versión menor o digest), de modo que Dependabot proponga las actualizaciones
+- [ ] Procedimiento documentado para actualizar PostgreSQL de versión mayor
 
 #### GH-120
 **Título:** Avisos de operación por Telegram
@@ -1607,7 +1737,79 @@ Hoy los fallos de las copias y el aviso de poco disco solo quedan en el registro
 
 ---
 
-### Milestone: Ciclo 9 · Roles en uso
+### Milestone: Ciclo 9 · Exportar y compartir
+
+#### GH-131
+**Título:** Exportar la sesión de entrenamiento en PDF
+**Etiquetas:** feature, backend, frontend
+
+Poder imprimir o compartir (por WhatsApp u otras vías) el plan de un entreno. Es la primera issue que genera PDF en el servidor: deja el motor común que reutilizarán GH-132 (multas) y GH-137 (ficha del ejercicio). Importar sesiones queda en GH-139.
+
+**Criterios de aceptación**
+- [ ] Motor de PDF común en el backend (librería por decidir, p. ej. `pdfkit` o `pdfmake`): cabecera con el nombre, el escudo si lo hay y los colores del club, y pie con la fecha de generación
+- [ ] `GET /api/plantillas/:id/entrenos/:eid/plan.pdf`: fecha, hora de inicio y de fin, objetivo, notas y los ejercicios en orden con duración, indicaciones, material y la miniatura de su primera foto; duración total
+- [ ] Mismo permiso de lectura que el plan del entreno
+- [ ] En la sesión planificada (GH-43): botón «Compartir PDF» que usa la Web Share API con el archivo en el móvil y lo descarga si el navegador no la admite
+- [ ] Legible impreso en A4 y en blanco y negro
+- [ ] Tests: el PDF se genera y contiene los textos del plan
+
+#### GH-132
+**Título:** Exportar el estado de las multas
+**Etiquetas:** feature, backend, frontend
+
+Informe de lo que ha pagado y lo que debe cada jugador, para compartirlo por WhatsApp u otras vías o imprimirlo. Reutiliza el motor de PDF de GH-131.
+
+**Criterios de aceptación**
+- [ ] PDF de la plantilla: por jugador, total de multas, pagado y pendiente; totales de la caja. Opción de detalle con cada multa (fecha, motivo, importe y si está pagada)
+- [ ] Rango de fechas, por defecto la temporada
+- [ ] Resumen en texto para WhatsApp (deudas por jugador), como el mensaje de convocatoria de GH-21, para pegarlo en el grupo sin adjuntar archivos
+- [ ] Botón «Compartir» con la Web Share API (PDF o texto) y descarga o copiar como alternativa
+- [ ] Permisos según la visibilidad de la sección 3: el informe con todos los jugadores solo para quien ve todas las deudas
+- [ ] Tests
+
+#### GH-133
+**Título:** Asistencia a los entrenos desde las encuestas de WhatsApp
+**Etiquetas:** investigacion
+
+La asistencia a los entrenos se pregunta con encuestas de WhatsApp en el grupo y después se pasa a mano. Investigar cómo llevar esas respuestas a la app sin teclearlas. El resultado es una propuesta y, si se aprueba, las issues para implementarla.
+
+**Criterios de aceptación**
+- [ ] Aclarado qué se quiere rellenar: la intención de ir (la respuesta a la encuesta, antes del entreno) o la asistencia real (pasar lista), y si la app necesita guardar la primera
+- [ ] Analizadas estas opciones, con ventajas, coste y riesgos:
+  - Importar el chat exportado de WhatsApp (`.txt`), si las encuestas y sus votos aparecen en él
+  - Bot sobre WhatsApp Web con librerías no oficiales: riesgo de bloqueo del número y va contra las condiciones de WhatsApp
+  - API oficial de WhatsApp Business: si admite grupos y encuestas, y su coste
+  - Sustituir la encuesta por un enlace a la app en el que cada jugador marca si va (necesita el rol jugador, GH-52) y la app prepara el resumen para el grupo
+- [ ] Prueba de concepto de la opción elegida, con datos inventados
+- [ ] Propuesta escrita en la issue y, si se aprueba, issues nuevas
+
+#### GH-145
+**Título:** Elegir si el mensaje y el informe de multas muestran la caja
+**Etiquetas:** feature, backend, frontend
+
+Continuación de GH-132. El mensaje de multas para WhatsApp y el informe en PDF muestran siempre lo que hay en caja (lo cobrado). En algunos equipos no interesa que todo el grupo vea ese dato, así que el delegado debería poder decidir si sale o no.
+
+**Criterios de aceptación**
+- [ ] Opción en la hoja «Exportar multas» para incluir o no lo que hay en caja, tanto en el mensaje como en el PDF (por defecto, incluido, como ahora)
+- [ ] Valorar si la elección se recuerda por plantilla (ajuste guardado) o basta con la casilla en cada exportación
+- [ ] Tests
+
+#### GH-148
+**Título:** Informe del jugador
+**Etiquetas:** feature, backend, frontend
+
+Un informe con todo lo de un jugador en la temporada, no solo los partidos: asistencia a los entrenos con sus faltas y ausencias justificadas, minutos, goles, tarjetas y multas. Aparte de la ficha del jugador, para no llenarla.
+
+**Criterios de aceptación**
+- [ ] Informe en PDF de un jugador y una plantilla, con el motor de PDF común (GH-131): partidos y estadísticas, asistencia (porcentaje, faltas y justificadas con su motivo) y multas
+- [ ] Se descarga o se comparte desde la ficha del jugador con el botón común de compartir; delegado o superior, y el jugador el suyo
+- [ ] Tests
+
+Por decidir al empezar: qué apartados entran y si también se hace el informe de toda la plantilla.
+
+---
+
+### Milestone: Ciclo 10 · Roles en uso
 
 #### GH-49
 **Título:** Modelo y API de invitaciones
@@ -1657,6 +1859,8 @@ Depende de GH-50.
 **Título:** Tests de la matriz de permisos
 **Etiquetas:** feature, backend, seguridad
 
+`backend/test/permisos.test.ts` ya cubre la sesión, el rol en `/plantillas/:id` y las rutas de club. Completarlo con la tabla de la sección 3 cuando existan las invitaciones y el rol jugador (GH-49 a GH-52).
+
 **Criterios de aceptación**
 - [ ] Test por cada fila de la tabla de la sección 3 y cada rol
 - [ ] Casos de acceso a una plantilla ajena y a datos de otro jugador
@@ -1665,7 +1869,7 @@ Depende de GH-50.
 
 ---
 
-### Milestone: Ciclo 10 · Exposición pública
+### Milestone: Ciclo 11 · Exposición pública
 
 #### GH-54
 **Título:** Servidor dedicado bastionado
@@ -1705,12 +1909,12 @@ Depende de GH-55.
 **Título:** HTTPS público y cabeceras de seguridad
 **Etiquetas:** feature, infra, seguridad
 
-Depende de GH-56.
+Depende de GH-56. `X-Content-Type-Options` y `Referrer-Policy` ya se envían (`proxy/templates/vestuario.inc.template`).
 
 **Criterios de aceptación**
 - [ ] nginx con certificado de Let's Encrypt obtenido con certbot (desafío HTTP-01 por el puerto 80) y renovación automática que recarga nginx
 - [ ] Redirección HTTP → HTTPS y HSTS
-- [ ] Cabeceras: Content-Security-Policy, X-Content-Type-Options, Referrer-Policy, Permissions-Policy
+- [ ] Cabeceras que faltan: Content-Security-Policy y Permissions-Policy
 - [ ] Calificación A o superior en una prueba externa de TLS
 
 #### GH-58
@@ -1722,6 +1926,7 @@ Depende de GH-56.
 - [ ] Bloqueo de IPs abusivas (CrowdSec o fail2ban) a partir de los logs de nginx
 - [ ] Revisión de dependencias con vulnerabilidades conocidas
 - [ ] Revisión de la configuración de cookies y CSRF para acceso público
+- [ ] Si ya existen las claves de API (GH-135): límite de peticiones, caducidad y que no aparezcan en los logs
 
 #### GH-59
 **Título:** Migración de producción al servidor público
@@ -1734,3 +1939,100 @@ Depende de GH-54 a GH-58.
 - [ ] Verificación completa de funcionalidades
 - [ ] Usuarios avisados del nuevo enlace y reinstalación de la PWA si cambia el dominio
 - [ ] Release `v2.0.0`
+
+---
+
+### Milestone: Ciclo 12 · Asistente de ejercicios
+
+#### GH-135
+**Título:** Claves de API para acceso externo
+**Etiquetas:** feature, db, backend, frontend, seguridad
+
+Que un programa externo (el MCP del asistente de ejercicios) pueda llamar a la API en nombre de un usuario sin su cookie de sesión. La clave actúa como su usuario: tiene sus mismos roles y clubes, y los permisos actuales (`requireRolEnClub`) no cambian.
+
+**Criterios de aceptación**
+- [ ] Plugin `apiKey` de Better Auth: una petición con `x-api-key` válida devuelve la sesión de su usuario en `getSession`
+- [ ] En la base de datos solo se guarda el hash; la clave completa se muestra una única vez al crearla
+- [ ] En el perfil: crear una clave con nombre y caducidad (por defecto 90 días), ver la lista con la fecha de último uso y revocarla
+- [ ] Una clave revocada o caducada responde 401 al momento
+- [ ] Límite de peticiones por clave
+- [ ] La clave no aparece en los logs (ni de la app ni de nginx)
+- [ ] nginx deja pasar la cabecera `x-api-key`
+- [ ] Tests: clave válida, revocada, caducada, de un usuario sin permiso en el club y de otro club
+- [ ] Documentado en `docs/operacion.md`: cómo crear una clave y usarla
+
+#### GH-136
+**Título:** Diagrama y datos tácticos del ejercicio
+**Etiquetas:** feature, db, backend, frontend
+
+Guardar en el ejercicio la disposición en el campo y sus pasos (la «ficha» del asistente de ejercicios) y los datos tácticos, para poder generar a partir de ellos imágenes, animación y PDF (GH-137). La categoría de edad no es un campo: se usa una etiqueta (por ejemplo `alevín`).
+
+**Criterios de aceptación**
+- [ ] Columna `diagrama` (jsonb, opcional) con un formato versionado (`version: 1`): campo en metros con origen abajo a la izquierda; elementos (jugador con equipo y etiqueta, cono, pica, balón, portería, miniportería, zona); pasos con movimientos (`pase`, `conduccion`, `desplazamiento`, `tiro`)
+- [ ] Significado de los pasos documentado: los movimientos de un paso son simultáneos, las posiciones se acumulan de un paso al siguiente, el pase y la conducción mueven el balón
+- [ ] Validación con Zod en la API, incluido que cada id usado en un paso exista en los elementos
+- [ ] Paleta de colores de equipo cerrada (nombre → color)
+- [ ] Campos nuevos opcionales: `objetivo` (texto), `organizacion` (texto), `reglas`, `puntos_clave` y `variantes` (listas de textos)
+- [ ] Un formato de versión antigua se sigue leyendo
+- [ ] Pantalla de biblioteca (GH-42): el formulario edita los campos nuevos y la ficha del ejercicio los muestra; el modo campo (GH-44) muestra los puntos clave
+- [ ] Migración, seed con un ejercicio con diagrama (rondo 4v2) y tests
+
+#### GH-137
+**Título:** Generar el diagrama, la animación y el PDF del ejercicio
+**Etiquetas:** feature, backend, frontend
+
+A partir del diagrama (GH-136), el servidor dibuja una imagen por paso, una animación y una ficha en PDF, con un estilo fijo. Así el asistente de ejercicios, o cualquier otro cliente, solo manda datos y no necesita instalar nada. Depende de GH-136. Conviene compartir el motor de PDF con la exportación de entrenos (#131).
+
+**Criterios de aceptación**
+- [ ] Imagen por paso: SVG dibujado en el servidor y convertido a PNG/WebP con `sharp`. Césped, líneas, conos, jugadores con color y etiqueta; flecha continua para el pase, discontinua para el desplazamiento y ondulada para la conducción
+- [ ] Animación MP4 con ffmpeg que interpola las posiciones entre pasos, en segundo plano y con el estado «procesando» de GH-39
+- [ ] PDF de la ficha: nombre, objetivo, datos rápidos, organización, reglas, diagramas por paso, puntos clave, variantes y QR al ejercicio en la app
+- [ ] Lo generado se guarda como medios del ejercicio, marcados como generados, y se rehace al cambiar el diagrama (sin tocar las fotos y vídeos subidos a mano)
+- [ ] En la ficha del ejercicio: botón «Descargar PDF» y aviso si lo generado está desactualizado
+- [ ] Lo generado se ve también en el modo campo (GH-44)
+- [ ] Tests: el SVG de un diagrama de ejemplo se compara con uno de referencia
+
+#### GH-150
+**Título:** Integración con biblioteca de ejercicios
+**Etiquetas:** investigacion
+
+Investigar si hay bibliotecas de ejercicios de fútbol disponibles (abiertas o con API) y si se pueden usar para traer ejercicios a la biblioteca del club (ciclo 7).
+
+**Criterios de aceptación**
+- [ ] Lista de bibliotecas o servicios encontrados, con qué ofrecen (texto, diagramas, vídeo), su formato y cómo se accede
+- [ ] Licencia y condiciones de uso de cada una: si se pueden copiar o solo enlazar
+- [ ] Recomendación anotada en la issue: si compensa integrar alguna, cómo (importar o enlazar) y en qué ciclo
+
+---
+
+### Sin milestone
+
+Issues aparcadas: no se retoman hasta que se decida.
+
+#### GH-36
+**Título:** Propuesta de multa al registrar una tarjeta
+**Etiquetas:** feature, backend, frontend
+
+Depende de GH-24 y GH-33.
+
+**Criterios de aceptación**
+- [ ] Al registrar una amarilla o roja, la app propone los motivos activos del catálogo con ese `tipo_evento`; si no hay ninguno, no propone nada
+- [ ] El entrenador confirma, edita o descarta; nunca se crea sola
+- [ ] La multa queda vinculada al evento (`evento_id`); al borrar el evento se avisa de la multa asociada
+
+#### GH-139
+**Título:** Importar una sesión de entrenamiento desde una plantilla
+**Etiquetas:** feature, backend, frontend
+
+Aparcada el 2026-10-20 (estaba en el ciclo 9): no convence una plantilla de Excel ni que no se puedan subir las imágenes de los ejercicios. Se retoma cuando surja la necesidad y esté más definido el alcance.
+
+Crear una sesión de entrenamiento y sus ejercicios a partir de un documento rellenado fuera de la app (sale de la parte de importar de GH-131).
+
+**Criterios de aceptación**
+- [ ] Formato de la plantilla decidido y documentado. Propuesta: hoja de cálculo (`.xlsx`) con los datos de la sesión arriba y una fila por ejercicio, más fiable de leer que un Word o un PDF
+- [ ] Plantilla descargable desde la app, con un ejemplo rellenado
+- [ ] Al subirla se ve una vista previa antes de crear nada: datos de la sesión, ejercicios que ya están en la biblioteca (por nombre, sin tildes ni mayúsculas) y los que se darán de alta
+- [ ] Errores por fila claros (duración no válida, categoría desconocida…), sin crear nada a medias
+- [ ] Al confirmar se crean en una transacción los ejercicios nuevos y el plan del entreno elegido; el archivo no se guarda
+- [ ] Delegado o superior
+- [ ] Tests con una plantilla de ejemplo (sin datos reales en el repositorio)

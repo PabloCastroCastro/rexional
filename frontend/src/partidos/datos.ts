@@ -146,3 +146,33 @@ export function resumenEstadisticas(e: {
     .filter(Boolean)
     .join(' · ')
 }
+
+// Minutos jugados por cada entreno al que ha ido (GH-155); null si no ha ido a ninguno
+export const minutosPorEntreno = (e: { minutos: number; entrenos: number }) =>
+  e.entrenos > 0 ? e.minutos / e.entrenos : null
+
+const unDecimal = new Intl.NumberFormat('es', {
+  minimumFractionDigits: 1,
+  maximumFractionDigits: 1,
+})
+
+// «37,8» o «—» si no ha ido a ningún entreno
+export const textoPorEntreno = (e: { minutos: number; entrenos: number }) => {
+  const valor = minutosPorEntreno(e)
+  return valor === null ? '—' : unDecimal.format(valor)
+}
+
+// Goles en contra con el jugador en el campo por cada 90 minutos (GH-153); null sin minutos con dato
+export const encajadosPor90 = (e: { golesEncajados: number; minutosConEncajados: number }) =>
+  e.minutosConEncajados > 0 ? (e.golesEncajados / e.minutosConEncajados) * 90 : null
+
+const dosDecimales = new Intl.NumberFormat('es', {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+})
+
+// «0,30» o «—» si no tiene minutos en partidos con el minuto de los goles en contra
+export const textoEncajados = (e: { golesEncajados: number; minutosConEncajados: number }) => {
+  const valor = encajadosPor90(e)
+  return valor === null ? '—' : dosDecimales.format(valor)
+}

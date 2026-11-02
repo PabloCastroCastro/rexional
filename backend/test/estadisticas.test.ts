@@ -417,12 +417,40 @@ describe('estadísticas acumuladas', () => {
       { jugadorId: J(2), tipo: 'asistencia', minuto: 10 },
       { jugadorId: J(1), tipo: 'gol', minuto: 50 },
       { jugadorId: J(2), tipo: 'amarilla', minuto: 55 },
+      { jugadorId: J(2), tipo: 'sale', minuto: 60 },
     ]) {
       expect((await evento(pid, e, 'senior25')).status).toBe(201)
     }
     // Otro partido sin jugar con un gol apuntado: no cuenta
     const sinJugar = await partidoConvocado([1], 'senior25', '2025-10-12')
     await evento(sinJugar, { jugadorId: J(1), tipo: 'gol', minuto: 5 }, 'senior25')
+
+    // Entrenos: J1 va a los dos y J2 a uno; una falta o una ausencia justificada no cuentan
+    for (const [fecha, estadoJ2] of [
+      ['2025-10-01', 'asiste'],
+      ['2025-10-03', 'justificada'],
+    ]) {
+      const entreno = await pedir('POST', `/plantillas/${ids.senior25}/entrenos`, 'delegado', {
+        fecha,
+      })
+      const { id } = await entreno.json()
+      const lista = await pedir(
+        'PUT',
+        `/plantillas/${ids.senior25}/entrenos/${id}/asistencias`,
+        'delegado',
+        {
+          asistencias: [
+            { jugadorId: J(1), estado: 'asiste' },
+            {
+              jugadorId: J(2),
+              estado: estadoJ2,
+              motivo: estadoJ2 === 'justificada' ? 'Estudios' : undefined,
+            },
+          ],
+        },
+      )
+      expect(lista.status).toBe(200)
+    }
 
     const res = await pedir('GET', `/plantillas/${ids.senior25}/estadisticas`, 'delegado')
     expect(res.status).toBe(200)
@@ -434,6 +462,8 @@ describe('estadísticas acumuladas', () => {
       perdidos: 0,
       golesFavor: 2,
       golesContra: 1,
+      // El gol en contra aún no tiene minuto
+      sinMinutoEnContra: 1,
     })
     expect(datos.jugadores).toEqual([
       expect.objectContaining({
@@ -442,6 +472,9 @@ describe('estadísticas acumuladas', () => {
         titularidades: 1,
         minutos: 90,
         goles: 2,
+        entrenos: 2,
+        golesEncajados: 0,
+        minutosConEncajados: 0,
       }),
       expect.objectContaining({
         nombre: 'J2',
@@ -449,7 +482,19 @@ describe('estadísticas acumuladas', () => {
         asistencias: 1,
         amarillas: 1,
         goles: 0,
+        entrenos: 1,
       }),
+    ])
+
+    // Con el minuto del gol en contra: le entra a J1, J2 ya había salido
+    expect((await evento(pid, { tipo: 'gol_rival', minuto: 70 }, 'senior25')).status).toBe(201)
+    const conMinuto = await (
+      await pedir('GET', `/plantillas/${ids.senior25}/estadisticas`, 'delegado')
+    ).json()
+    expect(conMinuto.equipo.sinMinutoEnContra).toBe(0)
+    expect(conMinuto.jugadores).toEqual([
+      expect.objectContaining({ nombre: 'J1', golesEncajados: 1, minutosConEncajados: 90 }),
+      expect.objectContaining({ nombre: 'J2', golesEncajados: 0, minutosConEncajados: 60 }),
     ])
 
     const suyas = await (

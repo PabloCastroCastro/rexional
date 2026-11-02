@@ -348,7 +348,7 @@ export interface paths {
         put?: never;
         /**
          * Añadir un administrador
-         * @description El usuario debe existir. Las invitaciones por email llegan en el ciclo 9.
+         * @description El usuario debe existir. Las invitaciones por email llegan en el ciclo 10.
          */
         post: {
             parameters: {
@@ -2373,7 +2373,7 @@ export interface paths {
         post?: never;
         /**
          * Borrar un partido
-         * @description Delegado o superior. Borra también su convocatoria.
+         * @description Delegado o superior. Borra también su convocatoria y su planificación.
          */
         delete: {
             parameters: {
@@ -3149,7 +3149,7 @@ export interface paths {
         };
         /**
          * Estadísticas de la temporada
-         * @description Resultados del equipo y, por jugador, partidos, titularidades, minutos, goles, asistencias y tarjetas en los partidos jugados de la plantilla. El rol jugador solo ve su fila.
+         * @description Resultados del equipo y, por jugador, partidos, titularidades, minutos, goles, asistencias y tarjetas en los partidos jugados de la plantilla, los entrenos a los que ha ido y los goles en contra con él en el campo. El rol jugador solo ve su fila.
          */
         get: {
             parameters: {
@@ -3637,6 +3637,856 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/plantillas/{id}/partidos/{pid}/videos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Añadir un vídeo
+         * @description Delegado o superior. Un enlace web (YouTube, Drive…) con título opcional; como mucho 10 por partido.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    pid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** Format: uri */
+                        url: string;
+                        titulo?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Vídeo añadido */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Partido"];
+                    };
+                };
+                /** @description Datos no válidos o demasiados vídeos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plantillas/{id}/partidos/{pid}/videos/{vid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Quitar un vídeo
+         * @description Delegado o superior. Quita el enlace; el vídeo sigue donde estuviera.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    pid: string;
+                    vid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Vídeo quitado */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Partido"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /**
+         * Cambiar un vídeo
+         * @description Delegado o superior. La URL o el título; un título vacío lo quita.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    pid: string;
+                    vid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** Format: uri */
+                        url?: string;
+                        titulo?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Vídeo cambiado */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Partido"];
+                    };
+                };
+                /** @description Datos no válidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/api/plantillas/{id}/partidos/{pid}/notas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Notas del partido
+         * @description Delegado o superior. Ordenadas por minuto; las que no tienen, al final.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    pid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Notas del partido */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["NotaPartido"][];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Anotar
+         * @description Delegado o superior. Como mucho 200 notas por partido.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    pid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        tipo: components["schemas"]["TipoNota"];
+                        texto: string;
+                        minuto?: number | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Nota añadida; devuelve todas las del partido */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["NotaPartido"][];
+                    };
+                };
+                /** @description Datos no válidos o demasiadas notas */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plantillas/{id}/partidos/{pid}/notas/{nid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Borrar una nota
+         * @description Delegado o superior, aunque la escribiera otro.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    pid: string;
+                    nid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Nota borrada; devuelve las que quedan */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["NotaPartido"][];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /**
+         * Cambiar una nota
+         * @description Delegado o superior, aunque la escribiera otro. El tipo, el texto o el minuto; un minuto null lo quita.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    pid: string;
+                    nid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        tipo?: components["schemas"]["TipoNota"];
+                        texto?: string;
+                        minuto?: number | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Nota cambiada; devuelve todas las del partido */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["NotaPartido"][];
+                    };
+                };
+                /** @description Datos no válidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/api/plantillas/{id}/partidos/{pid}/archivos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Planificación del partido
+         * @description Delegado o superior. Los archivos por orden de subida.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    pid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Archivos del partido */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ArchivoPartido"][];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Subir un archivo de planificación
+         * @description Delegado o superior. Cuerpo `multipart/form-data` con el archivo en `archivo` y, opcional, `titulo` (no se declara aquí: validarlo leería el cuerpo entero y la subida dejaría de ir en streaming). PDF o foto JPEG, PNG o WebP, con el límite de las fotos (por defecto 15 MB). El PDF se guarda tal cual; la foto, reducida, en WebP y sin metadatos. Como mucho 10 por partido.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    pid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Archivo subido; devuelve todos los del partido */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ArchivoPartido"][];
+                    };
+                };
+                /** @description Falta el archivo o hay demasiados */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Supera el límite */
+                413: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Tipo no admitido */
+                415: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plantillas/{id}/partidos/{pid}/archivos/{aid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Descargar un archivo de planificación
+         * @description Delegado o superior. Se sirve para abrirlo en el navegador (`inline`) con su nombre original.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    pid: string;
+                    aid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description El archivo */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/pdf": string;
+                        "image/webp": string;
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        /**
+         * Quitar un archivo
+         * @description Delegado o superior. Lo borra también del disco.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    pid: string;
+                    aid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Archivo quitado; devuelve los que quedan */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ArchivoPartido"][];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /**
+         * Cambiar el título de un archivo
+         * @description Delegado o superior. Un título vacío lo quita.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    pid: string;
+                    aid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        titulo: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Título cambiado; devuelve todos los del partido */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ArchivoPartido"][];
+                    };
+                };
+                /** @description Datos no válidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
         trace?: never;
     };
     "/api/clubes/{cid}/ejercicios": {
@@ -4566,6 +5416,75 @@ export interface paths {
                 };
             };
         };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plantillas/{id}/entrenos/{eid}/plan.pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Plan de un entreno en PDF
+         * @description Cualquier miembro. Para imprimirlo o compartirlo: fecha, horas, objetivo, notas y ejercicios con su miniatura, material, indicaciones y duración. Se genera al pedirlo, con el plan guardado.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    eid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description El PDF */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/pdf": string;
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -6019,6 +6938,155 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/plantillas/{id}/multas/informe.pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Informe de multas en PDF
+         * @description Delegado o superior. Totales y, por jugador (todos los de la plantilla, también sin multas), lo puesto, lo pagado y lo pendiente. Con `detalle=true`, cada multa. El rango filtra por la fecha de la multa; sin él, toda la temporada.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    desde?: string;
+                    hasta?: string;
+                    detalle?: "true" | "false";
+                };
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description El PDF */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/pdf": string;
+                    };
+                };
+                /** @description Rango no válido */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plantillas/{id}/multas/mensaje": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Mensaje de deudas para WhatsApp
+         * @description Delegado o superior. Quién debe hoy y cuánto, con lo pendiente y lo que hay en caja, con el formato de WhatsApp y el enlace wa.me para compartirlo.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Mensaje */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MensajeMultas"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -6308,6 +7376,8 @@ export interface components {
                 tamano: number;
                 subidaEn: string;
             } | null;
+            /** @description Enlaces al vídeo del partido, por orden de alta (GH-134) */
+            videos: components["schemas"]["VideoPartido"][];
         };
         JugadorConvocatoria: {
             /** Format: uuid */
@@ -6333,10 +7403,16 @@ export interface components {
              */
             jugadorId: string | null;
             /** @enum {string} */
-            tipo: "gol" | "asistencia" | "amarilla" | "roja" | "entra" | "sale" | "gol_propia";
+            tipo: "gol" | "asistencia" | "amarilla" | "roja" | "entra" | "sale" | "gol_propia" | "gol_rival";
             minuto: number | null;
             /** @enum {string} */
             origen: "manual" | "acta" | "federacion";
+        };
+        VideoPartido: {
+            /** Format: uuid */
+            id: string;
+            url: string;
+            titulo: string | null;
         };
         MensajeConvocatoria: {
             texto: string;
@@ -6347,7 +7423,7 @@ export interface components {
             /** Format: uuid */
             jugadorId?: string | null;
             /** @enum {string} */
-            tipo: "gol" | "asistencia" | "amarilla" | "roja" | "entra" | "sale" | "gol_propia";
+            tipo: "gol" | "asistencia" | "amarilla" | "roja" | "entra" | "sale" | "gol_propia" | "gol_rival";
             minuto?: number | null;
         };
         EstadisticasPlantilla: {
@@ -6358,6 +7434,8 @@ export interface components {
                 perdidos: number;
                 golesFavor: number;
                 golesContra: number;
+                /** @description Partidos jugados a los que les falta el minuto de algún gol en contra: no cuentan para los goles encajados */
+                sinMinutoEnContra: number;
             };
             jugadores: components["schemas"]["EstadisticasJugador"][];
         };
@@ -6378,6 +7456,12 @@ export interface components {
             rojas: number;
             /** @description Goles en propia puerta */
             golesPropia: number;
+            /** @description Entrenos de la plantilla a los que ha ido (solo se pasa lista hasta hoy) */
+            entrenos: number;
+            /** @description Goles en contra con el jugador en el campo, en los partidos con todos sus goles en contra con minuto */
+            golesEncajados: number;
+            /** @description Minutos jugados en esos mismos partidos: la base de los goles encajados por 90 */
+            minutosConEncajados: number;
         };
         TrayectoriaEstadisticas: {
             /** Format: uuid */
@@ -6470,6 +7554,33 @@ export interface components {
             minuto: number | null;
             /** @description A favor: gol en propia puerta del rival. En contra: de uno de los nuestros */
             enPropia: boolean;
+        };
+        NotaPartido: {
+            /** Format: uuid */
+            id: string;
+            tipo: components["schemas"]["TipoNota"];
+            texto: string;
+            minuto: number | null;
+            /** @description Nombre de quien la escribió */
+            autor: string | null;
+            /** Format: uuid */
+            autorId: string | null;
+            creadaEn: string;
+            editadaEn: string;
+        };
+        /** @enum {string} */
+        TipoNota: "tactica" | "incidencia" | "otra";
+        ArchivoPartido: {
+            /** Format: uuid */
+            id: string;
+            titulo: string | null;
+            nombreOriginal: string;
+            /** @enum {string} */
+            tipo: "pdf" | "imagen";
+            tamanoBytes: number;
+            /** @description Nombre de quien lo subió */
+            subidoPor: string | null;
+            subidoEn: string;
         };
         ResumenEjercicio: {
             /** Format: uuid */
@@ -6616,6 +7727,11 @@ export interface components {
             dorsal: number | null;
             pendienteCentimos: number;
             multasPendientes: number;
+        };
+        MensajeMultas: {
+            texto: string;
+            /** @example https://wa.me/?text=… */
+            whatsapp: string;
         };
     };
     responses: never;

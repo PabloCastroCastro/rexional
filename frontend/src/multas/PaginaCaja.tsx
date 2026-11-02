@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { ChevronRight, Coins, HandCoins, Plus } from 'lucide-react'
+import { ChevronRight, Coins, FileDown, HandCoins, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { api, datos } from '../api/cliente'
@@ -12,16 +12,19 @@ import { nombreCompleto } from '../jugadores/datos'
 import { Dorsal } from '../jugadores/PaginaPlantilla'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
 import { CLAVE_MULTAS, euros, type ResumenMultas, useResumenMultas } from './datos'
+import { ExportarMultas } from './ExportarMultas'
 import { FormularioMulta } from './FormularioMulta'
 import estilos from './Multas.module.css'
 
 type Deuda = ResumenMultas['deudas'][number]
 
-// Caja de la plantilla: lo pendiente, lo cobrado y quién debe, con la acción de saldar
+// Caja de la plantilla: lo pendiente, lo cobrado y quién debe, con la acción de saldar y la de
+// exportar (PDF y mensaje para WhatsApp)
 export function PaginaCaja() {
   const plantilla = usePlantillaActiva()
   const resumen = useResumenMultas(plantilla.id)
   const [poniendo, setPoniendo] = useState(false)
+  const [exportando, setExportando] = useState(false)
 
   if (resumen.isPending) return <Cargando />
   if (resumen.isError) {
@@ -46,9 +49,18 @@ export function PaginaCaja() {
         </p>
       </div>
 
-      <Boton icono={<Plus aria-hidden size={18} />} onClick={() => setPoniendo(true)}>
-        Poner multa
-      </Boton>
+      <div className={estilos.botones}>
+        <Boton icono={<Plus aria-hidden size={18} />} onClick={() => setPoniendo(true)}>
+          Poner multa
+        </Boton>
+        <Boton
+          variante="secundario"
+          icono={<FileDown aria-hidden size={18} />}
+          onClick={() => setExportando(true)}
+        >
+          Exportar
+        </Boton>
+      </div>
 
       <section className={estilos.seccion} aria-labelledby="deudas">
         <h2 id="deudas">Quién debe</h2>
@@ -70,6 +82,7 @@ export function PaginaCaja() {
       </section>
 
       <FormularioMulta abierta={poniendo} alCerrar={() => setPoniendo(false)} />
+      <ExportarMultas abierta={exportando} alCerrar={() => setExportando(false)} />
     </>
   )
 }

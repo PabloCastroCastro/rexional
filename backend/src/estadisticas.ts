@@ -60,6 +60,24 @@ export function calcularMinutos(lista: Participacion[], eventos: Evento[]) {
   )
 }
 
+// Goles en contra con cada participante en el campo (GH-153): los del rival y los de los nuestros en
+// propia puerta. Un gol en el minuto de un cambio cuenta para quien sale, no para quien entra. null
+// si el partido no tiene todos sus goles en contra con minuto: entonces no se puede saber.
+export function calcularEncajados(lista: Participacion[], eventos: Evento[], golesContra: number) {
+  const enContra = eventos.filter(
+    (e) => e.tipo === 'gol_rival' || (e.tipo === 'gol_propia' && e.jugadorId !== null),
+  )
+  if (enContra.length !== golesContra || enContra.some((e) => e.minuto === null)) return null
+  return new Map(
+    lista.map((p) => {
+      const t = tramo(p, eventos)
+      if (!t) return [p.jugadorId, 0]
+      const enCampo = (m: number) => (t.inicio === 0 ? m >= 0 : m > t.inicio) && m <= t.fin
+      return [p.jugadorId, enContra.filter((e) => enCampo(e.minuto ?? -1)).length]
+    }),
+  )
+}
+
 // El primer problema del partido en conjunto, o null si todo cuadra
 export function comprobar(datos: DatosEstadisticas, convocadosPartido: Set<string>): string | null {
   const { resultado, participaciones: lista, eventos } = datos
@@ -72,6 +90,10 @@ export function comprobar(datos: DatosEstadisticas, convocadosPartido: Set<strin
   if (lista.filter((p) => p.titular).length > 11) return 'No puede haber más de 11 titulares'
 
   for (const e of eventos) {
+    if (e.tipo === 'gol_rival') {
+      if (e.jugadorId !== null) return 'Un gol del rival no lleva jugador'
+      continue
+    }
     if (e.jugadorId === null) {
       if (e.tipo !== 'gol_propia') return 'Falta el jugador del evento'
       continue
@@ -136,6 +158,10 @@ export function comprobar(datos: DatosEstadisticas, convocadosPartido: Set<strin
   }
   if (resultado && enPropia > resultado.golesContra) {
     return `Hay ${enPropia} goles en propia puerta y el resultado dice ${resultado.golesContra} en contra`
+  }
+  const enContra = enPropia + cuantos((e) => e.tipo === 'gol_rival')
+  if (resultado && enContra > resultado.golesContra) {
+    return `Hay ${enContra} goles en contra registrados y el resultado dice ${resultado.golesContra}`
   }
   return null
 }

@@ -97,3 +97,14 @@ export function centimosDe(texto: string): number | null {
 
 // 550 → "5,50" para el campo del importe
 export const textoImporte = (centimos: number) => (centimos / 100).toFixed(2).replace('.', ',')
+
+// Quién debe hoy, como mensaje para WhatsApp; solo se pide al abrir la hoja de exportar
+export const useMensajeMultas = (plantillaId: string, activa: boolean) =>
+  useQuery({
+    queryKey: [...CLAVE_MULTAS, plantillaId, 'mensaje'],
+    queryFn: () =>
+      datos(
+        api.GET('/api/plantillas/{id}/multas/mensaje', { params: { path: { id: plantillaId } } }),
+      ),
+    enabled: activa,
+  })

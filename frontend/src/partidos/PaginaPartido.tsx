@@ -27,7 +27,10 @@ import { CLAVE_PARTIDOS, type Partido, textoLocal, usePartido } from './datos'
 import { FormularioPartido } from './FormularioPartido'
 import { SeccionPartido } from './Jugado'
 import { Mensaje } from './Mensaje'
+import { SeccionNotas } from './Notas'
 import estilos from './Partidos.module.css'
+import { SeccionPlanificacion } from './Planificacion'
+import { SeccionVideos } from './Videos'
 
 // Ficha de un partido: sus datos, editar y borrar, y la convocatoria
 export function PaginaPartido() {
@@ -115,6 +118,10 @@ export function PaginaPartido() {
 
       <SeccionPartido partido={p} />
 
+      <SeccionPlanificacion partido={p} />
+
+      <SeccionNotas partido={p} />
+
       <section className={estilos.seccion} aria-labelledby="convocatoria">
         <h2 id="convocatoria">
           <Users aria-hidden size={20} />
@@ -165,6 +172,8 @@ export function PaginaPartido() {
       </section>
 
       <SeccionActa partido={p} />
+
+      <SeccionVideos partido={p} />
 
       <section className={estilos.seccion} aria-labelledby="mensaje">
         <h2 id="mensaje">

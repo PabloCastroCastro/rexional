@@ -2,6 +2,7 @@ import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
 import { and, asc, eq, inArray, sql } from 'drizzle-orm'
 import { db } from '../db/cliente.js'
 import {
+  asistencias,
   convocados,
   eventosPartido,
   fichas,
@@ -12,7 +13,7 @@ import {
   tipoEvento,
 } from '../db/schema/index.js'
 import { ErrorApi, EsquemaError, validacionFallida } from '../errores.js'
-import { bloquearPartido, recalcular } from '../estadisticas.js'
+import { bloquearPartido, calcularEncajados, calcularMinutos, recalcular } from '../estadisticas.js'
 import {
   type EnvClub,
   type EnvPlantilla,
@@ -53,8 +54,11 @@ type NuevoEvento = z.infer<typeof EsquemaNuevoEvento>
 async function anadirEventos(partidoId: string, eventos: NuevoEvento[]) {
   await db.transaction(async (tx) => {
     await bloquearPartido(tx, partidoId)
-    if (eventos.some((e) => !e.jugadorId && e.tipo !== 'gol_propia')) {
+    if (eventos.some((e) => !e.jugadorId && e.tipo !== 'gol_propia' && e.tipo !== 'gol_rival')) {
       throw new ErrorApi(400, 'estadisticas_incoherentes', 'Falta el jugador del evento')
+    }
+    if (eventos.some((e) => e.jugadorId && e.tipo === 'gol_rival')) {
+      throw new ErrorApi(400, 'estadisticas_incoherentes', 'Un gol del rival no lleva jugador')
     }
     await comprobarConvocados(
       tx,
@@ -96,6 +100,16 @@ const EsquemaEstadisticasJugador = z
     dorsal: z.int().nullable(),
     activo: z.boolean(),
     ...datosEstadisticas,
+    entrenos: z.int().openapi({
+      description: 'Entrenos de la plantilla a los que ha ido (solo se pasa lista hasta hoy)',
+    }),
+    golesEncajados: z.int().openapi({
+      description:
+        'Goles en contra con el jugador en el campo, en los partidos con todos sus goles en contra con minuto',
+    }),
+    minutosConEncajados: z.int().openapi({
+      description: 'Minutos jugados en esos mismos partidos: la base de los goles encajados por 90',
+    }),
   })
   .openapi('EstadisticasJugador')
 
@@ -108,6 +122,10 @@ const EsquemaEstadisticasPlantilla = z
       perdidos: z.int(),
       golesFavor: z.int(),
       golesContra: z.int(),
+      sinMinutoEnContra: z.int().openapi({
+        description:
+          'Partidos jugados a los que les falta el minuto de algún gol en contra: no cuentan para los goles encajados',
+      }),
     }),
     jugadores: z.array(EsquemaEstadisticasJugador),
   })
@@ -429,7 +447,7 @@ export const rutasEstadisticas = () =>
         tags: ['Estadísticas'],
         summary: 'Estadísticas de la temporada',
         description:
-          'Resultados del equipo y, por jugador, partidos, titularidades, minutos, goles, asistencias y tarjetas en los partidos jugados de la plantilla. El rol jugador solo ve su fila.',
+          'Resultados del equipo y, por jugador, partidos, titularidades, minutos, goles, asistencias y tarjetas en los partidos jugados de la plantilla, los entrenos a los que ha ido y los goles en contra con él en el campo. El rol jugador solo ve su fila.',
         middleware: [requireRol('jugador')] as const,
         request: { params: ParamPartido.pick({ id: true }) },
         responses: { 200: json(EsquemaEstadisticasPlantilla, 'Estadísticas'), ...errores },
@@ -450,6 +468,16 @@ export const rutasEstadisticas = () =>
           .where(and(eq(partidos.plantillaId, plantillaId), eq(partidos.estado, 'jugado')))
 
         const a = acumulados({ plantillaId })
+        // Entrenos a los que ha ido cada jugador en la plantilla (GH-155)
+        const asistidos = db
+          .select({
+            jugadorId: sql<string>`${asistencias.jugadorId}`.as('as_jugador'),
+            entrenos: sql<number>`count(*)`.as('entrenos'),
+          })
+          .from(asistencias)
+          .where(and(eq(asistencias.plantillaId, plantillaId), eq(asistencias.estado, 'asiste')))
+          .groupBy(asistencias.jugadorId)
+          .as('asistidos')
         const filas = await db
           .select({
             jugadorId: jugadores.id,
@@ -458,9 +486,11 @@ export const rutasEstadisticas = () =>
             dorsal: fichas.dorsal,
             activo: fichas.activo,
             ...a.columnas,
+            entrenos: sql<number>`coalesce(${asistidos.entrenos}, 0)::int`,
           })
           .from(fichas)
           .innerJoin(jugadores, eq(jugadores.id, fichas.jugadorId))
+          .leftJoin(asistidos, eq(asistidos.jugadorId, fichas.jugadorId))
           .leftJoin(
             a.enCampo,
             and(
@@ -483,7 +513,18 @@ export const rutasEstadisticas = () =>
             ),
           )
           .orderBy(sql`${fichas.dorsal} asc nulls last`, ...porNombre, asc(jugadores.id))
-        return c.json({ equipo: equipo ?? sinPartidos, jugadores: filas }, 200)
+        const encajados = await encajadosEnPlantilla(plantillaId)
+        return c.json(
+          {
+            equipo: { ...(equipo ?? sinPartidos), sinMinutoEnContra: encajados.sinMinuto },
+            jugadores: filas.map((f) => ({
+              ...f,
+              golesEncajados: encajados.porJugador.get(f.jugadorId)?.goles ?? 0,
+              minutosConEncajados: encajados.porJugador.get(f.jugadorId)?.minutos ?? 0,
+            })),
+          },
+          200,
+        )
       },
     )
 
@@ -494,6 +535,54 @@ const sinPartidos = {
   perdidos: 0,
   golesFavor: 0,
   golesContra: 0,
+}
+
+// Goles encajados en el campo y minutos de cada jugador en los partidos jugados de la plantilla
+// que tienen todos sus goles en contra con minuto (GH-153). Se calcula con los mismos tramos que
+// los minutos jugados; los partidos sin ese dato solo se cuentan.
+async function encajadosEnPlantilla(plantillaId: string) {
+  const jugados = await db
+    .select({ id: partidos.id, golesContra: partidos.golesContra })
+    .from(partidos)
+    .where(and(eq(partidos.plantillaId, plantillaId), eq(partidos.estado, 'jugado')))
+  const ids = jugados.map((p) => p.id)
+  const porJugador = new Map<string, { goles: number; minutos: number }>()
+  if (ids.length === 0) return { porJugador, sinMinuto: 0 }
+  const lista = await db
+    .select({
+      partidoId: participaciones.partidoId,
+      jugadorId: participaciones.jugadorId,
+      titular: participaciones.titular,
+    })
+    .from(participaciones)
+    .where(inArray(participaciones.partidoId, ids))
+  const eventos = await db
+    .select({
+      partidoId: eventosPartido.partidoId,
+      jugadorId: eventosPartido.jugadorId,
+      tipo: eventosPartido.tipo,
+      minuto: eventosPartido.minuto,
+    })
+    .from(eventosPartido)
+    .where(inArray(eventosPartido.partidoId, ids))
+
+  let sinMinuto = 0
+  for (const p of jugados) {
+    const delPartido = lista.filter((l) => l.partidoId === p.id)
+    const susEventos = eventos.filter((e) => e.partidoId === p.id)
+    const goles = calcularEncajados(delPartido, susEventos, p.golesContra ?? 0)
+    if (!goles) {
+      sinMinuto++
+      continue
+    }
+    for (const [jugadorId, minutos] of calcularMinutos(delPartido, susEventos)) {
+      const total = porJugador.get(jugadorId) ?? { goles: 0, minutos: 0 }
+      total.goles += goles.get(jugadorId) ?? 0
+      total.minutos += minutos
+      porJugador.set(jugadorId, total)
+    }
+  }
+  return { porJugador, sinMinuto }
 }
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0]

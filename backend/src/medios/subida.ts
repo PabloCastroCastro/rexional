@@ -7,7 +7,7 @@ import busboy from 'busboy'
 import { config } from '../config.js'
 import { ErrorApi } from '../errores.js'
 import { preparar, raiz } from './almacen.js'
-import { BYTES_CABECERA, detectarTipo, type TipoArchivo } from './tipos.js'
+import { BYTES_CABECERA, detectarTipo, esPdf, type TipoArchivo } from './tipos.js'
 
 // Recibe una subida multipart en streaming: el archivo va directo a disco (tmp/), sin cargarlo
 // entero en memoria. El tipo se decide con los primeros bytes y el límite depende de él (foto o
@@ -17,18 +17,31 @@ export type Subida = {
   temporal: string
   tipo: TipoArchivo
   bytes: number
+  // Como lo llamó el navegador; solo para mostrarlo, nunca para guardar en disco
+  nombre: string
   campos: Record<string, string>
 }
 
 const MB = 1024 * 1024
-const demasiadoGrande = (tipo: 'foto' | 'video', maximo: number) =>
+const PDF: TipoArchivo = { tipo: 'pdf', mime: 'application/pdf', extension: 'pdf' }
+
+const NOMBRES = { foto: 'La foto', video: 'El vídeo', pdf: 'El archivo' } as const
+
+const demasiadoGrande = (tipo: TipoArchivo['tipo'], maximo: number) =>
   new ErrorApi(
     413,
     'archivo_demasiado_grande',
-    `${tipo === 'foto' ? 'La foto' : 'El vídeo'} no puede pasar de ${Math.round(maximo / MB)} MB`,
+    `${NOMBRES[tipo]} no puede pasar de ${Math.round(maximo / MB)} MB`,
   )
 
-export async function recibirArchivo(peticion: Request): Promise<Subida> {
+// «medios»: fotos y vídeos de un ejercicio. «planificacion»: PDF o fotos de un partido (GH-147), con
+// el límite de las fotos
+export type Admite = 'medios' | 'planificacion'
+
+export async function recibirArchivo(
+  peticion: Request,
+  admite: Admite = 'medios',
+): Promise<Subida> {
   await preparar()
   const { maxFotoBytes, maxVideoBytes } = config.subidas
   const tipoContenido = peticion.headers.get('content-type') ?? ''
@@ -49,11 +62,13 @@ export async function recibirArchivo(peticion: Request): Promise<Subida> {
 
     const lector = busboy({
       headers: { 'content-type': tipoContenido },
+      // Los nombres con tilde («Charla técnica.pdf») llegan en UTF-8
+      defParamCharset: 'utf8',
       limits: {
         files: 1,
         fields: 10,
         fieldSize: 2000,
-        fileSize: Math.max(maxFotoBytes, maxVideoBytes),
+        fileSize: admite === 'medios' ? Math.max(maxFotoBytes, maxVideoBytes) : maxFotoBytes,
       },
     })
 
@@ -61,7 +76,7 @@ export async function recibirArchivo(peticion: Request): Promise<Subida> {
       campos[nombre] = valor
     })
 
-    lector.on('file', (nombre, archivo) => {
+    lector.on('file', (nombre, archivo, info) => {
       if (nombre !== 'archivo') {
         archivo.resume()
         return
@@ -90,7 +105,8 @@ export async function recibirArchivo(peticion: Request): Promise<Subida> {
         if (!tipo) {
           cabecera = Buffer.concat([cabecera, trozo]).subarray(0, BYTES_CABECERA)
           if (cabecera.length < BYTES_CABECERA && bytes < BYTES_CABECERA) return
-          const detectado = detectarTipo(cabecera)
+          const detectado =
+            admite === 'planificacion' && esPdf(cabecera) ? PDF : detectarTipo(cabecera)
           if (detectado === 'heic') {
             return cortar(
               new ErrorApi(
@@ -100,23 +116,31 @@ export async function recibirArchivo(peticion: Request): Promise<Subida> {
               ),
             )
           }
-          if (!detectado) {
+          if (!detectado || (admite === 'planificacion' && detectado.tipo === 'video')) {
             return cortar(
               new ErrorApi(
                 415,
                 'tipo_no_admitido',
-                'Solo se admiten fotos JPEG, PNG o WebP y vídeos MP4, MOV o WebM',
+                admite === 'medios'
+                  ? 'Solo se admiten fotos JPEG, PNG o WebP y vídeos MP4, MOV o WebM'
+                  : 'Solo se admiten PDF o fotos JPEG, PNG o WebP',
               ),
             )
           }
           tipo = detectado
         }
-        const maximo = tipo.tipo === 'foto' ? maxFotoBytes : maxVideoBytes
+        const maximo = tipo.tipo === 'video' ? maxVideoBytes : maxFotoBytes
         if (bytes > maximo) cortar(demasiadoGrande(tipo.tipo, maximo))
       })
-      archivo.on('limit', () => cortar(demasiadoGrande(tipo?.tipo ?? 'video', maxVideoBytes)))
+      archivo.on('limit', () =>
+        cortar(
+          admite === 'medios'
+            ? demasiadoGrande(tipo?.tipo ?? 'video', maxVideoBytes)
+            : demasiadoGrande(tipo?.tipo ?? 'pdf', maxFotoBytes),
+        ),
+      )
       archivo.on('end', () => {
-        if (!fallo && tipo) resultado = { temporal, tipo, bytes }
+        if (!fallo && tipo) resultado = { temporal, tipo, bytes, nombre: info.filename ?? '' }
         if (!fallo && !tipo) {
           fallo = new ErrorApi(415, 'tipo_no_admitido', 'El archivo está vacío o no se reconoce')
         }

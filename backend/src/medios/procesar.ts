@@ -29,10 +29,11 @@ const miniaturaDe = (entrada: string | Buffer, salida: string) =>
     .webp({ quality: 70 })
     .toFile(absoluta(salida))
 
-export async function procesarFoto(temporal: string, clubId: string) {
-  const carpeta = carpetaDeClub(clubId)
+// En la carpeta indicada (la del club para un ejercicio, la del partido para su planificación).
+// La planificación no lleva miniatura: se lista con un icono
+export async function procesarFoto(temporal: string, carpeta: string, conMiniatura = true) {
   const archivo = nueva(carpeta, 'webp')
-  const miniatura = nueva(carpeta, 'webp')
+  const miniatura = conMiniatura ? nueva(carpeta, 'webp') : null
   try {
     await mover(temporal, `${archivo}.original`)
     const original = absoluta(`${archivo}.original`)
@@ -42,7 +43,7 @@ export async function procesarFoto(temporal: string, clubId: string) {
       .resize({ width: LADO_FOTO, height: LADO_FOTO, fit: 'inside', withoutEnlargement: true })
       .webp({ quality: 82 })
       .toFile(absoluta(archivo))
-    await miniaturaDe(original, miniatura)
+    if (miniatura) await miniaturaDe(original, miniatura)
     await borrar(`${archivo}.original`)
     return { archivo, miniatura, mime: 'image/webp', tamanoBytes: await tamano(archivo) }
   } catch (error) {

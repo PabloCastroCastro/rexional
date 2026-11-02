@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  calcularEncajados,
   calcularMinutos,
   comprobar,
   type DatosEstadisticas,
@@ -59,14 +60,63 @@ describe('minutos jugados', () => {
   })
 })
 
+describe('goles encajados en el campo', () => {
+  const lista = [titular('a'), titular('b'), suplente('c'), suplente('d')]
+
+  it('cada gol en contra cuenta para quien está en el campo; en el minuto del cambio, para quien sale', () => {
+    const encajados = calcularEncajados(
+      lista,
+      [
+        ev('gol_rival', null, 20),
+        ev('sale', 'b', 65),
+        ev('entra', 'c', 65),
+        ev('gol_rival', null, 65),
+        ev('gol_propia', 'a', 80),
+        // El descuento cuenta: sigue en el campo
+        ev('gol_rival', null, 92),
+      ],
+      4,
+    )
+    expect(Object.fromEntries(encajados ?? [])).toEqual({ a: 4, b: 2, c: 2, d: 0 })
+  })
+
+  it('una roja termina el tramo, como un cambio', () => {
+    const encajados = calcularEncajados(
+      [titular('a'), titular('b')],
+      [ev('roja', 'b', 30), ev('gol_rival', null, 30), ev('gol_rival', null, 31)],
+      2,
+    )
+    expect(Object.fromEntries(encajados ?? [])).toEqual({ a: 2, b: 1 })
+  })
+
+  it('sin goles en contra, todos a cero', () => {
+    expect(Object.fromEntries(calcularEncajados(lista, [], 0) ?? [])).toEqual({
+      a: 0,
+      b: 0,
+      c: 0,
+      d: 0,
+    })
+  })
+
+  it.each<[string, Evento[], number]>([
+    ['faltan goles en contra por registrar', [ev('gol_rival', null, 20)], 2],
+    ['un gol en contra sin minuto', [ev('gol_rival', null)], 1],
+    // Un gol en propia del rival es a favor: no suple a uno en contra
+    ['un gol en propia del rival', [ev('gol_propia', null, 10)], 1],
+  ])('no se sabe si %s', (_, eventos, golesContra) => {
+    expect(calcularEncajados(lista, eventos, golesContra)).toBeNull()
+  })
+})
+
 describe('coherencia del partido', () => {
   it('un partido completo y coherente pasa', () => {
     const problema = comprobar(
       datos({
-        resultado: { golesFavor: 2, golesContra: 1 },
+        resultado: { golesFavor: 2, golesContra: 2 },
         eventos: [
           ev('gol', 'a', 10),
           ev('asistencia', 'b', 10),
+          ev('gol_rival', null, 30),
           ev('sale', 'b', 60),
           ev('entra', 'c', 60),
           ev('gol', 'c', 75),
@@ -132,6 +182,15 @@ describe('coherencia del partido', () => {
       'más goles en propia que goles en contra',
       { resultado: { golesFavor: 0, golesContra: 0 }, eventos: [ev('gol_propia', 'a')] },
       /propia puerta/,
+    ],
+    ['un gol del rival con jugador', { eventos: [ev('gol_rival', 'a', 30)] }, /no lleva jugador/],
+    [
+      'más goles del rival y en propia que goles en contra',
+      {
+        resultado: { golesFavor: 0, golesContra: 2 },
+        eventos: [ev('gol_rival', null, 10), ev('gol_rival', null, 50), ev('gol_propia', 'a', 70)],
+      },
+      /3 goles en contra/,
     ],
   ])('rechaza %s', (_, cambios, mensaje) => {
     expect(comprobar(datos(cambios), CONVOCADOS)).toMatch(mensaje)

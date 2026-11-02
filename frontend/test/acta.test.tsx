@@ -30,6 +30,7 @@ const PARTIDO: Partido = {
   jugadores: [],
   eventos: [],
   acta: null,
+  videos: [],
 }
 
 const persona = (dorsal: number, nombre: string, jugadorId: string | null) => ({

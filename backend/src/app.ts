@@ -14,16 +14,19 @@ import { rutasEstadisticas, rutasEstadisticasClub } from './rutas/estadisticas.j
 import { rutasJugadoresClub, rutasJugadoresPlantilla } from './rutas/jugadores.js'
 import { rutasMedios, rutasMediosClub } from './rutas/medios.js'
 import { rutasMultas, rutasMultasJugadores } from './rutas/multas.js'
+import { rutasNotas } from './rutas/notas.js'
 import { rutasPartidos } from './rutas/partidos.js'
 import { rutasModelosSesion, rutasPlanes } from './rutas/planes.js'
+import { rutasPlanificacion } from './rutas/planificacion.js'
 import { rutasPlantillas } from './rutas/plantillas.js'
 import { rutasSalud } from './rutas/salud.js'
+import { rutasVideos } from './rutas/videos.js'
 
 export const infoOpenApi = {
   openapi: '3.1.0',
   info: {
     title: 'API de Vestuario',
-    version: '1.2.0',
+    version: '1.3.0',
     description:
       'API REST de Vestuario. Todas las rutas cuelgan de /api. Errores con el formato { error: { codigo, mensaje, detalles? } }.',
   },
@@ -65,6 +68,9 @@ export function crearApp(dependencias: Partial<Dependencias> = {}) {
   app.route('/', rutasEstadisticas())
   app.route('/', rutasEstadisticasClub())
   app.route('/', rutasActas())
+  app.route('/', rutasVideos())
+  app.route('/', rutasNotas())
+  app.route('/', rutasPlanificacion())
   app.route('/', rutasEjercicios())
   app.route('/', rutasPlanes())
   app.route('/', rutasModelosSesion())

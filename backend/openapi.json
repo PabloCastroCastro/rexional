@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "API de Vestuario",
-    "version": "1.2.0",
+    "version": "1.3.0",
     "description": "API REST de Vestuario. Todas las rutas cuelgan de /api. Errores con el formato { error: { codigo, mensaje, detalles? } }."
   },
   "components": {
@@ -1037,6 +1037,13 @@
               "subidaEn"
             ],
             "description": "La ficha del partido en PDF, si se ha subido"
+          },
+          "videos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VideoPartido"
+            },
+            "description": "Enlaces al vídeo del partido, por orden de alta (GH-134)"
           }
         },
         "required": [
@@ -1053,7 +1060,8 @@
           "golesContra",
           "jugadores",
           "eventos",
-          "acta"
+          "acta",
+          "videos"
         ]
       },
       "JugadorConvocatoria": {
@@ -1148,7 +1156,8 @@
               "roja",
               "entra",
               "sale",
-              "gol_propia"
+              "gol_propia",
+              "gol_rival"
             ]
           },
           "minuto": {
@@ -1172,6 +1181,29 @@
           "tipo",
           "minuto",
           "origen"
+        ]
+      },
+      "VideoPartido": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "url": {
+            "type": "string"
+          },
+          "titulo": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "url",
+          "titulo"
         ]
       },
       "MensajeConvocatoria": {
@@ -1209,7 +1241,8 @@
               "roja",
               "entra",
               "sale",
-              "gol_propia"
+              "gol_propia",
+              "gol_rival"
             ]
           },
           "minuto": {
@@ -1249,6 +1282,10 @@
               },
               "golesContra": {
                 "type": "integer"
+              },
+              "sinMinutoEnContra": {
+                "type": "integer",
+                "description": "Partidos jugados a los que les falta el minuto de algún gol en contra: no cuentan para los goles encajados"
               }
             },
             "required": [
@@ -1257,7 +1294,8 @@
               "empatados",
               "perdidos",
               "golesFavor",
-              "golesContra"
+              "golesContra",
+              "sinMinutoEnContra"
             ]
           },
           "jugadores": {
@@ -1322,6 +1360,18 @@
           "golesPropia": {
             "type": "integer",
             "description": "Goles en propia puerta"
+          },
+          "entrenos": {
+            "type": "integer",
+            "description": "Entrenos de la plantilla a los que ha ido (solo se pasa lista hasta hoy)"
+          },
+          "golesEncajados": {
+            "type": "integer",
+            "description": "Goles en contra con el jugador en el campo, en los partidos con todos sus goles en contra con minuto"
+          },
+          "minutosConEncajados": {
+            "type": "integer",
+            "description": "Minutos jugados en esos mismos partidos: la base de los goles encajados por 90"
           }
         },
         "required": [
@@ -1337,7 +1387,10 @@
           "asistencias",
           "amarillas",
           "rojas",
-          "golesPropia"
+          "golesPropia",
+          "entrenos",
+          "golesEncajados",
+          "minutosConEncajados"
         ]
       },
       "TrayectoriaEstadisticas": {
@@ -1740,6 +1793,112 @@
           "jugadorId",
           "minuto",
           "enPropia"
+        ]
+      },
+      "NotaPartido": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "$ref": "#/components/schemas/TipoNota"
+          },
+          "texto": {
+            "type": "string"
+          },
+          "minuto": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "autor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Nombre de quien la escribió"
+          },
+          "autorId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "creadaEn": {
+            "type": "string"
+          },
+          "editadaEn": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "tipo",
+          "texto",
+          "minuto",
+          "autor",
+          "autorId",
+          "creadaEn",
+          "editadaEn"
+        ]
+      },
+      "TipoNota": {
+        "type": "string",
+        "enum": [
+          "tactica",
+          "incidencia",
+          "otra"
+        ]
+      },
+      "ArchivoPartido": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "titulo": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "nombreOriginal": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "pdf",
+              "imagen"
+            ]
+          },
+          "tamanoBytes": {
+            "type": "integer"
+          },
+          "subidoPor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Nombre de quien lo subió"
+          },
+          "subidoEn": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "titulo",
+          "nombreOriginal",
+          "tipo",
+          "tamanoBytes",
+          "subidoPor",
+          "subidoEn"
         ]
       },
       "ResumenEjercicio": {
@@ -2334,6 +2493,22 @@
           "pendienteCentimos",
           "multasPendientes"
         ]
+      },
+      "MensajeMultas": {
+        "type": "object",
+        "properties": {
+          "texto": {
+            "type": "string"
+          },
+          "whatsapp": {
+            "type": "string",
+            "example": "https://wa.me/?text=…"
+          }
+        },
+        "required": [
+          "texto",
+          "whatsapp"
+        ]
       }
     },
     "parameters": {}
@@ -2691,7 +2866,7 @@
           "Clubes"
         ],
         "summary": "Añadir un administrador",
-        "description": "El usuario debe existir. Las invitaciones por email llegan en el ciclo 9.",
+        "description": "El usuario debe existir. Las invitaciones por email llegan en el ciclo 10.",
         "parameters": [
           {
             "schema": {
@@ -5382,7 +5557,7 @@
           "Partidos"
         ],
         "summary": "Borrar un partido",
-        "description": "Delegado o superior. Borra también su convocatoria.",
+        "description": "Delegado o superior. Borra también su convocatoria y su planificación.",
         "parameters": [
           {
             "schema": {
@@ -6203,7 +6378,7 @@
           "Estadísticas"
         ],
         "summary": "Estadísticas de la temporada",
-        "description": "Resultados del equipo y, por jugador, partidos, titularidades, minutos, goles, asistencias y tarjetas en los partidos jugados de la plantilla. El rol jugador solo ve su fila.",
+        "description": "Resultados del equipo y, por jugador, partidos, titularidades, minutos, goles, asistencias y tarjetas en los partidos jugados de la plantilla, los entrenos a los que ha ido y los goles en contra con él en el campo. El rol jugador solo ve su fila.",
         "parameters": [
           {
             "schema": {
@@ -6746,6 +6921,1153 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/partidos/{pid}/videos": {
+      "post": {
+        "tags": [
+          "Partidos"
+        ],
+        "summary": "Añadir un vídeo",
+        "description": "Delegado o superior. Un enlace web (YouTube, Drive…) con título opcional; como mucho 10 por partido.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "pid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "maxLength": 2000,
+                    "format": "uri"
+                  },
+                  "titulo": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 80
+                  }
+                },
+                "required": [
+                  "url"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Vídeo añadido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Partido"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos o demasiados vídeos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/partidos/{pid}/videos/{vid}": {
+      "patch": {
+        "tags": [
+          "Partidos"
+        ],
+        "summary": "Cambiar un vídeo",
+        "description": "Delegado o superior. La URL o el título; un título vacío lo quita.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "pid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "vid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "maxLength": 2000,
+                    "format": "uri"
+                  },
+                  "titulo": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 80
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Vídeo cambiado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Partido"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Partidos"
+        ],
+        "summary": "Quitar un vídeo",
+        "description": "Delegado o superior. Quita el enlace; el vídeo sigue donde estuviera.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "pid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "vid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Vídeo quitado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Partido"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/partidos/{pid}/notas": {
+      "get": {
+        "tags": [
+          "Partidos"
+        ],
+        "summary": "Notas del partido",
+        "description": "Delegado o superior. Ordenadas por minuto; las que no tienen, al final.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "pid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Notas del partido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/NotaPartido"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Partidos"
+        ],
+        "summary": "Anotar",
+        "description": "Delegado o superior. Como mucho 200 notas por partido.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "pid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "tipo": {
+                    "$ref": "#/components/schemas/TipoNota"
+                  },
+                  "texto": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1000
+                  },
+                  "minuto": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 150
+                  }
+                },
+                "required": [
+                  "tipo",
+                  "texto"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Nota añadida; devuelve todas las del partido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/NotaPartido"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos o demasiadas notas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/partidos/{pid}/notas/{nid}": {
+      "patch": {
+        "tags": [
+          "Partidos"
+        ],
+        "summary": "Cambiar una nota",
+        "description": "Delegado o superior, aunque la escribiera otro. El tipo, el texto o el minuto; un minuto null lo quita.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "pid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "nid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "tipo": {
+                    "$ref": "#/components/schemas/TipoNota"
+                  },
+                  "texto": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1000
+                  },
+                  "minuto": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 150
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Nota cambiada; devuelve todas las del partido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/NotaPartido"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Partidos"
+        ],
+        "summary": "Borrar una nota",
+        "description": "Delegado o superior, aunque la escribiera otro.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "pid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "nid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Nota borrada; devuelve las que quedan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/NotaPartido"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/partidos/{pid}/archivos": {
+      "get": {
+        "tags": [
+          "Partidos"
+        ],
+        "summary": "Planificación del partido",
+        "description": "Delegado o superior. Los archivos por orden de subida.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "pid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Archivos del partido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ArchivoPartido"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Partidos"
+        ],
+        "summary": "Subir un archivo de planificación",
+        "description": "Delegado o superior. Cuerpo `multipart/form-data` con el archivo en `archivo` y, opcional, `titulo` (no se declara aquí: validarlo leería el cuerpo entero y la subida dejaría de ir en streaming). PDF o foto JPEG, PNG o WebP, con el límite de las fotos (por defecto 15 MB). El PDF se guarda tal cual; la foto, reducida, en WebP y sin metadatos. Como mucho 10 por partido.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "pid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Archivo subido; devuelve todos los del partido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ArchivoPartido"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Falta el archivo o hay demasiados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Supera el límite",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Tipo no admitido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/partidos/{pid}/archivos/{aid}": {
+      "patch": {
+        "tags": [
+          "Partidos"
+        ],
+        "summary": "Cambiar el título de un archivo",
+        "description": "Delegado o superior. Un título vacío lo quita.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "pid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "aid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "titulo": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 80
+                  }
+                },
+                "required": [
+                  "titulo"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Título cambiado; devuelve todos los del partido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ArchivoPartido"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Partidos"
+        ],
+        "summary": "Quitar un archivo",
+        "description": "Delegado o superior. Lo borra también del disco.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "pid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "aid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Archivo quitado; devuelve los que quedan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ArchivoPartido"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Partidos"
+        ],
+        "summary": "Descargar un archivo de planificación",
+        "description": "Delegado o superior. Se sirve para abrirlo en el navegador (`inline`) con su nombre original.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "pid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "aid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "El archivo",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/webp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
                 }
               }
             }
@@ -8039,6 +9361,78 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/entrenos/{eid}/plan.pdf": {
+      "get": {
+        "tags": [
+          "Planificación"
+        ],
+        "summary": "Plan de un entreno en PDF",
+        "description": "Cualquier miembro. Para imprimirlo o compartirlo: fecha, horas, objetivo, notas y ejercicios con su miniatura, material, indicaciones y duración. Se genera al pedirlo, con el plan guardado.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "eid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "El PDF",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
                 }
               }
             }
@@ -9677,6 +11071,174 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ResumenMultas"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/multas/informe.pdf": {
+      "get": {
+        "tags": [
+          "Multas"
+        ],
+        "summary": "Informe de multas en PDF",
+        "description": "Delegado o superior. Totales y, por jugador (todos los de la plantilla, también sin multas), lo puesto, lo pagado y lo pendiente. Con `detalle=true`, cada multa. El rango filtra por la fecha de la multa; sin él, toda la temporada.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2026-10-13"
+            },
+            "required": false,
+            "name": "desde",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2026-10-13"
+            },
+            "required": false,
+            "name": "hasta",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ],
+              "default": "false"
+            },
+            "required": false,
+            "name": "detalle",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "El PDF",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Rango no válido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/multas/mensaje": {
+      "get": {
+        "tags": [
+          "Multas"
+        ],
+        "summary": "Mensaje de deudas para WhatsApp",
+        "description": "Delegado o superior. Quién debe hoy y cuánto, con lo pendiente y lo que hay en caja, con el formato de WhatsApp y el enlace wa.me para compartirlo.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Mensaje",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MensajeMultas"
                 }
               }
             }

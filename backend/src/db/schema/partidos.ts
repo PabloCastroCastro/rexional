@@ -20,7 +20,7 @@ import {
 } from 'drizzle-orm/pg-core'
 import { user } from './auth.js'
 import { fichas, plantillas } from './clubes.js'
-import { creadoEn, id } from './comun.js'
+import { actualizadoEn, creadoEn, id } from './comun.js'
 
 // Partidos de una plantilla, sus convocados y sus estadísticas: resultado, participaciones y eventos
 // (sección 6)
@@ -128,6 +128,8 @@ export const tipoEvento = pgEnum('tipo_evento', [
   'entra',
   'sale',
   'gol_propia',
+  // Gol del rival, sin jugador: solo para saber el minuto (GH-151)
+  'gol_rival',
 ])
 
 // De dónde viene una estadística: a mano, del acta del partido o de la federación
@@ -141,8 +143,9 @@ export const eventosPartido = pgTable(
     partidoId: uuid('partido_id')
       .notNull()
       .references(() => partidos.id, { onDelete: 'cascade' }),
-    // Siempre un convocado. Sin jugador solo el gol en propia puerta del rival a nuestro favor;
-    // gol_propia con jugador es un gol en propia de uno de los nuestros
+    // Siempre un convocado. Sin jugador solo el gol en propia puerta del rival a nuestro favor y el
+    // gol del rival, que nunca lleva jugador; gol_propia con jugador es un gol en propia de uno de
+    // los nuestros
     jugadorId: uuid('jugador_id'),
     tipo: tipoEvento('tipo').notNull(),
     minuto: smallint('minuto'),
@@ -157,7 +160,12 @@ export const eventosPartido = pgTable(
     }).onDelete('cascade'),
     index('eventos_partido_partido_idx').on(t.partidoId),
     index('eventos_partido_jugador_idx').on(t.jugadorId),
-    check('eventos_partido_jugador', sql`${t.jugadorId} IS NOT NULL OR ${t.tipo} = 'gol_propia'`),
+    // El tipo se compara como texto: un valor nuevo de un enum no se puede usar en la misma
+    // transacción que lo añade, y las migraciones pendientes se aplican juntas
+    check(
+      'eventos_partido_jugador',
+      sql`CASE ${t.tipo}::text WHEN 'gol_propia' THEN true WHEN 'gol_rival' THEN ${t.jugadorId} IS NULL ELSE ${t.jugadorId} IS NOT NULL END`,
+    ),
     check('eventos_partido_minuto_valido', sql`${t.minuto} BETWEEN 0 AND 150`),
   ],
 )
@@ -182,5 +190,82 @@ export const actasPartido = pgTable(
   (t) => [
     check('actas_partido_tamano', sql`${t.tamano} BETWEEN 1 AND 2097152`),
     check('actas_partido_nombre_no_vacio', sql`btrim(${t.nombreArchivo}) <> ''`),
+  ],
+)
+
+// Enlaces al vídeo de un partido (YouTube, Drive…), p. ej. uno por parte (GH-134). Solo se guarda
+// la URL: el vídeo está fuera de la app
+export const videosPartido = pgTable(
+  'videos_partido',
+  {
+    id: id(),
+    partidoId: uuid('partido_id')
+      .notNull()
+      .references(() => partidos.id, { onDelete: 'cascade' }),
+    url: text('url').notNull(),
+    titulo: text('titulo'),
+    creadoPor: uuid('creado_por').references(() => user.id, { onDelete: 'set null' }),
+    createdAt: creadoEn(),
+  },
+  (t) => [
+    index('videos_partido_partido_idx').on(t.partidoId),
+    check('videos_partido_url_web', sql`${t.url} ~* '^https?://'`),
+    check('videos_partido_titulo_no_vacio', sql`${t.titulo} IS NULL OR btrim(${t.titulo}) <> ''`),
+  ],
+)
+
+export const tipoNota = pgEnum('tipo_nota', ['tactica', 'incidencia', 'otra'])
+
+// Notas del cuerpo técnico durante el partido, para repasarlas después (GH-149). Solo las ve el
+// cuerpo técnico; van aparte de los eventos y no cuentan en las estadísticas
+export const notasPartido = pgTable(
+  'notas_partido',
+  {
+    id: id(),
+    partidoId: uuid('partido_id')
+      .notNull()
+      .references(() => partidos.id, { onDelete: 'cascade' }),
+    tipo: tipoNota('tipo').notNull(),
+    texto: text('texto').notNull(),
+    minuto: smallint('minuto'),
+    autorId: uuid('autor_id').references(() => user.id, { onDelete: 'set null' }),
+    createdAt: creadoEn(),
+    updatedAt: actualizadoEn(),
+  },
+  (t) => [
+    index('notas_partido_partido_idx').on(t.partidoId),
+    check(
+      'notas_partido_texto_valido',
+      sql`btrim(${t.texto}) <> '' AND length(${t.texto}) <= 1000`,
+    ),
+    check('notas_partido_minuto_valido', sql`${t.minuto} BETWEEN 0 AND 150`),
+  ],
+)
+
+// Archivos con la planificación de un partido: la charla, el plan táctico, el rival… (GH-147). PDF tal
+// cual o foto reducida a WebP, en la carpeta de subidas del partido. Solo los ve el cuerpo técnico
+export const archivosPartido = pgTable(
+  'archivos_partido',
+  {
+    id: id(),
+    partidoId: uuid('partido_id')
+      .notNull()
+      .references(() => partidos.id, { onDelete: 'cascade' }),
+    titulo: text('titulo'),
+    // El nombre con que se subió, solo para mostrarlo; en disco el nombre se genera
+    nombreOriginal: text('nombre_original').notNull(),
+    // Ruta dentro del volumen de subidas
+    archivo: text('archivo').notNull(),
+    mime: text('mime').notNull(),
+    tamanoBytes: integer('tamano_bytes').notNull(),
+    subidoPor: uuid('subido_por').references(() => user.id, { onDelete: 'set null' }),
+    createdAt: creadoEn(),
+  },
+  (t) => [
+    index('archivos_partido_partido_idx').on(t.partidoId),
+    check('archivos_partido_titulo_no_vacio', noVacioOpcional(t.titulo)),
+    check('archivos_partido_nombre_no_vacio', sql`btrim(${t.nombreOriginal}) <> ''`),
+    check('archivos_partido_mime', sql`${t.mime} IN ('application/pdf', 'image/webp')`),
+    check('archivos_partido_tamano', sql`${t.tamanoBytes} > 0`),
   ],
 )

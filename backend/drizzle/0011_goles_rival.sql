@@ -1,0 +1,3 @@
+ALTER TYPE "public"."tipo_evento" ADD VALUE 'gol_rival';--> statement-breakpoint
+ALTER TABLE "eventos_partido" DROP CONSTRAINT "eventos_partido_jugador";--> statement-breakpoint
+ALTER TABLE "eventos_partido" ADD CONSTRAINT "eventos_partido_jugador" CHECK (CASE "eventos_partido"."tipo"::text WHEN 'gol_propia' THEN true WHEN 'gol_rival' THEN "eventos_partido"."jugador_id" IS NULL ELSE "eventos_partido"."jugador_id" IS NOT NULL END);

@@ -11,6 +11,7 @@ import {
   modelosSesion,
 } from '../db/schema/index.js'
 import { ErrorApi, EsquemaError, validacionFallida } from '../errores.js'
+import { pdfPlan } from '../pdf/plan.js'
 import { type EnvClub, type EnvPlantilla, requireRol, requireRolEnClub } from '../permisos.js'
 import { EsquemaFecha, EsquemaTexto, EsquemaUuid, restriccionViolada } from '../validacion.js'
 
@@ -236,6 +237,36 @@ export const rutasPlanes = () =>
       async (c) => {
         const { eid } = c.req.valid('param')
         return c.json(await leerPlan(c.var.plantilla.id, eid), 200)
+      },
+    )
+    .openapi(
+      createRoute({
+        method: 'get',
+        path: '/plantillas/{id}/entrenos/{eid}/plan.pdf',
+        tags: ['Planificación'],
+        summary: 'Plan de un entreno en PDF',
+        description:
+          'Cualquier miembro. Para imprimirlo o compartirlo: fecha, horas, objetivo, notas y ejercicios con su miniatura, material, indicaciones y duración. Se genera al pedirlo, con el plan guardado.',
+        middleware: [requireRol('jugador')] as const,
+        request: { params: ParamEntreno },
+        responses: {
+          200: {
+            description: 'El PDF',
+            content: { 'application/pdf': { schema: z.string().openapi({ format: 'binary' }) } },
+          },
+          ...errores,
+        },
+      }),
+      async (c) => {
+        const { eid } = c.req.valid('param')
+        const plantilla = c.var.plantilla
+        const { pdf, nombre } = await pdfPlan(plantilla, await leerPlan(plantilla.id, eid))
+        return c.body(new Uint8Array(pdf), 200, {
+          'content-type': 'application/pdf',
+          'content-disposition': `inline; filename="${nombre}"`,
+          // Refleja el plan de ese momento: nunca de la caché
+          'cache-control': 'private, no-store',
+        }) as never
       },
     )
     .openapi(
