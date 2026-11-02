@@ -417,6 +417,7 @@ describe('estadísticas acumuladas', () => {
       { jugadorId: J(2), tipo: 'asistencia', minuto: 10 },
       { jugadorId: J(1), tipo: 'gol', minuto: 50 },
       { jugadorId: J(2), tipo: 'amarilla', minuto: 55 },
+      { jugadorId: J(2), tipo: 'sale', minuto: 60 },
     ]) {
       expect((await evento(pid, e, 'senior25')).status).toBe(201)
     }
@@ -461,6 +462,8 @@ describe('estadísticas acumuladas', () => {
       perdidos: 0,
       golesFavor: 2,
       golesContra: 1,
+      // El gol en contra aún no tiene minuto
+      sinMinutoEnContra: 1,
     })
     expect(datos.jugadores).toEqual([
       expect.objectContaining({
@@ -470,6 +473,8 @@ describe('estadísticas acumuladas', () => {
         minutos: 90,
         goles: 2,
         entrenos: 2,
+        golesEncajados: 0,
+        minutosConEncajados: 0,
       }),
       expect.objectContaining({
         nombre: 'J2',
@@ -479,6 +484,17 @@ describe('estadísticas acumuladas', () => {
         goles: 0,
         entrenos: 1,
       }),
+    ])
+
+    // Con el minuto del gol en contra: le entra a J1, J2 ya había salido
+    expect((await evento(pid, { tipo: 'gol_rival', minuto: 70 }, 'senior25')).status).toBe(201)
+    const conMinuto = await (
+      await pedir('GET', `/plantillas/${ids.senior25}/estadisticas`, 'delegado')
+    ).json()
+    expect(conMinuto.equipo.sinMinutoEnContra).toBe(0)
+    expect(conMinuto.jugadores).toEqual([
+      expect.objectContaining({ nombre: 'J1', golesEncajados: 1, minutosConEncajados: 90 }),
+      expect.objectContaining({ nombre: 'J2', golesEncajados: 0, minutosConEncajados: 60 }),
     ])
 
     const suyas = await (

@@ -161,3 +161,18 @@ export const textoPorEntreno = (e: { minutos: number; entrenos: number }) => {
   const valor = minutosPorEntreno(e)
   return valor === null ? '—' : unDecimal.format(valor)
 }
+
+// Goles en contra con el jugador en el campo por cada 90 minutos (GH-153); null sin minutos con dato
+export const encajadosPor90 = (e: { golesEncajados: number; minutosConEncajados: number }) =>
+  e.minutosConEncajados > 0 ? (e.golesEncajados / e.minutosConEncajados) * 90 : null
+
+const dosDecimales = new Intl.NumberFormat('es', {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+})
+
+// «0,30» o «—» si no tiene minutos en partidos con el minuto de los goles en contra
+export const textoEncajados = (e: { golesEncajados: number; minutosConEncajados: number }) => {
+  const valor = encajadosPor90(e)
+  return valor === null ? '—' : dosDecimales.format(valor)
+}
