@@ -1,66 +1,191 @@
-import { BarChart3 } from 'lucide-react'
-import { useState } from 'react'
+import { ArrowDown, ArrowUp, ArrowUpDown, BarChart3 } from 'lucide-react'
+import { type ReactNode, useState } from 'react'
 import { Link } from 'react-router'
 import { Cargando } from '../componentes/Cargando'
 import { EstadoVacio } from '../componentes/EstadoVacio'
+import { Selector } from '../componentes/Selector'
 import { nombreCompleto, puedeGestionarJugadores } from '../jugadores/datos'
 import { Dorsal } from '../jugadores/PaginaPlantilla'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
 import {
   type EstadisticasJugador,
   type EstadisticasPlantilla,
-  encajadosPor90,
   minutosPorEntreno,
+  por90,
   resumenEstadisticas,
-  textoEncajados,
+  textoPor90,
   textoPorEntreno,
   useEstadisticas,
 } from './datos'
 import estilos from './Partidos.module.css'
 
-// Estadísticas de la temporada (solo partidos jugados): resultados del equipo y clasificaciones de
-// goleadores, asistencias, minutos, minutos por entreno, goles en contra y tarjetas. Un jugador ve
-// los resultados del equipo y lo suyo.
+// Estadísticas de la temporada (solo partidos jugados): resultados del equipo y, para el cuerpo
+// técnico, una tabla de jugadores con la estadística elegida, ordenable por cualquier columna
+// (GH-164). Un jugador ve los resultados del equipo y lo suyo.
 
-type Tabla = 'goles' | 'asistencias' | 'minutos' | 'porEntreno' | 'encajados' | 'tarjetas'
-const TABLAS: { tabla: Tabla; texto: string; vacio: string }[] = [
-  { tabla: 'goles', texto: 'Goleadores', vacio: 'Nadie ha marcado todavía.' },
-  { tabla: 'asistencias', texto: 'Asistencias', vacio: 'Todavía no hay asistencias.' },
-  { tabla: 'minutos', texto: 'Minutos', vacio: 'Todavía no hay minutos registrados.' },
-  {
-    tabla: 'porEntreno',
-    texto: 'Minutos por entreno',
-    vacio: 'Todavía no se ha pasado lista en ningún entreno.',
-  },
-  {
-    tabla: 'encajados',
-    texto: 'Goles en contra',
-    vacio: 'Todavía no hay partidos con el minuto de los goles en contra.',
-  },
-  { tabla: 'tarjetas', texto: 'Tarjetas', vacio: 'Ninguna tarjeta. ¡Así da gusto!' },
-]
+type Equipo = EstadisticasPlantilla['equipo']
 
-// Valor por el que se ordena cada tabla: en tarjetas, una roja pesa más que cualquier amarilla; en
-// minutos por entreno, quien no ha ido a ningún entreno va al final; en goles en contra, de menos a
-// más, y con los mismos, primero quien más ha jugado
-function valor(j: EstadisticasJugador, tabla: Tabla) {
-  if (tabla === 'tarjetas') return j.rojas * 100 + j.amarillas
-  if (tabla === 'porEntreno') return minutosPorEntreno(j) ?? -1
-  if (tabla === 'encajados') return -(encajadosPor90(j) ?? 0)
-  return j[tabla]
+type Columna = {
+  clave: string
+  // Texto visible en la cabecera y el que se lee
+  corto: string
+  largo: string
+  // Por lo que se ordena; null va siempre al final
+  valor: (j: EstadisticasJugador) => number | string | null
+  celda?: (j: EstadisticasJugador) => ReactNode
+  // Al pulsarla por primera vez: los textos y el dorsal, de menor a mayor; las cifras, al revés
+  ascendente?: boolean
 }
 
-const desempate = (a: EstadisticasJugador, b: EstadisticasJugador, tabla: Tabla) =>
-  (tabla === 'encajados' ? b.minutosConEncajados - a.minutosConEncajados : 0) ||
-  a.nombre.localeCompare(b.nombre, 'es')
+type Orden = { columna: string; descendente: boolean }
 
-// Quién sale en cada tabla: en minutos por entreno, quien ha jugado o ha entrenado, y solo si se ha
-// pasado lista alguna vez
-function enTabla(jugadores: EstadisticasJugador[], tabla: Tabla) {
-  if (tabla === 'encajados') return jugadores.filter((j) => j.minutosConEncajados > 0)
-  if (tabla !== 'porEntreno') return jugadores.filter((j) => valor(j, tabla) > 0)
-  if (!jugadores.some((j) => j.entrenos > 0)) return []
-  return jugadores.filter((j) => j.minutos > 0 || j.entrenos > 0)
+type Estadistica = {
+  clave: string
+  texto: string
+  vacio: string
+  columnas: Columna[]
+  orden: Orden
+  // Quién sale: quien tiene algo que contar
+  filtrar: (jugadores: EstadisticasJugador[]) => EstadisticasJugador[]
+  aviso?: (equipo: Equipo) => string | null
+}
+
+const cifra = (
+  clave: keyof EstadisticasJugador,
+  corto: string,
+  largo = corto,
+  celda?: Columna['celda'],
+): Columna => ({ clave, corto, largo, valor: (j) => j[clave] as number, celda })
+
+const minutos = (clave: 'minutos' | 'minutosConFavor' | 'minutosConEncajados') =>
+  cifra(clave, 'Min.', 'Minutos', (j) => `${j[clave]}'`)
+
+const conAlgo = (clave: keyof EstadisticasJugador) => (jugadores: EstadisticasJugador[]) =>
+  jugadores.filter((j) => (j[clave] as number) > 0)
+
+// Aviso de los partidos que no cuentan para los goles en el campo
+const avisoSinMinuto = (n: number, cuales: 'a favor' | 'en contra') =>
+  n === 1
+    ? `1 partido no cuenta: le falta el minuto de algún gol ${cuales}.`
+    : `${n} partidos no cuentan: les falta el minuto de algún gol ${cuales}.`
+
+const enCampo = (
+  clave: string,
+  cuales: 'a favor' | 'en contra',
+  goles: 'golesFavorEnCampo' | 'golesEncajados',
+  base: 'minutosConFavor' | 'minutosConEncajados',
+  sinMinuto: (e: Equipo) => number,
+): Estadistica => ({
+  clave,
+  texto: `Goles ${cuales} en el campo`,
+  vacio: `Todavía no hay partidos con el minuto de los goles ${cuales}.`,
+  columnas: [
+    cifra(goles, 'Goles'),
+    minutos(base),
+    {
+      clave: 'por90',
+      corto: "Por 90'",
+      largo: `Goles ${cuales} por 90 minutos`,
+      valor: (j) => por90(j[goles], j[base]),
+      celda: (j) => textoPor90(j[goles], j[base]),
+    },
+  ],
+  // En contra, mejor cuantos menos
+  orden: { columna: 'por90', descendente: cuales === 'a favor' },
+  filtrar: conAlgo(base),
+  aviso: (e) => (sinMinuto(e) > 0 ? avisoSinMinuto(sinMinuto(e), cuales) : null),
+})
+
+const ESTADISTICAS: Estadistica[] = [
+  {
+    clave: 'goles',
+    texto: 'Goles',
+    vacio: 'Nadie ha marcado todavía.',
+    columnas: [cifra('goles', 'Goles')],
+    orden: { columna: 'goles', descendente: true },
+    filtrar: conAlgo('goles'),
+  },
+  {
+    clave: 'asistencias',
+    texto: 'Asistencias',
+    vacio: 'Todavía no hay asistencias.',
+    columnas: [cifra('asistencias', 'Asist.', 'Asistencias')],
+    orden: { columna: 'asistencias', descendente: true },
+    filtrar: conAlgo('asistencias'),
+  },
+  {
+    clave: 'minutos',
+    texto: 'Minutos',
+    vacio: 'Todavía no hay minutos registrados.',
+    columnas: [minutos('minutos')],
+    orden: { columna: 'minutos', descendente: true },
+    filtrar: conAlgo('minutos'),
+  },
+  {
+    clave: 'porEntreno',
+    texto: 'Minutos por entreno',
+    vacio: 'Todavía no se ha pasado lista en ningún entreno.',
+    columnas: [
+      minutos('minutos'),
+      cifra('entrenos', 'Entr.', 'Entrenos'),
+      {
+        clave: 'porEntreno',
+        corto: 'Media',
+        largo: 'Minutos por entreno',
+        valor: minutosPorEntreno,
+        celda: textoPorEntreno,
+      },
+    ],
+    orden: { columna: 'porEntreno', descendente: true },
+    // Quien ha jugado o ha entrenado, y solo si se ha pasado lista alguna vez
+    filtrar: (jugadores) =>
+      jugadores.some((j) => j.entrenos > 0)
+        ? jugadores.filter((j) => j.minutos > 0 || j.entrenos > 0)
+        : [],
+  },
+  enCampo('aFavor', 'a favor', 'golesFavorEnCampo', 'minutosConFavor', (e) => e.sinMinutoAFavor),
+  enCampo(
+    'encajados',
+    'en contra',
+    'golesEncajados',
+    'minutosConEncajados',
+    (e) => e.sinMinutoEnContra,
+  ),
+  {
+    clave: 'tarjetas',
+    texto: 'Tarjetas',
+    vacio: 'Ninguna tarjeta. ¡Así da gusto!',
+    columnas: [
+      cifra('amarillas', 'Am.', 'Amarillas'),
+      // Una roja pesa más que cualquier número de amarillas
+      {
+        ...cifra('rojas', 'Rojas'),
+        valor: (j) => j.rojas * 1000 + j.amarillas,
+        celda: (j) => j.rojas,
+      },
+    ],
+    orden: { columna: 'rojas', descendente: true },
+    filtrar: (jugadores) => jugadores.filter((j) => j.amarillas + j.rojas > 0),
+  },
+]
+
+const COLUMNAS_JUGADOR: Columna[] = [
+  { clave: 'dorsal', corto: '#', largo: 'Dorsal', valor: (j) => j.dorsal, ascendente: true },
+  { clave: 'jugador', corto: 'Jugador', largo: 'Jugador', valor: nombreCompleto, ascendente: true },
+]
+
+const porNombre = (a: EstadisticasJugador, b: EstadisticasJugador) =>
+  nombreCompleto(a).localeCompare(nombreCompleto(b), 'es')
+
+// Por la columna, con lo que no tiene valor al final; los empates, por nombre
+function ordenar(lista: EstadisticasJugador[], columna: Columna, descendente: boolean) {
+  return [...lista].sort((a, b) => {
+    const [va, vb] = [columna.valor(a), columna.valor(b)]
+    if (va === null || vb === null)
+      return (va === null ? 1 : 0) - (vb === null ? 1 : 0) || porNombre(a, b)
+    const r = typeof va === 'string' ? va.localeCompare(String(vb), 'es') : va - (vb as number)
+    return (descendente ? -r : r) || porNombre(a, b)
+  })
 }
 
 export function Estadisticas() {
@@ -86,17 +211,17 @@ export function Estadisticas() {
   }
   return (
     <>
-      <Equipo equipo={equipo} />
+      <ResultadosEquipo equipo={equipo} />
       {puedeGestionarJugadores(plantilla) ? (
-        <Clasificaciones jugadores={jugadores} sinMinuto={equipo.sinMinutoEnContra} />
+        <Clasificaciones jugadores={jugadores} equipo={equipo} />
       ) : (
-        <Mias jugador={jugadores[0]} sinMinuto={equipo.sinMinutoEnContra} />
+        <Mias jugador={jugadores[0]} equipo={equipo} />
       )}
     </>
   )
 }
 
-function Equipo({ equipo }: { equipo: EstadisticasPlantilla['equipo'] }) {
+function ResultadosEquipo({ equipo }: { equipo: Equipo }) {
   const diferencia = equipo.golesFavor - equipo.golesContra
   return (
     <section className={estilos.seccion} aria-labelledby="equipo">
@@ -122,116 +247,113 @@ function Equipo({ equipo }: { equipo: EstadisticasPlantilla['equipo'] }) {
   )
 }
 
+const PRIMERA = ESTADISTICAS[0] as Estadistica
+
 function Clasificaciones({
   jugadores,
-  sinMinuto,
+  equipo,
 }: {
   jugadores: EstadisticasJugador[]
-  sinMinuto: number
+  equipo: Equipo
 }) {
   const plantilla = usePlantillaActiva()
-  const [tabla, setTabla] = useState<Tabla>('goles')
-  const actual = TABLAS.find((t) => t.tabla === tabla) ?? TABLAS[0]
-  const lista = enTabla(jugadores, tabla).sort(
-    (a, b) => valor(b, tabla) - valor(a, tabla) || desempate(a, b, tabla),
-  )
+  const [actual, setActual] = useState<Estadistica>(PRIMERA)
+  const [orden, setOrden] = useState<Orden>(PRIMERA.orden)
+  const columnas = [...COLUMNAS_JUGADOR, ...actual.columnas]
+  const columna = columnas.find((c) => c.clave === orden.columna) ?? columnas[0]
+  const lista = columna
+    ? ordenar(actual.filtrar(jugadores), columna, orden.descendente)
+    : actual.filtrar(jugadores)
+  const aviso = actual.aviso?.(equipo)
+
+  const elegir = (clave: string) => {
+    const nueva = ESTADISTICAS.find((e) => e.clave === clave) ?? PRIMERA
+    setActual(nueva)
+    setOrden(nueva.orden)
+  }
+  const ordenarPor = (c: Columna) =>
+    setOrden((o) =>
+      o.columna === c.clave
+        ? { columna: c.clave, descendente: !o.descendente }
+        : { columna: c.clave, descendente: !c.ascendente },
+    )
 
   return (
     <section className={estilos.seccion} aria-labelledby="clasificaciones">
       <h2 id="clasificaciones">Jugadores</h2>
-      <fieldset className={estilos.tiposEvento}>
-        <legend className="solo-lectores">Clasificación</legend>
-        {TABLAS.map((t) => (
-          <button
-            key={t.tabla}
-            type="button"
-            aria-pressed={tabla === t.tabla}
-            onClick={() => setTabla(t.tabla)}
-          >
-            {t.texto}
-          </button>
+      <Selector
+        etiqueta="Estadística"
+        value={actual.clave}
+        onChange={(e) => elegir(e.target.value)}
+      >
+        {ESTADISTICAS.map((e) => (
+          <option key={e.clave} value={e.clave}>
+            {e.texto}
+          </option>
         ))}
-      </fieldset>
-      {tabla === 'encajados' && sinMinuto > 0 && (
+      </Selector>
+      {aviso && (
         <p className={estilos.secundario} role="note">
-          {avisoSinMinuto(sinMinuto)}
+          {aviso}
         </p>
       )}
       {lista.length === 0 ? (
-        <p className={estilos.secundario}>{actual?.vacio}</p>
+        <p className={estilos.secundario}>{actual.vacio}</p>
       ) : (
-        <ol className={estilos.convocados} aria-label={actual?.texto}>
-          {lista.map((j) => (
-            <li key={j.jugadorId}>
-              <Dorsal dorsal={j.dorsal} />
-              <Link
-                to={`/plantillas/${plantilla.id}/jugadores/${j.jugadorId}`}
-                className={estilos.nombreClasificacion}
-              >
-                {nombreCompleto(j)}
-                {!j.activo && <span className={estilos.secundario}> · baja</span>}
-                {tabla === 'porEntreno' && (
-                  <span className={estilos.secundario}>
-                    {' '}
-                    · {j.minutos}' en {j.entrenos === 1 ? '1 entreno' : `${j.entrenos} entrenos`}
-                  </span>
-                )}
-                {tabla === 'encajados' && (
-                  <span className={estilos.secundario}>
-                    {' '}
-                    · {j.golesEncajados} en {j.minutosConEncajados}'
-                  </span>
-                )}
-              </Link>
-              <span className={estilos.valorClasificacion}>
-                {tabla === 'tarjetas' ? (
-                  <>
-                    {j.amarillas > 0 && (
-                      <span className={estilos.tarjetaFalta} data-tipo="amarilla">
-                        {j.amarillas}
-                        <span className="solo-lectores">
-                          {j.amarillas === 1 ? ' amarilla' : ' amarillas'}
-                        </span>
-                      </span>
-                    )}
-                    {j.rojas > 0 && (
-                      <span className={estilos.tarjetaFalta} data-tipo="roja">
-                        {j.rojas}
-                        <span className="solo-lectores">{j.rojas === 1 ? ' roja' : ' rojas'}</span>
-                      </span>
-                    )}
-                  </>
-                ) : tabla === 'minutos' ? (
-                  `${j.minutos}'`
-                ) : tabla === 'porEntreno' ? (
-                  textoPorEntreno(j)
-                ) : tabla === 'encajados' ? (
-                  textoEncajados(j)
-                ) : (
-                  j[tabla]
-                )}
-              </span>
-            </li>
-          ))}
-        </ol>
+        <div className={estilos.envolturaTabla}>
+          <table className={estilos.tablaEstadisticas} aria-label={actual.texto}>
+            <thead>
+              <tr>
+                {columnas.map((c) => {
+                  const activa = c.clave === orden.columna
+                  const Flecha = !activa ? ArrowUpDown : orden.descendente ? ArrowDown : ArrowUp
+                  return (
+                    <th
+                      key={c.clave}
+                      scope="col"
+                      data-columna={c.clave}
+                      aria-sort={
+                        activa ? (orden.descendente ? 'descending' : 'ascending') : undefined
+                      }
+                    >
+                      <button type="button" onClick={() => ordenarPor(c)}>
+                        <span aria-hidden="true">{c.corto}</span>
+                        <span className="solo-lectores">{c.largo}</span>
+                        <Flecha aria-hidden size={14} data-activa={activa || undefined} />
+                      </button>
+                    </th>
+                  )
+                })}
+              </tr>
+            </thead>
+            <tbody>
+              {lista.map((j) => (
+                <tr key={j.jugadorId}>
+                  <td data-columna="dorsal">
+                    <Dorsal dorsal={j.dorsal} />
+                  </td>
+                  <th scope="row" data-columna="jugador">
+                    <Link to={`/plantillas/${plantilla.id}/jugadores/${j.jugadorId}`}>
+                      {nombreCompleto(j)}
+                    </Link>
+                    {!j.activo && <span className={estilos.secundario}> · baja</span>}
+                  </th>
+                  {actual.columnas.map((c) => (
+                    <td key={c.clave} data-orden={c.clave === orden.columna || undefined}>
+                      {c.celda ? c.celda(j) : c.valor(j)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </section>
   )
 }
 
-// Aviso de los partidos que no cuentan para los goles en contra
-const avisoSinMinuto = (n: number) =>
-  n === 1
-    ? '1 partido no cuenta: le falta el minuto de algún gol en contra.'
-    : `${n} partidos no cuentan: les falta el minuto de algún gol en contra.`
-
-function Mias({
-  jugador,
-  sinMinuto,
-}: {
-  jugador: EstadisticasJugador | undefined
-  sinMinuto: number
-}) {
+function Mias({ jugador, equipo }: { jugador: EstadisticasJugador | undefined; equipo: Equipo }) {
   return (
     <section className={estilos.seccion} aria-labelledby="mias">
       <h2 id="mias">Tus estadísticas</h2>
@@ -244,11 +366,19 @@ function Mias({
           {jugador.entrenos === 1 ? '1 entreno' : `${jugador.entrenos} entrenos`})
         </p>
       )}
+      {jugador && jugador.minutosConFavor > 0 && (
+        <p className={estilos.secundario}>
+          {textoPor90(jugador.golesFavorEnCampo, jugador.minutosConFavor)} goles a favor por 90' con
+          él en el campo ({jugador.golesFavorEnCampo} en {jugador.minutosConFavor}')
+          {equipo.sinMinutoAFavor > 0 && `. ${avisoSinMinuto(equipo.sinMinutoAFavor, 'a favor')}`}
+        </p>
+      )}
       {jugador && jugador.minutosConEncajados > 0 && (
         <p className={estilos.secundario}>
-          {textoEncajados(jugador)} goles en contra por 90' con él en el campo (
-          {jugador.golesEncajados} en {jugador.minutosConEncajados}')
-          {sinMinuto > 0 && `. ${avisoSinMinuto(sinMinuto)}`}
+          {textoPor90(jugador.golesEncajados, jugador.minutosConEncajados)} goles en contra por 90'
+          con él en el campo ({jugador.golesEncajados} en {jugador.minutosConEncajados}')
+          {equipo.sinMinutoEnContra > 0 &&
+            `. ${avisoSinMinuto(equipo.sinMinutoEnContra, 'en contra')}`}
         </p>
       )}
     </section>

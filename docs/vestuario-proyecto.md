@@ -718,7 +718,7 @@ Pasar lista y convocar se guardan como lista completa en una sola petición.
 - Multas: totales, formulario rápido, deuda por jugador, listado, catálogo editable.
 - Configuración: datos de la plantilla, plantillas y administradores del club y nombre del club (ciclo 1); escudo y colores con vista previa y asistente de temporada nueva (ciclo 5).
 - Partido jugado (ciclo 6): resultado, titulares, registro de eventos por minuto.
-- Estadísticas (ciclo 6): tablas de la temporada de la plantilla y trayectoria de cada jugador.
+- Estadísticas (ciclo 6): tabla de la temporada de la plantilla con la estadística elegida y ordenable por columna, y trayectoria de cada jugador.
 - Miembros e invitaciones (ciclo 10).
 
 **Criterios transversales:** diseño adaptable (móvil primero), foco visible y navegación por teclado, respeto a `prefers-reduced-motion`, modo claro/oscuro, estados vacíos que invitan a actuar, mensajes de error que indican qué pasó y cómo resolverlo.
@@ -770,7 +770,7 @@ Una issue está terminada cuando: cumple sus criterios de aceptación en el ento
 | 3 · Convocatorias | Partidos, convocados y mensaje de WhatsApp | v1.0.0 |
 | 4 · Multas | Catálogo, registro, cobro, deudas y caja. Paridad con el MVP y primer despliegue en el servidor | v1.0.0 |
 | 5 · Personalización y temporadas | Escudo y colores por club, y cambio de temporada | en parte en v1.1.0, con GH-101 y GH-102; el resto, pendiente |
-| 6 · Estadísticas | Resultado, participaciones, eventos, estadísticas de temporada y trayectoria de cada jugador | v1.1.0; después se añadieron GH-134, GH-147, GH-149, GH-151, GH-153 y GH-155, en v1.3.0, y GH-154, pendiente |
+| 6 · Estadísticas | Resultado, participaciones, eventos, estadísticas de temporada y trayectoria de cada jugador | v1.1.0; después se añadieron GH-134, GH-147, GH-149, GH-151, GH-153 y GH-155, en v1.3.0, y GH-154 y GH-164, pendientes |
 | 7 · Planificación de entrenos | Biblioteca de ejercicios con fotos y vídeos, y sesiones planificadas | v1.2.0 |
 | 8 · Operación | Backups automáticos, restauración, logs y actualizaciones | en parte en v1.2.0, con GH-45 y GH-46; el resto, pendiente |
 | 9 · Exportar y compartir | Exportar y compartir sesiones y multas en PDF o texto y asistencia desde WhatsApp | en parte en v1.3.0, con GH-131 y GH-132; el resto, pendiente |
@@ -807,7 +807,7 @@ Versión publicada en los ciclos ya cerrados y prevista en el resto. Los ciclos 
 | Ciclo 3 · Convocatorias | Partidos, convocados y mensaje de WhatsApp (v1.0.0) |
 | Ciclo 4 · Multas | Catálogo, registro, cobro, deudas y caja. Paridad con el MVP y primer despliegue en el servidor (v1.0.0) |
 | Ciclo 5 · Personalización y temporadas | Escudo y colores por club, y cambio de temporada (en parte en v1.1.0, con GH-101 y GH-102; el resto, pendiente) |
-| Ciclo 6 · Estadísticas | Resultado, participaciones, eventos, estadísticas de temporada y trayectoria de cada jugador (v1.1.0; después se añadieron GH-134, GH-147, GH-149, GH-151, GH-153 y GH-155, en v1.3.0, y GH-154, pendiente) |
+| Ciclo 6 · Estadísticas | Resultado, participaciones, eventos, estadísticas de temporada y trayectoria de cada jugador (v1.1.0; después se añadieron GH-134, GH-147, GH-149, GH-151, GH-153 y GH-155, en v1.3.0, y GH-154 y GH-164, pendientes) |
 | Ciclo 7 · Planificación de entrenos | Biblioteca de ejercicios con fotos y vídeos, y sesiones planificadas (v1.2.0) |
 | Ciclo 8 · Operación | Backups automáticos, restauración, logs y actualizaciones (en parte en v1.2.0, con GH-45 y GH-46; el resto, pendiente) |
 | Ciclo 9 · Exportar y compartir | Exportar y compartir sesiones y multas en PDF o texto y asistencia desde WhatsApp (en parte en v1.3.0, con GH-131 y GH-132; el resto, pendiente) |
@@ -1549,6 +1549,21 @@ Apuntar en el partido, mientras se juega, notas sobre detalles tácticos, incide
 - [ ] Migración y tests
 
 Fuera de esta issue: anotar sin conexión (se envían al recuperarla) y saltar desde una nota al minuto del vídeo (GH-134).
+
+#### GH-164
+**Título:** Estadísticas en tabla ordenable y goles a favor en el campo
+**Etiquetas:** feature, backend, frontend
+
+En Partidos → Estadísticas, las clasificaciones de jugadores pasan de una fila de botones con una lista a un desplegable con la estadística y una tabla ordenable. Se añade la de goles a favor con cada jugador en el campo, la otra cara de GH-153.
+
+**Criterios de aceptación**
+- [ ] Un desplegable «Estadística»: goles, asistencias, minutos, minutos por entreno, goles a favor en el campo, goles en contra en el campo y tarjetas; por defecto, goles
+- [ ] Tabla con dorsal, jugador y las columnas de la estadística (las de por 90' y por entreno, con su base); pulsar una cabecera ordena por ella y pulsarla otra vez invierte el orden (`aria-sort`); empates por nombre; lo que no tiene valor, al final
+- [ ] Orden por defecto: de mayor a menor, salvo goles en contra (de menor a mayor); al cambiar de estadística vuelve su orden
+- [ ] `GET /api/plantillas/:id/estadisticas` devuelve, por jugador, los goles a favor con él en el campo (`gol` y `gol_propia` del rival cuyo minuto cae en su tramo) y los minutos de esos partidos, y en el equipo los partidos que no cuentan
+- [ ] Mismas reglas que GH-153: un gol en el minuto de un cambio cuenta para quien sale; solo cuentan los partidos con todos sus goles a favor con minuto, y la tabla avisa de los que no
+- [ ] El rol jugador lo ve en «Tus estadísticas»; no se añade a la ficha del jugador
+- [ ] Tests
 
 ---
 

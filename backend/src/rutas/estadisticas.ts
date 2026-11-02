@@ -13,7 +13,13 @@ import {
   tipoEvento,
 } from '../db/schema/index.js'
 import { ErrorApi, EsquemaError, validacionFallida } from '../errores.js'
-import { bloquearPartido, calcularEncajados, calcularMinutos, recalcular } from '../estadisticas.js'
+import {
+  bloquearPartido,
+  calcularAFavor,
+  calcularEncajados,
+  calcularMinutos,
+  recalcular,
+} from '../estadisticas.js'
 import {
   type EnvClub,
   type EnvPlantilla,
@@ -110,6 +116,13 @@ const EsquemaEstadisticasJugador = z
     minutosConEncajados: z.int().openapi({
       description: 'Minutos jugados en esos mismos partidos: la base de los goles encajados por 90',
     }),
+    golesFavorEnCampo: z.int().openapi({
+      description:
+        'Goles a favor con el jugador en el campo, en los partidos con todos sus goles a favor con minuto',
+    }),
+    minutosConFavor: z.int().openapi({
+      description: 'Minutos jugados en esos mismos partidos: la base de los goles a favor por 90',
+    }),
   })
   .openapi('EstadisticasJugador')
 
@@ -125,6 +138,10 @@ const EsquemaEstadisticasPlantilla = z
       sinMinutoEnContra: z.int().openapi({
         description:
           'Partidos jugados a los que les falta el minuto de algún gol en contra: no cuentan para los goles encajados',
+      }),
+      sinMinutoAFavor: z.int().openapi({
+        description:
+          'Partidos jugados a los que les falta el minuto de algún gol a favor: no cuentan para los goles a favor en el campo',
       }),
     }),
     jugadores: z.array(EsquemaEstadisticasJugador),
@@ -447,7 +464,7 @@ export const rutasEstadisticas = () =>
         tags: ['Estadísticas'],
         summary: 'Estadísticas de la temporada',
         description:
-          'Resultados del equipo y, por jugador, partidos, titularidades, minutos, goles, asistencias y tarjetas en los partidos jugados de la plantilla, los entrenos a los que ha ido y los goles en contra con él en el campo. El rol jugador solo ve su fila.',
+          'Resultados del equipo y, por jugador, partidos, titularidades, minutos, goles, asistencias y tarjetas en los partidos jugados de la plantilla, los entrenos a los que ha ido y los goles a favor y en contra con él en el campo. El rol jugador solo ve su fila.',
         middleware: [requireRol('jugador')] as const,
         request: { params: ParamPartido.pick({ id: true }) },
         responses: { 200: json(EsquemaEstadisticasPlantilla, 'Estadísticas'), ...errores },
@@ -513,14 +530,20 @@ export const rutasEstadisticas = () =>
             ),
           )
           .orderBy(sql`${fichas.dorsal} asc nulls last`, ...porNombre, asc(jugadores.id))
-        const encajados = await encajadosEnPlantilla(plantillaId)
+        const { encajados, aFavor } = await golesEnCampoDePlantilla(plantillaId)
         return c.json(
           {
-            equipo: { ...(equipo ?? sinPartidos), sinMinutoEnContra: encajados.sinMinuto },
+            equipo: {
+              ...(equipo ?? sinPartidos),
+              sinMinutoEnContra: encajados.sinMinuto,
+              sinMinutoAFavor: aFavor.sinMinuto,
+            },
             jugadores: filas.map((f) => ({
               ...f,
               golesEncajados: encajados.porJugador.get(f.jugadorId)?.goles ?? 0,
               minutosConEncajados: encajados.porJugador.get(f.jugadorId)?.minutos ?? 0,
+              golesFavorEnCampo: aFavor.porJugador.get(f.jugadorId)?.goles ?? 0,
+              minutosConFavor: aFavor.porJugador.get(f.jugadorId)?.minutos ?? 0,
             })),
           },
           200,
@@ -537,17 +560,41 @@ const sinPartidos = {
   golesContra: 0,
 }
 
-// Goles encajados en el campo y minutos de cada jugador en los partidos jugados de la plantilla
-// que tienen todos sus goles en contra con minuto (GH-153). Se calcula con los mismos tramos que
-// los minutos jugados; los partidos sin ese dato solo se cuentan.
-async function encajadosEnPlantilla(plantillaId: string) {
+type GolesEnCampo = {
+  porJugador: Map<string, { goles: number; minutos: number }>
+  sinMinuto: number
+}
+
+// Suma lo de un partido: sin goles (falta algún minuto), el partido solo se cuenta
+function sumarPartido(
+  destino: GolesEnCampo,
+  goles: Map<string, number> | null,
+  minutos: Map<string, number>,
+) {
+  if (!goles) {
+    destino.sinMinuto++
+    return
+  }
+  for (const [jugadorId, m] of minutos) {
+    const total = destino.porJugador.get(jugadorId) ?? { goles: 0, minutos: 0 }
+    total.goles += goles.get(jugadorId) ?? 0
+    total.minutos += m
+    destino.porJugador.set(jugadorId, total)
+  }
+}
+
+// Goles en contra (GH-153) y a favor (GH-164) con cada jugador en el campo y sus minutos, en los
+// partidos jugados de la plantilla que tienen todos esos goles con minuto. Se calcula con los mismos
+// tramos que los minutos jugados; los partidos sin ese dato solo se cuentan.
+async function golesEnCampoDePlantilla(plantillaId: string) {
+  const encajados: GolesEnCampo = { porJugador: new Map(), sinMinuto: 0 }
+  const aFavor: GolesEnCampo = { porJugador: new Map(), sinMinuto: 0 }
   const jugados = await db
-    .select({ id: partidos.id, golesContra: partidos.golesContra })
+    .select({ id: partidos.id, golesFavor: partidos.golesFavor, golesContra: partidos.golesContra })
     .from(partidos)
     .where(and(eq(partidos.plantillaId, plantillaId), eq(partidos.estado, 'jugado')))
   const ids = jugados.map((p) => p.id)
-  const porJugador = new Map<string, { goles: number; minutos: number }>()
-  if (ids.length === 0) return { porJugador, sinMinuto: 0 }
+  if (ids.length === 0) return { encajados, aFavor }
   const lista = await db
     .select({
       partidoId: participaciones.partidoId,
@@ -566,23 +613,14 @@ async function encajadosEnPlantilla(plantillaId: string) {
     .from(eventosPartido)
     .where(inArray(eventosPartido.partidoId, ids))
 
-  let sinMinuto = 0
   for (const p of jugados) {
     const delPartido = lista.filter((l) => l.partidoId === p.id)
     const susEventos = eventos.filter((e) => e.partidoId === p.id)
-    const goles = calcularEncajados(delPartido, susEventos, p.golesContra ?? 0)
-    if (!goles) {
-      sinMinuto++
-      continue
-    }
-    for (const [jugadorId, minutos] of calcularMinutos(delPartido, susEventos)) {
-      const total = porJugador.get(jugadorId) ?? { goles: 0, minutos: 0 }
-      total.goles += goles.get(jugadorId) ?? 0
-      total.minutos += minutos
-      porJugador.set(jugadorId, total)
-    }
+    const minutos = calcularMinutos(delPartido, susEventos)
+    sumarPartido(encajados, calcularEncajados(delPartido, susEventos, p.golesContra ?? 0), minutos)
+    sumarPartido(aFavor, calcularAFavor(delPartido, susEventos, p.golesFavor ?? 0), minutos)
   }
-  return { porJugador, sinMinuto }
+  return { encajados, aFavor }
 }
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0]
