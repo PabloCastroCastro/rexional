@@ -67,13 +67,26 @@ export function calcularEncajados(lista: Participacion[], eventos: Evento[], gol
   const enContra = eventos.filter(
     (e) => e.tipo === 'gol_rival' || (e.tipo === 'gol_propia' && e.jugadorId !== null),
   )
-  if (enContra.length !== golesContra || enContra.some((e) => e.minuto === null)) return null
+  return golesEnCampo(lista, eventos, enContra, golesContra)
+}
+
+// Goles a favor con cada participante en el campo (GH-164): los nuestros y los del rival en propia
+// puerta, con las mismas reglas que los goles en contra
+export function calcularAFavor(lista: Participacion[], eventos: Evento[], golesFavor: number) {
+  const aFavor = eventos.filter(
+    (e) => e.tipo === 'gol' || (e.tipo === 'gol_propia' && e.jugadorId === null),
+  )
+  return golesEnCampo(lista, eventos, aFavor, golesFavor)
+}
+
+function golesEnCampo(lista: Participacion[], eventos: Evento[], goles: Evento[], total: number) {
+  if (goles.length !== total || goles.some((e) => e.minuto === null)) return null
   return new Map(
     lista.map((p) => {
       const t = tramo(p, eventos)
       if (!t) return [p.jugadorId, 0]
       const enCampo = (m: number) => (t.inicio === 0 ? m >= 0 : m > t.inicio) && m <= t.fin
-      return [p.jugadorId, enContra.filter((e) => enCampo(e.minuto ?? -1)).length]
+      return [p.jugadorId, goles.filter((e) => enCampo(e.minuto ?? -1)).length]
     }),
   )
 }

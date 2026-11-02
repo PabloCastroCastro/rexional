@@ -724,43 +724,104 @@
   font-variant-numeric: tabular-nums;
 }
 
-.nombreClasificacion {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  color: inherit;
-  text-decoration: none;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+/* Tabla de estadísticas de jugadores (GH-164) */
+.envolturaTabla {
+  overflow-x: auto;
+  border-radius: var(--radio-l);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra-1);
 }
 
-.valorClasificacion {
-  display: flex;
-  flex: none;
-  gap: var(--espacio-2);
-  font-size: var(--texto-lg);
-  font-weight: 700;
+.tablaEstadisticas {
+  width: 100%;
+  border-collapse: collapse;
   font-variant-numeric: tabular-nums;
 }
 
-.tarjetaFalta {
+.tablaEstadisticas th,
+.tablaEstadisticas td {
+  padding: var(--espacio-2);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.tablaEstadisticas tbody tr {
+  border-top: 1px solid var(--color-borde);
+}
+
+.tablaEstadisticas thead th {
+  padding-block: 0;
+  color: var(--color-texto-suave);
+  font-size: var(--texto-xs);
+  font-weight: 600;
+}
+
+.tablaEstadisticas thead button {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  min-width: 1.5rem;
+  gap: 2px;
+  min-height: var(--altura-tactil);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.tablaEstadisticas thead button:focus-visible {
+  outline: 3px solid var(--color-foco);
+  outline-offset: 2px;
+}
+
+.tablaEstadisticas thead svg {
+  opacity: 0.4;
+}
+
+.tablaEstadisticas thead svg[data-activa] {
+  opacity: 1;
+}
+
+.tablaEstadisticas th[aria-sort] {
+  color: var(--color-texto);
+}
+
+.tablaEstadisticas [data-columna="dorsal"] {
+  width: 2.5rem;
+  padding-inline-start: var(--espacio-3);
+  text-align: center;
+}
+
+/* En la tabla, el dorsal más pequeño: más sitio para el nombre */
+.tablaEstadisticas td[data-columna="dorsal"] > span {
+  width: 2rem;
   height: 2rem;
-  border-radius: var(--radio-s);
   font-size: var(--texto-sm);
 }
 
-.tarjetaFalta[data-tipo="amarilla"] {
-  background: #f2c230;
-  color: #1d1d1d;
+/* El nombre ocupa lo que sobra y se corta si no cabe */
+.tablaEstadisticas [data-columna="jugador"] {
+  width: 100%;
+  max-width: 0;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  font-weight: 400;
 }
 
-.tarjetaFalta[data-tipo="roja"] {
-  background: var(--color-peligro);
-  color: #fff;
+.tablaEstadisticas tbody [data-columna="jugador"] a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.tablaEstadisticas td:last-child,
+.tablaEstadisticas th:last-child {
+  padding-inline-end: var(--espacio-4);
+}
+
+.tablaEstadisticas td[data-orden] {
+  font-size: var(--texto-lg);
+  font-weight: 700;
 }
 
 .avisoGoles {

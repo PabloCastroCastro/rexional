@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  calcularAFavor,
   calcularEncajados,
   calcularMinutos,
   comprobar,
@@ -105,6 +106,36 @@ describe('goles encajados en el campo', () => {
     ['un gol en propia del rival', [ev('gol_propia', null, 10)], 1],
   ])('no se sabe si %s', (_, eventos, golesContra) => {
     expect(calcularEncajados(lista, eventos, golesContra)).toBeNull()
+  })
+})
+
+describe('goles a favor en el campo', () => {
+  const lista = [titular('a'), titular('b'), suplente('c')]
+
+  it('los nuestros y los del rival en propia, para quien está en el campo; en el cambio, para quien sale', () => {
+    const aFavor = calcularAFavor(
+      lista,
+      [
+        ev('gol', 'a', 5),
+        ev('sale', 'b', 60),
+        ev('entra', 'c', 60),
+        ev('gol', 'c', 60),
+        ev('gol_propia', null, 75),
+        // Los del rival no cuentan
+        ev('gol_rival', null, 80),
+        ev('gol_propia', 'a', 85),
+      ],
+      3,
+    )
+    expect(Object.fromEntries(aFavor ?? [])).toEqual({ a: 3, b: 2, c: 1 })
+  })
+
+  it.each<[string, Evento[], number]>([
+    ['faltan goles a favor por registrar', [ev('gol', 'a', 20)], 2],
+    ['un gol a favor sin minuto', [ev('gol', 'a')], 1],
+    ['un gol en propia nuestro', [ev('gol_propia', 'a', 10)], 1],
+  ])('no se sabe si %s', (_, eventos, golesFavor) => {
+    expect(calcularAFavor(lista, eventos, golesFavor)).toBeNull()
   })
 })
 
