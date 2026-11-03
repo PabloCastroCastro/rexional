@@ -948,3 +948,59 @@
   width: 100%;
   accent-color: var(--color-primario);
 }
+
+/* Goles del equipo por minuto (GH-168) */
+.tablaMinutos {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.tablaMinutos :where(th, td) {
+  padding: var(--espacio-2) var(--espacio-4);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.tablaMinutos thead th {
+  color: var(--color-texto-suave);
+  font-size: var(--texto-xs);
+  font-weight: 600;
+}
+
+.tablaMinutos th[scope="row"],
+.tablaMinutos th:first-child {
+  text-align: left;
+  font-weight: 400;
+}
+
+.tablaMinutos td {
+  font-weight: 700;
+}
+
+.tablaMinutos tbody tr {
+  border-top: 1px solid var(--color-borde);
+}
+
+/* Separa las partes de los tramos */
+.tablaMinutos tbody + tbody tr:first-child {
+  border-top-width: 3px;
+}
+
+.desdeMinuto {
+  display: grid;
+  grid-template-columns: minmax(0, 9rem) minmax(0, 1fr);
+  align-items: end;
+  gap: var(--espacio-3);
+}
+
+.desdeMinuto p {
+  padding-block-end: var(--espacio-3);
+}
+
+/* Exportar la temporada a Excel (GH-170) */
+.botonesExportar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-2);
+}

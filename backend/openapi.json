@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "API de Vestuario",
-    "version": "1.4.0",
+    "version": "1.5.0",
     "description": "API REST de Vestuario. Todas las rutas cuelgan de /api. Errores con el formato { error: { codigo, mensaje, detalles? } }."
   },
   "components": {
@@ -1290,6 +1290,40 @@
               "sinMinutoAFavor": {
                 "type": "integer",
                 "description": "Partidos jugados a los que les falta el minuto de algún gol a favor: no cuentan para los goles a favor en el campo"
+              },
+              "golesPorMinuto": {
+                "type": "object",
+                "properties": {
+                  "aFavor": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    },
+                    "description": "Minuto de cada gol a favor (nuestros y del rival en propia), de menor a mayor"
+                  },
+                  "enContra": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    },
+                    "description": "Minuto de cada gol en contra (del rival y nuestros en propia), de menor a mayor"
+                  },
+                  "aFavorSinMinuto": {
+                    "type": "integer",
+                    "description": "Goles a favor del resultado sin minuto: no cuentan en aFavor"
+                  },
+                  "enContraSinMinuto": {
+                    "type": "integer",
+                    "description": "Goles en contra del resultado sin minuto: no cuentan en enContra"
+                  }
+                },
+                "required": [
+                  "aFavor",
+                  "enContra",
+                  "aFavorSinMinuto",
+                  "enContraSinMinuto"
+                ],
+                "description": "Goles del equipo según el minuto (GH-168)"
               }
             },
             "required": [
@@ -1300,7 +1334,8 @@
               "golesFavor",
               "golesContra",
               "sinMinutoEnContra",
-              "sinMinutoAFavor"
+              "sinMinutoAFavor",
+              "golesPorMinuto"
             ]
           },
           "jugadores": {
@@ -6483,6 +6518,69 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/TrayectoriaEstadisticas"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/exportacion.xlsx": {
+      "get": {
+        "tags": [
+          "Estadísticas"
+        ],
+        "summary": "Exportar la temporada a Excel",
+        "description": "Delegado o superior. Un .xlsx con una hoja por tabla: partidos, eventos, participaciones, jugadores (las cifras de las estadísticas) y asistencia a los entrenos, sin el motivo de las ausencias. Los partidos sin jugar solo salen en Partidos.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "El archivo de Excel",
+            "content": {
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
                 }
               }
             }

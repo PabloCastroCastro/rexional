@@ -18,6 +18,7 @@ import {
   calcularAFavor,
   calcularEncajados,
   calcularMinutos,
+  minutosDeGoles,
   recalcular,
 } from '../estadisticas.js'
 import {
@@ -143,6 +144,24 @@ const EsquemaEstadisticasPlantilla = z
         description:
           'Partidos jugados a los que les falta el minuto de algún gol a favor: no cuentan para los goles a favor en el campo',
       }),
+      golesPorMinuto: z
+        .object({
+          aFavor: z.array(z.int()).openapi({
+            description:
+              'Minuto de cada gol a favor (nuestros y del rival en propia), de menor a mayor',
+          }),
+          enContra: z.array(z.int()).openapi({
+            description:
+              'Minuto de cada gol en contra (del rival y nuestros en propia), de menor a mayor',
+          }),
+          aFavorSinMinuto: z.int().openapi({
+            description: 'Goles a favor del resultado sin minuto: no cuentan en aFavor',
+          }),
+          enContraSinMinuto: z.int().openapi({
+            description: 'Goles en contra del resultado sin minuto: no cuentan en enContra',
+          }),
+        })
+        .openapi({ description: 'Goles del equipo según el minuto (GH-168)' }),
     }),
     jugadores: z.array(EsquemaEstadisticasJugador),
   })
@@ -470,86 +489,90 @@ export const rutasEstadisticas = () =>
         responses: { 200: json(EsquemaEstadisticasPlantilla, 'Estadísticas'), ...errores },
       }),
       async (c) => {
-        const plantillaId = c.var.plantilla.id
         const soloSuyas = !rolAlcanza(c.var.rol, 'delegado')
-        const [equipo] = await db
-          .select({
-            jugados: sql<number>`count(*)::int`,
-            ganados: sql<number>`count(*) filter (where ${partidos.golesFavor} > ${partidos.golesContra})::int`,
-            empatados: sql<number>`count(*) filter (where ${partidos.golesFavor} = ${partidos.golesContra})::int`,
-            perdidos: sql<number>`count(*) filter (where ${partidos.golesFavor} < ${partidos.golesContra})::int`,
-            golesFavor: sql<number>`coalesce(sum(${partidos.golesFavor}), 0)::int`,
-            golesContra: sql<number>`coalesce(sum(${partidos.golesContra}), 0)::int`,
-          })
-          .from(partidos)
-          .where(and(eq(partidos.plantillaId, plantillaId), eq(partidos.estado, 'jugado')))
-
-        const a = acumulados({ plantillaId })
-        // Entrenos a los que ha ido cada jugador en la plantilla (GH-155)
-        const asistidos = db
-          .select({
-            jugadorId: sql<string>`${asistencias.jugadorId}`.as('as_jugador'),
-            entrenos: sql<number>`count(*)`.as('entrenos'),
-          })
-          .from(asistencias)
-          .where(and(eq(asistencias.plantillaId, plantillaId), eq(asistencias.estado, 'asiste')))
-          .groupBy(asistencias.jugadorId)
-          .as('asistidos')
-        const filas = await db
-          .select({
-            jugadorId: jugadores.id,
-            nombre: jugadores.nombre,
-            apellidos: jugadores.apellidos,
-            dorsal: fichas.dorsal,
-            activo: fichas.activo,
-            ...a.columnas,
-            entrenos: sql<number>`coalesce(${asistidos.entrenos}, 0)::int`,
-          })
-          .from(fichas)
-          .innerJoin(jugadores, eq(jugadores.id, fichas.jugadorId))
-          .leftJoin(asistidos, eq(asistidos.jugadorId, fichas.jugadorId))
-          .leftJoin(
-            a.enCampo,
-            and(
-              eq(a.enCampo.plantillaId, fichas.plantillaId),
-              eq(a.enCampo.jugadorId, fichas.jugadorId),
-            ),
-          )
-          .leftJoin(
-            a.eventos,
-            and(
-              eq(a.eventos.plantillaId, fichas.plantillaId),
-              eq(a.eventos.jugadorId, fichas.jugadorId),
-            ),
-          )
-          .where(
-            and(
-              eq(fichas.plantillaId, plantillaId),
-              // Sin jugador vinculado, ninguna fila
-              soloSuyas ? sql`${fichas.jugadorId} = ${c.var.jugadorId}` : undefined,
-            ),
-          )
-          .orderBy(sql`${fichas.dorsal} asc nulls last`, ...porNombre, asc(jugadores.id))
-        const { encajados, aFavor } = await golesEnCampoDePlantilla(plantillaId)
         return c.json(
-          {
-            equipo: {
-              ...(equipo ?? sinPartidos),
-              sinMinutoEnContra: encajados.sinMinuto,
-              sinMinutoAFavor: aFavor.sinMinuto,
-            },
-            jugadores: filas.map((f) => ({
-              ...f,
-              golesEncajados: encajados.porJugador.get(f.jugadorId)?.goles ?? 0,
-              minutosConEncajados: encajados.porJugador.get(f.jugadorId)?.minutos ?? 0,
-              golesFavorEnCampo: aFavor.porJugador.get(f.jugadorId)?.goles ?? 0,
-              minutosConFavor: aFavor.porJugador.get(f.jugadorId)?.minutos ?? 0,
-            })),
-          },
+          // Sin jugador vinculado, ninguna fila
+          await estadisticasDePlantilla(
+            c.var.plantilla.id,
+            soloSuyas ? c.var.jugadorId : undefined,
+          ),
           200,
         )
       },
     )
+
+// Resultados del equipo y estadísticas por jugador de la plantilla, en los partidos jugados. Con
+// soloJugador, solo su fila (null: ninguna). También para la exportación (GH-170).
+export async function estadisticasDePlantilla(plantillaId: string, soloJugador?: string | null) {
+  const [equipo] = await db
+    .select({
+      jugados: sql<number>`count(*)::int`,
+      ganados: sql<number>`count(*) filter (where ${partidos.golesFavor} > ${partidos.golesContra})::int`,
+      empatados: sql<number>`count(*) filter (where ${partidos.golesFavor} = ${partidos.golesContra})::int`,
+      perdidos: sql<number>`count(*) filter (where ${partidos.golesFavor} < ${partidos.golesContra})::int`,
+      golesFavor: sql<number>`coalesce(sum(${partidos.golesFavor}), 0)::int`,
+      golesContra: sql<number>`coalesce(sum(${partidos.golesContra}), 0)::int`,
+    })
+    .from(partidos)
+    .where(and(eq(partidos.plantillaId, plantillaId), eq(partidos.estado, 'jugado')))
+
+  const a = acumulados({ plantillaId })
+  // Entrenos a los que ha ido cada jugador en la plantilla (GH-155)
+  const asistidos = db
+    .select({
+      jugadorId: sql<string>`${asistencias.jugadorId}`.as('as_jugador'),
+      entrenos: sql<number>`count(*)`.as('entrenos'),
+    })
+    .from(asistencias)
+    .where(and(eq(asistencias.plantillaId, plantillaId), eq(asistencias.estado, 'asiste')))
+    .groupBy(asistencias.jugadorId)
+    .as('asistidos')
+  const filas = await db
+    .select({
+      jugadorId: jugadores.id,
+      nombre: jugadores.nombre,
+      apellidos: jugadores.apellidos,
+      dorsal: fichas.dorsal,
+      activo: fichas.activo,
+      ...a.columnas,
+      entrenos: sql<number>`coalesce(${asistidos.entrenos}, 0)::int`,
+    })
+    .from(fichas)
+    .innerJoin(jugadores, eq(jugadores.id, fichas.jugadorId))
+    .leftJoin(asistidos, eq(asistidos.jugadorId, fichas.jugadorId))
+    .leftJoin(
+      a.enCampo,
+      and(eq(a.enCampo.plantillaId, fichas.plantillaId), eq(a.enCampo.jugadorId, fichas.jugadorId)),
+    )
+    .leftJoin(
+      a.eventos,
+      and(eq(a.eventos.plantillaId, fichas.plantillaId), eq(a.eventos.jugadorId, fichas.jugadorId)),
+    )
+    .where(
+      and(
+        eq(fichas.plantillaId, plantillaId),
+        // Sin jugador vinculado, ninguna fila
+        soloJugador === undefined ? undefined : sql`${fichas.jugadorId} = ${soloJugador}`,
+      ),
+    )
+    .orderBy(sql`${fichas.dorsal} asc nulls last`, ...porNombre, asc(jugadores.id))
+  const { encajados, aFavor, golesPorMinuto } = await golesEnCampoDePlantilla(plantillaId)
+  return {
+    equipo: {
+      ...(equipo ?? sinPartidos),
+      sinMinutoEnContra: encajados.sinMinuto,
+      sinMinutoAFavor: aFavor.sinMinuto,
+      golesPorMinuto,
+    },
+    jugadores: filas.map((f) => ({
+      ...f,
+      golesEncajados: encajados.porJugador.get(f.jugadorId)?.goles ?? 0,
+      minutosConEncajados: encajados.porJugador.get(f.jugadorId)?.minutos ?? 0,
+      golesFavorEnCampo: aFavor.porJugador.get(f.jugadorId)?.goles ?? 0,
+      minutosConFavor: aFavor.porJugador.get(f.jugadorId)?.minutos ?? 0,
+    })),
+  }
+}
 
 const sinPartidos = {
   jugados: 0,
@@ -589,12 +612,18 @@ function sumarPartido(
 async function golesEnCampoDePlantilla(plantillaId: string) {
   const encajados: GolesEnCampo = { porJugador: new Map(), sinMinuto: 0 }
   const aFavor: GolesEnCampo = { porJugador: new Map(), sinMinuto: 0 }
+  const golesPorMinuto = {
+    aFavor: [] as number[],
+    enContra: [] as number[],
+    aFavorSinMinuto: 0,
+    enContraSinMinuto: 0,
+  }
   const jugados = await db
     .select({ id: partidos.id, golesFavor: partidos.golesFavor, golesContra: partidos.golesContra })
     .from(partidos)
     .where(and(eq(partidos.plantillaId, plantillaId), eq(partidos.estado, 'jugado')))
   const ids = jugados.map((p) => p.id)
-  if (ids.length === 0) return { encajados, aFavor }
+  if (ids.length === 0) return { encajados, aFavor, golesPorMinuto }
   const lista = await db
     .select({
       partidoId: participaciones.partidoId,
@@ -619,8 +648,15 @@ async function golesEnCampoDePlantilla(plantillaId: string) {
     const minutos = calcularMinutos(delPartido, susEventos)
     sumarPartido(encajados, calcularEncajados(delPartido, susEventos, p.golesContra ?? 0), minutos)
     sumarPartido(aFavor, calcularAFavor(delPartido, susEventos, p.golesFavor ?? 0), minutos)
+    const goles = minutosDeGoles(susEventos, p.golesFavor ?? 0, p.golesContra ?? 0)
+    golesPorMinuto.aFavor.push(...goles.aFavor)
+    golesPorMinuto.enContra.push(...goles.enContra)
+    golesPorMinuto.aFavorSinMinuto += goles.aFavorSinMinuto
+    golesPorMinuto.enContraSinMinuto += goles.enContraSinMinuto
   }
-  return { encajados, aFavor }
+  golesPorMinuto.aFavor.sort((a, b) => a - b)
+  golesPorMinuto.enContra.sort((a, b) => a - b)
+  return { encajados, aFavor, golesPorMinuto }
 }
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0]

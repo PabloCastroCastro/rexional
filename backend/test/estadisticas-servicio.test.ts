@@ -6,6 +6,7 @@ import {
   comprobar,
   type DatosEstadisticas,
   type Evento,
+  minutosDeGoles,
   type Participacion,
 } from '../src/estadisticas.js'
 
@@ -136,6 +137,35 @@ describe('goles a favor en el campo', () => {
     ['un gol en propia nuestro', [ev('gol_propia', 'a', 10)], 1],
   ])('no se sabe si %s', (_, eventos, golesFavor) => {
     expect(calcularAFavor(lista, eventos, golesFavor)).toBeNull()
+  })
+})
+
+describe('goles por minuto del equipo', () => {
+  it('separa a favor y en contra, de menor a mayor, y cuenta los del resultado sin minuto', () => {
+    const eventos = [
+      ev('gol', 'a', 80),
+      ev('gol_propia', null, 12),
+      ev('asistencia', 'b', 80),
+      ev('gol_rival', null, 45),
+      ev('gol_propia', 'b', null),
+      ev('gol_rival', null, 3),
+      ev('amarilla', 'a', 30),
+    ]
+    expect(minutosDeGoles(eventos, 3, 4)).toEqual({
+      aFavor: [12, 80],
+      enContra: [3, 45],
+      aFavorSinMinuto: 1,
+      enContraSinMinuto: 2,
+    })
+  })
+
+  it('sin eventos, todos los goles del resultado van sin minuto', () => {
+    expect(minutosDeGoles([], 2, 1)).toEqual({
+      aFavor: [],
+      enContra: [],
+      aFavorSinMinuto: 2,
+      enContraSinMinuto: 1,
+    })
   })
 })
 

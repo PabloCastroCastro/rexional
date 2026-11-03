@@ -1,4 +1,5 @@
 import { inArray } from 'drizzle-orm'
+import readXlsxFile from 'read-excel-file/node'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { crearApp } from '../src/app.js'
 import { db, pool } from '../src/db/cliente.js'
@@ -466,6 +467,7 @@ describe('estadísticas acumuladas', () => {
       sinMinutoEnContra: 1,
       // Los dos goles a favor tienen minuto
       sinMinutoAFavor: 0,
+      golesPorMinuto: { aFavor: [10, 50], enContra: [], aFavorSinMinuto: 0, enContraSinMinuto: 1 },
     })
     expect(datos.jugadores).toEqual([
       expect.objectContaining({
@@ -499,6 +501,12 @@ describe('estadísticas acumuladas', () => {
       await pedir('GET', `/plantillas/${ids.senior25}/estadisticas`, 'delegado')
     ).json()
     expect(conMinuto.equipo.sinMinutoEnContra).toBe(0)
+    expect(conMinuto.equipo.golesPorMinuto).toEqual({
+      aFavor: [10, 50],
+      enContra: [70],
+      aFavorSinMinuto: 0,
+      enContraSinMinuto: 0,
+    })
     expect(conMinuto.jugadores).toEqual([
       expect.objectContaining({ nombre: 'J1', golesEncajados: 1, minutosConEncajados: 90 }),
       expect.objectContaining({ nombre: 'J2', golesEncajados: 0, minutosConEncajados: 60 }),
@@ -541,5 +549,95 @@ describe('estadísticas acumuladas', () => {
         )
       ).status,
     ).toBe(404)
+  })
+})
+
+// Usa los datos del Senior 2025-26 que deja «estadísticas acumuladas»
+describe('exportación a Excel', () => {
+  const url = () => `/plantillas/${ids.senior25}/exportacion.xlsx`
+
+  it('solo el cuerpo técnico; el jugador no', async () => {
+    expect((await pedir('GET', url(), 'jugador')).status).toBe(403)
+    expect((await pedir('GET', url())).status).toBe(401)
+  })
+
+  it('un .xlsx con partidos, eventos, participaciones, jugadores y asistencia', async () => {
+    const res = await pedir('GET', url(), 'delegado')
+    expect(res.status).toBe(200)
+    expect(res.headers.get('content-type')).toBe(
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    )
+    expect(res.headers.get('content-disposition')).toBe(
+      'attachment; filename="senior-2025-26.xlsx"',
+    )
+    const hojas = await readXlsxFile(Buffer.from(await res.arrayBuffer()))
+    const hoja = (nombre: string) => hojas.find((h) => h.sheet === nombre)?.data ?? []
+    expect(hojas.map((h) => h.sheet)).toEqual([
+      'Partidos',
+      'Eventos',
+      'Participaciones',
+      'Jugadores',
+      'Asistencia',
+    ])
+    const dia = (texto: string) => new Date(`${texto}T00:00:00Z`)
+
+    // Los partidos sin jugar salen, pero sin eventos ni participaciones
+    const partidosHoja = hoja('Partidos')
+    expect(partidosHoja[0]).toEqual([
+      'Fecha',
+      'Hora',
+      'Rival',
+      'Competición',
+      'Campo',
+      'Estado',
+      'Goles a favor',
+      'Goles en contra',
+    ])
+    expect(partidosHoja).toContainEqual([
+      dia('2025-10-05'),
+      null,
+      'Rosalía Mera',
+      null,
+      expect.any(String),
+      'Jugado',
+      2,
+      1,
+    ])
+    expect(partidosHoja.some((f) => f[5] === 'Programado')).toBe(true)
+
+    expect(hoja('Eventos').slice(1)).toEqual([
+      [dia('2025-10-05'), 'Rosalía Mera', 10, 'Gol', 'J1', 1],
+      [dia('2025-10-05'), 'Rosalía Mera', 10, 'Asistencia', 'J2', 2],
+      [dia('2025-10-05'), 'Rosalía Mera', 50, 'Gol', 'J1', 1],
+      [dia('2025-10-05'), 'Rosalía Mera', 55, 'Amarilla', 'J2', 2],
+      [dia('2025-10-05'), 'Rosalía Mera', 60, 'Sale', 'J2', 2],
+      // El gol del rival, sin jugador
+      [dia('2025-10-05'), 'Rosalía Mera', 70, 'Gol del rival', null, null],
+    ])
+    expect(hoja('Participaciones').slice(1)).toEqual([
+      [dia('2025-10-05'), 'Rosalía Mera', 'J1', 1, 'Titular', 90],
+      [dia('2025-10-05'), 'Rosalía Mera', 'J2', 2, 'Titular', 60],
+    ])
+
+    const jugadoresHoja = hoja('Jugadores')
+    expect(jugadoresHoja[0]?.slice(0, 7)).toEqual([
+      'Dorsal',
+      'Jugador',
+      'Baja',
+      'Partidos',
+      'Titularidades',
+      'Minutos',
+      'Goles',
+    ])
+    expect(jugadoresHoja[1]).toEqual([1, 'J1', null, 1, 1, 90, 2, 0, 0, 0, 0, 2, 2, 90, 1, 90])
+
+    // Sin el motivo de la ausencia
+    expect(hoja('Asistencia')).toEqual([
+      ['Fecha', 'Hora', 'Jugador', 'Dorsal', 'Estado'],
+      [dia('2025-10-01'), null, 'J1', 1, 'Asiste'],
+      [dia('2025-10-01'), null, 'J2', 2, 'Asiste'],
+      [dia('2025-10-03'), null, 'J1', 1, 'Asiste'],
+      [dia('2025-10-03'), null, 'J2', 2, 'Justificada'],
+    ])
   })
 })

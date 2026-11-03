@@ -2,6 +2,7 @@ import { ArrowDown, ArrowUp, ArrowUpDown, BarChart3 } from 'lucide-react'
 import { type ReactNode, useState } from 'react'
 import { Link } from 'react-router'
 import { Cargando } from '../componentes/Cargando'
+import { BotonesPdf } from '../componentes/CompartirPdf'
 import { EstadoVacio } from '../componentes/EstadoVacio'
 import { Selector } from '../componentes/Selector'
 import { nombreCompleto, puedeGestionarJugadores } from '../jugadores/datos'
@@ -17,10 +18,11 @@ import {
   textoPorEntreno,
   useEstadisticas,
 } from './datos'
+import { GolesPorMinuto } from './GolesPorMinuto'
 import estilos from './Partidos.module.css'
 
 // Estadísticas de la temporada (solo partidos jugados): resultados del equipo y, para el cuerpo
-// técnico, una tabla de jugadores con la estadística elegida, ordenable por cualquier columna
+// técnico, los goles por minuto del equipo (GH-168), una tabla de jugadores con la estadística elegida, ordenable por cualquier columna
 // (GH-164). Un jugador ve los resultados del equipo y lo suyo.
 
 type Equipo = EstadisticasPlantilla['equipo']
@@ -212,12 +214,44 @@ export function Estadisticas() {
   return (
     <>
       <ResultadosEquipo equipo={equipo} />
+      <GolesPorMinuto datos={equipo.golesPorMinuto} />
       {puedeGestionarJugadores(plantilla) ? (
-        <Clasificaciones jugadores={jugadores} equipo={equipo} />
+        <>
+          <Clasificaciones jugadores={jugadores} equipo={equipo} />
+          <Exportar />
+        </>
       ) : (
         <Mias jugador={jugadores[0]} equipo={equipo} />
       )}
     </>
+  )
+}
+
+// Los datos de la temporada en Excel, para analizarlos fuera de la app (GH-170)
+function Exportar() {
+  const plantilla = usePlantillaActiva()
+  const archivo = `${plantilla.nombre}-${plantilla.temporada}`
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+  return (
+    <section className={estilos.seccion} aria-labelledby="exportar">
+      <h2 id="exportar">Exportar</h2>
+      <p className={estilos.secundario}>
+        Partidos, goles y tarjetas, minutos de cada partido, estas cifras de los jugadores y la
+        asistencia a los entrenos, en un Excel con una hoja para cada cosa.
+      </p>
+      <div className={estilos.botonesExportar}>
+        <BotonesPdf
+          formato="excel"
+          url={`/api/plantillas/${plantilla.id}/exportacion.xlsx`}
+          nombre={`${archivo}.xlsx`}
+          titulo={`Estadísticas · ${plantilla.nombre} ${plantilla.temporada}`}
+        />
+      </div>
+    </section>
   )
 }
 

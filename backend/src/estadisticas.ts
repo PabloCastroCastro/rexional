@@ -79,6 +79,27 @@ export function calcularAFavor(lista: Participacion[], eventos: Evento[], golesF
   return golesEnCampo(lista, eventos, aFavor, golesFavor)
 }
 
+// Minutos de los goles a favor y en contra de un partido (GH-168), y cuántos goles del resultado no
+// tienen minuto: los de un partido sin acta o los del acta que no lo traen
+export function minutosDeGoles(eventos: Evento[], golesFavor: number, golesContra: number) {
+  const minutos = (goles: Evento[]) =>
+    goles.flatMap((e) => (e.minuto === null ? [] : [e.minuto])).sort((a, b) => a - b)
+  const aFavor = minutos(
+    eventos.filter((e) => e.tipo === 'gol' || (e.tipo === 'gol_propia' && e.jugadorId === null)),
+  )
+  const enContra = minutos(
+    eventos.filter(
+      (e) => e.tipo === 'gol_rival' || (e.tipo === 'gol_propia' && e.jugadorId !== null),
+    ),
+  )
+  return {
+    aFavor,
+    enContra,
+    aFavorSinMinuto: Math.max(0, golesFavor - aFavor.length),
+    enContraSinMinuto: Math.max(0, golesContra - enContra.length),
+  }
+}
+
 function golesEnCampo(lista: Participacion[], eventos: Evento[], goles: Evento[], total: number) {
   if (goles.length !== total || goles.some((e) => e.minuto === null)) return null
   return new Map(

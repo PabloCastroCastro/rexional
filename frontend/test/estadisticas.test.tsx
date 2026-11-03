@@ -1,6 +1,6 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { EstadisticasJugador, EstadisticasPlantilla } from '../src/partidos/datos'
 import { abrir, conDatos, json, manejadores, plantilla, senior26 } from './simulacion'
 
@@ -43,6 +43,12 @@ const ESTADISTICAS: EstadisticasPlantilla = {
     golesContra: 7,
     sinMinutoEnContra: 0,
     sinMinutoAFavor: 0,
+    golesPorMinuto: {
+      aFavor: [5, 20, 44, 45, 46, 50, 62, 70, 80, 90, 93],
+      enContra: [10, 30, 46, 77, 88],
+      aFavorSinMinuto: 5,
+      enContraSinMinuto: 2,
+    },
   },
   jugadores: [
     fila('j1', 'Íker', 1, { partidos: 6, titularidades: 6, minutos: 540 }),
@@ -80,6 +86,12 @@ const abrirEstadisticas = async () => {
 }
 
 describe('estadísticas de la temporada', () => {
+  afterEach(() => {
+    Reflect.deleteProperty(URL, 'createObjectURL')
+    Reflect.deleteProperty(URL, 'revokeObjectURL')
+    vi.restoreAllMocks()
+  })
+
   it('resultados del equipo y una tabla por estadística, solo con quien tiene algo', async () => {
     conEstadisticas()
     abrir('/plantillas/p1/partidos?ver=estadisticas')
@@ -109,6 +121,33 @@ describe('estadísticas de la temporada', () => {
     expect(screen.getByRole('link', { name: 'Zoe' })).toHaveAttribute(
       'href',
       '/plantillas/p1/jugadores/j3',
+    )
+  })
+
+  it('goles del equipo por partes, por tramos y desde un minuto', async () => {
+    conEstadisticas()
+    abrir('/plantillas/p1/partidos?ver=estadisticas')
+    const seccion = await screen.findByRole('region', { name: 'Goles por minuto' })
+    // El descuento de la 1.ª parte va como 45; el 46, ya en la 2.ª
+    expect(filas('Goles por partes y tramos')).toEqual([
+      ['1.ª parte', '4', '2'],
+      ['2.ª parte', '7', '3'],
+      ["0–15'del minuto 0 al 15", '1', '1'],
+      ["16–30'del minuto 16 al 30", '1', '1'],
+      ["31–45'del minuto 31 al 45", '2', '0'],
+      ["46–60'del minuto 46 al 60", '2', '1'],
+      ["61–75'del minuto 61 al 75", '2', '0'],
+      ["76–90+'del minuto 76 al final", '3', '2'],
+    ])
+    expect(seccion).toHaveTextContent('Desde el minuto 75: 3 a favor y 2 en contra')
+    const campo = within(seccion).getByRole('spinbutton', { name: 'Desde el minuto' })
+    await userEvent.clear(campo)
+    await userEvent.type(campo, '46')
+    expect(seccion).toHaveTextContent('Desde el minuto 46: 7 a favor y 3 en contra')
+    await userEvent.type(campo, '0')
+    expect(within(seccion).getByRole('alert')).toHaveTextContent('Entre 0 y 150')
+    expect(seccion).toHaveTextContent(
+      '5 goles a favor y 2 goles en contra no tienen minuto y no cuentan aquí.',
     )
   })
 
@@ -185,9 +224,9 @@ describe('estadísticas de la temporada', () => {
       ['7Dorsal 7', 'Brais', '1', "302'", '0,30'],
       ['1Dorsal 1', 'Íker', '5', "630'", '0,71'],
     ])
-    expect(screen.getByRole('note')).toHaveTextContent(
-      '2 partidos no cuentan: les falta el minuto de algún gol en contra.',
-    )
+    expect(
+      within(screen.getByRole('region', { name: 'Jugadores' })).getByRole('note'),
+    ).toHaveTextContent('2 partidos no cuentan: les falta el minuto de algún gol en contra.')
   })
 
   it('goles a favor: de más a menos por 90, y el aviso de los partidos sin minuto', async () => {
@@ -208,9 +247,9 @@ describe('estadísticas de la temporada', () => {
       ['1Dorsal 1', 'Íker', '9', "450'", '1,80'],
       ['9Dorsal 9', 'Zoe', '0', "30'", '0,00'],
     ])
-    expect(screen.getByRole('note')).toHaveTextContent(
-      '1 partido no cuenta: le falta el minuto de algún gol a favor.',
-    )
+    expect(
+      within(screen.getByRole('region', { name: 'Jugadores' })).getByRole('note'),
+    ).toHaveTextContent('1 partido no cuenta: le falta el minuto de algún gol a favor.')
   })
 
   it('goles en contra sin ningún partido con el minuto lo explica', async () => {
@@ -232,6 +271,27 @@ describe('estadísticas de la temporada', () => {
     expect(screen.getByText('Todavía no se ha pasado lista en ningún entreno.')).toBeInTheDocument()
   })
 
+  it('el cuerpo técnico descarga los datos de la temporada en Excel', async () => {
+    Object.defineProperty(URL, 'createObjectURL', {
+      value: vi.fn(() => 'blob:excel'),
+      configurable: true,
+    })
+    Object.defineProperty(URL, 'revokeObjectURL', { value: vi.fn(), configurable: true })
+    const clic = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    conEstadisticas()
+    manejadores['GET /api/plantillas/p1/exportacion.xlsx'] = () =>
+      new Response('PK', {
+        headers: {
+          'content-type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        },
+      })
+    abrir('/plantillas/p1/partidos?ver=estadisticas')
+    const exportar = await screen.findByRole('region', { name: 'Exportar' })
+    await userEvent.click(within(exportar).getByRole('button', { name: 'Descargar Excel' }))
+    await waitFor(() => expect(clic).toHaveBeenCalledTimes(1))
+    expect(clic.mock.contexts[0]).toHaveAttribute('download', 'senior-2026-27.xlsx')
+  })
+
   it('sin partidos jugados lo explica', async () => {
     conEstadisticas(senior26, {
       equipo: {
@@ -243,6 +303,7 @@ describe('estadísticas de la temporada', () => {
         golesContra: 0,
         sinMinutoEnContra: 0,
         sinMinutoAFavor: 0,
+        golesPorMinuto: { aFavor: [], enContra: [], aFavorSinMinuto: 0, enContraSinMinuto: 0 },
       },
       jugadores: [],
     })
@@ -271,6 +332,7 @@ describe('estadísticas de la temporada', () => {
     expect(mias).toHaveTextContent("1,25 goles a favor por 90' con él en el campo (5 en 360')")
     expect(mias).toHaveTextContent("0,90 goles en contra por 90' con él en el campo (3 en 300')")
     expect(screen.queryByRole('combobox', { name: 'Estadística' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Exportar' })).not.toBeInTheDocument()
   })
 })
 

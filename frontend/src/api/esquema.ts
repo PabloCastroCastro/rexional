@@ -3277,6 +3277,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/plantillas/{id}/exportacion.xlsx": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Exportar la temporada a Excel
+         * @description Delegado o superior. Un .xlsx con una hoja por tabla: partidos, eventos, participaciones, jugadores (las cifras de las estadísticas) y asistencia a los entrenos, sin el motivo de las ausencias. Los partidos sin jugar solo salen en Partidos.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description El archivo de Excel */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/plantillas/{id}/partidos/{pid}/acta": {
         parameters: {
             query?: never;
@@ -7438,6 +7506,17 @@ export interface components {
                 sinMinutoEnContra: number;
                 /** @description Partidos jugados a los que les falta el minuto de algún gol a favor: no cuentan para los goles a favor en el campo */
                 sinMinutoAFavor: number;
+                /** @description Goles del equipo según el minuto (GH-168) */
+                golesPorMinuto: {
+                    /** @description Minuto de cada gol a favor (nuestros y del rival en propia), de menor a mayor */
+                    aFavor: number[];
+                    /** @description Minuto de cada gol en contra (del rival y nuestros en propia), de menor a mayor */
+                    enContra: number[];
+                    /** @description Goles a favor del resultado sin minuto: no cuentan en aFavor */
+                    aFavorSinMinuto: number;
+                    /** @description Goles en contra del resultado sin minuto: no cuentan en enContra */
+                    enContraSinMinuto: number;
+                };
             };
             jugadores: components["schemas"]["EstadisticasJugador"][];
         };

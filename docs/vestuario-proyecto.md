@@ -770,10 +770,10 @@ Una issue está terminada cuando: cumple sus criterios de aceptación en el ento
 | 3 · Convocatorias | Partidos, convocados y mensaje de WhatsApp | v1.0.0 |
 | 4 · Multas | Catálogo, registro, cobro, deudas y caja. Paridad con el MVP y primer despliegue en el servidor | v1.0.0 |
 | 5 · Personalización y temporadas | Escudo y colores por club, y cambio de temporada | en parte en v1.1.0, con GH-101 y GH-102; el resto, pendiente |
-| 6 · Estadísticas | Resultado, participaciones, eventos, estadísticas de temporada y trayectoria de cada jugador | v1.1.0; después se añadieron GH-134, GH-147, GH-149, GH-151, GH-153 y GH-155, en v1.3.0, GH-164, en v1.4.0, y GH-154, pendiente |
+| 6 · Estadísticas | Resultado, participaciones, eventos, estadísticas de temporada y trayectoria de cada jugador | v1.1.0; después se añadieron GH-134, GH-147, GH-149, GH-151, GH-153 y GH-155, en v1.3.0, GH-164, en v1.4.0, GH-168, en v1.5.0, y GH-154, pendiente |
 | 7 · Planificación de entrenos | Biblioteca de ejercicios con fotos y vídeos, y sesiones planificadas | v1.2.0 |
 | 8 · Operación | Backups automáticos, restauración, logs y actualizaciones | en parte en v1.2.0, con GH-45 y GH-46; el resto, pendiente |
-| 9 · Exportar y compartir | Exportar y compartir sesiones y multas en PDF o texto y asistencia desde WhatsApp | en parte en v1.3.0, con GH-131 y GH-132; el resto, pendiente |
+| 9 · Exportar y compartir | Exportar y compartir sesiones y multas en PDF o texto, los datos de la temporada en Excel y asistencia desde WhatsApp | en parte en v1.3.0, con GH-131 y GH-132, y en v1.5.0, con GH-170; el resto, pendiente |
 | 10 · Roles en uso | Invitaciones, delegados y jugadores | v1.4.0, prevista |
 | 11 · Exposición pública | Servidor aislado, red, cortafuegos, dominio y HTTPS público | v2.0.0, prevista |
 | 12 · Asistente de ejercicios | Claves de API, diagrama táctico del ejercicio y generación de imágenes, animación y PDF en el servidor | v2.1.0, prevista |
@@ -807,10 +807,10 @@ Versión publicada en los ciclos ya cerrados y prevista en el resto. Los ciclos 
 | Ciclo 3 · Convocatorias | Partidos, convocados y mensaje de WhatsApp (v1.0.0) |
 | Ciclo 4 · Multas | Catálogo, registro, cobro, deudas y caja. Paridad con el MVP y primer despliegue en el servidor (v1.0.0) |
 | Ciclo 5 · Personalización y temporadas | Escudo y colores por club, y cambio de temporada (en parte en v1.1.0, con GH-101 y GH-102; el resto, pendiente) |
-| Ciclo 6 · Estadísticas | Resultado, participaciones, eventos, estadísticas de temporada y trayectoria de cada jugador (v1.1.0; después se añadieron GH-134, GH-147, GH-149, GH-151, GH-153 y GH-155, en v1.3.0, GH-164, en v1.4.0, y GH-154, pendiente) |
+| Ciclo 6 · Estadísticas | Resultado, participaciones, eventos, estadísticas de temporada y trayectoria de cada jugador (v1.1.0; después se añadieron GH-134, GH-147, GH-149, GH-151, GH-153 y GH-155, en v1.3.0, GH-164, en v1.4.0, GH-168, en v1.5.0, y GH-154, pendiente) |
 | Ciclo 7 · Planificación de entrenos | Biblioteca de ejercicios con fotos y vídeos, y sesiones planificadas (v1.2.0) |
 | Ciclo 8 · Operación | Backups automáticos, restauración, logs y actualizaciones (en parte en v1.2.0, con GH-45 y GH-46; el resto, pendiente) |
-| Ciclo 9 · Exportar y compartir | Exportar y compartir sesiones y multas en PDF o texto y asistencia desde WhatsApp (en parte en v1.3.0, con GH-131 y GH-132; el resto, pendiente) |
+| Ciclo 9 · Exportar y compartir | Exportar y compartir sesiones y multas en PDF o texto, los datos de la temporada en Excel y asistencia desde WhatsApp (en parte en v1.3.0, con GH-131 y GH-132, y en v1.5.0, con GH-170; el resto, pendiente) |
 | Ciclo 10 · Roles en uso | Invitaciones, delegados y jugadores (v1.4.0, prevista) |
 | Ciclo 11 · Exposición pública | Servidor aislado, red, cortafuegos, dominio y HTTPS público (v2.0.0, prevista) |
 | Ciclo 12 · Asistente de ejercicios | Claves de API, diagrama táctico del ejercicio y generación de imágenes, animación y PDF en el servidor (v2.1.0, prevista) |
@@ -1565,6 +1565,21 @@ En Partidos → Estadísticas, las clasificaciones de jugadores pasan de una fil
 - [ ] El rol jugador lo ve en «Tus estadísticas»; no se añade a la ficha del jugador
 - [ ] Tests
 
+#### GH-168
+**Título:** Goles a favor y en contra por minuto del equipo
+**Etiquetas:** feature, backend, frontend
+
+En Partidos → Estadísticas, debajo de los resultados, una sección del equipo con los goles a favor y en contra según el minuto: por partes, por tramos de 15 minutos y a partir de un minuto que elige el usuario.
+
+**Criterios de aceptación**
+- [ ] Por partes: la 1.ª, goles con minuto hasta el 45 (el descuento se apunta como 45); la 2.ª, del 46 en adelante
+- [ ] Por tramos de 15 minutos: 0–15, 16–30, 31–45, 46–60, 61–75 y 76–90+, con a favor y en contra
+- [ ] Desde el minuto X: un campo numérico (0–150, por defecto 75) con los goles a favor y en contra de minuto mayor o igual que X, calculado en el navegador
+- [ ] A favor, `gol` y `gol_propia` del rival; en contra, `gol_rival` y `gol_propia` de los nuestros. Los goles del resultado sin minuto no cuentan y se avisan
+- [ ] `GET /api/plantillas/:id/estadisticas` devuelve en el equipo los minutos de los goles a favor y en contra y cuántos no tienen minuto
+- [ ] Solo del equipo, no por jugador ni en la ficha del jugador; la ven el cuerpo técnico y el rol jugador
+- [ ] Sin migración. Tests
+
 ---
 
 ### Milestone: Ciclo 7 · Planificación de entrenos
@@ -1821,6 +1836,21 @@ Un informe con todo lo de un jugador en la temporada, no solo los partidos: asis
 - [ ] Tests
 
 Por decidir al empezar: qué apartados entran y si también se hace el informe de toda la plantilla.
+
+#### GH-170
+**Título:** Exportar los datos de la temporada a Excel
+**Etiquetas:** feature, backend, frontend
+
+Descargar en un .xlsx los datos de la temporada de una plantilla, para analizarlos fuera de la app (en Excel o pasándoselos a un asistente). Es el primer paso antes de valorar un MCP de solo lectura.
+
+**Criterios de aceptación**
+- [ ] Un .xlsx con una hoja por tabla, en filas planas: Partidos (fecha, hora, rival, competición, campo, estado y resultado), Eventos (partido, minuto, tipo, jugador y dorsal), Participaciones (partido, jugador, dorsal, titular o suplente y minutos), Jugadores (las cifras de la tabla de Estadísticas) y Asistencia (entreno, jugador, dorsal y estado, sin el motivo)
+- [ ] Fechas como fecha y cifras como número; los partidos sin jugar salen en Partidos, pero sin eventos ni participaciones
+- [ ] Botón «Exportar» en Partidos → Estadísticas que descarga `<plantilla>-<temporada>.xlsx`, generado por `GET /api/plantillas/:id/exportacion.xlsx`
+- [ ] Solo el cuerpo técnico (delegado o superior); el rol jugador recibe 403 y no ve el botón
+- [ ] Tests
+
+Fuera de esta issue: multas (GH-132), notas del partido, elegir rango u hojas y un servidor MCP.
 
 ---
 
