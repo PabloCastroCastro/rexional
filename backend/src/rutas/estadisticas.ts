@@ -18,6 +18,7 @@ import {
   calcularAFavor,
   calcularEncajados,
   calcularMinutos,
+  minutosDeGoles,
   recalcular,
 } from '../estadisticas.js'
 import {
@@ -143,6 +144,24 @@ const EsquemaEstadisticasPlantilla = z
         description:
           'Partidos jugados a los que les falta el minuto de algún gol a favor: no cuentan para los goles a favor en el campo',
       }),
+      golesPorMinuto: z
+        .object({
+          aFavor: z.array(z.int()).openapi({
+            description:
+              'Minuto de cada gol a favor (nuestros y del rival en propia), de menor a mayor',
+          }),
+          enContra: z.array(z.int()).openapi({
+            description:
+              'Minuto de cada gol en contra (del rival y nuestros en propia), de menor a mayor',
+          }),
+          aFavorSinMinuto: z.int().openapi({
+            description: 'Goles a favor del resultado sin minuto: no cuentan en aFavor',
+          }),
+          enContraSinMinuto: z.int().openapi({
+            description: 'Goles en contra del resultado sin minuto: no cuentan en enContra',
+          }),
+        })
+        .openapi({ description: 'Goles del equipo según el minuto (GH-168)' }),
     }),
     jugadores: z.array(EsquemaEstadisticasJugador),
   })
@@ -530,13 +549,14 @@ export const rutasEstadisticas = () =>
             ),
           )
           .orderBy(sql`${fichas.dorsal} asc nulls last`, ...porNombre, asc(jugadores.id))
-        const { encajados, aFavor } = await golesEnCampoDePlantilla(plantillaId)
+        const { encajados, aFavor, golesPorMinuto } = await golesEnCampoDePlantilla(plantillaId)
         return c.json(
           {
             equipo: {
               ...(equipo ?? sinPartidos),
               sinMinutoEnContra: encajados.sinMinuto,
               sinMinutoAFavor: aFavor.sinMinuto,
+              golesPorMinuto,
             },
             jugadores: filas.map((f) => ({
               ...f,
@@ -589,12 +609,18 @@ function sumarPartido(
 async function golesEnCampoDePlantilla(plantillaId: string) {
   const encajados: GolesEnCampo = { porJugador: new Map(), sinMinuto: 0 }
   const aFavor: GolesEnCampo = { porJugador: new Map(), sinMinuto: 0 }
+  const golesPorMinuto = {
+    aFavor: [] as number[],
+    enContra: [] as number[],
+    aFavorSinMinuto: 0,
+    enContraSinMinuto: 0,
+  }
   const jugados = await db
     .select({ id: partidos.id, golesFavor: partidos.golesFavor, golesContra: partidos.golesContra })
     .from(partidos)
     .where(and(eq(partidos.plantillaId, plantillaId), eq(partidos.estado, 'jugado')))
   const ids = jugados.map((p) => p.id)
-  if (ids.length === 0) return { encajados, aFavor }
+  if (ids.length === 0) return { encajados, aFavor, golesPorMinuto }
   const lista = await db
     .select({
       partidoId: participaciones.partidoId,
@@ -619,8 +645,15 @@ async function golesEnCampoDePlantilla(plantillaId: string) {
     const minutos = calcularMinutos(delPartido, susEventos)
     sumarPartido(encajados, calcularEncajados(delPartido, susEventos, p.golesContra ?? 0), minutos)
     sumarPartido(aFavor, calcularAFavor(delPartido, susEventos, p.golesFavor ?? 0), minutos)
+    const goles = minutosDeGoles(susEventos, p.golesFavor ?? 0, p.golesContra ?? 0)
+    golesPorMinuto.aFavor.push(...goles.aFavor)
+    golesPorMinuto.enContra.push(...goles.enContra)
+    golesPorMinuto.aFavorSinMinuto += goles.aFavorSinMinuto
+    golesPorMinuto.enContraSinMinuto += goles.enContraSinMinuto
   }
-  return { encajados, aFavor }
+  golesPorMinuto.aFavor.sort((a, b) => a - b)
+  golesPorMinuto.enContra.sort((a, b) => a - b)
+  return { encajados, aFavor, golesPorMinuto }
 }
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0]

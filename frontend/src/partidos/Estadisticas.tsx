@@ -17,10 +17,11 @@ import {
   textoPorEntreno,
   useEstadisticas,
 } from './datos'
+import { GolesPorMinuto } from './GolesPorMinuto'
 import estilos from './Partidos.module.css'
 
 // Estadísticas de la temporada (solo partidos jugados): resultados del equipo y, para el cuerpo
-// técnico, una tabla de jugadores con la estadística elegida, ordenable por cualquier columna
+// técnico, los goles por minuto del equipo (GH-168), una tabla de jugadores con la estadística elegida, ordenable por cualquier columna
 // (GH-164). Un jugador ve los resultados del equipo y lo suyo.
 
 type Equipo = EstadisticasPlantilla['equipo']
@@ -212,6 +213,7 @@ export function Estadisticas() {
   return (
     <>
       <ResultadosEquipo equipo={equipo} />
+      <GolesPorMinuto datos={equipo.golesPorMinuto} />
       {puedeGestionarJugadores(plantilla) ? (
         <Clasificaciones jugadores={jugadores} equipo={equipo} />
       ) : (

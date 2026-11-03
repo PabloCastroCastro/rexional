@@ -7438,6 +7438,17 @@ export interface components {
                 sinMinutoEnContra: number;
                 /** @description Partidos jugados a los que les falta el minuto de algún gol a favor: no cuentan para los goles a favor en el campo */
                 sinMinutoAFavor: number;
+                /** @description Goles del equipo según el minuto (GH-168) */
+                golesPorMinuto: {
+                    /** @description Minuto de cada gol a favor (nuestros y del rival en propia), de menor a mayor */
+                    aFavor: number[];
+                    /** @description Minuto de cada gol en contra (del rival y nuestros en propia), de menor a mayor */
+                    enContra: number[];
+                    /** @description Goles a favor del resultado sin minuto: no cuentan en aFavor */
+                    aFavorSinMinuto: number;
+                    /** @description Goles en contra del resultado sin minuto: no cuentan en enContra */
+                    enContraSinMinuto: number;
+                };
             };
             jugadores: components["schemas"]["EstadisticasJugador"][];
         };
