@@ -5,11 +5,25 @@ import { Boton } from './Boton'
 
 // Botones para un PDF que genera la API: «Compartir PDF» abre el menú del sistema con el archivo
 // adjunto (WhatsApp, correo…) y «Descargar PDF» lo guarda. Compartir solo aparece si el navegador
-// comparte archivos (en el móvil sí; en el ordenador, casi nunca).
+// comparte archivos (en el móvil sí; en el ordenador, casi nunca). También sirven para un Excel
+// (GH-170).
 
-const puedeCompartirArchivos = () =>
+const FORMATOS = {
+  pdf: { tipo: 'application/pdf', texto: 'PDF', extension: 'pdf' },
+  excel: {
+    tipo: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    texto: 'Excel',
+    extension: 'xlsx',
+  },
+}
+
+type Formato = keyof typeof FORMATOS
+
+const puedeCompartirArchivos = (formato: Formato) =>
   navigator.canShare?.({
-    files: [new File([''], 'prueba.pdf', { type: 'application/pdf' })],
+    files: [
+      new File([''], `prueba.${FORMATOS[formato].extension}`, { type: FORMATOS[formato].tipo }),
+    ],
   }) ?? false
 
 function descargar(archivo: File) {
@@ -24,14 +38,14 @@ function descargar(archivo: File) {
   setTimeout(() => URL.revokeObjectURL(url), 60_000)
 }
 
-async function mensajeDeError(respuesta: Response) {
+async function mensajeDeError(respuesta: Response, formato: Formato) {
   try {
     const cuerpo = (await respuesta.json()) as { error?: { mensaje?: string } }
     if (cuerpo.error?.mensaje) return cuerpo.error.mensaje
   } catch {
     // Sin cuerpo JSON: mensaje genérico
   }
-  return 'No se ha podido preparar el PDF. Inténtalo de nuevo.'
+  return `No se ha podido preparar el ${FORMATOS[formato].texto}. Inténtalo de nuevo.`
 }
 
 export function BotonesPdf({
@@ -39,28 +53,31 @@ export function BotonesPdf({
   nombre,
   titulo,
   disabled,
+  formato = 'pdf',
 }: {
-  // Ruta de la API que devuelve el PDF
+  // Ruta de la API que devuelve el archivo
   url: string
   // Nombre del archivo, con la extensión
   nombre: string
   // Título para el menú de compartir
   titulo: string
   disabled?: boolean
+  formato?: Formato
 }) {
   const { avisar } = useAvisos()
   const [enCurso, setEnCurso] = useState<'compartir' | 'descargar' | null>(null)
-  const [compartible] = useState(puedeCompartirArchivos)
+  const [compartible] = useState(() => puedeCompartirArchivos(formato))
+  const { tipo, texto } = FORMATOS[formato]
 
-  // Pide el PDF; null si falla (ya avisado)
-  async function pedirPdf() {
+  // Pide el archivo; null si falla (ya avisado)
+  async function pedirArchivo() {
     try {
       const respuesta = await globalThis.fetch(url, { credentials: 'same-origin' })
       if (!respuesta.ok) {
-        avisar({ tipo: 'error', mensaje: await mensajeDeError(respuesta) })
+        avisar({ tipo: 'error', mensaje: await mensajeDeError(respuesta, formato) })
         return null
       }
-      return new File([await respuesta.blob()], nombre, { type: 'application/pdf' })
+      return new File([await respuesta.blob()], nombre, { type: tipo })
     } catch {
       avisar({
         tipo: 'error',
@@ -73,7 +90,7 @@ export function BotonesPdf({
   async function accion(cual: 'compartir' | 'descargar') {
     setEnCurso(cual)
     try {
-      const archivo = await pedirPdf()
+      const archivo = await pedirArchivo()
       if (!archivo) return
       if (cual === 'compartir') {
         try {
@@ -101,7 +118,7 @@ export function BotonesPdf({
           disabled={disabled || enCurso !== null}
           onClick={() => accion('compartir')}
         >
-          Compartir PDF
+          Compartir {texto}
         </Boton>
       )}
       <Boton
@@ -111,7 +128,7 @@ export function BotonesPdf({
         disabled={disabled || enCurso !== null}
         onClick={() => accion('descargar')}
       >
-        Descargar PDF
+        Descargar {texto}
       </Boton>
     </>
   )

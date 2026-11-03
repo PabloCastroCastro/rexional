@@ -997,3 +997,10 @@
 .desdeMinuto p {
   padding-block-end: var(--espacio-3);
 }
+
+/* Exportar la temporada a Excel (GH-170) */
+.botonesExportar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-2);
+}

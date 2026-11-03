@@ -1,6 +1,6 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { EstadisticasJugador, EstadisticasPlantilla } from '../src/partidos/datos'
 import { abrir, conDatos, json, manejadores, plantilla, senior26 } from './simulacion'
 
@@ -86,6 +86,12 @@ const abrirEstadisticas = async () => {
 }
 
 describe('estadísticas de la temporada', () => {
+  afterEach(() => {
+    Reflect.deleteProperty(URL, 'createObjectURL')
+    Reflect.deleteProperty(URL, 'revokeObjectURL')
+    vi.restoreAllMocks()
+  })
+
   it('resultados del equipo y una tabla por estadística, solo con quien tiene algo', async () => {
     conEstadisticas()
     abrir('/plantillas/p1/partidos?ver=estadisticas')
@@ -265,6 +271,27 @@ describe('estadísticas de la temporada', () => {
     expect(screen.getByText('Todavía no se ha pasado lista en ningún entreno.')).toBeInTheDocument()
   })
 
+  it('el cuerpo técnico descarga los datos de la temporada en Excel', async () => {
+    Object.defineProperty(URL, 'createObjectURL', {
+      value: vi.fn(() => 'blob:excel'),
+      configurable: true,
+    })
+    Object.defineProperty(URL, 'revokeObjectURL', { value: vi.fn(), configurable: true })
+    const clic = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    conEstadisticas()
+    manejadores['GET /api/plantillas/p1/exportacion.xlsx'] = () =>
+      new Response('PK', {
+        headers: {
+          'content-type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        },
+      })
+    abrir('/plantillas/p1/partidos?ver=estadisticas')
+    const exportar = await screen.findByRole('region', { name: 'Exportar' })
+    await userEvent.click(within(exportar).getByRole('button', { name: 'Descargar Excel' }))
+    await waitFor(() => expect(clic).toHaveBeenCalledTimes(1))
+    expect(clic.mock.contexts[0]).toHaveAttribute('download', 'senior-2026-27.xlsx')
+  })
+
   it('sin partidos jugados lo explica', async () => {
     conEstadisticas(senior26, {
       equipo: {
@@ -305,6 +332,7 @@ describe('estadísticas de la temporada', () => {
     expect(mias).toHaveTextContent("1,25 goles a favor por 90' con él en el campo (5 en 360')")
     expect(mias).toHaveTextContent("0,90 goles en contra por 90' con él en el campo (3 en 300')")
     expect(screen.queryByRole('combobox', { name: 'Estadística' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Exportar' })).not.toBeInTheDocument()
   })
 })
 
