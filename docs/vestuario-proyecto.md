@@ -773,7 +773,7 @@ Una issue está terminada cuando: cumple sus criterios de aceptación en el ento
 | 6 · Estadísticas | Resultado, participaciones, eventos, estadísticas de temporada y trayectoria de cada jugador | v1.1.0; después se añadieron GH-134, GH-147, GH-149, GH-151, GH-153 y GH-155, en v1.3.0, GH-164, en v1.4.0, y GH-154 y GH-168, pendientes |
 | 7 · Planificación de entrenos | Biblioteca de ejercicios con fotos y vídeos, y sesiones planificadas | v1.2.0 |
 | 8 · Operación | Backups automáticos, restauración, logs y actualizaciones | en parte en v1.2.0, con GH-45 y GH-46; el resto, pendiente |
-| 9 · Exportar y compartir | Exportar y compartir sesiones y multas en PDF o texto y asistencia desde WhatsApp | en parte en v1.3.0, con GH-131 y GH-132; el resto, pendiente |
+| 9 · Exportar y compartir | Exportar y compartir sesiones y multas en PDF o texto, los datos de la temporada en Excel y asistencia desde WhatsApp | en parte en v1.3.0, con GH-131 y GH-132; el resto, pendiente |
 | 10 · Roles en uso | Invitaciones, delegados y jugadores | v1.4.0, prevista |
 | 11 · Exposición pública | Servidor aislado, red, cortafuegos, dominio y HTTPS público | v2.0.0, prevista |
 | 12 · Asistente de ejercicios | Claves de API, diagrama táctico del ejercicio y generación de imágenes, animación y PDF en el servidor | v2.1.0, prevista |
@@ -810,7 +810,7 @@ Versión publicada en los ciclos ya cerrados y prevista en el resto. Los ciclos 
 | Ciclo 6 · Estadísticas | Resultado, participaciones, eventos, estadísticas de temporada y trayectoria de cada jugador (v1.1.0; después se añadieron GH-134, GH-147, GH-149, GH-151, GH-153 y GH-155, en v1.3.0, GH-164, en v1.4.0, y GH-154 y GH-168, pendientes) |
 | Ciclo 7 · Planificación de entrenos | Biblioteca de ejercicios con fotos y vídeos, y sesiones planificadas (v1.2.0) |
 | Ciclo 8 · Operación | Backups automáticos, restauración, logs y actualizaciones (en parte en v1.2.0, con GH-45 y GH-46; el resto, pendiente) |
-| Ciclo 9 · Exportar y compartir | Exportar y compartir sesiones y multas en PDF o texto y asistencia desde WhatsApp (en parte en v1.3.0, con GH-131 y GH-132; el resto, pendiente) |
+| Ciclo 9 · Exportar y compartir | Exportar y compartir sesiones y multas en PDF o texto, los datos de la temporada en Excel y asistencia desde WhatsApp (en parte en v1.3.0, con GH-131 y GH-132; el resto, pendiente) |
 | Ciclo 10 · Roles en uso | Invitaciones, delegados y jugadores (v1.4.0, prevista) |
 | Ciclo 11 · Exposición pública | Servidor aislado, red, cortafuegos, dominio y HTTPS público (v2.0.0, prevista) |
 | Ciclo 12 · Asistente de ejercicios | Claves de API, diagrama táctico del ejercicio y generación de imágenes, animación y PDF en el servidor (v2.1.0, prevista) |
@@ -1836,6 +1836,21 @@ Un informe con todo lo de un jugador en la temporada, no solo los partidos: asis
 - [ ] Tests
 
 Por decidir al empezar: qué apartados entran y si también se hace el informe de toda la plantilla.
+
+#### GH-170
+**Título:** Exportar los datos de la temporada a Excel
+**Etiquetas:** feature, backend, frontend
+
+Descargar en un .xlsx los datos de la temporada de una plantilla, para analizarlos fuera de la app (en Excel o pasándoselos a un asistente). Es el primer paso antes de valorar un MCP de solo lectura.
+
+**Criterios de aceptación**
+- [ ] Un .xlsx con una hoja por tabla, en filas planas: Partidos (fecha, hora, rival, competición, campo, estado y resultado), Eventos (partido, minuto, tipo, jugador y dorsal), Participaciones (partido, jugador, dorsal, titular o suplente y minutos), Jugadores (las cifras de la tabla de Estadísticas) y Asistencia (entreno, jugador, dorsal y estado, sin el motivo)
+- [ ] Fechas como fecha y cifras como número; los partidos sin jugar salen en Partidos, pero sin eventos ni participaciones
+- [ ] Botón «Exportar» en Partidos → Estadísticas que descarga `<plantilla>-<temporada>.xlsx`, generado por `GET /api/plantillas/:id/exportacion.xlsx`
+- [ ] Solo el cuerpo técnico (delegado o superior); el rol jugador recibe 403 y no ve el botón
+- [ ] Tests
+
+Fuera de esta issue: multas (GH-132), notas del partido, elegir rango u hojas y un servidor MCP.
 
 ---
 
