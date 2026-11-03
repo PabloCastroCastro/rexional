@@ -770,7 +770,7 @@ Una issue está terminada cuando: cumple sus criterios de aceptación en el ento
 | 3 · Convocatorias | Partidos, convocados y mensaje de WhatsApp | v1.0.0 |
 | 4 · Multas | Catálogo, registro, cobro, deudas y caja. Paridad con el MVP y primer despliegue en el servidor | v1.0.0 |
 | 5 · Personalización y temporadas | Escudo y colores por club, y cambio de temporada | en parte en v1.1.0, con GH-101 y GH-102; el resto, pendiente |
-| 6 · Estadísticas | Resultado, participaciones, eventos, estadísticas de temporada y trayectoria de cada jugador | v1.1.0; después se añadieron GH-134, GH-147, GH-149, GH-151, GH-153 y GH-155, en v1.3.0, GH-164, en v1.4.0, y GH-154, pendiente |
+| 6 · Estadísticas | Resultado, participaciones, eventos, estadísticas de temporada y trayectoria de cada jugador | v1.1.0; después se añadieron GH-134, GH-147, GH-149, GH-151, GH-153 y GH-155, en v1.3.0, GH-164, en v1.4.0, y GH-154 y GH-168, pendientes |
 | 7 · Planificación de entrenos | Biblioteca de ejercicios con fotos y vídeos, y sesiones planificadas | v1.2.0 |
 | 8 · Operación | Backups automáticos, restauración, logs y actualizaciones | en parte en v1.2.0, con GH-45 y GH-46; el resto, pendiente |
 | 9 · Exportar y compartir | Exportar y compartir sesiones y multas en PDF o texto y asistencia desde WhatsApp | en parte en v1.3.0, con GH-131 y GH-132; el resto, pendiente |
@@ -807,7 +807,7 @@ Versión publicada en los ciclos ya cerrados y prevista en el resto. Los ciclos 
 | Ciclo 3 · Convocatorias | Partidos, convocados y mensaje de WhatsApp (v1.0.0) |
 | Ciclo 4 · Multas | Catálogo, registro, cobro, deudas y caja. Paridad con el MVP y primer despliegue en el servidor (v1.0.0) |
 | Ciclo 5 · Personalización y temporadas | Escudo y colores por club, y cambio de temporada (en parte en v1.1.0, con GH-101 y GH-102; el resto, pendiente) |
-| Ciclo 6 · Estadísticas | Resultado, participaciones, eventos, estadísticas de temporada y trayectoria de cada jugador (v1.1.0; después se añadieron GH-134, GH-147, GH-149, GH-151, GH-153 y GH-155, en v1.3.0, GH-164, en v1.4.0, y GH-154, pendiente) |
+| Ciclo 6 · Estadísticas | Resultado, participaciones, eventos, estadísticas de temporada y trayectoria de cada jugador (v1.1.0; después se añadieron GH-134, GH-147, GH-149, GH-151, GH-153 y GH-155, en v1.3.0, GH-164, en v1.4.0, y GH-154 y GH-168, pendientes) |
 | Ciclo 7 · Planificación de entrenos | Biblioteca de ejercicios con fotos y vídeos, y sesiones planificadas (v1.2.0) |
 | Ciclo 8 · Operación | Backups automáticos, restauración, logs y actualizaciones (en parte en v1.2.0, con GH-45 y GH-46; el resto, pendiente) |
 | Ciclo 9 · Exportar y compartir | Exportar y compartir sesiones y multas en PDF o texto y asistencia desde WhatsApp (en parte en v1.3.0, con GH-131 y GH-132; el resto, pendiente) |
@@ -1564,6 +1564,21 @@ En Partidos → Estadísticas, las clasificaciones de jugadores pasan de una fil
 - [ ] Mismas reglas que GH-153: un gol en el minuto de un cambio cuenta para quien sale; solo cuentan los partidos con todos sus goles a favor con minuto, y la tabla avisa de los que no
 - [ ] El rol jugador lo ve en «Tus estadísticas»; no se añade a la ficha del jugador
 - [ ] Tests
+
+#### GH-168
+**Título:** Goles a favor y en contra por minuto del equipo
+**Etiquetas:** feature, backend, frontend
+
+En Partidos → Estadísticas, debajo de los resultados, una sección del equipo con los goles a favor y en contra según el minuto: por partes, por tramos de 15 minutos y a partir de un minuto que elige el usuario.
+
+**Criterios de aceptación**
+- [ ] Por partes: la 1.ª, goles con minuto hasta el 45 (el descuento se apunta como 45); la 2.ª, del 46 en adelante
+- [ ] Por tramos de 15 minutos: 0–15, 16–30, 31–45, 46–60, 61–75 y 76–90+, con a favor y en contra
+- [ ] Desde el minuto X: un campo numérico (0–150, por defecto 75) con los goles a favor y en contra de minuto mayor o igual que X, calculado en el navegador
+- [ ] A favor, `gol` y `gol_propia` del rival; en contra, `gol_rival` y `gol_propia` de los nuestros. Los goles del resultado sin minuto no cuentan y se avisan
+- [ ] `GET /api/plantillas/:id/estadisticas` devuelve en el equipo los minutos de los goles a favor y en contra y cuántos no tienen minuto
+- [ ] Solo del equipo, no por jugador ni en la ficha del jugador; la ven el cuerpo técnico y el rol jugador
+- [ ] Sin migración. Tests
 
 ---
 

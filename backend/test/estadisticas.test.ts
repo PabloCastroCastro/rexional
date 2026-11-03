@@ -466,6 +466,7 @@ describe('estadísticas acumuladas', () => {
       sinMinutoEnContra: 1,
       // Los dos goles a favor tienen minuto
       sinMinutoAFavor: 0,
+      golesPorMinuto: { aFavor: [10, 50], enContra: [], aFavorSinMinuto: 0, enContraSinMinuto: 1 },
     })
     expect(datos.jugadores).toEqual([
       expect.objectContaining({
@@ -499,6 +500,12 @@ describe('estadísticas acumuladas', () => {
       await pedir('GET', `/plantillas/${ids.senior25}/estadisticas`, 'delegado')
     ).json()
     expect(conMinuto.equipo.sinMinutoEnContra).toBe(0)
+    expect(conMinuto.equipo.golesPorMinuto).toEqual({
+      aFavor: [10, 50],
+      enContra: [70],
+      aFavorSinMinuto: 0,
+      enContraSinMinuto: 0,
+    })
     expect(conMinuto.jugadores).toEqual([
       expect.objectContaining({ nombre: 'J1', golesEncajados: 1, minutosConEncajados: 90 }),
       expect.objectContaining({ nombre: 'J2', golesEncajados: 0, minutosConEncajados: 60 }),
