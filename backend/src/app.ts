@@ -1,13 +1,15 @@
 import { OpenAPIHono } from '@hono/zod-openapi'
 import { Scalar } from '@scalar/hono-api-reference'
-import { auth } from './auth.js'
+import { manejarAutenticacion } from './autenticacion.js'
 import { config } from './config.js'
+import { recibirAvisoCsp } from './csp.js'
 import { comprobarBaseDeDatos } from './db/cliente.js'
 import { manejarError, rutaNoEncontrada, soloMismoOrigen, validacionFallida } from './errores.js'
 import { registrarPeticiones } from './peticiones.js'
 import { rutasActas } from './rutas/actas.js'
 import { rutasCalendario } from './rutas/calendario.js'
 import { rutasClubes } from './rutas/clubes.js'
+import { rutasCuenta } from './rutas/cuenta.js'
 import { rutasEjercicios } from './rutas/ejercicios.js'
 import { rutasEntrenos } from './rutas/entrenos.js'
 import { rutasEstadisticas, rutasEstadisticasClub } from './rutas/estadisticas.js'
@@ -27,7 +29,7 @@ export const infoOpenApi = {
   openapi: '3.1.0',
   info: {
     title: 'API de Vestuario',
-    version: '1.5.0',
+    version: '1.6.0',
     description:
       'API REST de Vestuario. Todas las rutas cuelgan de /api. Errores con el formato { error: { codigo, mensaje, detalles? } }.',
   },
@@ -53,11 +55,17 @@ export function crearApp(dependencias: Partial<Dependencias> = {}) {
   app.onError(manejarError)
   app.notFound(rutaNoEncontrada)
 
-  // Autenticación (Better Auth): /api/auth/sign-in/email, /sign-out, /get-session y /change-password
-  app.post('/auth/*', soloMismoOrigen(config.urlPublica))
-  app.on(['GET', 'POST'], '/auth/*', (c) => auth.handler(c.req.raw))
+  // Avisos de violación de la CSP (GH-57): los manda el navegador, sin sesión y sin garantía de
+  // que lleve Origin, así que van antes de la comprobación del origen
+  app.post('/csp', recibirAvisoCsp)
+  // Ninguna petición que modifique datos desde otro origen
+  app.use(soloMismoOrigen(config.urlPublica))
+  // Autenticación (Better Auth): /api/auth/sign-in/email, /sign-out, /get-session y /change-password,
+  // con el bloqueo de cuentas y los eventos de seguridad
+  app.on(['GET', 'POST'], '/auth/*', manejarAutenticacion)
 
   app.route('/', rutasSalud(d.comprobarBaseDeDatos))
+  app.route('/', rutasCuenta())
   app.route('/', rutasClubes())
   app.route('/', rutasPlantillas())
   app.route('/', rutasJugadoresPlantilla())

@@ -324,7 +324,7 @@ Cada entorno es un clon del repositorio con su `.env`, su nombre de proyecto de 
 
 - **Fase inicial:** Tailscale instalado en el servidor (fuera de Docker) y en los dispositivos del entrenador. Acceso solo desde la red privada, con HTTPS mediante certificado de Tailscale (necesario para instalar la PWA). El certificado se genera en el servidor con `tailscale cert`, se monta en el contenedor de nginx y un cron lo renueva y recarga nginx, porque caduca a los 90 días.
 - Si en el servidor ya hay otro nginx ocupando los puertos 80/443, el proxy de cada entorno escucha en su propio puerto (p. ej. 8443 pruebas y 9443 producción).
-- **Fase final (ciclo 11):** servidor separado y bastionado, red aislada, cortafuegos, dominio (DuckDNS), apertura de puertos 80/443 en el router hacia nginx y certificados de Let's Encrypt obtenidos y renovados con certbot.
+- **Fase final (ciclo 11):** producción se publica en internet con **Tailscale Funnel**, en la misma Raspberry, que se comparte con otras aplicaciones. No hace falta dominio propio, ni abrir puertos en el router, ni certbot: el certificado lo gestiona Tailscale. Los visitantes no necesitan Tailscale. Antes de activarlo, la Raspberry se bastiona, Vestuario se aísla del resto de la máquina (reglas en `DOCKER-USER` y contenedores endurecidos) y la aplicación se endurece: IP real del cliente, límites de peticiones por IP y por usuario, y bloqueo progresivo de la cuenta tras logins fallidos. Pruebas sigue siendo solo del tailnet. Se descartaron Vercel y Cloudflare como alojamiento, porque el backend es un proceso permanente con ffmpeg, sharp, PostgreSQL y archivos en disco. Cloudflare Tunnel queda como alternativa si algún día se quiere un dominio propio.
 
 ### 5.4 Despliegue y copias de seguridad
 
@@ -775,7 +775,7 @@ Una issue está terminada cuando: cumple sus criterios de aceptación en el ento
 | 8 · Operación | Backups automáticos, restauración, logs y actualizaciones | en parte en v1.2.0, con GH-45 y GH-46; el resto, pendiente |
 | 9 · Exportar y compartir | Exportar y compartir sesiones y multas en PDF o texto, los datos de la temporada en Excel y asistencia desde WhatsApp | en parte en v1.3.0, con GH-131 y GH-132, y en v1.5.0, con GH-170; el resto, pendiente |
 | 10 · Roles en uso | Invitaciones, delegados y jugadores | v1.4.0, prevista |
-| 11 · Exposición pública | Servidor aislado, red, cortafuegos, dominio y HTTPS público | v2.0.0, prevista |
+| 11 · Exposición pública | Bastionado, aislamiento, cabeceras, límites y publicación con Tailscale Funnel | en parte en v1.6.0, con GH-54, GH-55, GH-57, GH-58, GH-177 y GH-56 (sin activar); v2.0.0, prevista |
 | 12 · Asistente de ejercicios | Claves de API, diagrama táctico del ejercicio y generación de imágenes, animación y PDF en el servidor | v2.1.0, prevista |
 
 Versión publicada en los ciclos ya cerrados y prevista en el resto. Los ciclos 1 a 3 no tuvieron release propia: se publicaron juntos en la v1.0.0. Lo que queda abierto de un ciclo ya publicado sale en la release siguiente a terminarlo.
@@ -812,7 +812,7 @@ Versión publicada en los ciclos ya cerrados y prevista en el resto. Los ciclos 
 | Ciclo 8 · Operación | Backups automáticos, restauración, logs y actualizaciones (en parte en v1.2.0, con GH-45 y GH-46; el resto, pendiente) |
 | Ciclo 9 · Exportar y compartir | Exportar y compartir sesiones y multas en PDF o texto, los datos de la temporada en Excel y asistencia desde WhatsApp (en parte en v1.3.0, con GH-131 y GH-132, y en v1.5.0, con GH-170; el resto, pendiente) |
 | Ciclo 10 · Roles en uso | Invitaciones, delegados y jugadores (v1.4.0, prevista) |
-| Ciclo 11 · Exposición pública | Servidor aislado, red, cortafuegos, dominio y HTTPS público (v2.0.0, prevista) |
+| Ciclo 11 · Exposición pública | Publicación con Tailscale Funnel en la Raspberry compartida: bastionado, aislamiento de Vestuario, cabeceras, límites de peticiones por usuario e IP y paso a producción pública (en parte en v1.6.0, con GH-54, GH-55, GH-57, GH-58, GH-177 y GH-56 sin activar; v2.0.0, prevista) |
 | Ciclo 12 · Asistente de ejercicios | Claves de API, diagrama táctico del ejercicio y generación de imágenes, animación y PDF en el servidor (v2.1.0, prevista) |
 
 ### 11.3 Issues
@@ -1877,6 +1877,7 @@ Depende de GH-49.
 - [ ] Pantalla a la que lleva el enlace: crear contraseña o iniciar sesión si la cuenta ya existe
 - [ ] Al aceptar se crea la membresía con el rol indicado y, si procede, se vincula la ficha de jugador
 - [ ] Enlaces caducados, usados o revocados muestran un mensaje claro
+- [ ] Límite de peticiones por IP en nginx para la ruta pública del enlace de invitación, como el del login (GH-58)
 
 #### GH-51
 **Título:** Gestión de miembros de la plantilla y administradores del club
@@ -1917,73 +1918,109 @@ Depende de GH-50.
 ### Milestone: Ciclo 11 · Exposición pública
 
 #### GH-54
-**Título:** Servidor dedicado bastionado
+**Título:** Bastionado de la Raspberry
 **Etiquetas:** feature, infra, seguridad
 
+La Raspberry sigue compartida con otras aplicaciones; esta issue endurece el sistema base.
+
 **Criterios de aceptación**
-- [ ] Máquina dedicada solo a la aplicación
-- [ ] SSH solo con clave, sin acceso root, y solo desde la red de administración o Tailscale
-- [ ] Actualizaciones de seguridad automáticas del sistema
-- [ ] Docker en modo rootless o con usuario dedicado
+- [ ] SSH solo con clave, sin login de root, y solo por Tailscale y desde la red de casa (puerta de rescate si Tailscale cae)
+- [ ] Actualizaciones de seguridad automáticas del sistema (`unattended-upgrades`), con aviso si hace falta reiniciar
+- [ ] Cortafuegos del host (nftables): entrada rechazada salvo Tailscale y la LAN
+- [ ] Revisión de los puertos que escuchan en `0.0.0.0` y propuesta para los que sobran, sin tocar las otras aplicaciones sin acordarlo
 - [ ] Documentado en `docs/servidor.md`
 
 #### GH-55
-**Título:** Red aislada y cortafuegos
+**Título:** Aislar Vestuario del resto de la Raspberry
 **Etiquetas:** feature, infra, seguridad
 
-Depende de GH-54.
+Depende de GH-54. Si alguien comprometiera Vestuario, no debe poder llegar a las otras aplicaciones de la Raspberry ni al host.
 
 **Criterios de aceptación**
-- [ ] Servidor en una red o VLAN aislada (DMZ) sin acceso al resto de la red de casa
-- [ ] Cortafuegos del router: solo 80 y 443 hacia el servidor
-- [ ] Cortafuegos del servidor (ufw o nftables): entrada solo 80/443 y administración por Tailscale
+- [ ] Redes de Docker con nombre de interfaz fijo (`vt-<entorno>-*`): backend y db en redes internas sin salida, y el proxy sin acceso a la base de datos
+- [ ] Reglas en el cortafuegos del servidor (tabla `inet bastionado` de GH-54, en lugar de `DOCKER-USER`): los contenedores de Vestuario no abren conexiones hacia el host, las redes de otros proyectos, la LAN, el tailnet ni internet (Vestuario no necesita salir)
+- [ ] Contenedores de producción con `cap_drop: ALL`, `no-new-privileges` y sistema de archivos de solo lectura salvo los volúmenes y `/tmp`
+- [ ] Ningún contenedor monta el socket de Docker
+- [ ] La base de datos y el backend siguen sin publicar puertos
+- [ ] Comprobado desde dentro del backend que no se llega a los puertos del host ni a las otras aplicaciones
+- [ ] Las reglas se mantienen tras reiniciar y tras `docker compose up`
+- [ ] Documentado en `docs/servidor.md`
 
 #### GH-56
-**Título:** Dominio y publicación por el router
+**Título:** Publicar producción con Tailscale Funnel
 **Etiquetas:** feature, infra
+
+Depende de GH-55, GH-57 y GH-58: Funnel se activa cuando la aplicación ya está aislada y endurecida. Funnel solo admite los puertos 443, 8443 y 10000; 443 y 8443 ya están ocupados en la Raspberry.
+
+**Criterios de aceptación**
+- [ ] Atributo `funnel` permitido en la política del tailnet, solo para genzo
+- [ ] Funnel en el puerto 10000 hacia el proxy de producción, persistente tras reinicios (`--bg`). El puerto de producción, solo en `127.0.0.1` (`IP_PUBLICADA`): desde el tailnet también se entra por el 10000
+- [ ] `URL_PUBLICA` con la dirección nueva (`https://genzo.<tailnet>.ts.net:10000`), que usa también `trustedOrigins`
+- [ ] Solo se publica producción: pruebas y las otras aplicaciones siguen siendo solo del tailnet (comprobado con `tailscale funnel status`)
+- [ ] Acceso verificado desde fuera de casa con datos móviles y sin Tailscale en el móvil
+- [ ] Calificación A o superior en securityheaders y prueba externa de TLS por la dirección pública (GH-57): `testssl.sh` contra la IP pública de Funnel, porque SSL Labs solo analiza el puerto 443
+- [ ] Documentado en `docs/servidor.md`: activarlo, desactivarlo de inmediato (`tailscale funnel reset`) y qué hacer si Tailscale cae
+
+#### GH-57
+**Título:** Cabeceras de seguridad
+**Etiquetas:** feature, infra, seguridad
+
+Depende de GH-55. Con Tailscale Funnel (GH-56) el TLS público lo termina Tailscale, con su certificado; nginx sigue sirviendo HTTPS para el acceso por el tailnet. `X-Content-Type-Options` y `Referrer-Policy` ya se envían (`proxy/templates/vestuario.inc.template`).
+
+**Criterios de aceptación**
+- [ ] HSTS solo por HTTPS, sin `includeSubDomains` ni `preload`. Empieza con 1 día, porque afecta a todo el nombre del servidor (también a las otras aplicaciones), y se sube a 1 año cuando se compruebe que nada se rompe
+- [ ] Content-Security-Policy estricta (solo el propio origen, sin `unsafe-inline` ni `eval`, `frame-ancestors 'none'`), comprobando con el navegador que la PWA, los vídeos, los PDF, compartir y las exportaciones siguen funcionando
+- [ ] Las violaciones de la CSP se registran como evento de seguridad (`csp_violada`) y salen en el informe de seguridad (GH-58)
+- [ ] Permissions-Policy: bloqueado lo que no se usa (cámara, micrófono, ubicación, pagos, USB, captura de pantalla); compartir y pantalla completa, solo para la propia aplicación
+- [ ] `X-Frame-Options`, `Cross-Origin-Opener-Policy` y `Cross-Origin-Resource-Policy`
+- [ ] TLS de nginx con la configuración «intermediate» de Mozilla
+- [ ] Test en la CI de que todas las respuestas llevan las cabeceras, también las de la API y las de error
+
+#### GH-58
+**Título:** Endurecimiento de la aplicación para internet
+**Etiquetas:** feature, backend, frontend, infra, seguridad
 
 Depende de GH-55.
 
 **Criterios de aceptación**
-- [ ] Comprobado que la conexión no usa CG-NAT (o IP pública solicitada a la operadora)
-- [ ] Subdominio DuckDNS con actualización automática de IP en un contenedor
-- [ ] IP local fija del servidor y reenvío de puertos 80/443 en el router
-- [ ] Acceso verificado desde fuera de casa con datos móviles
+- [ ] IP real del cliente: comprobar qué cabecera envía Funnel y configurar nginx para fiarse de ella solo cuando la conexión viene del propio servidor, de modo que `X-Real-IP` sea la del visitante y no la de `tailscaled`. Con tests, porque better-auth limita por esa IP (`backend/src/auth.ts`)
+- [ ] Limitación de peticiones por IP en nginx (`limit_req`), global y más estricta para el login. El límite del enlace de invitación va en GH-50
+- [ ] Límite de peticiones por usuario en el backend (middleware por id de usuario), general y más estricto en subidas, PDF y exportaciones; respuesta `429` con `Retry-After` y su aviso en la app
+- [ ] Bloqueo temporal y progresivo de la cuenta tras varios intentos fallidos de login, además del límite por IP; nunca permanente, para que nadie pueda bloquear a otro a propósito, e igual exista o no la cuenta
+- [ ] Comprobación del `Origin` en todas las peticiones que modifican datos en `/api/*`, no solo en `/api/auth/*`
+- [ ] Eventos de seguridad en el log del backend (`seguridad: true`): login correcto y fallido, cuenta bloqueada, límite superado, origen rechazado, cambio de contraseña y cierre de sesión, con IP real y usuario, sin datos personales (los emails que no existen, con su hash)
+- [ ] Login desde una IP o un navegador que el usuario no había usado antes: evento `login_desde_nuevo_origen` (para avisar por Telegram cuando exista GH-120)
+- [ ] `scripts/informe-seguridad.sh` resume los eventos de un periodo a partir de los logs (fallos por cuenta e IP, bloqueos, límites superados por usuario, logins desde orígenes nuevos), con un cron diario que lo deja en `/opt/vestuario/seguridad/`
+- [ ] Revisión de dependencias con vulnerabilidades conocidas y paso de la CI que falla con vulnerabilidades altas o críticas en las dependencias de producción del backend
+- [ ] Revisión de la configuración de cookies (`Secure`, `SameSite`) y CSRF para acceso público
+- [ ] Si ya existen las claves de API (GH-135): límite de peticiones por clave, caducidad y que no aparezcan en los logs
 
-#### GH-57
-**Título:** HTTPS público y cabeceras de seguridad
-**Etiquetas:** feature, infra, seguridad
-
-Depende de GH-56. `X-Content-Type-Options` y `Referrer-Policy` ya se envían (`proxy/templates/vestuario.inc.template`).
-
-**Criterios de aceptación**
-- [ ] nginx con certificado de Let's Encrypt obtenido con certbot (desafío HTTP-01 por el puerto 80) y renovación automática que recarga nginx
-- [ ] Redirección HTTP → HTTPS y HSTS
-- [ ] Cabeceras que faltan: Content-Security-Policy y Permissions-Policy
-- [ ] Calificación A o superior en una prueba externa de TLS
-
-#### GH-58
-**Título:** Endurecimiento de la aplicación para internet
-**Etiquetas:** feature, backend, infra, seguridad
-
-**Criterios de aceptación**
-- [ ] Limitación de peticiones en nginx (`limit_req`), global y específica para login e invitaciones
-- [ ] Bloqueo de IPs abusivas (CrowdSec o fail2ban) a partir de los logs de nginx
-- [ ] Revisión de dependencias con vulnerabilidades conocidas
-- [ ] Revisión de la configuración de cookies y CSRF para acceso público
-- [ ] Si ya existen las claves de API (GH-135): límite de peticiones, caducidad y que no aparezcan en los logs
+Sin fail2ban ni CrowdSec: con Funnel, todo el tráfico de internet llega al servidor desde `tailscaled`, así que bloquear IPs en el cortafuegos del sistema no serviría; la protección queda en los límites de nginx, del backend y en el bloqueo de cuentas.
 
 #### GH-59
-**Título:** Migración de producción al servidor público
+**Título:** Paso a producción pública
 **Etiquetas:** feature, infra
 
-Depende de GH-54 a GH-58.
+Depende de GH-56 y GH-177.
 
 **Criterios de aceptación**
-- [ ] Copia de seguridad y restauración de producción en el nuevo servidor
-- [ ] Verificación completa de funcionalidades
-- [ ] Usuarios avisados del nuevo enlace y reinstalación de la PWA si cambia el dominio
+- [ ] Copia de seguridad de producción justo antes de abrirla
+- [ ] Verificación completa por la dirección pública: login, PWA, subidas de vídeo, PDF y exportaciones
+- [ ] Usuarios avisados del nuevo enlace y de que tienen que reinstalar la PWA (cambia el origen)
 - [ ] Release `v2.0.0`
+
+#### GH-177
+**Título:** Sesiones abiertas y cambio de contraseña
+**Etiquetas:** feature, backend, frontend, seguridad
+
+Depende de GH-58. Lo imprescindible para cada usuario antes de abrir la aplicación a internet: las sesiones duran 30 días y se renuevan con el uso, así que si alguien pierde el móvil o le roban la contraseña tiene que poder cerrarlas y cambiarla desde la propia aplicación. El historial de eventos en la base de datos va en GH-180.
+
+**Criterios de aceptación**
+- [ ] `GET /api/cuenta/sesiones`: las sesiones abiertas del usuario (navegador y sistema, IP, inicio, último uso y cuál es la actual), nunca el token
+- [ ] `DELETE /api/cuenta/sesiones/{id}` y `POST /api/cuenta/sesiones/cerrar-otras`: cerrar una de las otras sesiones o todas salvo la actual, con su evento de seguridad (`sesion_cerrada`)
+- [ ] Cambio de contraseña desde la aplicación, que cierra las demás sesiones, con su evento (`contrasena_cambiada`)
+- [ ] En «Más → Cuenta»: este dispositivo, los demás con «Cerrar» y «Cerrar sesión en los demás dispositivos», y el cambio de contraseña
+- [ ] Tests
 
 ---
 
@@ -2052,7 +2089,7 @@ Investigar si hay bibliotecas de ejercicios de fútbol disponibles (abiertas o c
 
 ### Sin milestone
 
-Issues aparcadas: no se retoman hasta que se decida.
+Issues aparcadas o para más adelante: no se retoman hasta que se decida.
 
 #### GH-36
 **Título:** Propuesta de multa al registrar una tarjeta
@@ -2081,3 +2118,17 @@ Crear una sesión de entrenamiento y sus ejercicios a partir de un documento rel
 - [ ] Al confirmar se crean en una transacción los ejercicios nuevos y el plan del entreno elegido; el archivo no se guarda
 - [ ] Delegado o superior
 - [ ] Tests con una plantilla de ejemplo (sin datos reales en el repositorio)
+
+#### GH-180
+**Título:** Historial de eventos de seguridad en la base de datos
+**Etiquetas:** feature, db, backend, frontend, seguridad
+
+Ampliación de GH-58 y GH-177, sin ciclo: hacerla solo si los logs de Docker y el informe de seguridad diario se quedan cortos.
+
+**Criterios de aceptación**
+- [ ] Los eventos de seguridad se guardan también en la base de datos, con retención configurable (90 días por defecto) y borrado diario de lo antiguo
+- [ ] Sin riesgo de llenar el disco de la Raspberry ante un ataque: tope de eventos guardados por minuto (el resto solo en el log, con un evento que diga cuántos se han descartado) y tamaño máximo de la tabla
+- [ ] En «Más → Cuenta», la actividad reciente del propio usuario
+- [ ] Los administradores del club ven qué ha pasado, cuándo y desde qué dispositivo con los miembros de su club, sin la IP ni datos de otros clubes
+- [ ] Ni contraseñas ni tokens; los fallos de login con un email que no existe, con su hash
+- [ ] Tests

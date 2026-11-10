@@ -5,9 +5,9 @@ Guía para instalar y mantener Vestuario en el servidor de casa: una Raspberry P
 | Entorno | Código | Directorio | Proyecto de Compose | Puerto (ejemplo) | Datos |
 |---|---|---|---|---|---|
 | Pruebas | último `develop` | `/opt/vestuario/pruebas` | `vestuario-pruebas` | 8443 | de ejemplo (seed), desechables |
-| Producción | un tag `vX.Y.Z` de `main` | `/opt/vestuario/pro` | `vestuario-pro` | 9443 | reales |
+| Producción | un tag `vX.Y.Z` de `main` | `/opt/vestuario/pro` | `vestuario-pro` | 9443 (en internet, 10000 por Funnel) | reales |
 
-Solo se accede por la red de Tailscale, con HTTPS y el certificado que da Tailscale (necesario para instalar la PWA en el móvil). El único contenedor que publica un puerto es el proxy de cada entorno; la base de datos y el backend quedan en la red interna de Docker. No se usan los puertos 80 y 443, así que no hay conflicto con otra aplicación que los ocupe.
+Pruebas solo se usa desde la red de Tailscale, con HTTPS y el certificado que da Tailscale (necesario para instalar la PWA en el móvil). Producción se publica en internet con Tailscale Funnel, en el puerto 10000, sin abrir puertos en el router (apartado 10). El único contenedor que publica un puerto es el proxy de cada entorno; la base de datos y el backend quedan en redes internas de Docker, sin salida, y el cortafuegos aísla Vestuario del resto del servidor (apartado 9). No se usan los puertos 80 y 443, así que no hay conflicto con otra aplicación que los ocupe.
 
 ```
 /opt/vestuario/
@@ -69,12 +69,16 @@ Valores que hay que cambiar (el resto, como en `.env.example`):
 | `ENTORNO` | `pruebas` | `produccion` |
 | `PUERTO` | `8443` | `9443` |
 | `PUERTO_INTERNO` | `8443` | `8443` |
-| `URL_PUBLICA` | `https://raspberry.tail1234.ts.net:8443` | `https://raspberry.tail1234.ts.net:9443` |
+| `URL_PUBLICA` | `https://raspberry.tail1234.ts.net:8443` | `https://raspberry.tail1234.ts.net:10000` |
+| `IP_PUBLICADA` | (vacía) | `127.0.0.1` |
+| `INTERFAZ_RED` | `vt-pruebas` | `vt-pro` |
 | `POSTGRES_PASSWORD` | `openssl rand -hex 24` | otra distinta |
 | `BETTER_AUTH_SECRET` | `openssl rand -base64 32` | otra distinta |
 
 - `PUERTO_INTERNO=8443` hace que se publique el HTTPS del proxy.
-- `URL_PUBLICA` debe ser exactamente la dirección desde la que se usa la aplicación, con el puerto: el inicio de sesión solo se acepta desde ella.
+- `URL_PUBLICA` debe ser exactamente la dirección desde la que se usa la aplicación, con el puerto: el inicio de sesión solo se acepta desde ella. En producción es la de Funnel (apartado 10), también desde el tailnet.
+- `IP_PUBLICADA=127.0.0.1` deja el puerto de producción solo para el propio servidor: no se puede entrar por el 9443 saltándose Funnel. Pruebas la deja vacía (todas las interfaces, solo accesibles desde el tailnet y la red de casa).
+- `INTERFAZ_RED` da nombre fijo a las interfaces de red del entorno (`vt-pro-ext`, `vt-pro-app` y `vt-pro-db`), que son las que aísla el cortafuegos. `deploy.sh` no despliega sin ella.
 - Las contraseñas y secretos son distintos en cada entorno. La contraseña de PostgreSQL, solo letras y números (va dentro de una URL).
 
 ## 4. Certificado HTTPS
@@ -148,7 +152,7 @@ Las migraciones no se deshacen: si la versión nueva cambió el esquema, además
 ## 8. Comprobaciones
 
 ```bash
-curl -s https://raspberry.tail1234.ts.net:9443/api/health      # {"estado":"ok",...}
+curl -s https://raspberry.tail1234.ts.net:10000/api/health     # {"estado":"ok",...}
 docker compose -p vestuario-pro ps                              # todos healthy
 tail /opt/vestuario/deploys.log
 ls -lh /opt/vestuario/backups
@@ -161,4 +165,228 @@ cd /opt/vestuario/pro
 docker compose -p vestuario-pro -f docker-compose.yml -f docker-compose.servidor.yml logs -f backend
 ```
 
-Desde el móvil, con Tailscale activo: abre `https://raspberry.tail1234.ts.net:9443` y, en el menú del navegador, *Añadir a la pantalla de inicio* para instalar la aplicación.
+Desde el móvil (con Funnel, no hace falta Tailscale): abre `https://raspberry.tail1234.ts.net:10000` y, en el menú del navegador, *Añadir a la pantalla de inicio* para instalar la aplicación.
+
+Estado del bastionado (apartado 9):
+
+```bash
+sudo /opt/vestuario/pro/scripts/bastionado.sh comprobar
+```
+
+## 9. Bastionado del sistema
+
+El servidor se comparte con otras aplicaciones; esto endurece el sistema base. `scripts/bastionado.sh` instala los archivos de `scripts/servidor/` y se puede repetir sin problema. Cada paso se ejecuta como root desde el usuario que administra el servidor:
+
+| Paso | Qué hace |
+|---|---|
+| `ssh` | Solo con clave, sin root y solo ese usuario (`AllowUsers`) |
+| `actualizaciones` | `unattended-upgrades` con el repositorio de seguridad de Debian, sin reinicio automático |
+| `servicios` | Desactiva `rpcbind`, que solo sirve para NFS |
+| `cortafuegos` y `confirmar` | Cortafuegos de nftables: entrada solo por Tailscale y desde la red de casa, y Vestuario aislado del resto del servidor |
+| `comprobar` | Estado de todo lo anterior, aislamiento de Vestuario, puertos abiertos y si hace falta reiniciar |
+
+### SSH
+
+```bash
+sudo /opt/vestuario/pro/scripts/bastionado.sh ssh
+```
+
+Instala `/etc/ssh/sshd_config.d/10-bastionado.conf` y recarga SSH. Antes comprueba que el usuario tiene claves en `~/.ssh/authorized_keys` y, después, que la configuración efectiva (`sshd -T`) es la buena. El archivo va antes que `50-cloud-init.conf`, que permite entrar con contraseña, porque sshd se queda con el primer valor que lee. **No cierres la sesión** hasta comprobar desde otra terminal que puedes entrar.
+
+### Actualizaciones automáticas
+
+```bash
+sudo /opt/vestuario/pro/scripts/bastionado.sh actualizaciones
+```
+
+Solo se instalan solas las actualizaciones de seguridad de Debian, cada día. El resto de paquetes de Debian, el repositorio de Raspberry Pi (núcleo y firmware) y Docker se actualizan a mano. Registro en `/var/log/unattended-upgrades/`.
+
+No reinicia solo, porque no todas las aplicaciones del servidor arrancan solas. Cuando una actualización necesita reinicio, lo avisan `deploy.sh` y `bastionado.sh comprobar`. Para reiniciar, en un momento sin uso:
+
+```bash
+sudo reboot
+# después: docker ps (todos los contenedores en marcha) y las comprobaciones del apartado 8
+```
+
+### Cortafuegos
+
+Es una tabla de nftables propia (`inet bastionado`), sin `flush ruleset` para no borrar las reglas de Docker. La carga `vestuario-cortafuegos.service` al arrancar. Acepta la entrada por Tailscale (y el UDP 41641 de sus conexiones directas), desde la red de casa (`192.168.1.0/24`), desde los contenedores, ICMP y DHCP, y descarta el resto. Los descartes quedan en el registro del sistema con el prefijo `bastionado descartado`.
+
+La red de casa es la puerta de rescate: si Tailscale cae, se sigue entrando por SSH desde la LAN. Si la red de casa no es `192.168.1.0/24`, cámbiala en `scripts/servidor/cortafuegos.nft` (conjunto `lan4`).
+
+Además aísla Vestuario del resto del servidor: ver «Aislamiento de Vestuario», más abajo.
+
+Se aplica en dos pasos, con marcha atrás automática por si se pierde el acceso:
+
+```bash
+sudo /opt/vestuario/pro/scripts/bastionado.sh cortafuegos   # se retira solo en 2 minutos
+# desde otra terminal: ssh y las aplicaciones responden
+sudo /opt/vestuario/pro/scripts/bastionado.sh confirmar     # queda fijo, también tras reiniciar
+```
+
+Para cambiar las reglas, edita `scripts/servidor/cortafuegos.nft` y repite los dos pasos. En una emergencia, `bastionado.sh quitar` lo retira del todo. Para ver lo que se descarta: `sudo journalctl -k -g 'bastionado descartado'`.
+
+### Aislamiento de Vestuario
+
+El servidor se comparte con otras aplicaciones. Si alguien comprometiera Vestuario, desde sus contenedores no debe poder llegar a ellas ni al propio servidor. El aislamiento tiene tres capas:
+
+1. **Redes de Docker.** Cada entorno tiene tres redes, con nombre de interfaz fijo gracias a `INTERFAZ_RED`:
+
+   | Red | Interfaz | Quién | Salida |
+   |---|---|---|---|
+   | `externa` | `vt-pro-ext` | proxy | la del puerto publicado |
+   | `aplicacion` | `vt-pro-app` | proxy y backend | ninguna (`internal`) |
+   | `datos` | `vt-pro-db` | backend y db | ninguna (`internal`) |
+
+   El backend y la base de datos no tienen salida, y el proxy no llega a la base de datos. Vestuario no necesita salir a internet.
+2. **Cortafuegos.** La tabla `inet bastionado` descarta toda conexión nueva que abra un contenedor desde una interfaz `vt-*`, tanto hacia el servidor (cadena `entrada`) como hacia cualquier sitio fuera de las redes de Vestuario (cadena `reenvio`). Eso incluye los puertos publicados y los contenedores de otras aplicaciones, la LAN, el tailnet e internet. Las respuestas a lo que llega al puerto publicado sí pasan. Lo descartado queda en el registro con el prefijo `vestuario aislado`. Se hace en esta tabla y no en `DOCKER-USER` para tenerlo todo en un solo archivo, y porque Docker no la toca al reiniciarse.
+3. **Contenedores endurecidos** (`docker-compose.yml`): sin capacidades (`cap_drop: ALL`), sin poder ganar privilegios (`no-new-privileges`) y con el sistema de archivos de solo lectura. Escriben solo en sus volúmenes (datos y subidas) y en tmpfs: `/tmp`, la configuración que nginx genera al arrancar y el socket de PostgreSQL. PostgreSQL arranca directamente como `postgres`. Ningún contenedor monta el socket de Docker.
+
+Para comprobarlo desde dentro de los contenedores (no necesita root):
+
+```bash
+/opt/vestuario/pro/scripts/comprobar-aislamiento.sh pro
+```
+
+Desde el backend y el proxy intenta llegar al servidor (por sus redes, la LAN y Tailscale), a los puertos publicados de otras aplicaciones, a un contenedor de otra aplicación, al router y a internet; desde el proxy, también a la base de datos. Nada de eso tiene que llegar. Como control, el proxy tiene que llegar al backend y el backend a la base de datos.
+
+**Primer despliegue con el aislamiento:**
+
+1. Añade `INTERFAZ_RED` al `.env` del entorno.
+2. Carga el cortafuegos con las reglas nuevas (`bastionado.sh cortafuegos` y `confirmar`).
+3. Despliega. Se crean las redes nuevas y se recrean los contenedores, con unos segundos sin servicio. `deploy.sh` borra la red de antes (`vestuario-pro_default`).
+
+### Límites y eventos de seguridad
+
+Para cuando Vestuario esté abierto a internet (GH-58):
+
+- **Límites por IP, en nginx:** 10 peticiones por segundo en `/api` (ráfagas de 100) y 10 por minuto en el inicio de sesión. La IP es la real del visitante, también con Tailscale Funnel ([proxy/README.md](../proxy/README.md)).
+- **Límites por usuario, en el backend:** 300 peticiones por minuto, y 30 peticiones costosas (subidas, actas, calendarios, PDF y Excel) cada 10 minutos.
+- **Bloqueo de cuentas:** tras 5 fallos seguidos de login con un email, ese email queda bloqueado 1 minuto, el doble en cada fallo siguiente, hasta 15. Da igual desde qué IP, y vale igual para emails que no existen.
+
+Por encima de los límites se responde `429` con `Retry-After`, y la aplicación dice cuánto hay que esperar. Los valores del backend se cambian en el `.env` (`LIMITE_PETICIONES_MINUTO`, `LIMITE_COSTOSAS_10MIN` y `LOGIN_FALLOS_BLOQUEO`). Los contadores están en memoria: al reiniciar el backend empiezan de cero.
+
+El backend deja en su log una línea por cada evento de seguridad, con `"seguridad": true`, la IP real y el usuario: `login_ok`, `login_fallido`, `cuenta_bloqueada`, `login_desde_nuevo_origen` (una IP o un navegador que el usuario no tenía en ninguna otra sesión), `limite_superado`, `origen_rechazado`, `csp_violada` (algo que la Content-Security-Policy ha bloqueado en el navegador), `contrasena_cambiada` y `sesion_cerrada`. Ni contraseñas ni tokens; los fallos con un email que no es de nadie llevan un resumen del email (`emailResumen`), no el email.
+
+### Cabeceras de seguridad y HSTS
+
+El proxy pone en todas las respuestas una Content-Security-Policy estricta, Permissions-Policy y el resto de cabeceras de seguridad ([proxy/README.md](../proxy/README.md), GH-57). Si una pantalla deja de funcionar por la CSP, sale como `csp_violada` en el informe de seguridad, con la directiva, lo bloqueado y la página.
+
+Por HTTPS, además, **HSTS**: el navegador recuerda que el servidor solo se usa por HTTPS. Vale para todo el nombre del servidor (`genzo.….ts.net`) **en cualquier puerto**, así que también afecta a las otras aplicaciones que se abran con ese nombre: si alguna se usa por `http://`, el navegador pasará a pedirla por HTTPS. Por eso empieza con 1 día (`HSTS_MAX_AGE=86400`). Cuando se haya comprobado que nada se rompe, se sube a 1 año en el `.env` de cada entorno y se despliega:
+
+```bash
+HSTS_MAX_AGE=31536000
+```
+
+Sin `includeSubDomains` ni `preload`: el nombre es de Tailscale y no se puede dar de alta en las listas de los navegadores.
+
+### Informe de seguridad
+
+`scripts/informe-seguridad.sh` resume esos eventos y las peticiones que ha rechazado nginx:
+
+- logins correctos y fallidos, por cuenta y por IP;
+- cuentas bloqueadas;
+- logins desde un origen nuevo;
+- límites superados y peticiones desde otro origen.
+
+Pone nombre y email a cada usuario. No necesita root:
+
+```bash
+/opt/vestuario/pro/scripts/informe-seguridad.sh pro                  # últimas 24 horas
+/opt/vestuario/pro/scripts/informe-seguridad.sh pro --desde 168h     # última semana
+```
+
+Cron diario en el crontab del usuario que administra el servidor (`crontab -e`). Deja cada informe en `/opt/vestuario/seguridad/` (solo legible por ese usuario) y conserva los 30 últimos:
+
+```cron
+# Informe de seguridad de Vestuario, cada día a las 7:00
+0 7 * * *  /opt/vestuario/pro/scripts/informe-seguridad.sh pro --guardar >/dev/null 2>>/opt/vestuario/informe-seguridad.log
+```
+
+Lee los logs de Docker, que guardan 5 archivos de 10 MB por contenedor: en periodos muy largos puede faltar lo más antiguo. Un historial en la base de datos está pendiente (GH-180).
+
+### Puertos abiertos
+
+`bastionado.sh comprobar` lista los puertos TCP que escuchan en todas las interfaces. Desde internet no se llega a ninguno, porque el router no tiene puertos abiertos: lo único publicado es producción, por Funnel (apartado 10). Aun así, lo que no tenga que usarse desde fuera del servidor (bases de datos, backends) conviene publicarlo en `127.0.0.1` o no publicarlo: en Vestuario solo publica puerto el proxy.
+
+## 10. Publicación en internet (Tailscale Funnel)
+
+Producción se publica en internet con [Tailscale Funnel](https://tailscale.com/kb/1223/funnel) (GH-56): sin dominio propio y sin abrir puertos en el router. Funnel solo admite los puertos 443, 8443 y 10000; en el servidor, 443 y 8443 están ocupados, así que producción va en el **10000**:
+
+```
+internet ──TLS──> Tailscale (relés) ──> tailscaled en el servidor :10000 ──> 127.0.0.1:9443 (proxy de pro)
+tailnet  ──TLS──────────────────────────> tailscaled en el servidor :10000 ──┘
+```
+
+- El TLS lo termina Tailscale, con su certificado para el nombre del servidor, que renueva solo. El TLS de nginx (apartado 4) queda para pruebas y para el tramo interno.
+- Desde el tailnet también se entra por el 10000: es el único origen de producción (`URL_PUBLICA`) y la PWA se instala solo desde él.
+- Tailscale pasa la IP del visitante en `X-Forwarded-For`, y nginx la usa (límites, registro) porque la conexión llega del propio servidor ([proxy/README.md](../proxy/README.md)).
+- Solo se publica producción. Pruebas y las otras aplicaciones siguen siendo solo del tailnet y de la red de casa.
+- El tráfico de internet pasa por los relés de Tailscale, con ancho de banda limitado: las subidas de vídeo desde fuera van más lentas que desde casa.
+
+### Permitir Funnel solo en el servidor
+
+En la consola de Tailscale:
+
+1. *Machines* › el servidor › *Edit ACL tags*: etiqueta `tag:servidor`. Un equipo etiquetado deja de ser de un usuario y su clave no caduca. Antes, comprueba que las reglas de acceso no dependen de que el servidor sea tuyo (con las de por defecto, `*` a `*`, no cambia nada).
+2. *Access controls*, en el archivo de la política:
+
+   ```json
+   "tagOwners": {
+     "tag:servidor": ["autogroup:admin"]
+   },
+   "nodeAttrs": [
+     { "target": ["tag:servidor"], "attr": ["funnel"] }
+   ]
+   ```
+
+   Si ya hay `tagOwners` o `nodeAttrs`, se añade dentro. Así ningún otro equipo del tailnet puede usar Funnel.
+
+### Activar
+
+1. En `/opt/vestuario/pro/.env`: `URL_PUBLICA=https://raspberry.tail1234.ts.net:10000` e `IP_PUBLICADA=127.0.0.1`.
+2. Desplegar producción (`deploy.sh pro vX.Y.Z`): a partir de aquí el 9443 solo responde desde el servidor.
+3. Publicar:
+
+   ```bash
+   sudo /opt/vestuario/pro/scripts/funnel.sh activar
+   ```
+
+   Antes comprueba el `.env`, que producción escuche solo en `127.0.0.1` y que responda. Ejecuta `tailscale funnel --bg --https=10000 https+insecure://127.0.0.1:9443`: tailscaled guarda la configuración y la mantiene tras reiniciar.
+
+Al cambiar de dirección cambia el origen: los usuarios tienen que abrir la nueva, volver a iniciar sesión y reinstalar la PWA.
+
+### Comprobar
+
+```bash
+sudo /opt/vestuario/pro/scripts/funnel.sh estado      # solo https://…:10000 (Funnel on)
+sudo /opt/vestuario/pro/scripts/bastionado.sh comprobar
+```
+
+- Desde el móvil con datos móviles y **sin Tailscale**: entrar, navegar e instalar la PWA.
+- Cabeceras: [securityheaders.com](https://securityheaders.com) con `https://raspberry.tail1234.ts.net:10000` (A o más).
+- TLS: SSL Labs solo analiza el puerto 443, así que se usa [testssl.sh](https://testssl.sh) desde un equipo fuera del tailnet, o desde el PC forzando la IP pública de Funnel (la que da un DNS público, no la del tailnet):
+
+  ```bash
+  ip=$(nslookup raspberry.tail1234.ts.net 1.1.1.1 | awk '/^Address: / {print $2}' | grep -v ':' | tail -n 1)
+  docker run --rm drwetter/testssl.sh --ip "$ip" --quiet --color 0 https://raspberry.tail1234.ts.net:10000
+  ```
+
+  Sin protocolos antiguos (SSLv3, TLS 1.0 y 1.1), sin cifrados débiles y con HSTS.
+
+### Cortar el acceso desde internet
+
+De inmediato, por ejemplo si se ve un ataque en el informe de seguridad:
+
+```bash
+sudo /opt/vestuario/pro/scripts/funnel.sh quitar      # solo el puerto 10000
+sudo tailscale funnel reset                           # o todo lo de Funnel y serve
+```
+
+Con eso producción deja de verse desde internet **y desde el tailnet**, porque solo escucha en `127.0.0.1`. Para seguir usándola solo desde el tailnet mientras tanto, se publica en el tailnet sin Funnel (`sudo tailscale serve --bg --https=10000 https+insecure://127.0.0.1:9443`), con la misma dirección. Para volver a abrirla, `funnel.sh activar`.
+
+### Si Tailscale cae
+
+- **Tailscale (el servicio) no funciona:** producción no se ve desde fuera ni desde el tailnet, pero los datos y el servidor no corren peligro. Se espera a que vuelva ([status.tailscale.com](https://status.tailscale.com)); al volver, Funnel sigue configurado y no hay que hacer nada.
+- **tailscaled se ha parado en el servidor:** se entra por SSH desde la red de casa (puerta de rescate del cortafuegos) y `sudo systemctl restart tailscaled`. Después, `funnel.sh estado`.
+- **Hay que usar producción mientras tanto:** desde la red de casa, quitando `IP_PUBLICADA` del `.env` y desplegando, se vuelve a escuchar en el 9443 de todas las interfaces. Es temporal: el inicio de sesión solo se acepta desde `URL_PUBLICA`, que habría que cambiar también. Al terminar se deja como estaba y se vuelve a desplegar.

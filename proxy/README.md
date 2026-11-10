@@ -9,7 +9,15 @@ Servidor web de Vestuario con **nginx** (imagen `nginx-unprivileged`, sin root, 
 
 - **HTTPS en 8443** si hay certificado montado en `/etc/nginx/certs` (`cert.pem` y `key.pem`): lo genera al arrancar `docker-entrypoint.d/40-https.sh`. En el servidor se monta el certificado de Tailscale (`docker-compose.servidor.yml`, ver [docs/servidor.md](../docs/servidor.md)); en local y en la CI no hay certificado y solo se sirve HTTP en 8080. La clave debe ser legible por el usuario 101 (nginx sin privilegios).
 
-Más adelante asumirá las cabeceras de seguridad (GH-57) y la limitación de peticiones (GH-58).
+- **IP real del visitante** (`docker-entrypoint.d/35-ip-real.sh`): con Tailscale Funnel las peticiones llegan desde el propio servidor, por la puerta de enlace de la red de Docker, y la IP del visitante viene en `X-Forwarded-For`. Esa cabecera solo se cree cuando la conexión viene de esa puerta de enlace; lo que llega directamente de la LAN o del tailnet conserva su IP. Es la IP que usan los límites, el registro y el `X-Real-IP` hacia el backend.
+- **Límites de peticiones por IP** (`limit_req`, GH-58): 10 por segundo en `/api` (ráfagas de 100) y, en el inicio de sesión, además 10 por minuto (ráfagas de 5). Por encima responde `429` con el error de la API y `Retry-After`. Los de cada usuario los pone el backend. Lo prueba `test/limites.sh` en la CI.
+- **Cabeceras de seguridad** (`templates/cabeceras.inc.template`, GH-57) en todas las respuestas, también las de la API y las de error:
+  - Content-Security-Policy estricta: solo el propio origen, sin estilos ni scripts en línea ni `eval`, `frame-ancestors 'none'`. Las violaciones van a `/api/csp` y el backend las registra como evento de seguridad.
+  - Permissions-Policy: sin cámara, micrófono, ubicación, pagos, USB ni captura de pantalla; compartir y pantalla completa, solo la propia aplicación.
+  - `X-Frame-Options`, `Cross-Origin-Opener-Policy`, `Cross-Origin-Resource-Policy`, `X-Content-Type-Options` y `Referrer-Policy`.
+  - Por HTTPS, además HSTS (`HSTS_MAX_AGE`, 1 día por defecto) y TLS con la configuración «intermediate» de Mozilla.
+
+  Lo prueba `test/cabeceras.sh` en la CI. Si una `location` define sus propios `add_header`, tiene que incluir `cabeceras.inc`: nginx no hereda los del nivel superior.
 
 ## Relación con los otros proyectos
 
@@ -24,6 +32,7 @@ La configuración está en `templates/`: `default.conf.template` (el servidor HT
 |---|---|---|
 | `BACKEND_URL` | `http://backend:3000` | URL interna del backend |
 | `MAX_SUBIDA` | `200m` | Tamaño máximo de una petición (formato de nginx: `200m`, `1g`) |
+| `HSTS_MAX_AGE` | `86400` | Duración de HSTS en segundos, solo por HTTPS (1 día; `31536000` es 1 año) |
 
 Las variables propias de nginx (`$host`, `$uri`…) no se tocan.
 

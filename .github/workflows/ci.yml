@@ -94,6 +94,8 @@ jobs:
         run: npx biome ci --error-on-warnings --reporter=github .
       - name: Tipos
         run: npm run typecheck
+      - name: Dependencias de producción sin vulnerabilidades altas ni críticas
+        run: npm audit --omit=dev --audit-level=high
       - name: Compilación
         run: npm run build
 
@@ -160,6 +162,13 @@ jobs:
           openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj /CN=ci -keyout certs/key.pem -out certs/cert.pem
           sudo chown 101:101 certs/key.pem
           docker run --rm -v "$PWD/certs:/etc/nginx/certs:ro" vestuario-proxy:ci nginx -t
+      - name: ShellCheck
+        run: shellcheck proxy/docker-entrypoint.d/*.sh proxy/test/*.sh
+      - name: IP real y límites de peticiones
+        run: bash proxy/test/limites.sh vestuario-proxy:ci
+      - name: Cabeceras de seguridad y HSTS
+        # Con el certificado autofirmado del paso de HTTPS
+        run: bash proxy/test/cabeceras.sh vestuario-proxy:ci "$PWD/certs"
 
   scripts:
     name: Scripts
@@ -173,6 +182,15 @@ jobs:
         run: shellcheck -x scripts/*.sh scripts/test/*.sh
       - name: Rotación de las copias
         run: bash scripts/test/rotacion.sh
+      - name: Informe de seguridad
+        run: bash scripts/test/informe-seguridad.sh
+      - name: Configuración del bastionado
+        run: |
+          sudo apt-get install -y -q nftables openssh-server >/dev/null
+          sudo nft -c -f scripts/servidor/cortafuegos.nft
+          sudo mkdir -p /run/sshd
+          sudo sshd -t -f scripts/servidor/ssh-bastionado.conf
+          sudo apt-config -c scripts/servidor/52unattended-upgrades-bastionado dump Unattended-Upgrade::Origins-Pattern
 
   humo:
     name: Prueba de humo

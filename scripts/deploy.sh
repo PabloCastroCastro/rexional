@@ -35,6 +35,7 @@ main() {
   local puerto
   puerto=$(grep -E '^PUERTO=' .env | cut -d= -f2)
   [[ -n "$puerto" ]] || error "Falta PUERTO en $dir/.env"
+  grep -qE "^INTERFAZ_RED=vt-$entorno$" .env || error "Falta INTERFAZ_RED=vt-$entorno en $dir/.env (GH-55)"
 
   local anterior
   anterior=$(git rev-parse --short HEAD)
@@ -63,6 +64,8 @@ main() {
 
   echo "== Imágenes y servicios"
   "${compose[@]}" up -d --build --wait --wait-timeout 300 --remove-orphans
+  # La red por defecto de antes de GH-55, si queda: ya no la usa nadie
+  docker network rm "${proyecto}_default" >/dev/null 2>&1 || true
 
   echo "== Comprobación"
   # El certificado es del nombre del servidor en Tailscale, no de localhost: -k solo aquí
@@ -72,6 +75,10 @@ main() {
   apuntar "$registro" "$entorno" "$ref" "$anterior" OK
   trap - ERR
   echo "Desplegado $entorno ($ref)"
+  # Las actualizaciones automáticas no reinician (docs/servidor.md, «Bastionado del sistema»)
+  if [[ -f /var/run/reboot-required ]]; then
+    echo "Aviso: el servidor necesita reiniciarse para terminar de aplicar actualizaciones" >&2
+  fi
 }
 
 error() {

@@ -1,0 +1,70 @@
+#!/usr/sbin/nft -f
+# Cortafuegos de la Raspberry (docs/servidor.md, «Bastionado del sistema»). Se instala en
+# /etc/vestuario/cortafuegos.nft y lo carga vestuario-cortafuegos.service al arrancar.
+#
+# Es una tabla propia, sin «flush ruleset», para no borrar las reglas que crea Docker (y Docker
+# tampoco la toca al reiniciarse). Dos cadenas:
+# - entrada: lo que va al propio servidor
+# - reenvio: lo que sale de las redes de Vestuario (interfaces vt-*, GH-55) hacia cualquier otro
+#   sitio: los puertos publicados de otras aplicaciones, sus contenedores, la LAN, el tailnet o
+#   internet. Lo que llega a los puertos publicados no se toca
+#
+# Cargarla otra vez la sustituye entera: primero se declara (por si no existe) y luego se borra.
+
+table inet bastionado
+delete table inet bastionado
+
+table inet bastionado {
+  set lan4 {
+    type ipv4_addr
+    flags interval
+    elements = { 192.168.1.0/24 }
+  }
+
+  chain entrada {
+    type filter hook input priority filter; policy drop;
+
+    iifname "lo" accept
+    # Incluye las respuestas de los contenedores a conexiones abiertas desde el servidor
+    # (la comprobación de deploy.sh, Funnel)
+    ct state established,related accept
+    ct state invalid drop
+
+    # Vestuario: sus contenedores no abren conexiones hacia el servidor
+    iifname "vt-*" limit rate 10/minute burst 20 packets log prefix "vestuario aislado: " level info
+    iifname "vt-*" drop
+
+    # Administración y acceso a las aplicaciones por Tailscale
+    iifname "tailscale0" accept
+    # Conexiones directas de Tailscale (sin ellas va por relés, más lento)
+    udp dport 41641 accept
+
+    # La red de casa: puerta de rescate por SSH si Tailscale cae
+    ip saddr @lan4 accept
+    ip6 saddr fe80::/10 accept
+
+    # Contenedores de las otras aplicaciones hacia el servidor
+    iifname "docker0" accept
+    iifname "br-*" accept
+
+    # ICMP: ping, MTU y, en IPv6, el descubrimiento de vecinos
+    meta l4proto icmp accept
+    meta l4proto ipv6-icmp accept
+    # Respuestas de DHCP
+    udp sport 67 udp dport 68 accept
+
+    limit rate 10/minute burst 20 packets log prefix "bastionado descartado: " level info
+  }
+
+  chain reenvio {
+    type filter hook forward priority filter; policy accept;
+
+    # Respuestas a lo que llega a los puertos publicados de Vestuario
+    iifname "vt-*" ct state established,related accept
+    # Dentro de las redes de Vestuario (proxy → backend → db). Docker ya aísla sus redes entre sí
+    iifname "vt-*" oifname "vt-*" accept
+    # Cualquier otra conexión que abra un contenedor de Vestuario
+    iifname "vt-*" limit rate 10/minute burst 20 packets log prefix "vestuario aislado: " level info
+    iifname "vt-*" drop
+  }
+}
