@@ -9,6 +9,7 @@ import { registrarPeticiones } from './peticiones.js'
 import { rutasActas } from './rutas/actas.js'
 import { rutasCalendario } from './rutas/calendario.js'
 import { rutasClubes } from './rutas/clubes.js'
+import { rutasCuenta } from './rutas/cuenta.js'
 import { rutasEjercicios } from './rutas/ejercicios.js'
 import { rutasEntrenos } from './rutas/entrenos.js'
 import { rutasEstadisticas, rutasEstadisticasClub } from './rutas/estadisticas.js'
@@ -64,6 +65,7 @@ export function crearApp(dependencias: Partial<Dependencias> = {}) {
   app.on(['GET', 'POST'], '/auth/*', manejarAutenticacion)
 
   app.route('/', rutasSalud(d.comprobarBaseDeDatos))
+  app.route('/', rutasCuenta())
   app.route('/', rutasClubes())
   app.route('/', rutasPlantillas())
   app.route('/', rutasJugadoresPlantilla())

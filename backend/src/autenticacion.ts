@@ -46,9 +46,8 @@ export const reiniciarBloqueosParaTests = () => intentos.clear()
 export async function manejarAutenticacion(c: Context) {
   const ruta = c.req.path.replace(/^\/api\/auth/, '')
   if (c.req.method === 'POST' && ruta === '/sign-in/email') return iniciarSesion(c)
-  if (c.req.method === 'POST' && (ruta === '/sign-out' || ruta === '/change-password')) {
-    return conUsuario(c, ruta === '/sign-out' ? 'sesion_cerrada' : 'contrasena_cambiada')
-  }
+  if (c.req.method === 'POST' && ruta === '/sign-out') return cerrarSesion(c)
+  if (c.req.method === 'POST' && ruta === '/change-password') return cambiarContrasena(c)
   return auth.handler(c.req.raw)
 }
 
@@ -102,15 +101,70 @@ async function iniciarSesion(c: Context) {
   return respuesta
 }
 
-// Cierre de sesión y cambio de contraseña: el evento lleva el usuario, que se lee antes de que la
-// sesión desaparezca
-async function conUsuario(c: Context, evento: 'sesion_cerrada' | 'contrasena_cambiada') {
+// Cierre de sesión: el evento lleva el usuario, que se lee antes de que la sesión desaparezca
+async function cerrarSesion(c: Context) {
   const sesion = await auth.api.getSession({ headers: c.req.raw.headers }).catch(() => null)
   const respuesta = await auth.handler(c.req.raw)
   if (respuesta.ok && sesion) {
-    registrarEvento(evento, { usuarioId: sesion.user.id, ip: ipDe(c.req.raw.headers) })
+    registrarEvento('sesion_cerrada', { usuarioId: sesion.user.id, ip: ipDe(c.req.raw.headers) })
   }
   return respuesta
+}
+
+// Cambio de contraseña (GH-177): pide la actual, así que los fallos cuentan para el mismo bloqueo que
+// el login. Si no, con una sesión robada se podría probar la contraseña sin límite y, al acertar,
+// quedarse con la cuenta
+async function cambiarContrasena(c: Context) {
+  const ip = ipDe(c.req.raw.headers)
+  const sesion = await auth.api.getSession({ headers: c.req.raw.headers }).catch(() => null)
+  // Sin sesión, Better Auth responde 401
+  if (!sesion) return auth.handler(c.req.raw)
+  const email = normalizarEmail(sesion.user.email)
+  const usuarioId = sesion.user.id
+
+  const ahora = Date.now()
+  const estado = intentosDe(email, ahora)
+  if (estado.bloqueadoHasta > ahora) {
+    const segundos = Math.ceil((estado.bloqueadoHasta - ahora) / 1000)
+    return c.json(cuerpoError('demasiados_intentos', mensajeBloqueo(segundos)), 429, {
+      'Retry-After': String(segundos),
+    })
+  }
+
+  const respuesta = await auth.handler(c.req.raw)
+  estado.ultimo = Date.now()
+  if (respuesta.ok) {
+    intentos.delete(email)
+    registrarEvento('contrasena_cambiada', { usuarioId, ip })
+  } else if (await esContrasenaIncorrecta(respuesta)) {
+    estado.fallos += 1
+    registrarEvento('login_fallido', {
+      usuarioId,
+      ip,
+      fallos: estado.fallos,
+      motivo: 'cambio_contrasena',
+    })
+    const bloqueo = duracionBloqueo(estado.fallos)
+    if (bloqueo > 0) {
+      estado.bloqueadoHasta = Date.now() + bloqueo
+      registrarEvento('cuenta_bloqueada', {
+        usuarioId,
+        ip,
+        fallos: estado.fallos,
+        segundos: bloqueo / 1000,
+      })
+    }
+  }
+  return respuesta
+}
+
+async function esContrasenaIncorrecta(respuesta: Response) {
+  if (respuesta.status !== 400) return false
+  const cuerpo = (await respuesta
+    .clone()
+    .json()
+    .catch(() => null)) as { code?: string } | null
+  return cuerpo?.code === 'INVALID_PASSWORD'
 }
 
 async function emailDelCuerpo(peticion: Request) {
