@@ -324,7 +324,7 @@ Cada entorno es un clon del repositorio con su `.env`, su nombre de proyecto de 
 
 - **Fase inicial:** Tailscale instalado en el servidor (fuera de Docker) y en los dispositivos del entrenador. Acceso solo desde la red privada, con HTTPS mediante certificado de Tailscale (necesario para instalar la PWA). El certificado se genera en el servidor con `tailscale cert`, se monta en el contenedor de nginx y un cron lo renueva y recarga nginx, porque caduca a los 90 días.
 - Si en el servidor ya hay otro nginx ocupando los puertos 80/443, el proxy de cada entorno escucha en su propio puerto (p. ej. 8443 pruebas y 9443 producción).
-- **Fase final (ciclo 11):** servidor separado y bastionado, red aislada, cortafuegos, dominio (DuckDNS), apertura de puertos 80/443 en el router hacia nginx y certificados de Let's Encrypt obtenidos y renovados con certbot.
+- **Fase final (ciclo 11):** producción se publica en internet con **Tailscale Funnel**, en la misma Raspberry, que se comparte con otras aplicaciones. No hace falta dominio propio, ni abrir puertos en el router, ni certbot: el certificado lo gestiona Tailscale. Los visitantes no necesitan Tailscale. Antes de activarlo, la Raspberry se bastiona, Vestuario se aísla del resto de la máquina (reglas en `DOCKER-USER` y contenedores endurecidos) y la aplicación se endurece: IP real del cliente, límites de peticiones por IP y por usuario, y bloqueo progresivo de la cuenta tras logins fallidos. Pruebas sigue siendo solo del tailnet. Se descartaron Vercel y Cloudflare como alojamiento, porque el backend es un proceso permanente con ffmpeg, sharp, PostgreSQL y archivos en disco. Cloudflare Tunnel queda como alternativa si algún día se quiere un dominio propio.
 
 ### 5.4 Despliegue y copias de seguridad
 
@@ -812,7 +812,7 @@ Versión publicada en los ciclos ya cerrados y prevista en el resto. Los ciclos 
 | Ciclo 8 · Operación | Backups automáticos, restauración, logs y actualizaciones (en parte en v1.2.0, con GH-45 y GH-46; el resto, pendiente) |
 | Ciclo 9 · Exportar y compartir | Exportar y compartir sesiones y multas en PDF o texto, los datos de la temporada en Excel y asistencia desde WhatsApp (en parte en v1.3.0, con GH-131 y GH-132, y en v1.5.0, con GH-170; el resto, pendiente) |
 | Ciclo 10 · Roles en uso | Invitaciones, delegados y jugadores (v1.4.0, prevista) |
-| Ciclo 11 · Exposición pública | Servidor aislado, red, cortafuegos, dominio y HTTPS público (v2.0.0, prevista) |
+| Ciclo 11 · Exposición pública | Publicación con Tailscale Funnel en la Raspberry compartida: bastionado, aislamiento de Vestuario, cabeceras, límites de peticiones por usuario e IP y paso a producción pública (v2.0.0, prevista) |
 | Ciclo 12 · Asistente de ejercicios | Claves de API, diagrama táctico del ejercicio y generación de imágenes, animación y PDF en el servidor (v2.1.0, prevista) |
 
 ### 11.3 Issues
@@ -1917,72 +1917,84 @@ Depende de GH-50.
 ### Milestone: Ciclo 11 · Exposición pública
 
 #### GH-54
-**Título:** Servidor dedicado bastionado
+**Título:** Bastionado de la Raspberry
 **Etiquetas:** feature, infra, seguridad
 
+La Raspberry sigue compartida con otras aplicaciones; esta issue endurece el sistema base.
+
 **Criterios de aceptación**
-- [ ] Máquina dedicada solo a la aplicación
-- [ ] SSH solo con clave, sin acceso root, y solo desde la red de administración o Tailscale
-- [ ] Actualizaciones de seguridad automáticas del sistema
-- [ ] Docker en modo rootless o con usuario dedicado
+- [ ] SSH solo con clave, sin login de root y solo por Tailscale
+- [ ] Actualizaciones de seguridad automáticas del sistema (`unattended-upgrades`), con aviso si hace falta reiniciar
+- [ ] Cortafuegos del host (nftables): entrada rechazada salvo Tailscale y la LAN
+- [ ] Revisión de los puertos que escuchan en `0.0.0.0` y propuesta para los que sobran, sin tocar las otras aplicaciones sin acordarlo
 - [ ] Documentado en `docs/servidor.md`
 
 #### GH-55
-**Título:** Red aislada y cortafuegos
+**Título:** Aislar Vestuario del resto de la Raspberry
 **Etiquetas:** feature, infra, seguridad
 
-Depende de GH-54.
+Depende de GH-54. Si alguien comprometiera Vestuario, no debe poder llegar a las otras aplicaciones de la Raspberry ni al host.
 
 **Criterios de aceptación**
-- [ ] Servidor en una red o VLAN aislada (DMZ) sin acceso al resto de la red de casa
-- [ ] Cortafuegos del router: solo 80 y 443 hacia el servidor
-- [ ] Cortafuegos del servidor (ufw o nftables): entrada solo 80/443 y administración por Tailscale
+- [ ] Reglas en `DOCKER-USER` (nftables): la red de `vestuario-pro` no alcanza la IP del host ni las redes de otros proyectos de Docker; la salida a internet sigue permitida si hace falta
+- [ ] Contenedores de producción con `cap_drop: ALL`, `no-new-privileges` y sistema de archivos de solo lectura salvo los volúmenes y `/tmp`
+- [ ] Ningún contenedor monta el socket de Docker
+- [ ] La base de datos y el backend siguen sin publicar puertos
+- [ ] Comprobado desde dentro del backend que no se llega a los puertos del host ni a las otras aplicaciones
+- [ ] Las reglas se mantienen tras reiniciar y tras `docker compose up`
+- [ ] Documentado en `docs/servidor.md`
 
 #### GH-56
-**Título:** Dominio y publicación por el router
+**Título:** Publicar producción con Tailscale Funnel
 **Etiquetas:** feature, infra
+
+Depende de GH-55, GH-57 y GH-58: Funnel se activa cuando la aplicación ya está aislada y endurecida. Funnel solo admite los puertos 443, 8443 y 10000; 443 y 8443 ya están ocupados en la Raspberry.
+
+**Criterios de aceptación**
+- [ ] Atributo `funnel` permitido en la política del tailnet, solo para genzo
+- [ ] Funnel en el puerto 10000 hacia el proxy de producción, persistente tras reinicios (`--bg`)
+- [ ] `URL_PUBLICA` con la dirección nueva (`https://genzo.<tailnet>.ts.net:10000`), que usa también `trustedOrigins`
+- [ ] Solo se publica producción: pruebas y las otras aplicaciones siguen siendo solo del tailnet (comprobado con `tailscale funnel status`)
+- [ ] Acceso verificado desde fuera de casa con datos móviles y sin Tailscale en el móvil
+- [ ] Documentado en `docs/servidor.md`: activarlo, desactivarlo de inmediato (`tailscale funnel reset`) y qué hacer si Tailscale cae
+
+#### GH-57
+**Título:** Cabeceras de seguridad
+**Etiquetas:** feature, infra, seguridad
+
+Depende de GH-55. El certificado lo gestiona Tailscale Funnel (GH-56): no hace falta certbot. `X-Content-Type-Options` y `Referrer-Policy` ya se envían (`proxy/templates/vestuario.inc.template`).
+
+**Criterios de aceptación**
+- [ ] HSTS
+- [ ] Content-Security-Policy y Permissions-Policy, comprobando que la PWA, los vídeos, los PDF y las exportaciones siguen funcionando
+- [ ] Calificación A o superior en securityheaders y en una prueba externa de TLS (esta, con Funnel ya activo)
+
+#### GH-58
+**Título:** Endurecimiento de la aplicación para internet
+**Etiquetas:** feature, backend, frontend, infra, seguridad
 
 Depende de GH-55.
 
 **Criterios de aceptación**
-- [ ] Comprobado que la conexión no usa CG-NAT (o IP pública solicitada a la operadora)
-- [ ] Subdominio DuckDNS con actualización automática de IP en un contenedor
-- [ ] IP local fija del servidor y reenvío de puertos 80/443 en el router
-- [ ] Acceso verificado desde fuera de casa con datos móviles
-
-#### GH-57
-**Título:** HTTPS público y cabeceras de seguridad
-**Etiquetas:** feature, infra, seguridad
-
-Depende de GH-56. `X-Content-Type-Options` y `Referrer-Policy` ya se envían (`proxy/templates/vestuario.inc.template`).
-
-**Criterios de aceptación**
-- [ ] nginx con certificado de Let's Encrypt obtenido con certbot (desafío HTTP-01 por el puerto 80) y renovación automática que recarga nginx
-- [ ] Redirección HTTP → HTTPS y HSTS
-- [ ] Cabeceras que faltan: Content-Security-Policy y Permissions-Policy
-- [ ] Calificación A o superior en una prueba externa de TLS
-
-#### GH-58
-**Título:** Endurecimiento de la aplicación para internet
-**Etiquetas:** feature, backend, infra, seguridad
-
-**Criterios de aceptación**
-- [ ] Limitación de peticiones en nginx (`limit_req`), global y específica para login e invitaciones
-- [ ] Bloqueo de IPs abusivas (CrowdSec o fail2ban) a partir de los logs de nginx
+- [ ] IP real del cliente: comprobar qué cabecera envía Funnel y configurar nginx para fiarse solo de ella, de modo que `X-Real-IP` sea la del visitante y no la de `tailscaled`. Con tests, porque better-auth limita por esa IP (`backend/src/auth.ts`)
+- [ ] Limitación de peticiones en nginx (`limit_req`), global y más estricta para el login y las invitaciones
+- [ ] Límite de peticiones por usuario en el backend (middleware por id de usuario), general y más estricto en subidas, PDF y exportaciones; respuesta `429` con su aviso en la app
+- [ ] Bloqueo temporal y progresivo de la cuenta tras varios intentos fallidos de login, además del límite por IP; nunca permanente, para que nadie pueda bloquear a otro a propósito
+- [ ] Bloqueo de IPs abusivas (fail2ban o CrowdSec) a partir de los logs de nginx
 - [ ] Revisión de dependencias con vulnerabilidades conocidas
-- [ ] Revisión de la configuración de cookies y CSRF para acceso público
-- [ ] Si ya existen las claves de API (GH-135): límite de peticiones, caducidad y que no aparezcan en los logs
+- [ ] Revisión de la configuración de cookies (`Secure`, `SameSite`) y CSRF para acceso público
+- [ ] Si ya existen las claves de API (GH-135): límite de peticiones por clave, caducidad y que no aparezcan en los logs
 
 #### GH-59
-**Título:** Migración de producción al servidor público
+**Título:** Paso a producción pública
 **Etiquetas:** feature, infra
 
-Depende de GH-54 a GH-58.
+Depende de GH-56.
 
 **Criterios de aceptación**
-- [ ] Copia de seguridad y restauración de producción en el nuevo servidor
-- [ ] Verificación completa de funcionalidades
-- [ ] Usuarios avisados del nuevo enlace y reinstalación de la PWA si cambia el dominio
+- [ ] Copia de seguridad de producción justo antes de abrirla
+- [ ] Verificación completa por la dirección pública: login, PWA, subidas de vídeo, PDF y exportaciones
+- [ ] Usuarios avisados del nuevo enlace y de que tienen que reinstalar la PWA (cambia el origen)
 - [ ] Release `v2.0.0`
 
 ---
