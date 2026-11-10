@@ -7,7 +7,8 @@
 #   sudo scripts/bastionado.sh cortafuegos     carga el cortafuegos, con marcha atrás en 2 minutos
 #   sudo scripts/bastionado.sh confirmar       lo deja fijo (también tras reiniciar)
 #   sudo scripts/bastionado.sh quitar          lo retira del todo (emergencia)
-#   sudo scripts/bastionado.sh comprobar       estado de todo lo anterior y del aislamiento (GH-55)
+#   sudo scripts/bastionado.sh comprobar       estado de todo lo anterior, del aislamiento (GH-55) y
+#                                              de lo publicado con Funnel (GH-56)
 #
 # Los archivos que instala están en scripts/servidor/. Se puede repetir sin problema: cada paso deja
 # el sistema igual que si se ejecutara por primera vez.
@@ -149,6 +150,9 @@ comprobar() {
       "$(dirname "$(readlink -f "$0")")/comprobar-aislamiento.sh" "$entorno" | tail -n 1 || true
     fi
   done
+
+  echo "== Publicado en internet (Tailscale Funnel)"
+  "$(dirname "$(readlink -f "$0")")/funnel.sh" estado | tail -n 1 || true
 
   echo "== rpcbind"
   systemctl is-enabled rpcbind.socket 2>/dev/null || true

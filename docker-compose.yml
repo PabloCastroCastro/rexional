@@ -107,8 +107,10 @@ services:
       HSTS_MAX_AGE: ${HSTS_MAX_AGE:-86400}
       TZ: ${TZ:-Europe/Madrid}
     ports:
-      # En el servidor, PUERTO_INTERNO=8443: se publica el HTTPS (ver docker-compose.servidor.yml)
-      - "${PUERTO:-8080}:${PUERTO_INTERNO:-8080}"
+      # En el servidor, PUERTO_INTERNO=8443: se publica el HTTPS (ver docker-compose.servidor.yml).
+      # IP_PUBLICADA=127.0.0.1 lo deja solo para el propio servidor: producción, detrás de Tailscale
+      # Funnel (GH-56). Sin ella, en todas las interfaces
+      - "${IP_PUBLICADA:+${IP_PUBLICADA}:}${PUERTO:-8080}:${PUERTO_INTERNO:-8080}"
     depends_on:
       backend:
         condition: service_healthy
