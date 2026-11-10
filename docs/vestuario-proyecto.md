@@ -1954,11 +1954,11 @@ Depende de GH-55, GH-57 y GH-58: Funnel se activa cuando la aplicación ya está
 
 **Criterios de aceptación**
 - [ ] Atributo `funnel` permitido en la política del tailnet, solo para genzo
-- [ ] Funnel en el puerto 10000 hacia el proxy de producción, persistente tras reinicios (`--bg`)
+- [ ] Funnel en el puerto 10000 hacia el proxy de producción, persistente tras reinicios (`--bg`). El puerto de producción, solo en `127.0.0.1` (`IP_PUBLICADA`): desde el tailnet también se entra por el 10000
 - [ ] `URL_PUBLICA` con la dirección nueva (`https://genzo.<tailnet>.ts.net:10000`), que usa también `trustedOrigins`
 - [ ] Solo se publica producción: pruebas y las otras aplicaciones siguen siendo solo del tailnet (comprobado con `tailscale funnel status`)
 - [ ] Acceso verificado desde fuera de casa con datos móviles y sin Tailscale en el móvil
-- [ ] Calificación A o superior en securityheaders y en una prueba externa de TLS (SSL Labs) por la dirección pública (GH-57)
+- [ ] Calificación A o superior en securityheaders y prueba externa de TLS por la dirección pública (GH-57): `testssl.sh` contra la IP pública de Funnel, porque SSL Labs solo analiza el puerto 443
 - [ ] Documentado en `docs/servidor.md`: activarlo, desactivarlo de inmediato (`tailscale funnel reset`) y qué hacer si Tailscale cae
 
 #### GH-57
