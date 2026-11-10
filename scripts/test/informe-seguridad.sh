@@ -19,6 +19,7 @@ cat >"$dir/logs" <<'FIN'
 {"level":40,"time":"2026-11-10T08:04:00Z","seguridad":true,"evento":"login_desde_nuevo_origen","usuarioId":"u1","ip":"198.51.100.4","navegador":"Firefox","ipNueva":true,"navegadorNuevo":false}
 {"level":40,"time":"2026-11-10T08:05:00Z","seguridad":true,"evento":"limite_superado","limite":"general","usuarioId":"u1","ip":"10.0.0.1","metodo":"GET","ruta":"/api/clubes"}
 {"level":30,"time":"2026-11-10T08:06:00Z","seguridad":true,"evento":"sesion_cerrada","usuarioId":"u1","ip":"10.0.0.1"}
+{"level":40,"time":"2026-11-10T08:06:30Z","seguridad":true,"evento":"csp_violada","directiva":"script-src-elem","bloqueado":"https://malo.test/x.js","pagina":"https://vestuario.test/","ip":"10.0.0.2"}
 no es json {
 2026/11/10 08:07:00 [warn] 22#22: *9 limiting requests, excess: 5.120 by zone "login", client: 203.0.113.9, server: _, request: "POST /api/auth/sign-in/email HTTP/1.1"
 2026/11/10 08:07:01 [warn] 22#22: *10 limiting requests, excess: 5.300 by zone "login", client: 203.0.113.9, server: _, request: "POST /api/auth/sign-in/email HTTP/1.1"
@@ -35,7 +36,7 @@ espera() {
     fallos=$((fallos + 1))
   fi
 }
-espera "Avisos: 3"
+espera "Avisos: 4"
 espera "Logins correctos: 1 (1 usuarios)"
 espera "Logins fallidos: 3"
 espera "     2  email desconocido (abc123)"
@@ -48,6 +49,8 @@ espera "Límites superados en el backend: 1"
 espera "general: Ana <ana@club.test> GET /api/clubes"
 espera "Límites superados en nginx (peticiones rechazadas): 2"
 espera "     2  203.0.113.9 (login)"
+espera "Violaciones de la CSP: 1"
+espera "script-src-elem: https://malo.test/x.js en https://vestuario.test/ desde 10.0.0.2"
 espera "Sesiones cerradas: 1"
 
 if [[ $fallos -gt 0 ]]; then

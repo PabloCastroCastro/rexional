@@ -1,0 +1,17 @@
+# Cabeceras de seguridad de todas las respuestas (GH-57), también las de la API y las de error
+# («always»). Se incluye en el nivel de server (vestuario.inc) y en cada location que tenga sus
+# propios add_header, porque nginx no hereda los add_header de un nivel superior si el nivel
+# actual define alguno. HSTS va aparte, solo en HTTPS (40-https.sh).
+#
+# CSP: solo el propio origen. Sin estilos ni scripts en línea ni eval; imágenes, vídeos y PDF de la
+# propia API o generados en el navegador (blob:). Las violaciones las recibe el backend en /api/csp
+# y las registra como evento de seguridad. Con report-uri, que todos los navegadores envían al
+# momento; report-to (la Reporting API) los entrega en diferido y no llegaban de forma fiable.
+
+add_header X-Content-Type-Options "nosniff" always;
+add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+add_header X-Frame-Options "DENY" always;
+add_header Cross-Origin-Opener-Policy "same-origin" always;
+add_header Cross-Origin-Resource-Policy "same-origin" always;
+add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=(), display-capture=(), fullscreen=(self), web-share=(self)" always;
+add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob:; media-src 'self' blob:; connect-src 'self'; font-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; report-uri /api/csp" always;
