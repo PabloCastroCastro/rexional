@@ -1,0 +1,18 @@
+# Carga el cortafuegos de la Raspberry al arrancar (docs/servidor.md, «Bastionado del sistema»):
+# /etc/systemd/system/vestuario-cortafuegos.service
+[Unit]
+Description=Cortafuegos del servidor (tabla inet bastionado)
+Wants=network-pre.target
+Before=network-pre.target
+DefaultDependencies=no
+After=local-fs.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/sbin/nft -f /etc/vestuario/cortafuegos.nft
+ExecReload=/usr/sbin/nft -f /etc/vestuario/cortafuegos.nft
+ExecStop=/usr/sbin/nft delete table inet bastionado
+
+[Install]
+WantedBy=multi-user.target

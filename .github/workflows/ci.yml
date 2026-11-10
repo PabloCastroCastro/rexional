@@ -173,6 +173,13 @@ jobs:
         run: shellcheck -x scripts/*.sh scripts/test/*.sh
       - name: Rotación de las copias
         run: bash scripts/test/rotacion.sh
+      - name: Configuración del bastionado
+        run: |
+          sudo apt-get install -y -q nftables openssh-server >/dev/null
+          sudo nft -c -f scripts/servidor/cortafuegos.nft
+          sudo mkdir -p /run/sshd
+          sudo sshd -t -f scripts/servidor/ssh-bastionado.conf
+          sudo apt-config -c scripts/servidor/52unattended-upgrades-bastionado dump Unattended-Upgrade::Origins-Pattern
 
   humo:
     name: Prueba de humo

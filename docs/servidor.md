@@ -162,3 +162,66 @@ docker compose -p vestuario-pro -f docker-compose.yml -f docker-compose.servidor
 ```
 
 Desde el móvil, con Tailscale activo: abre `https://raspberry.tail1234.ts.net:9443` y, en el menú del navegador, *Añadir a la pantalla de inicio* para instalar la aplicación.
+
+Estado del bastionado (apartado 9):
+
+```bash
+sudo /opt/vestuario/pro/scripts/bastionado.sh comprobar
+```
+
+## 9. Bastionado del sistema
+
+El servidor se comparte con otras aplicaciones; esto endurece el sistema base. `scripts/bastionado.sh` instala los archivos de `scripts/servidor/` y se puede repetir sin problema. Cada paso se ejecuta como root desde el usuario que administra el servidor:
+
+| Paso | Qué hace |
+|---|---|
+| `ssh` | Solo con clave, sin root y solo ese usuario (`AllowUsers`) |
+| `actualizaciones` | `unattended-upgrades` con el repositorio de seguridad de Debian, sin reinicio automático |
+| `servicios` | Desactiva `rpcbind`, que solo sirve para NFS |
+| `cortafuegos` y `confirmar` | Cortafuegos de nftables: entrada solo por Tailscale y desde la red de casa |
+| `comprobar` | Estado de todo lo anterior, puertos abiertos y si hace falta reiniciar |
+
+### SSH
+
+```bash
+sudo /opt/vestuario/pro/scripts/bastionado.sh ssh
+```
+
+Instala `/etc/ssh/sshd_config.d/10-bastionado.conf` y recarga SSH. Antes comprueba que el usuario tiene claves en `~/.ssh/authorized_keys` y, después, que la configuración efectiva (`sshd -T`) es la buena. El archivo va antes que `50-cloud-init.conf`, que permite entrar con contraseña, porque sshd se queda con el primer valor que lee. **No cierres la sesión** hasta comprobar desde otra terminal que puedes entrar.
+
+### Actualizaciones automáticas
+
+```bash
+sudo /opt/vestuario/pro/scripts/bastionado.sh actualizaciones
+```
+
+Solo se instalan solas las actualizaciones de seguridad de Debian, cada día. El resto de paquetes de Debian, el repositorio de Raspberry Pi (núcleo y firmware) y Docker se actualizan a mano. Registro en `/var/log/unattended-upgrades/`.
+
+No reinicia solo, porque no todas las aplicaciones del servidor arrancan solas. Cuando una actualización necesita reinicio, lo avisan `deploy.sh` y `bastionado.sh comprobar`. Para reiniciar, en un momento sin uso:
+
+```bash
+sudo reboot
+# después: docker ps (todos los contenedores en marcha) y las comprobaciones del apartado 8
+```
+
+### Cortafuegos
+
+Es una tabla de nftables propia (`inet bastionado`), sin `flush ruleset` para no borrar las reglas de Docker. La carga `vestuario-cortafuegos.service` al arrancar. Acepta la entrada por Tailscale (y el UDP 41641 de sus conexiones directas), desde la red de casa (`192.168.1.0/24`), desde los contenedores, ICMP y DHCP, y descarta el resto. Los descartes quedan en el registro del sistema con el prefijo `bastionado descartado`.
+
+La red de casa es la puerta de rescate: si Tailscale cae, se sigue entrando por SSH desde la LAN. Si la red de casa no es `192.168.1.0/24`, cámbiala en `scripts/servidor/cortafuegos.nft` (conjunto `lan4`).
+
+Solo filtra lo que va al propio servidor. Los puertos que publica Docker no pasan por esa regla: los controla `DOCKER-USER` (GH-55).
+
+Se aplica en dos pasos, con marcha atrás automática por si se pierde el acceso:
+
+```bash
+sudo /opt/vestuario/pro/scripts/bastionado.sh cortafuegos   # se retira solo en 2 minutos
+# desde otra terminal: ssh y las aplicaciones responden
+sudo /opt/vestuario/pro/scripts/bastionado.sh confirmar     # queda fijo, también tras reiniciar
+```
+
+Para cambiar las reglas, edita `scripts/servidor/cortafuegos.nft` y repite los dos pasos. En una emergencia, `bastionado.sh quitar` lo retira del todo. Para ver lo que se descarta: `sudo journalctl -k -g 'bastionado descartado'`.
+
+### Puertos abiertos
+
+`bastionado.sh comprobar` lista los puertos TCP que escuchan en todas las interfaces. Desde internet no se llega a ninguno, porque el router no tiene puertos abiertos. Aun así, lo que no tenga que usarse desde fuera del servidor (bases de datos, backends) conviene publicarlo en `127.0.0.1` o no publicarlo: en Vestuario solo publica puerto el proxy.

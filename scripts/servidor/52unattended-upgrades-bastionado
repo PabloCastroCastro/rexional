@@ -1,0 +1,14 @@
+// Qué instala unattended-upgrades (docs/servidor.md, «Bastionado del sistema»):
+// /etc/apt/apt.conf.d/52unattended-upgrades-bastionado, leído después de 50unattended-upgrades.
+// Solo el repositorio de seguridad de Debian. El resto (Debian, Raspberry Pi y Docker) se actualiza
+// a mano: es menos probable que una actualización automática rompa algo.
+#clear Unattended-Upgrade::Origins-Pattern;
+Unattended-Upgrade::Origins-Pattern {
+  "origin=Debian,codename=${distro_codename}-security,label=Debian-Security";
+};
+
+// Sin reinicio automático: deploy.sh y scripts/bastionado.sh comprobar avisan si hace falta
+Unattended-Upgrade::Automatic-Reboot "false";
+Unattended-Upgrade::Remove-Unused-Kernel-Packages "true";
+Unattended-Upgrade::Remove-Unused-Dependencies "true";
+Unattended-Upgrade::SyslogEnable "true";

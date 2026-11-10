@@ -1923,7 +1923,7 @@ Depende de GH-50.
 La Raspberry sigue compartida con otras aplicaciones; esta issue endurece el sistema base.
 
 **Criterios de aceptación**
-- [ ] SSH solo con clave, sin login de root y solo por Tailscale
+- [ ] SSH solo con clave, sin login de root, y solo por Tailscale y desde la red de casa (puerta de rescate si Tailscale cae)
 - [ ] Actualizaciones de seguridad automáticas del sistema (`unattended-upgrades`), con aviso si hace falta reiniciar
 - [ ] Cortafuegos del host (nftables): entrada rechazada salvo Tailscale y la LAN
 - [ ] Revisión de los puertos que escuchan en `0.0.0.0` y propuesta para los que sobran, sin tocar las otras aplicaciones sin acordarlo
