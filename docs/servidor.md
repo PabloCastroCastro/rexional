@@ -7,7 +7,7 @@ Guía para instalar y mantener Vestuario en el servidor de casa: una Raspberry P
 | Pruebas | último `develop` | `/opt/vestuario/pruebas` | `vestuario-pruebas` | 8443 | de ejemplo (seed), desechables |
 | Producción | un tag `vX.Y.Z` de `main` | `/opt/vestuario/pro` | `vestuario-pro` | 9443 | reales |
 
-Solo se accede por la red de Tailscale, con HTTPS y el certificado que da Tailscale (necesario para instalar la PWA en el móvil). El único contenedor que publica un puerto es el proxy de cada entorno; la base de datos y el backend quedan en la red interna de Docker. No se usan los puertos 80 y 443, así que no hay conflicto con otra aplicación que los ocupe.
+Solo se accede por la red de Tailscale, con HTTPS y el certificado que da Tailscale (necesario para instalar la PWA en el móvil). El único contenedor que publica un puerto es el proxy de cada entorno; la base de datos y el backend quedan en redes internas de Docker, sin salida, y el cortafuegos aísla Vestuario del resto del servidor (apartado 9). No se usan los puertos 80 y 443, así que no hay conflicto con otra aplicación que los ocupe.
 
 ```
 /opt/vestuario/
@@ -70,11 +70,13 @@ Valores que hay que cambiar (el resto, como en `.env.example`):
 | `PUERTO` | `8443` | `9443` |
 | `PUERTO_INTERNO` | `8443` | `8443` |
 | `URL_PUBLICA` | `https://raspberry.tail1234.ts.net:8443` | `https://raspberry.tail1234.ts.net:9443` |
+| `INTERFAZ_RED` | `vt-pruebas` | `vt-pro` |
 | `POSTGRES_PASSWORD` | `openssl rand -hex 24` | otra distinta |
 | `BETTER_AUTH_SECRET` | `openssl rand -base64 32` | otra distinta |
 
 - `PUERTO_INTERNO=8443` hace que se publique el HTTPS del proxy.
 - `URL_PUBLICA` debe ser exactamente la dirección desde la que se usa la aplicación, con el puerto: el inicio de sesión solo se acepta desde ella.
+- `INTERFAZ_RED` da nombre fijo a las interfaces de red del entorno (`vt-pro-ext`, `vt-pro-app` y `vt-pro-db`), que son las que aísla el cortafuegos. `deploy.sh` no despliega sin ella.
 - Las contraseñas y secretos son distintos en cada entorno. La contraseña de PostgreSQL, solo letras y números (va dentro de una URL).
 
 ## 4. Certificado HTTPS
@@ -178,8 +180,8 @@ El servidor se comparte con otras aplicaciones; esto endurece el sistema base. `
 | `ssh` | Solo con clave, sin root y solo ese usuario (`AllowUsers`) |
 | `actualizaciones` | `unattended-upgrades` con el repositorio de seguridad de Debian, sin reinicio automático |
 | `servicios` | Desactiva `rpcbind`, que solo sirve para NFS |
-| `cortafuegos` y `confirmar` | Cortafuegos de nftables: entrada solo por Tailscale y desde la red de casa |
-| `comprobar` | Estado de todo lo anterior, puertos abiertos y si hace falta reiniciar |
+| `cortafuegos` y `confirmar` | Cortafuegos de nftables: entrada solo por Tailscale y desde la red de casa, y Vestuario aislado del resto del servidor |
+| `comprobar` | Estado de todo lo anterior, aislamiento de Vestuario, puertos abiertos y si hace falta reiniciar |
 
 ### SSH
 
@@ -210,7 +212,7 @@ Es una tabla de nftables propia (`inet bastionado`), sin `flush ruleset` para no
 
 La red de casa es la puerta de rescate: si Tailscale cae, se sigue entrando por SSH desde la LAN. Si la red de casa no es `192.168.1.0/24`, cámbiala en `scripts/servidor/cortafuegos.nft` (conjunto `lan4`).
 
-Solo filtra lo que va al propio servidor. Los puertos que publica Docker no pasan por esa regla: los controla `DOCKER-USER` (GH-55).
+Además aísla Vestuario del resto del servidor: ver «Aislamiento de Vestuario», más abajo.
 
 Se aplica en dos pasos, con marcha atrás automática por si se pierde el acceso:
 
@@ -221,6 +223,36 @@ sudo /opt/vestuario/pro/scripts/bastionado.sh confirmar     # queda fijo, tambi�
 ```
 
 Para cambiar las reglas, edita `scripts/servidor/cortafuegos.nft` y repite los dos pasos. En una emergencia, `bastionado.sh quitar` lo retira del todo. Para ver lo que se descarta: `sudo journalctl -k -g 'bastionado descartado'`.
+
+### Aislamiento de Vestuario
+
+El servidor se comparte con otras aplicaciones. Si alguien comprometiera Vestuario, desde sus contenedores no debe poder llegar a ellas ni al propio servidor. El aislamiento tiene tres capas:
+
+1. **Redes de Docker.** Cada entorno tiene tres redes, con nombre de interfaz fijo gracias a `INTERFAZ_RED`:
+
+   | Red | Interfaz | Quién | Salida |
+   |---|---|---|---|
+   | `externa` | `vt-pro-ext` | proxy | la del puerto publicado |
+   | `aplicacion` | `vt-pro-app` | proxy y backend | ninguna (`internal`) |
+   | `datos` | `vt-pro-db` | backend y db | ninguna (`internal`) |
+
+   El backend y la base de datos no tienen salida, y el proxy no llega a la base de datos. Vestuario no necesita salir a internet.
+2. **Cortafuegos.** La tabla `inet bastionado` descarta toda conexión nueva que abra un contenedor desde una interfaz `vt-*`, tanto hacia el servidor (cadena `entrada`) como hacia cualquier sitio fuera de las redes de Vestuario (cadena `reenvio`). Eso incluye los puertos publicados y los contenedores de otras aplicaciones, la LAN, el tailnet e internet. Las respuestas a lo que llega al puerto publicado sí pasan. Lo descartado queda en el registro con el prefijo `vestuario aislado`. Se hace en esta tabla y no en `DOCKER-USER` para tenerlo todo en un solo archivo, y porque Docker no la toca al reiniciarse.
+3. **Contenedores endurecidos** (`docker-compose.yml`): sin capacidades (`cap_drop: ALL`), sin poder ganar privilegios (`no-new-privileges`) y con el sistema de archivos de solo lectura. Escriben solo en sus volúmenes (datos y subidas) y en tmpfs: `/tmp`, la configuración que nginx genera al arrancar y el socket de PostgreSQL. PostgreSQL arranca directamente como `postgres`. Ningún contenedor monta el socket de Docker.
+
+Para comprobarlo desde dentro de los contenedores (no necesita root):
+
+```bash
+/opt/vestuario/pro/scripts/comprobar-aislamiento.sh pro
+```
+
+Desde el backend y el proxy intenta llegar al servidor (por sus redes, la LAN y Tailscale), a los puertos publicados de otras aplicaciones, a un contenedor de otra aplicación, al router y a internet; desde el proxy, también a la base de datos. Nada de eso tiene que llegar. Como control, el proxy tiene que llegar al backend y el backend a la base de datos.
+
+**Primer despliegue con el aislamiento:**
+
+1. Añade `INTERFAZ_RED` al `.env` del entorno.
+2. Carga el cortafuegos con las reglas nuevas (`bastionado.sh cortafuegos` y `confirmar`).
+3. Despliega. Se crean las redes nuevas y se recrean los contenedores, con unos segundos sin servicio. `deploy.sh` borra la red de antes (`vestuario-pro_default`).
 
 ### Puertos abiertos
 

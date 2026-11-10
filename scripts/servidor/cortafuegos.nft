@@ -2,9 +2,12 @@
 # Cortafuegos de la Raspberry (docs/servidor.md, «Bastionado del sistema»). Se instala en
 # /etc/vestuario/cortafuegos.nft y lo carga vestuario-cortafuegos.service al arrancar.
 #
-# Es una tabla propia, sin «flush ruleset», para no borrar las reglas que crea Docker. Solo filtra
-# lo que va al propio servidor (hook input): los puertos que publica Docker pasan por forward y se
-# controlan en DOCKER-USER (GH-55).
+# Es una tabla propia, sin «flush ruleset», para no borrar las reglas que crea Docker (y Docker
+# tampoco la toca al reiniciarse). Dos cadenas:
+# - entrada: lo que va al propio servidor
+# - reenvio: lo que sale de las redes de Vestuario (interfaces vt-*, GH-55) hacia cualquier otro
+#   sitio: los puertos publicados de otras aplicaciones, sus contenedores, la LAN, el tailnet o
+#   internet. Lo que llega a los puertos publicados no se toca
 #
 # Cargarla otra vez la sustituye entera: primero se declara (por si no existe) y luego se borra.
 
@@ -22,8 +25,14 @@ table inet bastionado {
     type filter hook input priority filter; policy drop;
 
     iifname "lo" accept
+    # Incluye las respuestas de los contenedores a conexiones abiertas desde el servidor
+    # (la comprobación de deploy.sh, Funnel)
     ct state established,related accept
     ct state invalid drop
+
+    # Vestuario: sus contenedores no abren conexiones hacia el servidor
+    iifname "vt-*" limit rate 10/minute burst 20 packets log prefix "vestuario aislado: " level info
+    iifname "vt-*" drop
 
     # Administración y acceso a las aplicaciones por Tailscale
     iifname "tailscale0" accept
@@ -34,7 +43,7 @@ table inet bastionado {
     ip saddr @lan4 accept
     ip6 saddr fe80::/10 accept
 
-    # Contenedores hacia el servidor (lo restringe GH-55)
+    # Contenedores de las otras aplicaciones hacia el servidor
     iifname "docker0" accept
     iifname "br-*" accept
 
@@ -45,5 +54,17 @@ table inet bastionado {
     udp sport 67 udp dport 68 accept
 
     limit rate 10/minute burst 20 packets log prefix "bastionado descartado: " level info
+  }
+
+  chain reenvio {
+    type filter hook forward priority filter; policy accept;
+
+    # Respuestas a lo que llega a los puertos publicados de Vestuario
+    iifname "vt-*" ct state established,related accept
+    # Dentro de las redes de Vestuario (proxy → backend → db). Docker ya aísla sus redes entre sí
+    iifname "vt-*" oifname "vt-*" accept
+    # Cualquier otra conexión que abra un contenedor de Vestuario
+    iifname "vt-*" limit rate 10/minute burst 20 packets log prefix "vestuario aislado: " level info
+    iifname "vt-*" drop
   }
 }

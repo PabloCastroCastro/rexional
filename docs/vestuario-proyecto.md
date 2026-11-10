@@ -1936,7 +1936,8 @@ La Raspberry sigue compartida con otras aplicaciones; esta issue endurece el sis
 Depende de GH-54. Si alguien comprometiera Vestuario, no debe poder llegar a las otras aplicaciones de la Raspberry ni al host.
 
 **Criterios de aceptación**
-- [ ] Reglas en `DOCKER-USER` (nftables): la red de `vestuario-pro` no alcanza la IP del host ni las redes de otros proyectos de Docker; la salida a internet sigue permitida si hace falta
+- [ ] Redes de Docker con nombre de interfaz fijo (`vt-<entorno>-*`): backend y db en redes internas sin salida, y el proxy sin acceso a la base de datos
+- [ ] Reglas en el cortafuegos del servidor (tabla `inet bastionado` de GH-54, en lugar de `DOCKER-USER`): los contenedores de Vestuario no abren conexiones hacia el host, las redes de otros proyectos, la LAN, el tailnet ni internet (Vestuario no necesita salir)
 - [ ] Contenedores de producción con `cap_drop: ALL`, `no-new-privileges` y sistema de archivos de solo lectura salvo los volúmenes y `/tmp`
 - [ ] Ningún contenedor monta el socket de Docker
 - [ ] La base de datos y el backend siguen sin publicar puertos
