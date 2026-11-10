@@ -7,7 +7,7 @@
 #   sudo scripts/bastionado.sh cortafuegos     carga el cortafuegos, con marcha atrás en 2 minutos
 #   sudo scripts/bastionado.sh confirmar       lo deja fijo (también tras reiniciar)
 #   sudo scripts/bastionado.sh quitar          lo retira del todo (emergencia)
-#   sudo scripts/bastionado.sh comprobar       estado de todo lo anterior
+#   sudo scripts/bastionado.sh comprobar       estado de todo lo anterior y del aislamiento (GH-55)
 #
 # Los archivos que instala están en scripts/servidor/. Se puede repetir sin problema: cada paso deja
 # el sistema igual que si se ejecutara por primera vez.
@@ -141,6 +141,14 @@ comprobar() {
     echo "NO cargado"
   fi
   systemctl is-active --quiet "$MARCHA_ATRAS.timer" && echo "pendiente de confirmar (marcha atrás activa)"
+
+  echo "== Aislamiento de Vestuario"
+  local entorno
+  for entorno in pruebas pro; do
+    if docker ps -q --filter "label=com.docker.compose.project=vestuario-$entorno" | grep -q .; then
+      "$(dirname "$(readlink -f "$0")")/comprobar-aislamiento.sh" "$entorno" | tail -n 1 || true
+    fi
+  done
 
   echo "== rpcbind"
   systemctl is-enabled rpcbind.socket 2>/dev/null || true

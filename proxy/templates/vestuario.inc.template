@@ -32,6 +32,8 @@ location /api/ {
     proxy_set_header X-Forwarded-Proto $scheme;
     # Subidas en streaming hacia el backend, sin guardarlas antes en disco
     proxy_request_buffering off;
+    # Respuestas grandes (vídeos, PDF, exportaciones) en streaming: /tmp es un tmpfs en memoria
+    proxy_max_temp_file_size 0;
     proxy_read_timeout 300s;
     proxy_send_timeout 300s;
 }

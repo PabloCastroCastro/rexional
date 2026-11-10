@@ -2,9 +2,23 @@
 #   docker compose -p vestuario-pro -f docker-compose.yml -f docker-compose.servidor.yml up -d --build
 # Monta el certificado de Tailscale en el proxy, que así sirve HTTPS en 8443; con PUERTO_INTERNO=8443
 # en el .env, ese es el puerto que se publica (ver docs/servidor.md).
+#
+# Las redes tienen un nombre de interfaz fijo, INTERFAZ_RED-ext, -app y -db (vt-pro-ext, …):
+# el cortafuegos del servidor (scripts/servidor/cortafuegos.nft) aísla todo lo que sale de vt-*.
 
 services:
   proxy:
     volumes:
       # cert.pem y key.pem; la clave debe ser legible por el usuario 101 (nginx sin privilegios)
       - ${CERTIFICADOS:-/opt/vestuario/certs}:/etc/nginx/certs:ro
+
+networks:
+  externa:
+    driver_opts:
+      com.docker.network.bridge.name: ${INTERFAZ_RED:?Define INTERFAZ_RED en .env (vt-pruebas o vt-pro)}-ext
+  aplicacion:
+    driver_opts:
+      com.docker.network.bridge.name: ${INTERFAZ_RED:?Define INTERFAZ_RED en .env (vt-pruebas o vt-pro)}-app
+  datos:
+    driver_opts:
+      com.docker.network.bridge.name: ${INTERFAZ_RED:?Define INTERFAZ_RED en .env (vt-pruebas o vt-pro)}-db
