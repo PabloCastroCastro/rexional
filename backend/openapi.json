@@ -64,6 +64,61 @@
           "error"
         ]
       },
+      "SesionAbierta": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "actual": {
+            "type": "boolean",
+            "description": "Si es la sesión de esta petición"
+          },
+          "navegador": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "Chrome"
+          },
+          "sistema": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "Android"
+          },
+          "ip": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "iniciada": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "ultimoUso": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "caduca": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "actual",
+          "navegador",
+          "sistema",
+          "ip",
+          "iniciada",
+          "ultimoUso",
+          "caduca"
+        ]
+      },
       "Club": {
         "type": "object",
         "properties": {
@@ -2598,6 +2653,133 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Salud"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cuenta/sesiones": {
+      "get": {
+        "tags": [
+          "Cuenta"
+        ],
+        "summary": "Mis sesiones abiertas",
+        "description": "Sesiones sin caducar del usuario, la actual primero y luego por último uso. Nunca incluye el token.",
+        "responses": {
+          "200": {
+            "description": "Sesiones abiertas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SesionAbierta"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cuenta/sesiones/{id}": {
+      "delete": {
+        "tags": [
+          "Cuenta"
+        ],
+        "summary": "Cerrar una de mis otras sesiones",
+        "description": "La actual se cierra con /api/auth/sign-out.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Sesión cerrada"
+          },
+          "400": {
+            "description": "Es la sesión actual",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No es una sesión del usuario",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cuenta/sesiones/cerrar-otras": {
+      "post": {
+        "tags": [
+          "Cuenta"
+        ],
+        "summary": "Cerrar todas mis sesiones salvo la actual",
+        "responses": {
+          "200": {
+            "description": "Sesiones cerradas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "cerradas": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "cerradas"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }

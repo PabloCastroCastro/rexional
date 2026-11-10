@@ -2010,16 +2010,16 @@ Depende de GH-56 y GH-177.
 - [ ] Release `v2.0.0`
 
 #### GH-177
-**Título:** Historial de seguridad y sesiones abiertas
-**Etiquetas:** feature, db, backend, frontend, seguridad
+**Título:** Sesiones abiertas y cambio de contraseña
+**Etiquetas:** feature, backend, frontend, seguridad
 
-Depende de GH-58, que deja los eventos de seguridad en el log del backend. Docker solo guarda los últimos 50 MB de log por contenedor, así que no sirven para revisar lo que pasó hace meses.
+Depende de GH-58. Lo imprescindible para cada usuario antes de abrir la aplicación a internet: las sesiones duran 30 días y se renuevan con el uso, así que si alguien pierde el móvil o le roban la contraseña tiene que poder cerrarlas y cambiarla desde la propia aplicación. El historial de eventos en la base de datos va en GH-180.
 
 **Criterios de aceptación**
-- [ ] Los eventos de seguridad de GH-58 (logins, fallos, bloqueos, límites superados, origen rechazado, cambio de contraseña, cierre de sesión, login desde un origen nuevo) se guardan también en la base de datos, con 90 días de retención
-- [ ] En el perfil, «Sesiones y actividad»: los dispositivos con sesión abierta (navegador, IP, último uso), los últimos eventos del propio usuario y un botón para cerrar sesión en los demás dispositivos
-- [ ] Los administradores del club ven los eventos de los miembros de su club, sin datos de otros clubes
-- [ ] Ni contraseñas ni tokens en los eventos; los fallos de login con un email que no existe se guardan con su hash, no con el email
+- [ ] `GET /api/cuenta/sesiones`: las sesiones abiertas del usuario (navegador y sistema, IP, inicio, último uso y cuál es la actual), nunca el token
+- [ ] `DELETE /api/cuenta/sesiones/{id}` y `POST /api/cuenta/sesiones/cerrar-otras`: cerrar una de las otras sesiones o todas salvo la actual, con su evento de seguridad (`sesion_cerrada`)
+- [ ] Cambio de contraseña desde la aplicación, que cierra las demás sesiones, con su evento (`contrasena_cambiada`)
+- [ ] En «Más → Cuenta»: este dispositivo, los demás con «Cerrar» y «Cerrar sesión en los demás dispositivos», y el cambio de contraseña
 - [ ] Tests
 
 ---
@@ -2089,7 +2089,7 @@ Investigar si hay bibliotecas de ejercicios de fútbol disponibles (abiertas o c
 
 ### Sin milestone
 
-Issues aparcadas: no se retoman hasta que se decida.
+Issues aparcadas o para más adelante: no se retoman hasta que se decida.
 
 #### GH-36
 **Título:** Propuesta de multa al registrar una tarjeta
@@ -2118,3 +2118,17 @@ Crear una sesión de entrenamiento y sus ejercicios a partir de un documento rel
 - [ ] Al confirmar se crean en una transacción los ejercicios nuevos y el plan del entreno elegido; el archivo no se guarda
 - [ ] Delegado o superior
 - [ ] Tests con una plantilla de ejemplo (sin datos reales en el repositorio)
+
+#### GH-180
+**Título:** Historial de eventos de seguridad en la base de datos
+**Etiquetas:** feature, db, backend, frontend, seguridad
+
+Ampliación de GH-58 y GH-177, sin ciclo: hacerla solo si los logs de Docker y el informe de seguridad diario se quedan cortos.
+
+**Criterios de aceptación**
+- [ ] Los eventos de seguridad se guardan también en la base de datos, con retención configurable (90 días por defecto) y borrado diario de lo antiguo
+- [ ] Sin riesgo de llenar el disco de la Raspberry ante un ataque: tope de eventos guardados por minuto (el resto solo en el log, con un evento que diga cuántos se han descartado) y tamaño máximo de la tabla
+- [ ] En «Más → Cuenta», la actividad reciente del propio usuario
+- [ ] Los administradores del club ven qué ha pasado, cuándo y desde qué dispositivo con los miembros de su club, sin la IP ni datos de otros clubes
+- [ ] Ni contraseñas ni tokens; los fallos de login con un email que no existe, con su hash
+- [ ] Tests

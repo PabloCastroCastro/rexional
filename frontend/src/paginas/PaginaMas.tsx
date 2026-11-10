@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { ChevronRight, LogOut, Settings } from 'lucide-react'
+import { ChevronRight, KeyRound, LogOut, Settings } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { api, datos } from '../api/cliente'
@@ -66,6 +66,12 @@ export function PaginaMas() {
         <dt>Versión</dt>
         <dd>{__VERSION__}</dd>
       </dl>
+
+      <Link to={`/plantillas/${plantilla.id}/mas/cuenta`} className={estilos.enlace}>
+        <KeyRound aria-hidden size={20} />
+        <span>Cuenta: sesiones y contraseña</span>
+        <ChevronRight aria-hidden size={20} />
+      </Link>
 
       {puedeConfigurar(plantilla) && (
         <Link to={`/plantillas/${plantilla.id}/mas/configuracion`} className={estilos.enlace}>
