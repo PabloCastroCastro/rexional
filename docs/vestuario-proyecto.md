@@ -775,7 +775,7 @@ Una issue está terminada cuando: cumple sus criterios de aceptación en el ento
 | 8 · Operación | Backups automáticos, restauración, logs y actualizaciones | en parte en v1.2.0, con GH-45 y GH-46; el resto, pendiente |
 | 9 · Exportar y compartir | Exportar y compartir sesiones y multas en PDF o texto, los datos de la temporada en Excel y asistencia desde WhatsApp | en parte en v1.3.0, con GH-131 y GH-132, y en v1.5.0, con GH-170; el resto, pendiente |
 | 10 · Roles en uso | Invitaciones, delegados y jugadores | v1.4.0, prevista |
-| 11 · Exposición pública | Servidor aislado, red, cortafuegos, dominio y HTTPS público | v2.0.0, prevista |
+| 11 · Exposición pública | Bastionado, aislamiento, cabeceras, límites y publicación con Tailscale Funnel | en parte en v1.6.0, con GH-54, GH-55, GH-57, GH-58, GH-177 y GH-56 (sin activar); v2.0.0, prevista |
 | 12 · Asistente de ejercicios | Claves de API, diagrama táctico del ejercicio y generación de imágenes, animación y PDF en el servidor | v2.1.0, prevista |
 
 Versión publicada en los ciclos ya cerrados y prevista en el resto. Los ciclos 1 a 3 no tuvieron release propia: se publicaron juntos en la v1.0.0. Lo que queda abierto de un ciclo ya publicado sale en la release siguiente a terminarlo.
@@ -812,7 +812,7 @@ Versión publicada en los ciclos ya cerrados y prevista en el resto. Los ciclos 
 | Ciclo 8 · Operación | Backups automáticos, restauración, logs y actualizaciones (en parte en v1.2.0, con GH-45 y GH-46; el resto, pendiente) |
 | Ciclo 9 · Exportar y compartir | Exportar y compartir sesiones y multas en PDF o texto, los datos de la temporada en Excel y asistencia desde WhatsApp (en parte en v1.3.0, con GH-131 y GH-132, y en v1.5.0, con GH-170; el resto, pendiente) |
 | Ciclo 10 · Roles en uso | Invitaciones, delegados y jugadores (v1.4.0, prevista) |
-| Ciclo 11 · Exposición pública | Publicación con Tailscale Funnel en la Raspberry compartida: bastionado, aislamiento de Vestuario, cabeceras, límites de peticiones por usuario e IP y paso a producción pública (v2.0.0, prevista) |
+| Ciclo 11 · Exposición pública | Publicación con Tailscale Funnel en la Raspberry compartida: bastionado, aislamiento de Vestuario, cabeceras, límites de peticiones por usuario e IP y paso a producción pública (en parte en v1.6.0, con GH-54, GH-55, GH-57, GH-58, GH-177 y GH-56 sin activar; v2.0.0, prevista) |
 | Ciclo 12 · Asistente de ejercicios | Claves de API, diagrama táctico del ejercicio y generación de imágenes, animación y PDF en el servidor (v2.1.0, prevista) |
 
 ### 11.3 Issues
