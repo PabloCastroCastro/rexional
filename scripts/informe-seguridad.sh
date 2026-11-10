@@ -34,7 +34,7 @@ main() {
   proxy=$(contenedor "$proyecto" proxy)
   db=$(contenedor "$proyecto" db)
 
-  local temporal
+  # Global: la limpieza se ejecuta al salir, cuando las variables locales ya no existen
   temporal=$(mktemp -d)
   trap 'rm -rf "$temporal"' EXIT
   # Nombre y email de los usuarios, para que el informe no sean solo identificadores
