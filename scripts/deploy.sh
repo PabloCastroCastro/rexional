@@ -72,6 +72,10 @@ main() {
   apuntar "$registro" "$entorno" "$ref" "$anterior" OK
   trap - ERR
   echo "Desplegado $entorno ($ref)"
+  # Las actualizaciones automáticas no reinician (docs/servidor.md, «Bastionado del sistema»)
+  if [[ -f /var/run/reboot-required ]]; then
+    echo "Aviso: el servidor necesita reiniciarse para terminar de aplicar actualizaciones" >&2
+  fi
 }
 
 error() {
