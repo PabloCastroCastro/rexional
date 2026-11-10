@@ -4,6 +4,7 @@ import type { Context, ErrorHandler, MiddlewareHandler, NotFoundHandler } from '
 import { HTTPException } from 'hono/http-exception'
 import type { ContentfulStatusCode } from 'hono/utils/http-status'
 import { logger } from './logger.js'
+import { ipDe, registrarEvento } from './seguridad.js'
 
 // Formato común de error de la API (sección 7): { error: { codigo, mensaje, detalles? } }
 
@@ -30,6 +31,8 @@ export class ErrorApi extends Error {
     public readonly codigo: string,
     mensaje: string,
     public readonly detalles?: unknown,
+    // Cabeceras de la respuesta, p. ej. Retry-After en un 429
+    public readonly cabeceras?: Record<string, string>,
   ) {
     super(mensaje)
     this.name = 'ErrorApi'
@@ -46,7 +49,11 @@ const porEstado: Partial<Record<number, [codigo: string, mensaje: string]>> = {
 
 export const manejarError: ErrorHandler = (error, c) => {
   if (error instanceof ErrorApi) {
-    return c.json(cuerpoError(error.codigo, error.message, error.detalles), error.estado)
+    return c.json(
+      cuerpoError(error.codigo, error.message, error.detalles),
+      error.estado,
+      error.cabeceras,
+    )
   }
   if (error instanceof HTTPException && error.status < 500) {
     const [codigo, mensaje] = porEstado[error.status] ?? [
@@ -81,14 +88,23 @@ export const validacionFallida: Hook<any, any, any, any> = (resultado, c: Contex
   }
 }
 
-// Rechaza las peticiones de un navegador desde otro origen. Better Auth solo comprueba el origen si
-// la petición lleva cookie de sesión; así también se cubre el inicio de sesión. Los navegadores
-// siempre envían Origin en un POST; sin Origin (p. ej. curl) decide la ruta.
+// Rechaza las peticiones de un navegador desde otro origen que modifican datos (todas salvo GET,
+// HEAD y OPTIONS), también el inicio de sesión: Better Auth solo comprueba el origen si la petición
+// lleva cookie de sesión. Es una capa más sobre la cookie SameSite=Lax (GH-58). Los navegadores
+// siempre envían Origin en esas peticiones; sin Origin (p. ej. curl) decide la ruta.
+const METODOS_SEGUROS = new Set(['GET', 'HEAD', 'OPTIONS'])
+
 export const soloMismoOrigen =
   (origenPermitido: string): MiddlewareHandler =>
   async (c, next) => {
     const origen = c.req.header('origin')
-    if (origen && origen !== origenPermitido) {
+    if (origen && origen !== origenPermitido && !METODOS_SEGUROS.has(c.req.method)) {
+      registrarEvento('origen_rechazado', {
+        origen: origen.slice(0, 200),
+        ip: ipDe(c.req.raw.headers),
+        metodo: c.req.method,
+        ruta: c.req.path,
+      })
       return c.json(
         cuerpoError('origen_no_permitido', 'Petición desde un origen no permitido'),
         403,

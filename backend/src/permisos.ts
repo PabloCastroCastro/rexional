@@ -11,6 +11,8 @@ import {
   type rol,
 } from './db/schema/index.js'
 import { ErrorApi } from './errores.js'
+import { comprobarLimites } from './limites.js'
+import { ipDe } from './seguridad.js'
 
 // Autorización por club, plantilla y rol (sección 3). Los permisos se aplican siempre aquí, en el
 // backend; el frontend solo oculta lo que el usuario no puede hacer.
@@ -83,6 +85,8 @@ const comprobarRol = (rolUsuario: Rol, minimo: Rol) => {
 async function cargarSesion<E extends EnvSesion>(c: Context<E>) {
   const sesion = await auth.api.getSession({ headers: c.req.raw.headers })
   if (!sesion) throw noAutenticado()
+  // Límites de peticiones del usuario (GH-58): 429 si los ha superado
+  comprobarLimites(sesion.user.id, c.req.method, c.req.path, ipDe(c.req.raw.headers))
   const contexto = c as unknown as Context<EnvSesion>
   contexto.set('usuario', sesion.user)
   contexto.set('sesion', sesion.session)

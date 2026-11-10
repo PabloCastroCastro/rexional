@@ -19,6 +19,10 @@ export default defineConfig({
       SUBIDAS_DIR: join(tmpdir(), 'vestuario-test-subidas'),
       MAX_FOTO_MB: '1',
       MAX_VIDEO_MB: '2',
+      // Sin límites de peticiones por usuario en el resto de tests: los suyos los ponen a propósito
+      // (configurarLimitesParaTests)
+      LIMITE_PETICIONES_MINUTO: '100000',
+      LIMITE_COSTOSAS_10MIN: '100000',
     },
     // Los archivos comparten la base de datos: se ejecutan de uno en uno
     fileParallelism: false,

@@ -37,10 +37,15 @@ export async function iniciarSesion(email: string, password: string) {
   if (res.status === 401)
     throw new ErrorApi(401, 'credenciales', 'El email o la contraseña no son correctos')
   if (res.status === 429) {
+    // El backend (bloqueo de la cuenta) y nginx (límite por IP) dicen cuánto hay que esperar;
+    // el límite de Better Auth, no
+    const cuerpo = (await res.json().catch(() => null)) as {
+      error?: { mensaje?: string }
+    } | null
     throw new ErrorApi(
       429,
       'demasiados_intentos',
-      'Demasiados intentos. Espera un minuto y vuelve a probar.',
+      cuerpo?.error?.mensaje ?? 'Demasiados intentos. Espera un minuto y vuelve a probar.',
     )
   }
   throw new ErrorApi(res.status, 'error', 'No se ha podido iniciar sesión. Inténtalo de nuevo.')

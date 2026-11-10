@@ -17,6 +17,8 @@ ENV BACKEND_URL=http://backend:3000 \
     MAX_SUBIDA=200m
 COPY templates/ /etc/nginx/templates/
 # HTTPS en 8443 si hay certificado montado (el servidor); sin él, solo HTTP en 8080
+# IP real del visitante: solo se cree X-Forwarded-For desde el propio servidor (Tailscale Funnel)
+COPY --chmod=755 docker-entrypoint.d/35-ip-real.sh /docker-entrypoint.d/35-ip-real.sh
 COPY --chmod=755 docker-entrypoint.d/40-https.sh /docker-entrypoint.d/40-https.sh
 COPY --from=estaticos /app/dist /usr/share/nginx/html
 EXPOSE 8080 8443

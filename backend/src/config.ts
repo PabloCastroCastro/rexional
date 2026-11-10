@@ -33,6 +33,11 @@ const esquema = z.object({
   SUBIDAS_DIR: z.string().min(1).default('uploads'),
   MAX_FOTO_MB: z.coerce.number().int().min(1).max(100).default(15),
   MAX_VIDEO_MB: z.coerce.number().int().min(1).max(2000).default(150),
+  // Límites de cada usuario con sesión (GH-58): peticiones por minuto, y peticiones costosas (subidas,
+  // PDF, Excel) cada 10 minutos. Y fallos seguidos de login con un email antes de bloquearlo
+  LIMITE_PETICIONES_MINUTO: z.coerce.number().int().min(1).default(300),
+  LIMITE_COSTOSAS_10MIN: z.coerce.number().int().min(1).default(30),
+  LOGIN_FALLOS_BLOQUEO: z.coerce.number().int().min(1).default(5),
 })
 
 export type Config = {
@@ -44,6 +49,7 @@ export type Config = {
   urlPublica: string
   nivelLog: z.infer<typeof esquema>['LOG_LEVEL']
   subidas: { dir: string; maxFotoBytes: number; maxVideoBytes: number }
+  limites: { peticionesPorMinuto: number; costosasCada10Min: number; fallosLoginBloqueo: number }
 }
 
 export class ErrorConfiguracion extends Error {
@@ -83,6 +89,11 @@ export function leerConfig(env: Record<string, string | undefined>): Config {
       dir: e.SUBIDAS_DIR,
       maxFotoBytes: e.MAX_FOTO_MB * 1024 * 1024,
       maxVideoBytes: e.MAX_VIDEO_MB * 1024 * 1024,
+    },
+    limites: {
+      peticionesPorMinuto: e.LIMITE_PETICIONES_MINUTO,
+      costosasCada10Min: e.LIMITE_COSTOSAS_10MIN,
+      fallosLoginBloqueo: e.LOGIN_FALLOS_BLOQUEO,
     },
   }
 }
