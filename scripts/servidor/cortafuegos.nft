@@ -61,8 +61,10 @@ table inet bastionado {
 
     # Respuestas a lo que llega a los puertos publicados de Vestuario
     iifname "vt-*" ct state established,related accept
-    # Dentro de las redes de Vestuario (proxy → backend → db). Docker ya aísla sus redes entre sí
-    iifname "vt-*" oifname "vt-*" accept
+    # Dentro de las redes de cada entorno (proxy → backend → db). Docker ya aísla sus redes entre
+    # sí. Entre entornos no: el puerto publicado de uno se reenvía a la interfaz del otro (GH-185)
+    iifname "vt-pro-*" oifname "vt-pro-*" accept
+    iifname "vt-pruebas-*" oifname "vt-pruebas-*" accept
     # Cualquier otra conexión que abra un contenedor de Vestuario
     iifname "vt-*" limit rate 10/minute burst 20 packets log prefix "vestuario aislado: " level info
     iifname "vt-*" drop
