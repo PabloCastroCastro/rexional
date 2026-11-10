@@ -1,8 +1,9 @@
 import { randomUUID } from 'node:crypto'
 import { eq, inArray } from 'drizzle-orm'
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { crearAdministrador, ErrorAdministrador } from '../src/administradores.js'
 import { crearApp } from '../src/app.js'
+import { reiniciarBloqueosParaTests } from '../src/autenticacion.js'
 import { db, pool } from '../src/db/cliente.js'
 import { adminsClub, clubes, session, user } from '../src/db/schema/index.js'
 
@@ -55,6 +56,9 @@ beforeAll(async () => {
   creados.usuarios.push(usuario.id)
   creados.clubes.push(club.id)
 })
+
+// Los fallos de un test no bloquean el email en los siguientes (el bloqueo se prueba en seguridad)
+beforeEach(() => reiniciarBloqueosParaTests())
 
 afterAll(async () => {
   if (creados.clubes.length) await db.delete(clubes).where(inArray(clubes.id, creados.clubes))
@@ -114,7 +118,9 @@ describe('inicio de sesión', () => {
     const estados: number[] = []
     for (let i = 0; i < 6; i++) estados.push((await iniciarSesion('otra-contraseña', ip)).status)
     expect(estados).toEqual([401, 401, 401, 401, 401, 429])
-    // Otra IP no se ve afectada
+    // Otra IP no se ve afectada (sin el bloqueo del email, que también salta a los 5 fallos y se
+    // prueba en seguridad.test.ts)
+    reiniciarBloqueosParaTests()
     expect((await iniciarSesion()).status).toBe(200)
   })
 })

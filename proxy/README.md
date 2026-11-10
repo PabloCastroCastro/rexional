@@ -9,7 +9,10 @@ Servidor web de Vestuario con **nginx** (imagen `nginx-unprivileged`, sin root, 
 
 - **HTTPS en 8443** si hay certificado montado en `/etc/nginx/certs` (`cert.pem` y `key.pem`): lo genera al arrancar `docker-entrypoint.d/40-https.sh`. En el servidor se monta el certificado de Tailscale (`docker-compose.servidor.yml`, ver [docs/servidor.md](../docs/servidor.md)); en local y en la CI no hay certificado y solo se sirve HTTP en 8080. La clave debe ser legible por el usuario 101 (nginx sin privilegios).
 
-Más adelante asumirá las cabeceras de seguridad (GH-57) y la limitación de peticiones (GH-58).
+- **IP real del visitante** (`docker-entrypoint.d/35-ip-real.sh`): con Tailscale Funnel las peticiones llegan desde el propio servidor, por la puerta de enlace de la red de Docker, y la IP del visitante viene en `X-Forwarded-For`. Esa cabecera solo se cree cuando la conexión viene de esa puerta de enlace; lo que llega directamente de la LAN o del tailnet conserva su IP. Es la IP que usan los límites, el registro y el `X-Real-IP` hacia el backend.
+- **Límites de peticiones por IP** (`limit_req`, GH-58): 10 por segundo en `/api` (ráfagas de 100) y, en el inicio de sesión, además 10 por minuto (ráfagas de 5). Por encima responde `429` con el error de la API y `Retry-After`. Los de cada usuario los pone el backend. Lo prueba `test/limites.sh` en la CI.
+
+Más adelante asumirá las cabeceras de seguridad (GH-57).
 
 ## Relación con los otros proyectos
 

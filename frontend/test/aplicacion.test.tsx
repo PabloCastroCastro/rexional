@@ -51,6 +51,25 @@ describe('login', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Espera un minuto')
   })
 
+  it('con la cuenta bloqueada dice cuánto hay que esperar', async () => {
+    manejadores['GET /api/auth/get-session'] = sinSesion
+    manejadores['POST /api/auth/sign-in/email'] = () =>
+      json(
+        {
+          error: {
+            codigo: 'demasiados_intentos',
+            mensaje: 'Demasiados intentos fallidos. Espera 4 minutos y vuelve a probar.',
+          },
+        },
+        429,
+      )
+    abrir('/login')
+    await userEvent.type(await screen.findByLabelText(/Email/), 'a@b.test')
+    await userEvent.type(screen.getByLabelText(/Contraseña/), 'x')
+    await userEvent.click(screen.getByRole('button', { name: 'Entrar' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Espera 4 minutos')
+  })
+
   it('al entrar con una sola plantilla va directamente a ella y devuelve a donde se estaba', async () => {
     let conectado = false
     manejadores['GET /api/auth/get-session'] = () => (conectado ? sesionActiva() : sinSesion())

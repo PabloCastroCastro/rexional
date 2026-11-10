@@ -1877,6 +1877,7 @@ Depende de GH-49.
 - [ ] Pantalla a la que lleva el enlace: crear contraseña o iniciar sesión si la cuenta ya existe
 - [ ] Al aceptar se crea la membresía con el rol indicado y, si procede, se vincula la ficha de jugador
 - [ ] Enlaces caducados, usados o revocados muestran un mensaje claro
+- [ ] Límite de peticiones por IP en nginx para la ruta pública del enlace de invitación, como el del login (GH-58)
 
 #### GH-51
 **Título:** Gestión de miembros de la plantilla y administradores del club
@@ -1977,26 +1978,44 @@ Depende de GH-55. El certificado lo gestiona Tailscale Funnel (GH-56): no hace f
 Depende de GH-55.
 
 **Criterios de aceptación**
-- [ ] IP real del cliente: comprobar qué cabecera envía Funnel y configurar nginx para fiarse solo de ella, de modo que `X-Real-IP` sea la del visitante y no la de `tailscaled`. Con tests, porque better-auth limita por esa IP (`backend/src/auth.ts`)
-- [ ] Limitación de peticiones en nginx (`limit_req`), global y más estricta para el login y las invitaciones
-- [ ] Límite de peticiones por usuario en el backend (middleware por id de usuario), general y más estricto en subidas, PDF y exportaciones; respuesta `429` con su aviso en la app
-- [ ] Bloqueo temporal y progresivo de la cuenta tras varios intentos fallidos de login, además del límite por IP; nunca permanente, para que nadie pueda bloquear a otro a propósito
-- [ ] Bloqueo de IPs abusivas (fail2ban o CrowdSec) a partir de los logs de nginx
-- [ ] Revisión de dependencias con vulnerabilidades conocidas
+- [ ] IP real del cliente: comprobar qué cabecera envía Funnel y configurar nginx para fiarse de ella solo cuando la conexión viene del propio servidor, de modo que `X-Real-IP` sea la del visitante y no la de `tailscaled`. Con tests, porque better-auth limita por esa IP (`backend/src/auth.ts`)
+- [ ] Limitación de peticiones por IP en nginx (`limit_req`), global y más estricta para el login. El límite del enlace de invitación va en GH-50
+- [ ] Límite de peticiones por usuario en el backend (middleware por id de usuario), general y más estricto en subidas, PDF y exportaciones; respuesta `429` con `Retry-After` y su aviso en la app
+- [ ] Bloqueo temporal y progresivo de la cuenta tras varios intentos fallidos de login, además del límite por IP; nunca permanente, para que nadie pueda bloquear a otro a propósito, e igual exista o no la cuenta
+- [ ] Comprobación del `Origin` en todas las peticiones que modifican datos en `/api/*`, no solo en `/api/auth/*`
+- [ ] Eventos de seguridad en el log del backend (`seguridad: true`): login correcto y fallido, cuenta bloqueada, límite superado, origen rechazado, cambio de contraseña y cierre de sesión, con IP real y usuario, sin datos personales (los emails que no existen, con su hash)
+- [ ] Login desde una IP o un navegador que el usuario no había usado antes: evento `login_desde_nuevo_origen` (para avisar por Telegram cuando exista GH-120)
+- [ ] `scripts/informe-seguridad.sh` resume los eventos de un periodo a partir de los logs (fallos por cuenta e IP, bloqueos, límites superados por usuario, logins desde orígenes nuevos), con un cron diario que lo deja en `/opt/vestuario/seguridad/`
+- [ ] Revisión de dependencias con vulnerabilidades conocidas y paso de la CI que falla con vulnerabilidades altas o críticas en las dependencias de producción del backend
 - [ ] Revisión de la configuración de cookies (`Secure`, `SameSite`) y CSRF para acceso público
 - [ ] Si ya existen las claves de API (GH-135): límite de peticiones por clave, caducidad y que no aparezcan en los logs
+
+Sin fail2ban ni CrowdSec: con Funnel, todo el tráfico de internet llega al servidor desde `tailscaled`, así que bloquear IPs en el cortafuegos del sistema no serviría; la protección queda en los límites de nginx, del backend y en el bloqueo de cuentas.
 
 #### GH-59
 **Título:** Paso a producción pública
 **Etiquetas:** feature, infra
 
-Depende de GH-56.
+Depende de GH-56 y GH-177.
 
 **Criterios de aceptación**
 - [ ] Copia de seguridad de producción justo antes de abrirla
 - [ ] Verificación completa por la dirección pública: login, PWA, subidas de vídeo, PDF y exportaciones
 - [ ] Usuarios avisados del nuevo enlace y de que tienen que reinstalar la PWA (cambia el origen)
 - [ ] Release `v2.0.0`
+
+#### GH-177
+**Título:** Historial de seguridad y sesiones abiertas
+**Etiquetas:** feature, db, backend, frontend, seguridad
+
+Depende de GH-58, que deja los eventos de seguridad en el log del backend. Docker solo guarda los últimos 50 MB de log por contenedor, así que no sirven para revisar lo que pasó hace meses.
+
+**Criterios de aceptación**
+- [ ] Los eventos de seguridad de GH-58 (logins, fallos, bloqueos, límites superados, origen rechazado, cambio de contraseña, cierre de sesión, login desde un origen nuevo) se guardan también en la base de datos, con 90 días de retención
+- [ ] En el perfil, «Sesiones y actividad»: los dispositivos con sesión abierta (navegador, IP, último uso), los últimos eventos del propio usuario y un botón para cerrar sesión en los demás dispositivos
+- [ ] Los administradores del club ven los eventos de los miembros de su club, sin datos de otros clubes
+- [ ] Ni contraseñas ni tokens en los eventos; los fallos de login con un email que no existe se guardan con su hash, no con el email
+- [ ] Tests
 
 ---
 

@@ -31,6 +31,7 @@ describe('configuración', () => {
       urlPublica: 'https://vestuario.test:8443',
       nivelLog: 'info',
       subidas: { dir: 'uploads', maxFotoBytes: 15 * 1024 * 1024, maxVideoBytes: 150 * 1024 * 1024 },
+      limites: { peticionesPorMinuto: 300, costosasCada10Min: 30, fallosLoginBloqueo: 5 },
     })
   })
 

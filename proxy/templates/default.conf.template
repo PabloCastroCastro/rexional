@@ -4,6 +4,16 @@
 # HTTP en 8080: el que usan la CI, el entorno local y el healthcheck. En el servidor, si hay
 # certificado montado en /etc/nginx/certs, se añade además HTTPS en 8443 (ver
 # docker-entrypoint.d/40-https.sh). Los dos sirven lo mismo: vestuario.inc.
+
+# Límites de peticiones por IP (GH-58), con la IP real del visitante (ver 35-ip-real.sh). Por encima
+# del límite se responde 429. Los de cada usuario los pone el backend.
+#   api: todo /api, holgado para la carga de una página (ráfagas de hasta 100)
+#   login: el inicio de sesión, además del límite de intentos del backend
+limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;
+limit_req_zone $binary_remote_addr zone=login:1m rate=10r/m;
+limit_req_status 429;
+limit_req_log_level warn;
+
 server {
     listen 8080;
     server_name _;

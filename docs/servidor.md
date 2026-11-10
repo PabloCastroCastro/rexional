@@ -254,6 +254,43 @@ Desde el backend y el proxy intenta llegar al servidor (por sus redes, la LAN y 
 2. Carga el cortafuegos con las reglas nuevas (`bastionado.sh cortafuegos` y `confirmar`).
 3. Despliega. Se crean las redes nuevas y se recrean los contenedores, con unos segundos sin servicio. `deploy.sh` borra la red de antes (`vestuario-pro_default`).
 
+### Límites y eventos de seguridad
+
+Para cuando Vestuario esté abierto a internet (GH-58):
+
+- **Límites por IP, en nginx:** 10 peticiones por segundo en `/api` (ráfagas de 100) y 10 por minuto en el inicio de sesión. La IP es la real del visitante, también con Tailscale Funnel ([proxy/README.md](../proxy/README.md)).
+- **Límites por usuario, en el backend:** 300 peticiones por minuto, y 30 peticiones costosas (subidas, actas, calendarios, PDF y Excel) cada 10 minutos.
+- **Bloqueo de cuentas:** tras 5 fallos seguidos de login con un email, ese email queda bloqueado 1 minuto, el doble en cada fallo siguiente, hasta 15. Da igual desde qué IP, y vale igual para emails que no existen.
+
+Por encima de los límites se responde `429` con `Retry-After`, y la aplicación dice cuánto hay que esperar. Los valores del backend se cambian en el `.env` (`LIMITE_PETICIONES_MINUTO`, `LIMITE_COSTOSAS_10MIN` y `LOGIN_FALLOS_BLOQUEO`). Los contadores están en memoria: al reiniciar el backend empiezan de cero.
+
+El backend deja en su log una línea por cada evento de seguridad, con `"seguridad": true`, la IP real y el usuario: `login_ok`, `login_fallido`, `cuenta_bloqueada`, `login_desde_nuevo_origen` (una IP o un navegador que el usuario no tenía en ninguna otra sesión), `limite_superado`, `origen_rechazado`, `contrasena_cambiada` y `sesion_cerrada`. Ni contraseñas ni tokens; los fallos con un email que no es de nadie llevan un resumen del email (`emailResumen`), no el email.
+
+### Informe de seguridad
+
+`scripts/informe-seguridad.sh` resume esos eventos y las peticiones que ha rechazado nginx:
+
+- logins correctos y fallidos, por cuenta y por IP;
+- cuentas bloqueadas;
+- logins desde un origen nuevo;
+- límites superados y peticiones desde otro origen.
+
+Pone nombre y email a cada usuario. No necesita root:
+
+```bash
+/opt/vestuario/pro/scripts/informe-seguridad.sh pro                  # últimas 24 horas
+/opt/vestuario/pro/scripts/informe-seguridad.sh pro --desde 168h     # última semana
+```
+
+Cron diario en el crontab del usuario que administra el servidor (`crontab -e`). Deja cada informe en `/opt/vestuario/seguridad/` (solo legible por ese usuario) y conserva los 30 últimos:
+
+```cron
+# Informe de seguridad de Vestuario, cada día a las 7:00
+0 7 * * *  /opt/vestuario/pro/scripts/informe-seguridad.sh pro --guardar >/dev/null 2>>/opt/vestuario/informe-seguridad.log
+```
+
+Lee los logs de Docker, que guardan 5 archivos de 10 MB por contenedor: en periodos muy largos puede faltar lo más antiguo. El historial completo, en la base de datos, llega con GH-177.
+
 ### Puertos abiertos
 
 `bastionado.sh comprobar` lista los puertos TCP que escuchan en todas las interfaces. Desde internet no se llega a ninguno, porque el router no tiene puertos abiertos. Aun así, lo que no tenga que usarse desde fuera del servidor (bases de datos, backends) conviene publicarlo en `127.0.0.1` o no publicarlo: en Vestuario solo publica puerto el proxy.
