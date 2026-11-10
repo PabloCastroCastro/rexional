@@ -53,11 +53,12 @@ main() {
       probar no "$c" "$nombre → puerto publicado de otra aplicación ($lan:$publicado)" "$lan" "$publicado"
     done
     local ajeno
-    ajeno=$(contenedor_ajeno "$proyecto")
+    ajeno=$(contenedor_ajeno)
     # shellcheck disable=SC2086 # «IP PUERTO» son dos argumentos
     [[ -n "$ajeno" ]] && probar no "$c" "$nombre → contenedor de otra aplicación (${ajeno% *})" ${ajeno}
     probar no "$c" "$nombre → router ($router:80)" "$router" 80
-    probar no "$c" "$nombre → internet (1.1.1.1:443)" 1.1.1.1 443
+    # DNS de Google por TCP: responde siempre y no depende de resolver nombres
+    probar no "$c" "$nombre → internet (8.8.8.8:53)" 8.8.8.8 53
   done
 
   if [[ $fallos -gt 0 ]]; then
@@ -90,14 +91,15 @@ contenedor() {
 puertos_ajenos() {
   docker ps --format '{{.Label "com.docker.compose.project"}} {{.Ports}}' |
     awk -v propio="$1" '$1 != propio' |
-    grep -oE '0\.0\.0\.0:[0-9]+->' | grep -oE '[0-9]+' | sort -un
+    grep -oE '0\.0\.0\.0:[0-9]+->' | sed -E 's/.*:([0-9]+)->/\1/' | sort -un
 }
 
-# IP y un puerto en el que escucha un contenedor de otro proyecto («IP PUERTO»), si lo hay
+# IP y un puerto en el que escucha un contenedor de otra aplicación («IP PUERTO»), si lo hay. Se
+# salta los de Vestuario: entre sus entornos ya los separa Docker
 contenedor_ajeno() {
   local id
   for id in $(docker ps -q); do
-    [[ "$(docker inspect -f '{{index .Config.Labels "com.docker.compose.project"}}' "$id")" == "$1" ]] && continue
+    [[ "$(docker inspect -f '{{index .Config.Labels "com.docker.compose.project"}}' "$id")" == vestuario-* ]] && continue
     local ip puerto
     ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}' "$id" | awk '{print $1}')
     puerto=$(docker inspect -f '{{range $p, $v := .Config.ExposedPorts}}{{$p}} {{end}}' "$id" | grep -oE '^[0-9]+/tcp' | head -1)
