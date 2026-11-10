@@ -62,7 +62,8 @@ def informe(titulo, eventos, nginx, usuarios):
     salida = [titulo, "=" * len(titulo), ""]
     alertas = sum(
         len(por_tipo[t])
-        for t in ("cuenta_bloqueada", "login_desde_nuevo_origen", "limite_superado", "origen_rechazado")
+        for t in ("cuenta_bloqueada", "login_desde_nuevo_origen", "limite_superado", "origen_rechazado",
+                  "csp_violada")
     )
     salida.append(f"Avisos: {alertas}" + ("" if alertas else " (nada que revisar)"))
     salida.append("")
@@ -100,6 +101,9 @@ def informe(titulo, eventos, nginx, usuarios):
     seccion(salida, "Peticiones desde otro origen", por_tipo["origen_rechazado"],
             lambda e: f"{e.get('time', '')}  {e.get('origen')} desde {e.get('ip', '?')}: "
                       f"{e.get('metodo')} {e.get('ruta')}")
+    seccion(salida, "Violaciones de la CSP", por_tipo["csp_violada"],
+            lambda e: f"{e.get('time', '')}  {e.get('directiva')}: {e.get('bloqueado')} "
+                      f"en {e.get('pagina')} desde {e.get('ip', '?')}")
     seccion(salida, "Contraseñas cambiadas", por_tipo["contrasena_cambiada"],
             lambda e: f"{e.get('time', '')}  {quien(e)} desde {e.get('ip', '?')}")
     salida.append("")

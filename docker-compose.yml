@@ -103,6 +103,8 @@ services:
     environment:
       BACKEND_URL: http://backend:3000
       MAX_SUBIDA: ${MAX_SUBIDA:-200m}
+      # HSTS en HTTPS, en segundos (GH-57): 1 día al principio; 31536000 (1 año) cuando esté comprobado
+      HSTS_MAX_AGE: ${HSTS_MAX_AGE:-86400}
       TZ: ${TZ:-Europe/Madrid}
     ports:
       # En el servidor, PUERTO_INTERNO=8443: se publica el HTTPS (ver docker-compose.servidor.yml)

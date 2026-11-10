@@ -264,7 +264,19 @@ Para cuando Vestuario esté abierto a internet (GH-58):
 
 Por encima de los límites se responde `429` con `Retry-After`, y la aplicación dice cuánto hay que esperar. Los valores del backend se cambian en el `.env` (`LIMITE_PETICIONES_MINUTO`, `LIMITE_COSTOSAS_10MIN` y `LOGIN_FALLOS_BLOQUEO`). Los contadores están en memoria: al reiniciar el backend empiezan de cero.
 
-El backend deja en su log una línea por cada evento de seguridad, con `"seguridad": true`, la IP real y el usuario: `login_ok`, `login_fallido`, `cuenta_bloqueada`, `login_desde_nuevo_origen` (una IP o un navegador que el usuario no tenía en ninguna otra sesión), `limite_superado`, `origen_rechazado`, `contrasena_cambiada` y `sesion_cerrada`. Ni contraseñas ni tokens; los fallos con un email que no es de nadie llevan un resumen del email (`emailResumen`), no el email.
+El backend deja en su log una línea por cada evento de seguridad, con `"seguridad": true`, la IP real y el usuario: `login_ok`, `login_fallido`, `cuenta_bloqueada`, `login_desde_nuevo_origen` (una IP o un navegador que el usuario no tenía en ninguna otra sesión), `limite_superado`, `origen_rechazado`, `csp_violada` (algo que la Content-Security-Policy ha bloqueado en el navegador), `contrasena_cambiada` y `sesion_cerrada`. Ni contraseñas ni tokens; los fallos con un email que no es de nadie llevan un resumen del email (`emailResumen`), no el email.
+
+### Cabeceras de seguridad y HSTS
+
+El proxy pone en todas las respuestas una Content-Security-Policy estricta, Permissions-Policy y el resto de cabeceras de seguridad ([proxy/README.md](../proxy/README.md), GH-57). Si una pantalla deja de funcionar por la CSP, sale como `csp_violada` en el informe de seguridad, con la directiva, lo bloqueado y la página.
+
+Por HTTPS, además, **HSTS**: el navegador recuerda que el servidor solo se usa por HTTPS. Vale para todo el nombre del servidor (`genzo.….ts.net`) **en cualquier puerto**, así que también afecta a las otras aplicaciones que se abran con ese nombre: si alguna se usa por `http://`, el navegador pasará a pedirla por HTTPS. Por eso empieza con 1 día (`HSTS_MAX_AGE=86400`). Cuando se haya comprobado que nada se rompe, se sube a 1 año en el `.env` de cada entorno y se despliega:
+
+```bash
+HSTS_MAX_AGE=31536000
+```
+
+Sin `includeSubDomains` ni `preload`: el nombre es de Tailscale y no se puede dar de alta en las listas de los navegadores.
 
 ### Informe de seguridad
 

@@ -7,6 +7,7 @@ import {
   mensajeBloqueo,
   reiniciarBloqueosParaTests,
 } from '../src/autenticacion.js'
+import { reiniciarAvisosCspParaTests } from '../src/csp.js'
 import { db, pool } from '../src/db/cliente.js'
 import { user } from '../src/db/schema/index.js'
 import { configurarLimitesParaTests, esCostosa } from '../src/limites.js'
@@ -62,6 +63,7 @@ beforeEach(() => {
   vi.spyOn(logger, 'warn').mockImplementation(capturar as never)
   vi.spyOn(logger, 'info').mockImplementation(capturar as never)
   reiniciarBloqueosParaTests()
+  reiniciarAvisosCspParaTests()
 })
 
 afterEach(() => {
@@ -234,5 +236,63 @@ describe('origen', () => {
 
     const leer = await app.request('/api/clubes', { headers: { origin: otro, cookie } })
     expect(leer.status).toBe(200)
+  })
+})
+
+describe('avisos de violación de la CSP', () => {
+  const avisar = (cuerpo: unknown, tipo = 'application/csp-report') =>
+    app.request('/api/csp', {
+      method: 'POST',
+      headers: { 'content-type': tipo, 'x-real-ip': '10.57.0.1' },
+      body: typeof cuerpo === 'string' ? cuerpo : JSON.stringify(cuerpo),
+    })
+
+  it('registra el formato report-uri sin la consulta de las URL, una vez cada 10 minutos', async () => {
+    const aviso = {
+      'csp-report': {
+        'document-uri': 'https://vestuario.test/plantillas/p1?token=secreto',
+        'effective-directive': 'script-src-elem',
+        'blocked-uri': 'https://malo.test/x.js?a=1',
+        'source-file': 'https://vestuario.test/assets/index.js',
+      },
+    }
+    expect((await avisar(aviso)).status).toBe(204)
+    expect((await avisar(aviso)).status).toBe(204)
+    expect(eventosDe('csp_violada')).toEqual([
+      expect.objectContaining({
+        directiva: 'script-src-elem',
+        bloqueado: 'https://malo.test/x.js',
+        pagina: 'https://vestuario.test/plantillas/p1',
+        fuente: 'https://vestuario.test/assets/index.js',
+        ip: '10.57.0.1',
+      }),
+    ])
+    expect(JSON.stringify(eventos)).not.toContain('secreto')
+  })
+
+  it('registra el formato report-to, sin sesión ni Origin', async () => {
+    const res = await avisar(
+      [
+        {
+          type: 'csp-violation',
+          body: {
+            documentURL: 'https://vestuario.test/',
+            effectiveDirective: 'style-src-attr',
+            blockedURL: 'inline',
+          },
+        },
+        { type: 'otra-cosa', body: {} },
+      ],
+      'application/reports+json',
+    )
+    expect(res.status).toBe(204)
+    expect(eventosDe('csp_violada')).toEqual([
+      expect.objectContaining({ directiva: 'style-src-attr', bloqueado: 'inline' }),
+    ])
+  })
+
+  it('rechaza lo que no es JSON y no registra nada', async () => {
+    expect((await avisar('no es json')).status).toBe(400)
+    expect(eventosDe('csp_violada')).toEqual([])
   })
 })

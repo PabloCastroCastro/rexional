@@ -15,6 +15,7 @@ export type EventoSeguridad =
   | 'origen_rechazado'
   | 'contrasena_cambiada'
   | 'sesion_cerrada'
+  | 'csp_violada'
 
 // Los que indican un problema van como aviso; el resto, como información
 const AVISOS = new Set<EventoSeguridad>([
@@ -23,6 +24,7 @@ const AVISOS = new Set<EventoSeguridad>([
   'cuenta_bloqueada',
   'limite_superado',
   'origen_rechazado',
+  'csp_violada',
 ])
 
 export function registrarEvento(evento: EventoSeguridad, datos: Record<string, unknown> = {}) {

@@ -1958,18 +1958,23 @@ Depende de GH-55, GH-57 y GH-58: Funnel se activa cuando la aplicación ya está
 - [ ] `URL_PUBLICA` con la dirección nueva (`https://genzo.<tailnet>.ts.net:10000`), que usa también `trustedOrigins`
 - [ ] Solo se publica producción: pruebas y las otras aplicaciones siguen siendo solo del tailnet (comprobado con `tailscale funnel status`)
 - [ ] Acceso verificado desde fuera de casa con datos móviles y sin Tailscale en el móvil
+- [ ] Calificación A o superior en securityheaders y en una prueba externa de TLS (SSL Labs) por la dirección pública (GH-57)
 - [ ] Documentado en `docs/servidor.md`: activarlo, desactivarlo de inmediato (`tailscale funnel reset`) y qué hacer si Tailscale cae
 
 #### GH-57
 **Título:** Cabeceras de seguridad
 **Etiquetas:** feature, infra, seguridad
 
-Depende de GH-55. El certificado lo gestiona Tailscale Funnel (GH-56): no hace falta certbot. `X-Content-Type-Options` y `Referrer-Policy` ya se envían (`proxy/templates/vestuario.inc.template`).
+Depende de GH-55. Con Tailscale Funnel (GH-56) el TLS público lo termina Tailscale, con su certificado; nginx sigue sirviendo HTTPS para el acceso por el tailnet. `X-Content-Type-Options` y `Referrer-Policy` ya se envían (`proxy/templates/vestuario.inc.template`).
 
 **Criterios de aceptación**
-- [ ] HSTS
-- [ ] Content-Security-Policy y Permissions-Policy, comprobando que la PWA, los vídeos, los PDF y las exportaciones siguen funcionando
-- [ ] Calificación A o superior en securityheaders y en una prueba externa de TLS (esta, con Funnel ya activo)
+- [ ] HSTS solo por HTTPS, sin `includeSubDomains` ni `preload`. Empieza con 1 día, porque afecta a todo el nombre del servidor (también a las otras aplicaciones), y se sube a 1 año cuando se compruebe que nada se rompe
+- [ ] Content-Security-Policy estricta (solo el propio origen, sin `unsafe-inline` ni `eval`, `frame-ancestors 'none'`), comprobando con el navegador que la PWA, los vídeos, los PDF, compartir y las exportaciones siguen funcionando
+- [ ] Las violaciones de la CSP se registran como evento de seguridad (`csp_violada`) y salen en el informe de seguridad (GH-58)
+- [ ] Permissions-Policy: bloqueado lo que no se usa (cámara, micrófono, ubicación, pagos, USB, captura de pantalla); compartir y pantalla completa, solo para la propia aplicación
+- [ ] `X-Frame-Options`, `Cross-Origin-Opener-Policy` y `Cross-Origin-Resource-Policy`
+- [ ] TLS de nginx con la configuración «intermediate» de Mozilla
+- [ ] Test en la CI de que todas las respuestas llevan las cabeceras, también las de la API y las de error
 
 #### GH-58
 **Título:** Endurecimiento de la aplicación para internet

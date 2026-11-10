@@ -2,6 +2,7 @@ import { OpenAPIHono } from '@hono/zod-openapi'
 import { Scalar } from '@scalar/hono-api-reference'
 import { manejarAutenticacion } from './autenticacion.js'
 import { config } from './config.js'
+import { recibirAvisoCsp } from './csp.js'
 import { comprobarBaseDeDatos } from './db/cliente.js'
 import { manejarError, rutaNoEncontrada, soloMismoOrigen, validacionFallida } from './errores.js'
 import { registrarPeticiones } from './peticiones.js'
@@ -53,6 +54,9 @@ export function crearApp(dependencias: Partial<Dependencias> = {}) {
   app.onError(manejarError)
   app.notFound(rutaNoEncontrada)
 
+  // Avisos de violación de la CSP (GH-57): los manda el navegador, sin sesión y sin garantía de
+  // que lleve Origin, así que van antes de la comprobación del origen
+  app.post('/csp', recibirAvisoCsp)
   // Ninguna petición que modifique datos desde otro origen
   app.use(soloMismoOrigen(config.urlPublica))
   // Autenticación (Better Auth): /api/auth/sign-in/email, /sign-out, /get-session y /change-password,

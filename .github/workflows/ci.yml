@@ -166,6 +166,9 @@ jobs:
         run: shellcheck proxy/docker-entrypoint.d/*.sh proxy/test/*.sh
       - name: IP real y límites de peticiones
         run: bash proxy/test/limites.sh vestuario-proxy:ci
+      - name: Cabeceras de seguridad y HSTS
+        # Con el certificado autofirmado del paso de HTTPS
+        run: bash proxy/test/cabeceras.sh vestuario-proxy:ci "$PWD/certs"
 
   scripts:
     name: Scripts
