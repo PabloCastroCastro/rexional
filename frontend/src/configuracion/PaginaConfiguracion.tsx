@@ -5,6 +5,7 @@ import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
 import { Administradores } from './Administradores'
 import estilos from './Configuracion.module.css'
 import { DatosPlantilla } from './DatosPlantilla'
+import { Miembros } from './Miembros'
 import { NombreClub } from './NombreClub'
 import { PlantillasClub } from './PlantillasClub'
 import { Seccion } from './Seccion'
@@ -42,6 +43,15 @@ export function PaginaConfiguracion() {
         <p className={estilos.descripcion}>
           Tu rol en esta plantilla no permite cambiar su configuración.
         </p>
+      )}
+
+      {(plantilla.esAdminClub || plantilla.rol === 'admin') && (
+        <Seccion
+          titulo="Miembros"
+          descripcion="Quién tiene acceso a esta plantilla y con qué rol. Solo lo ve el admin."
+        >
+          <Miembros plantilla={plantilla} />
+        </Seccion>
       )}
 
       {plantilla.esAdminClub && club && (

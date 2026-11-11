@@ -507,83 +507,7 @@ export interface paths {
             };
         };
         put?: never;
-        /**
-         * Añadir un administrador
-         * @description El usuario debe existir. Las invitaciones por email llegan en el ciclo 10.
-         */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    cid: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": {
-                        email: string;
-                    };
-                };
-            };
-            responses: {
-                /** @description Administrador añadido */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AdministradorClub"];
-                    };
-                };
-                /** @description Datos no válidos */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Sin sesión */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Sin permiso */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description No existe */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Ya es administrador */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -602,7 +526,7 @@ export interface paths {
         post?: never;
         /**
          * Retirar un administrador
-         * @description Un club nunca se queda sin administradores.
+         * @description Un club nunca se queda sin administradores. Para añadir uno, se le invita (`POST /clubes/{cid}/invitaciones`).
          */
         delete: {
             parameters: {
@@ -2328,6 +2252,213 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/plantillas/{id}/miembros": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Miembros de la plantilla
+         * @description Admin. Los miembros con su rol y el jugador vinculado, y los administradores del club como heredados. También los jugadores sin cuenta, para invitarlos.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Miembros */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MiembrosPlantilla"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plantillas/{id}/miembros/{uid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Retirar el acceso a la plantilla
+         * @description Admin. Borra la membresía; el jugador sigue vinculado a su cuenta (es del club). Los administradores del club se retiran desde el club.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    uid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Acceso retirado */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /**
+         * Cambiar el rol de un miembro
+         * @description Admin. Solo los miembros de la plantilla; los administradores del club, no. El jugador vinculado no cambia.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    uid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        rol: "admin" | "entrenador" | "delegado" | "jugador";
+                    };
+                };
+            };
+            responses: {
+                /** @description Rol cambiado */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {string} */
+                            rol: "admin" | "entrenador" | "delegado" | "jugador";
+                        };
+                    };
+                };
+                /** @description Datos no válidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
         trace?: never;
     };
     "/api/plantillas/{id}/horario": {
@@ -8512,6 +8643,31 @@ export interface components {
             clubId: string;
             /** Format: uuid */
             plantillaId: string | null;
+        };
+        MiembrosPlantilla: {
+            /** @description Primero los administradores del club; después, por nombre */
+            miembros: components["schemas"]["MiembroPlantilla"][];
+            /** @description Jugadores con ficha propia activa y sin cuenta: a los que se puede invitar */
+            jugadoresSinCuenta: {
+                /** Format: uuid */
+                jugadorId: string;
+                nombre: string;
+            }[];
+        };
+        MiembroPlantilla: {
+            /** Format: uuid */
+            usuarioId: string;
+            nombre: string;
+            email: string;
+            /** @enum {string} */
+            rol: "admin" | "entrenador" | "delegado" | "jugador";
+            /** @description Administrador del club: es admin de todas sus plantillas sin membresía */
+            heredado: boolean;
+            /**
+             * @description Jugador del club vinculado a su cuenta
+             * @example Brais Pazos
+             */
+            jugador: string | null;
         };
         Horario: {
             /** @example 2026-10-13 */

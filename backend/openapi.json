@@ -875,6 +875,86 @@
           "plantillaId"
         ]
       },
+      "MiembrosPlantilla": {
+        "type": "object",
+        "properties": {
+          "miembros": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MiembroPlantilla"
+            },
+            "description": "Primero los administradores del club; después, por nombre"
+          },
+          "jugadoresSinCuenta": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "jugadorId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "nombre": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "jugadorId",
+                "nombre"
+              ]
+            },
+            "description": "Jugadores con ficha propia activa y sin cuenta: a los que se puede invitar"
+          }
+        },
+        "required": [
+          "miembros",
+          "jugadoresSinCuenta"
+        ]
+      },
+      "MiembroPlantilla": {
+        "type": "object",
+        "properties": {
+          "usuarioId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "rol": {
+            "type": "string",
+            "enum": [
+              "admin",
+              "entrenador",
+              "delegado",
+              "jugador"
+            ]
+          },
+          "heredado": {
+            "type": "boolean",
+            "description": "Administrador del club: es admin de todas sus plantillas sin membresía"
+          },
+          "jugador": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Jugador del club vinculado a su cuenta",
+            "example": "Brais Pazos"
+          }
+        },
+        "required": [
+          "usuarioId",
+          "nombre",
+          "email",
+          "rol",
+          "heredado",
+          "jugador"
+        ]
+      },
       "Horario": {
         "type": [
           "object",
@@ -3595,103 +3675,6 @@
             }
           }
         }
-      },
-      "post": {
-        "tags": [
-          "Clubes"
-        ],
-        "summary": "Añadir un administrador",
-        "description": "El usuario debe existir. Las invitaciones por email llegan en el ciclo 10.",
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "required": true,
-            "name": "cid",
-            "in": "path"
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "email": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "email"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Administrador añadido",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AdministradorClub"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Datos no válidos",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Sin sesión",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Sin permiso",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "No existe",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Ya es administrador",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
       }
     },
     "/api/clubes/{cid}/admins/{uid}": {
@@ -3700,7 +3683,7 @@
           "Clubes"
         ],
         "summary": "Retirar un administrador",
-        "description": "Un club nunca se queda sin administradores.",
+        "description": "Un club nunca se queda sin administradores. Para añadir uno, se le invita (`POST /clubes/{cid}/invitaciones`).",
         "parameters": [
           {
             "schema": {
@@ -5867,6 +5850,249 @@
           },
           "410": {
             "description": "Usada, anulada o caducada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/miembros": {
+      "get": {
+        "tags": [
+          "Miembros"
+        ],
+        "summary": "Miembros de la plantilla",
+        "description": "Admin. Los miembros con su rol y el jugador vinculado, y los administradores del club como heredados. También los jugadores sin cuenta, para invitarlos.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Miembros",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MiembrosPlantilla"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/miembros/{uid}": {
+      "patch": {
+        "tags": [
+          "Miembros"
+        ],
+        "summary": "Cambiar el rol de un miembro",
+        "description": "Admin. Solo los miembros de la plantilla; los administradores del club, no. El jugador vinculado no cambia.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "uid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "rol": {
+                    "type": "string",
+                    "enum": [
+                      "admin",
+                      "entrenador",
+                      "delegado",
+                      "jugador"
+                    ]
+                  }
+                },
+                "required": [
+                  "rol"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Rol cambiado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "rol": {
+                      "type": "string",
+                      "enum": [
+                        "admin",
+                        "entrenador",
+                        "delegado",
+                        "jugador"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "rol"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Miembros"
+        ],
+        "summary": "Retirar el acceso a la plantilla",
+        "description": "Admin. Borra la membresía; el jugador sigue vinculado a su cuenta (es del club). Los administradores del club se retiran desde el club.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "uid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Acceso retirado"
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
             "content": {
               "application/json": {
                 "schema": {
