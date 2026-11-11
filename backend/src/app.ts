@@ -14,6 +14,7 @@ import { rutasEjercicios } from './rutas/ejercicios.js'
 import { rutasEntrenos } from './rutas/entrenos.js'
 import { rutasEstadisticas, rutasEstadisticasClub } from './rutas/estadisticas.js'
 import { rutasExportacion } from './rutas/exportacion.js'
+import { rutasFichaEquipoClub, rutasFichaEquipoPlantilla } from './rutas/fichaEquipo.js'
 import { rutasInvitacionesClub, rutasInvitacionesPlantilla } from './rutas/invitaciones.js'
 import { rutasJugadoresClub, rutasJugadoresPlantilla } from './rutas/jugadores.js'
 import { rutasMedios, rutasMediosClub } from './rutas/medios.js'
@@ -71,6 +72,8 @@ export function crearApp(dependencias: Partial<Dependencias> = {}) {
   app.route('/', rutasPlantillas())
   app.route('/', rutasJugadoresPlantilla())
   app.route('/', rutasJugadoresClub())
+  app.route('/', rutasFichaEquipoClub())
+  app.route('/', rutasFichaEquipoPlantilla())
   app.route('/', rutasInvitacionesPlantilla())
   app.route('/', rutasInvitacionesClub())
   app.route('/', rutasEntrenos())

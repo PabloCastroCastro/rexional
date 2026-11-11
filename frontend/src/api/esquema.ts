@@ -740,6 +740,14 @@ export interface paths {
                         temporada: string;
                         /** Format: uuid */
                         plantillaAnteriorId?: string | null;
+                        /** @description Jugadores con ficha propia desde el principio (de la ficha de la federación, GH-197): del club o nuevos. Si alguno ya tiene ficha propia esa temporada, no se crea nada. */
+                        jugadores?: ({
+                            /** Format: uuid */
+                            jugadorId: string;
+                        } | {
+                            nombre: string;
+                            apellidos?: string | null;
+                        })[];
                     };
                 };
             };
@@ -1519,6 +1527,197 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/clubes/{cid}/ficha-federacion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Leer la ficha del equipo de la federación
+         * @description Delegado o superior en alguna plantilla del club. La ficha del equipo en PDF de la Federación Gallega (como mucho 2 MB), en el campo `archivo`. Devuelve el equipo, la categoría, los jugadores emparejados con los del club y el cuerpo técnico, sin crear nada; el PDF no se guarda. Para crear la plantilla con sus jugadores, `POST /plantillas` con `jugadores`; para añadirlos a una que ya existe, `POST /plantillas/{id}/jugadores/lote`.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    cid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "multipart/form-data": {
+                        /** Format: binary */
+                        archivo?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Ficha leída */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["FichaEquipoLeida"];
+                    };
+                };
+                /** @description No es un PDF o no es la ficha de un equipo */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Pasa de 2 MB */
+                413: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plantillas/{id}/jugadores/lote": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Añadir varios jugadores a la plantilla
+         * @description Delegado o superior. Con ficha propia y sin dorsal ni posición, como al importar la ficha de la federación (GH-197): jugadores del club (`jugadorId`) o nuevos (`nombre` y `apellidos`). Todos o ninguno: si alguno ya está en la plantilla o tiene ficha propia en otra esa temporada, no se añade nadie.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        jugadores: ({
+                            /** Format: uuid */
+                            jugadorId: string;
+                        } | {
+                            nombre: string;
+                            apellidos?: string | null;
+                        })[];
+                    };
+                };
+            };
+            responses: {
+                /** @description Los jugadores añadidos */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["JugadorPlantilla"][];
+                    };
+                };
+                /** @description Datos no válidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Alguno ya tiene ficha en la temporada */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -8017,6 +8216,68 @@ export interface components {
                 tipo: "propia" | "invitado";
                 enDinamica: boolean;
                 procedencia: string | null;
+            }[];
+        };
+        FichaEquipoLeida: {
+            /** @example Sofan S.D. "B" */
+            equipo: string | null;
+            /** @example 2ª Futgal */
+            categoria: string | null;
+            jugadores: {
+                /**
+                 * @description Como sale en la ficha, con las tildes arregladas
+                 * @example FERNÁNDEZ CASTRO, IVÁN
+                 */
+                ficha: string;
+                /** @example Iván */
+                nombre: string;
+                /** @example Fernández Castro */
+                apellidos: string | null;
+                /**
+                 * @description Tipo de licencia del jugador o función en el cuerpo técnico
+                 * @example Aficionado
+                 */
+                funcion: string | null;
+                /**
+                 * Format: uuid
+                 * @description El jugador del club que parece ser; null si no hay uno claro
+                 */
+                jugadorId: string | null;
+            }[];
+            /** @description Técnicos, delegados y auxiliares; solo informativo */
+            cuerpoTecnico: {
+                /**
+                 * @description Como sale en la ficha, con las tildes arregladas
+                 * @example FERNÁNDEZ CASTRO, IVÁN
+                 */
+                ficha: string;
+                /** @example Iván */
+                nombre: string;
+                /** @example Fernández Castro */
+                apellidos: string | null;
+                /**
+                 * @description Tipo de licencia del jugador o función en el cuerpo técnico
+                 * @example Aficionado
+                 */
+                funcion: string | null;
+            }[];
+            /** @description Los jugadores del club con sus fichas, para saber en la vista previa si ya están en la plantilla o tienen ficha propia en otra la temporada elegida, y para emparejar a mano */
+            club: {
+                /** Format: uuid */
+                id: string;
+                nombre: string;
+                apellidos: string | null;
+                fichas: {
+                    /** Format: uuid */
+                    plantillaId: string;
+                    plantilla: string;
+                    temporada: string;
+                    /**
+                     * @description `propia`: es de la plantilla; `invitado`: juega con ella sin dejar la suya
+                     * @enum {string}
+                     */
+                    tipo: "propia" | "invitado";
+                }[];
             }[];
         };
         Invitacion: {
