@@ -64,3 +64,21 @@
   background: color-mix(in srgb, var(--color-informacion) 12%, transparent);
   color: var(--color-informacion);
 }
+
+/* Invitación (GH-50) */
+.titulo {
+  font-size: var(--texto-lg);
+}
+
+.secundario {
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
+}
+
+.enlace {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--altura-tactil);
+  color: var(--color-acento);
+  font-weight: var(--peso-medio);
+}

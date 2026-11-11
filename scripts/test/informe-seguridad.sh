@@ -21,6 +21,8 @@ cat >"$dir/logs" <<'FIN'
 {"level":30,"time":"2026-11-10T08:06:00Z","seguridad":true,"evento":"sesion_cerrada","usuarioId":"u1","ip":"10.0.0.1"}
 {"level":30,"time":"2026-11-10T08:06:10Z","seguridad":true,"evento":"invitacion_creada","usuarioId":"u1","invitacionId":"i1","plantillaId":"p1","rol":"jugador","emailResumen":"def456","ip":"10.0.0.1"}
 {"level":30,"time":"2026-11-10T08:06:20Z","seguridad":true,"evento":"invitacion_revocada","usuarioId":"u1","invitacionId":"i1","plantillaId":"p1","emailResumen":"def456","ip":"10.0.0.1"}
+{"level":30,"time":"2026-11-10T08:06:25Z","seguridad":true,"evento":"cuenta_creada","usuarioId":"u1","invitacionId":"i2","ip":"198.51.100.7"}
+{"level":30,"time":"2026-11-10T08:06:26Z","seguridad":true,"evento":"invitacion_aceptada","usuarioId":"u1","invitacionId":"i2","plantillaId":"p1","rol":"entrenador"}
 {"level":40,"time":"2026-11-10T08:06:30Z","seguridad":true,"evento":"csp_violada","directiva":"script-src-elem","bloqueado":"https://malo.test/x.js","pagina":"https://vestuario.test/","ip":"10.0.0.2"}
 no es json {
 2026/11/10 08:07:00 [warn] 22#22: *9 limiting requests, excess: 5.120 by zone "login", client: 203.0.113.9, server: _, request: "POST /api/auth/sign-in/email HTTP/1.1"
@@ -58,6 +60,10 @@ espera "Invitaciones creadas: 1"
 espera "Ana <ana@club.test> invita como jugador a def456"
 espera "Invitaciones revocadas: 1"
 espera "Ana <ana@club.test> revoca la de def456"
+espera "Invitaciones aceptadas: 1"
+espera "Ana <ana@club.test> entra como entrenador"
+espera "Cuentas creadas: 1"
+espera "Ana <ana@club.test> desde 198.51.100.7"
 
 if [[ $fallos -gt 0 ]]; then
   echo "$informe"

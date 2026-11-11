@@ -7,8 +7,8 @@
 # - Desde el propio servidor (el puerto publicado, por la puerta de enlace de Docker), nginx se cree
 #   X-Forwarded-For: es lo que hace Tailscale Funnel
 # - Desde otro contenedor, la cabecera se ignora y vale la IP de la conexión
-# - El login admite una ráfaga de 5 por IP y luego responde 429 con el error de la API; otra IP
-#   tiene su propio límite
+# - El login y las invitaciones admiten una ráfaga de 5 por IP y luego responden 429 con el error de
+#   la API; otra IP tiene su propio límite
 
 set -euo pipefail
 
@@ -56,6 +56,16 @@ estados=""
 for _ in $(seq 1 8); do estados+="$(login 198.51.100.1) "; done
 comprobar "ráfaga de 5 (más la primera) y después 429" "$estados" "502 502 502 502 502 502 429 429 "
 comprobar "otra IP tiene su propio límite" "$(login 198.51.100.2)" 502
+
+echo "== Límite de las invitaciones por IP"
+invitacion() {
+  curl -s -o /dev/null -w '%{http_code}' -X POST -H "X-Forwarded-For: $1" \
+    -H 'Content-Type: application/json' -d '{}' "http://127.0.0.1:$puerto/api/invitaciones/aceptar"
+}
+estados=""
+for _ in $(seq 1 8); do estados+="$(invitacion 198.51.100.3) "; done
+comprobar "invitaciones: ráfaga de 5 (más la primera) y después 429" "$estados" "502 502 502 502 502 502 429 429 "
+comprobar "invitaciones: otra IP tiene su propio límite" "$(invitacion 198.51.100.4)" 502
 
 cuerpo=$(curl -s -X POST -H 'X-Forwarded-For: 198.51.100.1' "http://127.0.0.1:$puerto/api/auth/sign-in/email")
 comprobar "el 429 lleva el error de la API" "$(grep -o '"codigo":"[a-z_]*"' <<<"$cuerpo")" '"codigo":"demasiadas_peticiones"'
