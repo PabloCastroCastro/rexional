@@ -115,34 +115,20 @@ describe('clubes', () => {
 })
 
 describe('administradores del club', () => {
-  it('añadir un usuario existente por email', async () => {
-    const otro = await db
-      .select({ email: user.email })
-      .from(user)
-      .where(eq(user.id, ids['otro-admin'] ?? ''))
-    const res = await pedir('POST', `/clubes/${ids.club}/admins`, 'admin', {
-      email: otro[0]?.email.toUpperCase(),
-    })
-    expect(res.status).toBe(201)
-    expect((await res.json()).usuarioId).toBe(ids['otro-admin'])
+  it('se listan; ya no se añaden por email, sino con una invitación (GH-51)', async () => {
+    await db
+      .insert(adminsClub)
+      .values({ clubId: ids.club ?? '', usuarioId: ids['otro-admin'] ?? '' })
     const lista = await (await pedir('GET', `/clubes/${ids.club}/admins`, 'admin')).json()
-    expect(lista).toHaveLength(2)
-  })
-
-  it('un email desconocido: 404; un administrador repetido: 409', async () => {
-    const desconocido = await pedir('POST', `/clubes/${ids.club}/admins`, 'admin', {
-      email: 'nadie@prueba.test',
-    })
-    expect(desconocido.status).toBe(404)
-    expect((await desconocido.json()).error.codigo).toBe('usuario_no_encontrado')
+    expect(lista.map((a: { usuarioId: string }) => a.usuarioId).sort()).toEqual(
+      [ids.admin, ids['otro-admin']].sort(),
+    )
     const [otro] = await db
       .select({ email: user.email })
       .from(user)
       .where(eq(user.id, ids['otro-admin'] ?? ''))
-    const repetido = await pedir('POST', `/clubes/${ids.club}/admins`, 'admin', {
-      email: otro?.email,
-    })
-    expect(repetido.status).toBe(409)
+    const res = await pedir('POST', `/clubes/${ids.club}/admins`, 'admin', { email: otro?.email })
+    expect(res.status).toBe(404)
   })
 
   it('solo los administradores del club los gestionan', async () => {

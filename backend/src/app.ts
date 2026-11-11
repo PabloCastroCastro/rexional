@@ -22,6 +22,7 @@ import {
 } from './rutas/invitaciones.js'
 import { rutasJugadoresClub, rutasJugadoresPlantilla } from './rutas/jugadores.js'
 import { rutasMedios, rutasMediosClub } from './rutas/medios.js'
+import { rutasMiembros } from './rutas/miembros.js'
 import { rutasMultas, rutasMultasJugadores } from './rutas/multas.js'
 import { rutasNotas } from './rutas/notas.js'
 import { rutasPartidos } from './rutas/partidos.js'
@@ -81,6 +82,7 @@ export function crearApp(dependencias: Partial<Dependencias> = {}) {
   app.route('/', rutasInvitacionesPlantilla())
   app.route('/', rutasInvitacionesClub())
   app.route('/', rutasInvitacionesPublicas())
+  app.route('/', rutasMiembros())
   app.route('/', rutasEntrenos())
   // Antes que los partidos: en /partidos/calendario, «calendario» no es el id de un partido
   app.route('/', rutasCalendario())

@@ -1,26 +1,25 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { UserMinus, UserPlus } from 'lucide-react'
-import { type FormEvent, useState } from 'react'
-import { api, datos, ErrorApi, enviar, erroresPorCampo } from '../api/cliente'
+import { UserMinus } from 'lucide-react'
+import { useState } from 'react'
+import { api, datos, enviar } from '../api/cliente'
 import { useSesion } from '../auth/sesion'
 import { useAvisos } from '../componentes/Avisos'
-import { Boton } from '../componentes/Boton'
-import { Campo } from '../componentes/Campo'
 import { Cargando } from '../componentes/Cargando'
 import { useConfirmacion } from '../componentes/Confirmacion'
-import { HojaInferior } from '../componentes/HojaInferior'
 import { CLAVE_CLUBES, CLAVE_PLANTILLAS } from '../plantillas/datos'
 import estilos from './Configuracion.module.css'
+import { BotonInvitar, type Destino, HojaInvitar, InvitacionesPendientes } from './Invitaciones'
 
 const claveAdmins = (clubId: string) => ['admins', clubId] as const
 
-// Administradores del club: ver, añadir por email (usuarios que ya existen) y retirar
+// Administradores del club: ver, invitar (GH-51) y retirar; un club nunca se queda sin ninguno
 export function Administradores({ club }: { club: { id: string; nombre: string } }) {
   const cliente = useQueryClient()
   const sesion = useSesion()
   const { avisar } = useAvisos()
   const confirmar = useConfirmacion()
-  const [anadiendo, setAnadiendo] = useState(false)
+  const [invitando, setInvitando] = useState(false)
+  const destino: Destino = { tipo: 'club', id: club.id, nombre: club.nombre }
 
   const admins = useQuery({
     queryKey: claveAdmins(club.id),
@@ -94,101 +93,12 @@ export function Administradores({ club }: { club: { id: string; nombre: string }
       </ul>
       {lista.length === 1 && (
         <p className={estilos.descripcion}>
-          Un club no puede quedarse sin administradores: añade otro antes de retirarte.
+          Un club no puede quedarse sin administradores: invita a otro antes de retirarte.
         </p>
       )}
-      <div className={estilos.acciones}>
-        <Boton
-          variante="secundario"
-          icono={<UserPlus aria-hidden size={18} />}
-          onClick={() => setAnadiendo(true)}
-        >
-          Añadir administrador
-        </Boton>
-      </div>
-      <AnadirAdministrador
-        clubId={club.id}
-        abierta={anadiendo}
-        alCerrar={() => setAnadiendo(false)}
-      />
+      <InvitacionesPendientes destino={destino} />
+      <BotonInvitar texto="Invitar administrador" onClick={() => setInvitando(true)} />
+      <HojaInvitar destino={destino} abierta={invitando} alCerrar={() => setInvitando(false)} />
     </>
-  )
-}
-
-function AnadirAdministrador({
-  clubId,
-  abierta,
-  alCerrar,
-}: {
-  clubId: string
-  abierta: boolean
-  alCerrar: () => void
-}) {
-  const cliente = useQueryClient()
-  const { avisar } = useAvisos()
-  const [email, setEmail] = useState('')
-  const [error, setError] = useState<string>()
-
-  const cerrar = () => {
-    setEmail('')
-    setError(undefined)
-    alCerrar()
-  }
-
-  const anadir = useMutation({
-    mutationFn: () =>
-      datos(
-        api.POST('/api/clubes/{cid}/admins', {
-          params: { path: { cid: clubId } },
-          body: { email: email.trim() },
-        }),
-      ),
-    onSuccess: async (admin) => {
-      await cliente.invalidateQueries({ queryKey: claveAdmins(clubId) })
-      avisar({ tipo: 'exito', mensaje: `${admin.nombre} ya es administrador del club` })
-      cerrar()
-    },
-    onError: (e) =>
-      setError(
-        erroresPorCampo(e).email ??
-          (e instanceof ErrorApi ? e.message : 'No se ha podido añadir el administrador'),
-      ),
-  })
-
-  function enviarFormulario(e: FormEvent) {
-    e.preventDefault()
-    if (!email.trim()) return setError('Escribe el email del usuario')
-    setError(undefined)
-    anadir.mutate()
-  }
-
-  return (
-    <HojaInferior abierta={abierta} alCerrar={cerrar} titulo="Añadir administrador">
-      <form className={estilos.formulario} onSubmit={enviarFormulario} noValidate>
-        <Campo
-          etiqueta="Email"
-          type="email"
-          inputMode="email"
-          autoCapitalize="none"
-          spellCheck={false}
-          ayuda="Tiene que ser un usuario que ya exista. Las invitaciones por email llegarán más adelante."
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          error={error}
-        />
-        <div className={estilos.acciones}>
-          <Boton variante="secundario" onClick={cerrar}>
-            Cancelar
-          </Boton>
-          <Boton
-            type="submit"
-            cargando={anadir.isPending}
-            icono={<UserPlus aria-hidden size={18} />}
-          >
-            Añadir
-          </Boton>
-        </div>
-      </form>
-    </HojaInferior>
   )
 }

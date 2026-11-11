@@ -666,7 +666,7 @@ Prefijo `/api`. JSON. Todas las rutas de la plantilla cuelgan de `/plantillas`, 
 | | `GET /clubes/:cid/jugadores?q=` (jugadores del club, para añadirlos a una plantilla) | Delegado en alguna plantilla del club |
 | | `GET /clubes/:cid/jugadores/:jid` (ficha y trayectoria por temporadas) | Delegado en alguna plantilla del club (jugador: solo la suya) |
 | | `POST /clubes/:cid/ficha-federacion` (lee la ficha del equipo en PDF y empareja sus jugadores con los del club, sin guardar nada; GH-197) | Delegado en alguna plantilla del club |
-| | `GET/POST /clubes/:cid/admins` · `DELETE /clubes/:cid/admins/:uid` (nunca el último) | Administrador del club |
+| | `GET /clubes/:cid/admins` · `DELETE /clubes/:cid/admins/:uid` (nunca el último; para añadir uno se le invita, GH-51) | Administrador del club |
 | Plantillas | `GET /plantillas?club=` (las mías con su club y mi rol efectivo, por club y temporada; el administrador del club ve todas las de su club) | Autenticado |
 | | `POST /plantillas` (`clubId`, nombre, categoría, temporada, plantilla anterior opcional y `jugadores` opcional: del club o nuevos, con ficha propia; todos o ninguno) | Administrador del club indicado |
 | | `GET /plantillas/:id` · `PATCH /plantillas/:id` (nombre, categoría) | Miembro · Entrenador |
@@ -704,7 +704,7 @@ Prefijo `/api`. JSON. Todas las rutas de la plantilla cuelgan de `/plantillas`, 
 | | `GET /plantillas/:id/multas?jugador=&estado=pendientes|cobradas` · `POST /plantillas/:id/multas` (del catálogo o libre) · `PATCH/DELETE /plantillas/:id/multas/:mid` (`fechaPago` cobra; `null` deshace) | Miembro (jugador: suyas) / Delegado |
 | | `POST /plantillas/:id/jugadores/:jid/saldar` | Delegado |
 | | `GET /plantillas/:id/multas/resumen` | Delegado |
-| Miembros | `GET /plantillas/:id/miembros` · `PATCH/DELETE /plantillas/:id/miembros/:uid` | Miembro / Admin |
+| Miembros | `GET /plantillas/:id/miembros` (con los administradores del club como heredados y los jugadores sin cuenta) · `PATCH /plantillas/:id/miembros/:uid` (rol) · `DELETE /plantillas/:id/miembros/:uid` (retirar el acceso; GH-51) | Admin |
 | Invitaciones | `GET/POST /plantillas/:id/invitaciones` · `DELETE /plantillas/:id/invitaciones/:iid` (revocar) | Admin |
 | | `GET/POST /clubes/:cid/invitaciones` · `DELETE /clubes/:cid/invitaciones/:iid` (como administrador del club) | Administrador del club |
 | | `POST /invitaciones/consultar` (a qué invita y si ya hay cuenta) · `POST /invitaciones/aceptar` (crea la cuenta o pide la sesión de ese email; GH-50) | Público con el token en el cuerpo |
