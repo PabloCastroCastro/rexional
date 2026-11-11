@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Check, ChevronLeft, Save } from 'lucide-react'
+import { Check, ChevronLeft, Save, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useBlocker, useNavigate, useParams } from 'react-router'
 import { api, datos } from '../api/cliente'
@@ -9,13 +9,22 @@ import { Cargando } from '../componentes/Cargando'
 import { useConfirmacion } from '../componentes/Confirmacion'
 import { EstadoVacio } from '../componentes/EstadoVacio'
 import { textoFecha } from '../entrenos/datos'
-import { nombreCompleto, POSICIONES } from '../jugadores/datos'
+import { BuscadorInvitables, MarcaInvitado } from '../jugadores/BuscadorInvitables'
+import {
+  CLAVE_JUGADORES,
+  type JugadorInvitable,
+  nombreCompleto,
+  POSICIONES,
+  textoInvitado,
+} from '../jugadores/datos'
 import { Dorsal } from '../jugadores/PaginaPlantilla'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
 import { CLAVE_PARTIDOS, type Partido, usePartido } from './datos'
 import estilos from './Partidos.module.css'
 
-// Elegir los convocados de un partido: se marca la lista y se guarda entera al final
+// Elegir los convocados de un partido: se marca la lista y se guarda entera al final. Se puede
+// convocar también a jugadores de otras plantillas del club: al guardar se crea su ficha de
+// invitado, solo para partidos (GH-188)
 export function PaginaConvocatoria() {
   const plantilla = usePlantillaActiva()
   const { partidoId = '' } = useParams()
@@ -39,9 +48,14 @@ function Seleccion({ partido }: { partido: Partido }) {
   const inicial = partido.jugadores.filter((j) => j.convocado).map((j) => j.jugadorId)
   const [elegidos, setElegidos] = useState<Set<string>>(() => new Set(inicial))
   const [guardado, setGuardado] = useState(false)
+  // De otras plantillas, todavía sin ficha en esta
+  const [externos, setExternos] = useState<JugadorInvitable[]>([])
 
   const cambiado =
-    !guardado && (elegidos.size !== inicial.length || inicial.some((id) => !elegidos.has(id)))
+    !guardado &&
+    (externos.length > 0 ||
+      elegidos.size !== inicial.length ||
+      inicial.some((id) => !elegidos.has(id)))
   // Los de baja solo se pueden quitar: si ya no están elegidos, no se vuelven a convocar
   const convocables = partido.jugadores.filter((j) => j.activo || elegidos.has(j.jugadorId))
 
@@ -78,15 +92,17 @@ function Seleccion({ partido }: { partido: Partido }) {
           params: { path: { id: plantilla.id, pid: partido.id } },
           // En el orden de la lista (por dorsal)
           body: {
-            jugadores: partido.jugadores
-              .filter((j) => elegidos.has(j.jugadorId))
-              .map((j) => j.jugadorId),
+            jugadores: [
+              ...partido.jugadores.filter((j) => elegidos.has(j.jugadorId)).map((j) => j.jugadorId),
+              ...externos.map((j) => j.jugadorId),
+            ],
           },
         }),
       ),
     onSuccess: async (actualizado) => {
       setGuardado(true)
       await cliente.invalidateQueries({ queryKey: CLAVE_PARTIDOS })
+      if (externos.length > 0) await cliente.invalidateQueries({ queryKey: CLAVE_JUGADORES })
       const n = actualizado.jugadores.filter((j) => j.convocado).length
       avisar({
         tipo: 'exito',
@@ -119,8 +135,9 @@ function Seleccion({ partido }: { partido: Partido }) {
 
       <div className={estilos.barraConvocatoria}>
         <p role="status" aria-live="polite">
-          <strong>{elegidos.size}</strong> {elegidos.size === 1 ? 'convocado' : 'convocados'} de{' '}
-          {partido.jugadores.filter((j) => j.activo).length}
+          <strong>{elegidos.size + externos.length}</strong>{' '}
+          {elegidos.size + externos.length === 1 ? 'convocado' : 'convocados'} de{' '}
+          {partido.jugadores.filter((j) => j.activo).length + externos.length}
         </p>
         <Boton
           variante="texto"
@@ -158,9 +175,13 @@ function Seleccion({ partido }: { partido: Partido }) {
                   </span>
                   <Dorsal dorsal={j.dorsal} />
                   <span className={estilos.texto}>
-                    <span className={estilos.nombre}>{nombreCompleto(j)}</span>
+                    <span className={estilos.nombre}>
+                      {nombreCompleto(j)}
+                      {j.tipo === 'invitado' && <MarcaInvitado />}
+                    </span>
                     <span className={estilos.secundario}>
                       {[
+                        j.tipo === 'invitado' ? textoInvitado(j) : null,
                         j.posicion ? POSICIONES[j.posicion] : null,
                         !j.activo && 'baja',
                         !elegido && 'No convocado',
@@ -175,6 +196,40 @@ function Seleccion({ partido }: { partido: Partido }) {
           })}
         </ul>
       )}
+
+      <section className={estilos.otrasPlantillas} aria-labelledby="otras-plantillas">
+        <h2 id="otras-plantillas">De otras plantillas</h2>
+        {externos.length > 0 && (
+          <ul className={estilos.seleccion} aria-label="Convocados de otras plantillas">
+            {externos.map((j) => (
+              <li key={j.jugadorId} data-convocado="true">
+                <div className={estilos.externo}>
+                  <span className={estilos.texto}>
+                    <span className={estilos.nombre}>
+                      {nombreCompleto(j)}
+                      <MarcaInvitado />
+                    </span>
+                    <span className={estilos.secundario}>{j.plantilla}</span>
+                  </span>
+                  <Boton
+                    variante="texto"
+                    icono={<X aria-hidden size={18} />}
+                    aria-label={`Quitar a ${nombreCompleto(j)}`}
+                    onClick={() => setExternos(externos.filter((e) => e.jugadorId !== j.jugadorId))}
+                  >
+                    Quitar
+                  </Boton>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+        <BuscadorInvitables
+          plantillaId={plantilla.id}
+          excluir={new Set(externos.map((j) => j.jugadorId))}
+          alElegir={(j) => setExternos([...externos, j])}
+        />
+      </section>
 
       <div className={estilos.pieFijo}>
         <Boton variante="secundario" onClick={() => navegar(ficha)}>

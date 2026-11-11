@@ -225,8 +225,9 @@ describe('convocatoria', () => {
     expect(proximos.find((p: Partido) => p.id === ids.p3)).toMatchObject({ convocados: 1 })
   })
 
-  it('solo se convoca a jugadores con ficha activa en la plantilla', async () => {
-    for (const lista of [[ids.Hugo], [ids.Bruno], ['00000000-0000-7000-8000-000000000000']]) {
+  it('solo se convoca a jugadores con ficha activa en la plantilla o en otra del club', async () => {
+    // A Bruno, de otra plantilla del club, sí: como invitado (test/invitados.test.ts)
+    for (const lista of [[ids.Hugo], ['00000000-0000-7000-8000-000000000000']]) {
       const res = await convocar(ids.p3 ?? '', lista)
       expect(res.status).toBe(400)
       expect((await res.json()).error.codigo).toBe('jugador_no_convocable')

@@ -31,8 +31,21 @@ const JUGADORES: JugadorPlantilla[] = [
     dorsal: 1,
     posicion: null,
     activo: true,
+    tipo: 'propia',
+    enDinamica: true,
+    procedencia: null,
   },
-  { jugadorId: 'j2', nombre: 'Zoe', apellidos: null, dorsal: 7, posicion: null, activo: true },
+  {
+    jugadorId: 'j2',
+    nombre: 'Zoe',
+    apellidos: null,
+    dorsal: 7,
+    posicion: null,
+    activo: true,
+    tipo: 'propia',
+    enDinamica: true,
+    procedencia: null,
+  },
 ]
 
 const motivo = (
@@ -61,6 +74,7 @@ const multa = (id: string, jugador: JugadorPlantilla, extra: Partial<Multa> = {}
   nombre: jugador.nombre,
   apellidos: jugador.apellidos,
   dorsal: jugador.dorsal,
+  invitado: jugador.tipo === 'invitado',
   motivoId: 'm1',
   motivo: 'Llegar tarde al entreno',
   importeCentimos: 200,

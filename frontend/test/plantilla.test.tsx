@@ -20,6 +20,9 @@ const BRAIS: JugadorPlantilla = {
   dorsal: 7,
   posicion: 'delantero',
   activo: true,
+  tipo: 'propia',
+  enDinamica: true,
+  procedencia: null,
 }
 const ZOE: JugadorPlantilla = {
   jugadorId: 'j2',
@@ -28,6 +31,9 @@ const ZOE: JugadorPlantilla = {
   dorsal: null,
   posicion: null,
   activo: true,
+  tipo: 'propia',
+  enDinamica: true,
+  procedencia: null,
 }
 const HUGO: JugadorPlantilla = {
   jugadorId: 'j3',
@@ -36,6 +42,9 @@ const HUGO: JugadorPlantilla = {
   dorsal: 10,
   posicion: 'defensa',
   activo: false,
+  tipo: 'propia',
+  enDinamica: true,
+  procedencia: null,
 }
 
 const enviado = (clave: string) => peticiones.filter((p) => p.clave === clave).map((p) => p.cuerpo)

@@ -8,8 +8,10 @@ import { useResumenAsistencia } from '../entrenos/datos'
 import { Porcentaje } from '../entrenos/Porcentaje'
 import { euros, useDeudas } from '../multas/datos'
 import estilosMultas from '../multas/Multas.module.css'
+import { useEstadisticas } from '../partidos/datos'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
 import { useBajaYReactivacion } from './acciones'
+import { MarcaInvitado } from './BuscadorInvitables'
 import {
   type JugadorPlantilla,
   nombreCompleto,
@@ -21,7 +23,8 @@ import { FormularioJugador, type ModoFormulario } from './FormularioJugador'
 import estilos from './Jugadores.module.css'
 
 // Jugadores de la plantilla activa, por dorsal y nombre (la API ya los devuelve ordenados). Activos o
-// bajas según ?ver=bajas, para que volver desde un jugador deje la misma vista.
+// bajas según ?ver=bajas, para que volver desde un jugador deje la misma vista. Entre los activos,
+// los invitados van aparte, en un apartado plegado (GH-188).
 export function PaginaPlantilla() {
   const plantilla = usePlantillaActiva()
   const [parametros, setParametros] = useSearchParams()
@@ -32,7 +35,11 @@ export function PaginaPlantilla() {
   const porcentajes = new Map(resumen.data?.map((r) => [r.jugadorId, r.porcentaje]))
   // Deuda de multas pendiente; al rol jugador solo le llega la suya
   const deudas = useDeudas(plantilla)
+  // Partidos jugados con la plantilla, para los invitados
+  const estadisticas = useEstadisticas(plantilla.id)
+  const partidos = new Map(estadisticas.data?.jugadores.map((j) => [j.jugadorId, j.partidos]))
   const gestiona = puedeGestionarJugadores(plantilla)
+  const [abiertos, setAbiertos] = useState(false)
   const [formulario, setFormulario] = useState<ModoFormulario | null>(null)
   const { reactivar, pendiente } = useBajaYReactivacion({
     alDorsalOcupado: (jugador, mensaje) =>
@@ -97,46 +104,77 @@ export function PaginaPlantilla() {
           />
         )
       ) : (
-        <ul className={estilos.lista} aria-label={verBajas ? 'Bajas' : 'Jugadores'}>
-          {jugadores.data.map((j) => (
-            <li key={j.jugadorId}>
-              {gestiona ? (
-                <Link to={j.jugadorId} className={estilos.fila}>
-                  <Datos
-                    jugador={j}
-                    porcentaje={porcentajes.get(j.jugadorId)}
-                    deuda={deudas.get(j.jugadorId)}
-                  />
-                  <ChevronRight aria-hidden size={20} className={estilos.flecha} />
-                </Link>
-              ) : (
-                <div className={estilos.fila}>
-                  <Datos
-                    jugador={j}
-                    porcentaje={porcentajes.get(j.jugadorId)}
-                    deuda={deudas.get(j.jugadorId)}
-                  />
-                </div>
-              )}
-              {gestiona && verBajas && (
-                <Boton
-                  variante="secundario"
-                  icono={<RotateCcw aria-hidden size={18} />}
-                  disabled={pendiente}
-                  onClick={() => reactivar(j)}
-                  aria-label={`Reactivar a ${nombreCompleto(j)}`}
-                >
-                  Reactivar
-                </Boton>
-              )}
-            </li>
-          ))}
-        </ul>
+        <>
+          {(() => {
+            const propios = verBajas
+              ? jugadores.data
+              : jugadores.data.filter((j) => j.tipo === 'propia')
+            const invitados = verBajas ? [] : jugadores.data.filter((j) => j.tipo === 'invitado')
+            const lista = (filas: JugadorPlantilla[], etiqueta: string) => (
+              <ul className={estilos.lista} aria-label={etiqueta}>
+                {filas.map((j) => fila(j))}
+              </ul>
+            )
+            return (
+              <>
+                {propios.length > 0 && lista(propios, verBajas ? 'Bajas' : 'Jugadores')}
+                {invitados.length > 0 && (
+                  <details
+                    className={estilos.invitados}
+                    open={abiertos}
+                    onToggle={(e) => setAbiertos(e.currentTarget.open)}
+                  >
+                    <summary>Invitados · {invitados.length}</summary>
+                    {lista(invitados, 'Invitados')}
+                  </details>
+                )}
+              </>
+            )
+          })()}
+        </>
       )}
 
       <FormularioJugador modo={formulario} alCerrar={() => setFormulario(null)} />
     </div>
   )
+
+  function fila(j: JugadorPlantilla) {
+    return (
+      <li key={j.jugadorId}>
+        {gestiona ? (
+          <Link to={j.jugadorId} className={estilos.fila}>
+            <Datos
+              jugador={j}
+              porcentaje={porcentajes.get(j.jugadorId)}
+              deuda={deudas.get(j.jugadorId)}
+              partidos={partidos.get(j.jugadorId)}
+            />
+            <ChevronRight aria-hidden size={20} className={estilos.flecha} />
+          </Link>
+        ) : (
+          <div className={estilos.fila}>
+            <Datos
+              jugador={j}
+              porcentaje={porcentajes.get(j.jugadorId)}
+              deuda={deudas.get(j.jugadorId)}
+              partidos={partidos.get(j.jugadorId)}
+            />
+          </div>
+        )}
+        {gestiona && verBajas && (
+          <Boton
+            variante="secundario"
+            icono={<RotateCcw aria-hidden size={18} />}
+            disabled={pendiente}
+            onClick={() => reactivar(j)}
+            aria-label={`Reactivar a ${nombreCompleto(j)}`}
+          >
+            Reactivar
+          </Boton>
+        )}
+      </li>
+    )
+  }
 }
 
 export function Dorsal({ dorsal }: { dorsal: number | null }) {
@@ -152,18 +190,34 @@ function Datos({
   jugador,
   porcentaje,
   deuda,
+  partidos,
 }: {
   jugador: JugadorPlantilla
   porcentaje: number | null | undefined
   deuda: number | undefined
+  partidos: number | undefined
 }) {
+  const invitado = jugador.tipo === 'invitado'
   return (
     <>
       <Dorsal dorsal={jugador.dorsal} />
       <span className={estilos.texto}>
-        <strong>{nombreCompleto(jugador)}</strong>
+        <strong>
+          {nombreCompleto(jugador)}
+          {invitado && <MarcaInvitado />}
+        </strong>
         <span className={estilos.secundario}>
-          {jugador.posicion ? POSICIONES[jugador.posicion] : 'Sin posición'}
+          {invitado
+            ? [
+                jugador.procedencia,
+                jugador.enDinamica ? 'En la dinámica' : 'Solo partidos',
+                `${partidos ?? 0} ${partidos === 1 ? 'partido' : 'partidos'}`,
+              ]
+                .filter(Boolean)
+                .join(' · ')
+            : jugador.posicion
+              ? POSICIONES[jugador.posicion]
+              : 'Sin posición'}
         </span>
       </span>
       {deuda ? (

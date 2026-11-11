@@ -1079,7 +1079,7 @@ export interface paths {
         put?: never;
         /**
          * Añadir un jugador a la plantilla
-         * @description Delegado o superior. Con `nombre`, da de alta un jugador nuevo en el club; con `jugadorId`, crea la ficha de un jugador que ya es del club. Un jugador tiene como máximo una ficha por temporada.
+         * @description Delegado o superior. Con `nombre`, da de alta un jugador nuevo en el club; con `jugadorId`, crea la ficha de un jugador que ya es del club. Un jugador tiene como máximo una ficha propia por temporada. Con `invitado: true`, la ficha es de invitado (GH-187): juega con la plantilla sin dejar la suya; `enDinamica` (por defecto false) indica si va también a los entrenos y tiene multas, y `procedencia` es obligatoria si no tiene ficha propia en el club esa temporada. El dorsal de un invitado puede repetirse.
          */
         post: {
             parameters: {
@@ -1101,6 +1101,29 @@ export interface paths {
                     } | {
                         /** Format: uuid */
                         jugadorId: string;
+                        dorsal?: number | null;
+                        /** @enum {string|null} */
+                        posicion?: "portero" | "defensa" | "centrocampista" | "delantero" | null;
+                    } | {
+                        /** @enum {boolean} */
+                        invitado: true;
+                        /** Format: uuid */
+                        jugadorId: string;
+                        /** @default false */
+                        enDinamica?: boolean;
+                        /** @description Solo si no tiene ficha propia en el club esta temporada (y entonces es obligatoria) */
+                        procedencia?: string;
+                        dorsal?: number | null;
+                        /** @enum {string|null} */
+                        posicion?: "portero" | "defensa" | "centrocampista" | "delantero" | null;
+                    } | {
+                        /** @enum {boolean} */
+                        invitado: true;
+                        nombre: string;
+                        apellidos?: string | null;
+                        procedencia: string;
+                        /** @default false */
+                        enDinamica?: boolean;
                         dorsal?: number | null;
                         /** @enum {string|null} */
                         posicion?: "portero" | "defensa" | "centrocampista" | "delantero" | null;
@@ -1170,6 +1193,85 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/plantillas/{id}/invitables": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Jugadores de otras plantillas para invitar
+         * @description Delegado o superior. Los jugadores con ficha propia activa en otra plantilla del club en la misma temporada y sin ficha en esta, solo con nombre y plantilla. Busca en el nombre y los apellidos sin distinguir mayúsculas.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    q?: string;
+                };
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Jugadores de otras plantillas */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["JugadorInvitable"][];
+                    };
+                };
+                /** @description Datos no válidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/plantillas/{id}/jugadores/{jid}": {
         parameters: {
             query?: never;
@@ -1185,7 +1287,7 @@ export interface paths {
         head?: never;
         /**
          * Editar un jugador de la plantilla
-         * @description Delegado o superior. El nombre es del jugador y cambia en todas sus temporadas; dorsal, posición y `activo` son de su ficha en esta plantilla. `activo: false` da de baja y `activo: true` reactiva.
+         * @description Delegado o superior. El nombre es del jugador y cambia en todas sus temporadas; dorsal, posición y `activo` son de su ficha en esta plantilla. `activo: false` da de baja y `activo: true` reactiva. `enDinamica` y `procedencia`, solo en los invitados: al apagar `enDinamica` se conservan sus asistencias y multas.
          */
         patch: {
             parameters: {
@@ -1209,6 +1311,10 @@ export interface paths {
                         posicion?: "portero" | "defensa" | "centrocampista" | "delantero" | null;
                         /** @description false da de baja; true reactiva */
                         activo?: boolean;
+                        /** @description Solo de los invitados: si va a los entrenos y tiene multas */
+                        enDinamica?: boolean;
+                        /** @description Solo de los invitados sin ficha propia en el club esa temporada */
+                        procedencia?: string;
                     };
                 };
             };
@@ -1989,7 +2095,7 @@ export interface paths {
         get?: never;
         /**
          * Pasar lista
-         * @description Delegado o superior. Guarda la lista completa del entreno: quien no aparece queda sin registrar, y una lista vacía lo deja sin asistencia (el entreno sigue en el calendario). No admite entrenos futuros.
+         * @description Delegado o superior. Guarda la lista completa del entreno: quien no aparece queda sin registrar, y una lista vacía lo deja sin asistencia (el entreno sigue en el calendario). No admite entrenos futuros ni, entre los invitados, a los que solo vienen a los partidos, salvo que ya tengan asistencia en ese entreno.
          */
         put: {
             parameters: {
@@ -2078,7 +2184,7 @@ export interface paths {
         };
         /**
          * Asistencia por jugador
-         * @description Asistencias, justificadas, faltas y porcentaje de cada jugador de la plantilla (también de las bajas). El porcentaje es asistencias / entrenos con estado registrado, y null si no tiene ninguno. El rol jugador solo recibe el suyo.
+         * @description Asistencias, justificadas, faltas y porcentaje de cada jugador de la plantilla (también de las bajas; de los invitados solo para partidos, los que tienen alguna asistencia registrada). El porcentaje es asistencias / entrenos con estado registrado, y null si no tiene ninguno. El rol jugador solo recibe el suyo.
          */
         get: {
             parameters: {
@@ -2681,7 +2787,7 @@ export interface paths {
         get?: never;
         /**
          * Convocar
-         * @description Delegado o superior. Guarda la lista completa de convocados. Cada jugador nuevo en la convocatoria debe tener ficha activa en la plantilla; quien ya estaba convocado puede seguir aunque haya causado baja. No se puede quitar a quien tiene estadísticas en el partido.
+         * @description Delegado o superior. Guarda la lista completa de convocados. Cada jugador nuevo en la convocatoria debe tener ficha activa en la plantilla o ficha propia activa en otra plantilla del club esa temporada: entonces se le crea su ficha de invitado, solo para partidos (GH-187). Quien ya estaba convocado puede seguir aunque haya causado baja. No se puede quitar a quien tiene estadísticas en el partido.
          */
         put: {
             parameters: {
@@ -3310,7 +3416,7 @@ export interface paths {
         };
         /**
          * Estadísticas de la temporada
-         * @description Resultados del equipo y, por jugador, partidos, titularidades, minutos, goles, asistencias y tarjetas en los partidos jugados de la plantilla, los entrenos a los que ha ido y los goles a favor y en contra con él en el campo. El rol jugador solo ve su fila.
+         * @description Resultados del equipo y, por jugador, partidos, titularidades, minutos, goles, asistencias y tarjetas en los partidos jugados de la plantilla, los entrenos a los que ha ido y los goles a favor y en contra con él en el campo. De los invitados, solo los que han jugado, detrás de los propios y con su procedencia. El rol jugador solo ve su fila.
          */
         get: {
             parameters: {
@@ -3784,7 +3890,7 @@ export interface paths {
         put?: never;
         /**
          * Registrar el acta
-         * @description Delegado o superior. Con las correcciones de la revisión, registra el acta con la fuente «acta»: la convocatoria pasa a ser la del acta (se conserva a quien tiene estadísticas a mano), se guardan resultado, titulares, cambios, goles y tarjetas, y competición, lugar y hora se rellenan si estaban vacíos. Volver a confirmar sustituye lo importado antes.
+         * @description Delegado o superior. Con las correcciones de la revisión, registra el acta con la fuente «acta»: la convocatoria pasa a ser la del acta (se conserva a quien tiene estadísticas a mano; a los jugadores de otras plantillas del club se les crea su ficha de invitado, solo para partidos), se guardan resultado, titulares, cambios, goles y tarjetas, y competición, lugar y hora se rellenan si estaban vacíos. Volver a confirmar sustituye lo importado antes.
          */
         post: {
             parameters: {
@@ -6741,7 +6847,7 @@ export interface paths {
         put?: never;
         /**
          * Poner una multa
-         * @description Delegado o superior. Con `motivoId`, copia la descripción y el importe del motivo activo del catálogo (el importe se puede cambiar); con `motivo`, texto libre e importe obligatorio. La fecha, por defecto, es hoy.
+         * @description Delegado o superior. Con `motivoId`, copia la descripción y el importe del motivo activo del catálogo (el importe se puede cambiar); con `motivo`, texto libre e importe obligatorio. La fecha, por defecto, es hoy. No se multa a los invitados que solo vienen a los partidos.
          */
         post: {
             parameters: {
@@ -7421,6 +7527,30 @@ export interface components {
             posicion: "portero" | "defensa" | "centrocampista" | "delantero" | null;
             /** @description false si está de baja en la plantilla */
             activo: boolean;
+            /**
+             * @description `propia`: es de la plantilla; `invitado`: juega con ella sin dejar la suya
+             * @enum {string}
+             */
+            tipo: "propia" | "invitado";
+            /** @description Si va a los entrenos y tiene multas. Siempre true en las propias; en los invitados, false si solo viene a los partidos */
+            enDinamica: boolean;
+            /**
+             * @description De los invitados: la plantilla del club en la que tiene ficha propia esa temporada o, si no tiene, el texto de su alta
+             * @example Juvenil A
+             */
+            procedencia: string | null;
+        };
+        JugadorInvitable: {
+            /** Format: uuid */
+            jugadorId: string;
+            /** @example Mateo */
+            nombre: string;
+            apellidos: string | null;
+            /**
+             * @description Donde tiene ficha propia
+             * @example Juvenil A
+             */
+            plantilla: string;
         };
         JugadorClub: {
             /** Format: uuid */
@@ -7428,7 +7558,7 @@ export interface components {
             nombre: string;
             /** @example Méndez */
             apellidos: string | null;
-            /** @description Temporadas en las que tiene ficha, la más reciente primero */
+            /** @description Temporadas en las que tiene ficha propia, la más reciente primero */
             temporadas: string[];
         };
         TrayectoriaJugador: {
@@ -7449,6 +7579,13 @@ export interface components {
                 /** @enum {string|null} */
                 posicion: "portero" | "defensa" | "centrocampista" | "delantero" | null;
                 activo: boolean;
+                /**
+                 * @description `propia`: es de la plantilla; `invitado`: juega con ella sin dejar la suya
+                 * @enum {string}
+                 */
+                tipo: "propia" | "invitado";
+                enDinamica: boolean;
+                procedencia: string | null;
             }[];
         };
         Horario: {
@@ -7515,6 +7652,12 @@ export interface components {
                 /** @enum {string|null} */
                 posicion: "portero" | "defensa" | "centrocampista" | "delantero" | null;
                 activo: boolean;
+                /**
+                 * @description `propia`: es de la plantilla; `invitado`: juega con ella sin dejar la suya
+                 * @enum {string}
+                 */
+                tipo: "propia" | "invitado";
+                procedencia: string | null;
                 /** @enum {string|null} */
                 estado: "asiste" | "justificada" | "falta" | null;
                 motivo: string | null;
@@ -7526,6 +7669,11 @@ export interface components {
             nombre: string;
             apellidos: string | null;
             activo: boolean;
+            /**
+             * @description `propia`: es de la plantilla; `invitado`: juega con ella sin dejar la suya
+             * @enum {string}
+             */
+            tipo: "propia" | "invitado";
             /** @description Asistencias / entrenos con estado registrado, de 0 a 100 */
             porcentaje: number | null;
         };
@@ -7634,6 +7782,16 @@ export interface components {
             /** @enum {string|null} */
             posicion: "portero" | "defensa" | "centrocampista" | "delantero" | null;
             activo: boolean;
+            /**
+             * @description `propia`: es de la plantilla; `invitado`: juega con ella sin dejar la suya
+             * @enum {string}
+             */
+            tipo: "propia" | "invitado";
+            /**
+             * @description De los invitados, de dónde vienen
+             * @example Juvenil A
+             */
+            procedencia: string | null;
             convocado: boolean;
             /** @description true titular, false suplente; null si no se ha registrado */
             titular: boolean | null;
@@ -7705,6 +7863,16 @@ export interface components {
             apellidos: string | null;
             dorsal: number | null;
             activo: boolean;
+            /**
+             * @description `propia`: es de la plantilla; `invitado`: juega con ella sin dejar la suya
+             * @enum {string}
+             */
+            tipo: "propia" | "invitado";
+            /**
+             * @description De los invitados, de dónde vienen
+             * @example Juvenil A
+             */
+            procedencia: string | null;
             /** @description Partidos jugados (con algún minuto) */
             partidos: number;
             titularidades: number;
@@ -7737,6 +7905,11 @@ export interface components {
                 plantilla: string;
                 temporada: string;
                 dorsal: number | null;
+                /**
+                 * @description `propia`: es de la plantilla; `invitado`: juega con ella sin dejar la suya
+                 * @enum {string}
+                 */
+                tipo: "propia" | "invitado";
                 /** @description Partidos jugados (con algún minuto) */
                 partidos: number;
                 titularidades: number;
@@ -7959,6 +8132,8 @@ export interface components {
             nombre: string;
             apellidos: string | null;
             dorsal: number | null;
+            /** @description Si juega en la plantilla como invitado (GH-188) */
+            invitado: boolean;
             /**
              * Format: uuid
              * @description null si es un motivo libre

@@ -233,3 +233,64 @@ a.fila:hover {
   color: var(--color-peligro);
   font-size: var(--texto-sm);
 }
+
+/* Invitados (GH-188): marca junto al nombre, en azul para no confundirla con avisos */
+.marcaInvitado {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  margin-left: var(--espacio-2);
+  padding: 0 var(--espacio-2);
+  border-radius: var(--radio-completo);
+  background: color-mix(in srgb, var(--color-informacion) 12%, transparent);
+  color: var(--color-informacion);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-medio);
+  line-height: 1.5rem;
+  vertical-align: middle;
+}
+
+.atajos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-2);
+}
+
+.interruptor {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espacio-3);
+  min-height: var(--altura-tactil);
+  cursor: pointer;
+}
+
+.interruptor input {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-top: 2px;
+  accent-color: var(--color-primario);
+}
+
+.interruptor > span {
+  display: grid;
+  gap: var(--espacio-1);
+  font-weight: var(--peso-medio);
+}
+
+.interruptor .secundario {
+  font-weight: var(--peso-normal);
+}
+
+.invitados {
+  display: grid;
+  gap: var(--espacio-3);
+}
+
+.invitados > summary {
+  display: flex;
+  align-items: center;
+  min-height: var(--altura-tactil);
+  font-weight: var(--peso-medio);
+  cursor: pointer;
+}

@@ -1004,3 +1004,22 @@
   flex-wrap: wrap;
   gap: var(--espacio-2);
 }
+
+/* Convocar a jugadores de otras plantillas (GH-188) */
+.otrasPlantillas {
+  display: grid;
+  gap: var(--espacio-3);
+}
+
+.otrasPlantillas h2 {
+  margin: 0;
+  font-size: var(--texto-base);
+}
+
+.externo {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  min-height: calc(var(--altura-tactil) + var(--espacio-3));
+  padding: var(--espacio-2) var(--espacio-2) var(--espacio-2) var(--espacio-4);
+}

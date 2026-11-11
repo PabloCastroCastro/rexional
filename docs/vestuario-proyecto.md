@@ -74,7 +74,7 @@ Este documento recoge todas las decisiones funcionales, técnicas y de organizac
   - Categoría elegida de una lista sugerida (prebenjamín, benjamín, alevín, infantil, cadete, juvenil, sénior, veteranos) o texto libre. Puede haber varias plantillas de la misma categoría y temporada en un club (Infantil A e Infantil B).
   - Cada plantilla puede enlazar con la que la precede en la temporada anterior (Senior 2026-27 → Senior 2025-26), para seguir su historia año a año.
 - **Jugador:** la persona, que pertenece al club y es permanente. Su participación en cada temporada es una **ficha** en una plantilla, con su dorsal, su posición y si está activo. Así un jugador puede ser el 7 del Alevín una temporada y el 10 del Infantil la siguiente, conservando todo su historial.
-  - Un jugador tiene como máximo una ficha por temporada. Convocar a jugadores de otra plantilla queda fuera de alcance por ahora.
+  - Un jugador tiene como máximo una ficha **propia** por temporada. Además puede tener fichas de **invitado** en otras plantillas del club (ciclo 13): juveniles o equipo B que suben a un partido, o jugadores de un club asociado o a prueba. El entrenador decide si el invitado es solo para partidos o si entra en la dinámica del equipo (entrenos y multas).
 - **Cuerpo técnico por temporada:** los roles (entrenador, delegado…) se asignan en cada plantilla, así que pueden cambiar de una temporada a otra.
 - **Cambio de temporada:** cada plantilla de la temporada nueva se crea por separado, indicando su temporada y su plantilla anterior, con la opción de copiar de ella los jugadores y el cuerpo técnico. Los jugadores que cambian de categoría se añaden a su nueva plantilla desde la lista de jugadores del club. El catálogo de multas se copia de la plantilla anterior; las multas no: **la caja empieza de cero cada temporada**.
 - El sistema gestiona varios clubes. Los **administradores del club** crean, editan y borran sus plantillas (también las de una temporada nueva), gestionan la identidad del club y tienen rol admin en todas sus plantillas.
@@ -88,7 +88,8 @@ Este documento recoge todas las decisiones funcionales, técnicas y de organizac
 - Edición de los datos del jugador, comunes a todas sus temporadas, y de su ficha en la plantilla (dorsal y posición).
 - Baja **lógica** de la ficha: el jugador deja de aparecer en la plantilla, pero se conserva su historial de asistencia, multas y estadísticas. Posibilidad de reactivarlo.
 - El dorsal es único entre los jugadores activos de una misma plantilla.
-- Un jugador tiene como máximo una ficha por temporada.
+- Un jugador tiene como máximo una ficha propia por temporada.
+- **Invitados** (ciclo 13): jugadores con ficha propia en otra plantilla del club esa temporada, o de fuera (club asociado, a prueba). Se añaden desde «Añadir jugador», en la pestaña «Invitado», o al convocarlos o importar el acta. Llevan su procedencia y el interruptor «En la dinámica del equipo»: apagado, solo partidos; encendido, también entrenos y multas. Salen aparte, en un apartado «Invitados», y cuentan en las estadísticas de la plantilla marcados con su procedencia.
 - Lista ordenada por dorsal y, a igualdad, por apellidos y nombre (quien no tiene apellidos, por su nombre). En cada jugador se muestra su porcentaje de asistencia y su deuda de multas pendiente (cuando existan esos módulos).
 
 ### 2.3 Entrenamientos y asistencia
@@ -403,10 +404,13 @@ La participación de un jugador en una plantilla (una temporada).
 | plantilla_id | uuid → plantillas | PK compuesta, cascade |
 | jugador_id | uuid → jugadores | PK compuesta, cascade |
 | club_id | uuid | Garantiza que jugador y plantilla son del mismo club, con las FK compuestas `(plantilla_id, club_id, temporada) → plantillas` y `(jugador_id, club_id) → jugadores` |
-| temporada | text | Copia de la temporada de la plantilla, garantizada por la FK compuesta. Único `(jugador_id, temporada)`: una ficha por temporada |
-| dorsal | smallint | 0–99, nullable. Único por plantilla entre activos (índice parcial) |
+| temporada | text | Copia de la temporada de la plantilla, garantizada por la FK compuesta. Único `(jugador_id, temporada)` entre las propias (índice parcial): una ficha propia por temporada |
+| dorsal | smallint | 0–99, nullable. Único por plantilla entre las propias activas (índice parcial) |
 | posicion | enum `portero, defensa, centrocampista, delantero` | nullable |
 | activo | boolean | por defecto true (baja lógica) |
+| tipo | enum `propia, invitado` | por defecto `propia`. Invitado: juega con la plantilla sin dejar la suya (GH-187) |
+| en_dinamica | boolean | por defecto true; siempre true en las propias (check). En un invitado, false si solo viene a los partidos: no sale en los entrenos ni tiene multas, y lo que ya tenía se conserva |
+| procedencia | text | nullable, solo en invitados: de dónde viene si no tiene ficha propia en el club esa temporada («Club asociado: X», «A prueba»). Si la tiene, la procedencia es esa plantilla y no se guarda |
 | created_at | timestamptz | |
 
 ### entrenos
@@ -775,8 +779,9 @@ Una issue está terminada cuando: cumple sus criterios de aceptación en el ento
 | 8 · Operación | Backups automáticos, restauración, logs y actualizaciones | en parte en v1.2.0, con GH-45 y GH-46; el resto, pendiente |
 | 9 · Exportar y compartir | Exportar y compartir sesiones y multas en PDF o texto, los datos de la temporada en Excel y asistencia desde WhatsApp | en parte en v1.3.0, con GH-131 y GH-132, y en v1.5.0, con GH-170; el resto, pendiente |
 | 10 · Roles en uso | Invitaciones, delegados y jugadores | v1.4.0, prevista |
-| 11 · Exposición pública | Bastionado, aislamiento, cabeceras, límites y publicación con Tailscale Funnel | en parte en v1.6.0, con GH-54, GH-55, GH-57, GH-58, GH-177 y GH-56 (sin activar); v2.0.0, prevista |
+| 11 · Exposición pública | Bastionado, aislamiento, cabeceras, límites y publicación con Tailscale Funnel | en parte en v1.6.0, con GH-54, GH-55, GH-57, GH-58, GH-177 y GH-56 (Funnel activo desde el 2026-11-11); v2.0.0, prevista |
 | 12 · Asistente de ejercicios | Claves de API, diagrama táctico del ejercicio y generación de imágenes, animación y PDF en el servidor | v2.1.0, prevista |
+| 13 · Jugadores invitados | Convocar y, si el entrenador quiere, meter en la dinámica del equipo a jugadores de otra plantilla, de un club asociado o a prueba | v1.7.0, con GH-187, GH-188 y GH-189 |
 
 Versión publicada en los ciclos ya cerrados y prevista en el resto. Los ciclos 1 a 3 no tuvieron release propia: se publicaron juntos en la v1.0.0. Lo que queda abierto de un ciclo ya publicado sale en la release siguiente a terminarlo.
 
@@ -812,8 +817,9 @@ Versión publicada en los ciclos ya cerrados y prevista en el resto. Los ciclos 
 | Ciclo 8 · Operación | Backups automáticos, restauración, logs y actualizaciones (en parte en v1.2.0, con GH-45 y GH-46; el resto, pendiente) |
 | Ciclo 9 · Exportar y compartir | Exportar y compartir sesiones y multas en PDF o texto, los datos de la temporada en Excel y asistencia desde WhatsApp (en parte en v1.3.0, con GH-131 y GH-132, y en v1.5.0, con GH-170; el resto, pendiente) |
 | Ciclo 10 · Roles en uso | Invitaciones, delegados y jugadores (v1.4.0, prevista) |
-| Ciclo 11 · Exposición pública | Publicación con Tailscale Funnel en la Raspberry compartida: bastionado, aislamiento de Vestuario, cabeceras, límites de peticiones por usuario e IP y paso a producción pública (en parte en v1.6.0, con GH-54, GH-55, GH-57, GH-58, GH-177 y GH-56 sin activar; v2.0.0, prevista) |
+| Ciclo 11 · Exposición pública | Publicación con Tailscale Funnel en la Raspberry compartida: bastionado, aislamiento de Vestuario, cabeceras, límites de peticiones por usuario e IP y paso a producción pública (en parte en v1.6.0, con GH-54, GH-55, GH-57, GH-58, GH-177 y GH-56, con Funnel activo desde el 2026-11-11; v2.0.0, prevista) |
 | Ciclo 12 · Asistente de ejercicios | Claves de API, diagrama táctico del ejercicio y generación de imágenes, animación y PDF en el servidor (v2.1.0, prevista) |
+| Ciclo 13 · Jugadores invitados | Convocar y, si el entrenador quiere, meter en la dinámica del equipo a jugadores de otra plantilla del club (juveniles, equipo B), de un club asociado o a prueba (v1.7.0, con GH-187, GH-188 y GH-189) |
 
 ### 11.3 Issues
 
@@ -2084,6 +2090,52 @@ Investigar si hay bibliotecas de ejercicios de fútbol disponibles (abiertas o c
 - [ ] Lista de bibliotecas o servicios encontrados, con qué ofrecen (texto, diagramas, vídeo), su formato y cómo se accede
 - [ ] Licencia y condiciones de uso de cada una: si se pueden copiar o solo enlazar
 - [ ] Recomendación anotada en la issue: si compensa integrar alguna, cómo (importar o enlazar) y en qué ciclo
+
+---
+
+### Milestone: Ciclo 13 · Jugadores invitados
+
+#### GH-187
+**Título:** Fichas de invitado: modelo y API
+**Etiquetas:** feature, db, backend
+
+Un jugador puede jugar con otra plantilla del club sin dejar la suya: juveniles o equipo B que suben a un partido, o jugadores de un club asociado o a prueba. El entrenador decide si es solo para partidos o si entra en la dinámica del equipo (entrenos y multas).
+
+**Criterios de aceptación**
+- [ ] La ficha tiene un tipo, `propia` o `invitado`. «Una ficha por temporada» y «dorsal único entre los activos» se aplican solo a las propias. Las fichas que ya existen quedan como propias
+- [ ] La ficha de invitado lleva `en_dinamica` (apagado: solo partidos; encendido: también entrenos y multas) y su procedencia: la plantilla del club en la que tiene ficha propia esa temporada o, si no tiene, un texto libre («Club asociado: X», «A prueba»)
+- [ ] Alta de invitado de un jugador del club con ficha propia activa esta temporada en otra plantilla, o alta rápida de un jugador nuevo en el club solo con ficha de invitado y procedencia en texto
+- [ ] Editar `en_dinamica` y el dorsal (opcional, sin la regla de dorsal único); dar de baja y reactivar al invitado (baja lógica, se conserva lo que ya jugó)
+- [ ] Al convocar a un jugador del club de otra plantilla se crea solo su ficha de invitado, con `en_dinamica` apagado
+- [ ] Entrenos (lista para pasar asistencia) y multas solo incluyen a los invitados con `en_dinamica` encendido; si se apaga, sus multas y asistencias se conservan
+- [ ] Búsqueda de jugadores para invitar: los de las otras plantillas del club en la temporada, solo con nombre y plantilla
+- [ ] Delegado o superior
+- [ ] Migración y tests
+
+#### GH-188
+**Título:** Invitados en la convocatoria y en Jugadores
+**Etiquetas:** feature, frontend
+
+Depende de GH-187.
+
+**Criterios de aceptación**
+- [ ] En la convocatoria, apartado «De otras plantillas» con buscador; cada jugador con su procedencia («Mateo · Juvenil»)
+- [ ] En «Añadir jugador», una pestaña más, «Invitado», junto a «Nuevo en el club» y «Ya es del club» (sin botón aparte): elegir un jugador de otra plantilla del club o dar de alta a alguien de fuera con su procedencia, y el interruptor «En la dinámica del equipo»
+- [ ] En Jugadores, un apartado plegado «Invitados» con su procedencia, el interruptor «En la dinámica del equipo» y los partidos jugados con la plantilla; editar y dar de baja como al resto
+- [ ] Los invitados se ven marcados en la convocatoria, la asistencia y las multas; en el mensaje de WhatsApp salen como uno más
+- [ ] Tests
+
+#### GH-189
+**Título:** Invitados en el acta y en las estadísticas
+**Etiquetas:** feature, backend, frontend
+
+Depende de GH-187.
+
+**Criterios de aceptación**
+- [ ] Al importar el acta, los nombres sin emparejar se buscan también entre los jugadores de las otras plantillas del club en la temporada; al confirmar se crea su ficha de invitado (con `en_dinamica` apagado)
+- [ ] Las estadísticas y las exportaciones de la plantilla incluyen a los invitados que han jugado, marcados con su procedencia
+- [ ] La trayectoria del jugador muestra también lo jugado como invitado y con qué plantilla
+- [ ] Tests
 
 ---
 

@@ -1,5 +1,5 @@
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
-import { and, eq, notInArray } from 'drizzle-orm'
+import { and, eq, ne, notInArray, sql } from 'drizzle-orm'
 import { bodyLimit } from 'hono/body-limit'
 import { aEstadisticas, type Correcciones, construirLectura } from '../acta/lectura.js'
 import { ActaNoLegible, leerActa } from '../acta/leer.js'
@@ -19,6 +19,7 @@ import { type EnvPlantilla, requireRol } from '../permisos.js'
 import { EsquemaUuid } from '../validacion.js'
 import {
   buscarPartido,
+  crearFichasInvitado,
   detallePartido,
   EsquemaPartido,
   errores,
@@ -123,6 +124,29 @@ const candidatos = (plantillaId: string) =>
     .innerJoin(jugadores, eq(jugadores.id, fichas.jugadorId))
     .where(eq(fichas.plantillaId, plantillaId))
 
+// Jugadores con ficha propia activa en otra plantilla del club esa temporada y sin ficha en esta:
+// los nombres del acta sin emparejar se buscan también entre ellos (GH-189)
+const otrosCandidatos = (plantilla: { id: string; clubId: string; temporada: string }) =>
+  db
+    .select({
+      jugadorId: jugadores.id,
+      nombre: jugadores.nombre,
+      apellidos: jugadores.apellidos,
+      dorsal: fichas.dorsal,
+    })
+    .from(fichas)
+    .innerJoin(jugadores, eq(jugadores.id, fichas.jugadorId))
+    .where(
+      and(
+        eq(fichas.clubId, plantilla.clubId),
+        eq(fichas.temporada, plantilla.temporada),
+        eq(fichas.tipo, 'propia'),
+        eq(fichas.activo, true),
+        ne(fichas.plantillaId, plantilla.id),
+        sql`not exists (select 1 from fichas f where f.plantilla_id = ${plantilla.id} and f.jugador_id = ${fichas.jugadorId})`,
+      ),
+    )
+
 async function nombreClub(clubId: string) {
   const [club] = await db
     .select({ nombre: clubes.nombre })
@@ -139,7 +163,7 @@ async function cargarActa(partidoId: string) {
 
 // Lee el acta guardada; si no se puede, la lectura es null y se explica por qué
 async function leer(
-  plantilla: { id: string; clubId: string },
+  plantilla: { id: string; clubId: string; temporada: string },
   partidoId: string,
   correcciones?: Correcciones,
 ) {
@@ -158,6 +182,7 @@ async function leer(
       await nombreClub(plantilla.clubId),
       await candidatos(plantilla.id),
       correcciones,
+      await otrosCandidatos(plantilla),
     )
     return { acta: resumen, lectura, error: null }
   } catch (error) {
@@ -301,7 +326,7 @@ export const rutasActas = () =>
         tags: ['Actas'],
         summary: 'Registrar el acta',
         description:
-          'Delegado o superior. Con las correcciones de la revisión, registra el acta con la fuente «acta»: la convocatoria pasa a ser la del acta (se conserva a quien tiene estadísticas a mano), se guardan resultado, titulares, cambios, goles y tarjetas, y competición, lugar y hora se rellenan si estaban vacíos. Volver a confirmar sustituye lo importado antes.',
+          'Delegado o superior. Con las correcciones de la revisión, registra el acta con la fuente «acta»: la convocatoria pasa a ser la del acta (se conserva a quien tiene estadísticas a mano; a los jugadores de otras plantillas del club se les crea su ficha de invitado, solo para partidos), se guardan resultado, titulares, cambios, goles y tarjetas, y competición, lugar y hora se rellenan si estaban vacíos. Volver a confirmar sustituye lo importado antes.',
         middleware: [requireRol('delegado')] as const,
         request: {
           params: ParamPartido,
@@ -318,14 +343,18 @@ export const rutasActas = () =>
         const correcciones = c.req.valid('json')
         const plantillaId = c.var.plantilla.id
         const de = await candidatos(plantillaId)
+        const otros = await otrosCandidatos(c.var.plantilla)
         const ajenos = (correcciones.jugadores ?? []).filter(
-          (j) => j.jugadorId && !de.some((d) => d.jugadorId === j.jugadorId),
+          (j) =>
+            j.jugadorId &&
+            !de.some((d) => d.jugadorId === j.jugadorId) &&
+            !otros.some((o) => o.jugadorId === j.jugadorId),
         )
         if (ajenos.length > 0) {
           throw new ErrorApi(
             400,
             'jugador_ajeno',
-            'Solo se eligen jugadores con ficha en la plantilla',
+            'Solo se eligen jugadores con ficha en la plantilla o en otra del club',
           )
         }
         const { lectura, error } = await leer(c.var.plantilla, pid, correcciones)
@@ -374,6 +403,8 @@ export const rutasActas = () =>
               ),
             )
           if (ids.length > 0) {
+            // Los de otras plantillas, como invitados solo para partidos
+            await crearFichasInvitado(tx, c.var.plantilla, ids)
             await tx
               .insert(convocados)
               .values(ids.map((jugadorId) => ({ partidoId: pid, jugadorId, plantillaId })))
