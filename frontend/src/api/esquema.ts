@@ -2155,6 +2155,181 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/invitaciones/consultar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ver una invitación
+         * @description Pública, con el token del enlace en el cuerpo. No cambia nada: dice a qué invita y si ya hay una cuenta con ese email.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        token: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Invitación */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["InvitacionAbierta"];
+                    };
+                };
+                /** @description Datos no válidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description El enlace no es válido */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Usada, anulada o caducada */
+                410: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/invitaciones/aceptar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Aceptar una invitación
+         * @description Pública, con el token del enlace en el cuerpo. La invitación es para un email: si ya hay una cuenta con él, hay que haber iniciado sesión con ella; si no, se crea con `nombre` y `contrasena` (mínimo 10 caracteres) y se inicia la sesión. Crea la membresía con el rol de la invitación (o hace administrador del club) y vincula el jugador, si lo hay. De un solo uso.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        token: string;
+                        /** @description Solo al crear la cuenta */
+                        nombre?: string;
+                        /** @description Solo al crear la cuenta; mínimo 10 caracteres */
+                        contrasena?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Aceptada; si se ha creado la cuenta, con la cookie de sesión */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["InvitacionAceptada"];
+                    };
+                };
+                /** @description Datos no válidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Ya hay una cuenta con ese email: inicia sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Has entrado con otro email */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description El enlace no es válido */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description El jugador ya tiene otra cuenta */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Usada, anulada o caducada */
+                410: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/plantillas/{id}/horario": {
         parameters: {
             query?: never;
@@ -8311,6 +8486,32 @@ export interface components {
              * @example https://vestuario.example/invitacion#…
              */
             enlace: string;
+        };
+        InvitacionAbierta: {
+            email: string;
+            /** @example CD Rexional */
+            club: string;
+            /** Format: uuid */
+            clubId: string;
+            /** @description null en las de administrador del club */
+            plantilla: {
+                /** Format: uuid */
+                id: string;
+                nombre: string;
+                temporada: string;
+            } | null;
+            /** @enum {string|null} */
+            rol: "admin" | "entrenador" | "delegado" | "jugador" | null;
+            /** @description Jugador del club que se vinculará */
+            jugador: string | null;
+            /** @description Si ya hay una cuenta con ese email: entonces hay que iniciar sesión */
+            cuentaExiste: boolean;
+        };
+        InvitacionAceptada: {
+            /** Format: uuid */
+            clubId: string;
+            /** Format: uuid */
+            plantillaId: string | null;
         };
         Horario: {
             /** @example 2026-10-13 */

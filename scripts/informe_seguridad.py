@@ -113,6 +113,10 @@ def informe(titulo, eventos, nginx, usuarios):
                       f"a {e.get('emailResumen', '?')}")
     seccion(salida, "Invitaciones revocadas", por_tipo["invitacion_revocada"],
             lambda e: f"{e.get('time', '')}  {quien(e)} revoca la de {e.get('emailResumen', '?')}")
+    seccion(salida, "Invitaciones aceptadas", por_tipo["invitacion_aceptada"],
+            lambda e: f"{e.get('time', '')}  {quien(e)} entra como {e.get('rol')}")
+    seccion(salida, "Cuentas creadas", por_tipo["cuenta_creada"],
+            lambda e: f"{e.get('time', '')}  {quien(e)} desde {e.get('ip', '?')}")
     return "\n".join(salida) + "\n"
 
 

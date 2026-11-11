@@ -1,21 +1,25 @@
 import { createHash, randomBytes } from 'node:crypto'
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
 import { and, desc, eq, isNull, sql } from 'drizzle-orm'
+import { auth, LONGITUD_MINIMA_CONTRASENA } from '../auth.js'
 import { config } from '../config.js'
 import { db } from '../db/cliente.js'
 import {
+  account,
   adminsClub,
+  clubes,
   fichas,
   invitaciones,
   jugadores,
   membresias,
+  plantillas,
   rol,
   user,
 } from '../db/schema/index.js'
 import { ErrorApi, EsquemaError, validacionFallida } from '../errores.js'
 import { type EnvClub, type EnvPlantilla, requireAdminClub, requireRol } from '../permisos.js'
-import { registrarEvento, resumenEmail } from '../seguridad.js'
-import { EsquemaUuid, restriccionViolada } from '../validacion.js'
+import { ipDe, normalizarEmail, registrarEvento, resumenEmail } from '../seguridad.js'
+import { EsquemaTexto, EsquemaUuid, restriccionViolada } from '../validacion.js'
 
 // Invitaciones (sección 3 y 6, GH-49). La app no envía correos: al crear la invitación se devuelve
 // el enlace una sola vez y quien invita lo comparte (por WhatsApp, por ejemplo). El token va detrás
@@ -26,6 +30,8 @@ export const DIAS_INVITACION = 7
 
 // Hash del token, el que se guarda y con el que se busca al aceptar
 export const hashToken = (token: string) => createHash('sha256').update(token).digest('hex')
+
+const nombreJugador = sql<string>`concat_ws(' ', ${jugadores.nombre}, ${jugadores.apellidos})`
 
 const nuevoToken = () => randomBytes(32).toString('base64url')
 
@@ -439,5 +445,291 @@ export const rutasInvitacionesClub = () =>
           emailResumen: resumenEmail(revocada.email),
         })
         return c.body(null, 204)
+      },
+    )
+
+// Aceptar la invitación (GH-50): rutas públicas, con el token en el cuerpo (nunca en la URL, para que
+// no quede en los registros). nginx las limita por IP como el login.
+
+const CuerpoToken = z.object({ token: z.string().min(20).max(100) }).strict()
+
+const CuerpoAceptar = CuerpoToken.extend({
+  nombre: EsquemaTexto('El nombre').optional().openapi({ description: 'Solo al crear la cuenta' }),
+  contrasena: z
+    .string()
+    .max(128)
+    .optional()
+    .openapi({
+      description: `Solo al crear la cuenta; mínimo ${LONGITUD_MINIMA_CONTRASENA} caracteres`,
+    }),
+}).strict()
+
+const EsquemaInvitacionAbierta = z
+  .object({
+    email: z.string(),
+    club: z.string().openapi({ example: 'CD Rexional' }),
+    clubId: z.uuid(),
+    plantilla: z
+      .object({ id: z.uuid(), nombre: z.string(), temporada: z.string() })
+      .nullable()
+      .openapi({ description: 'null en las de administrador del club' }),
+    rol: z.enum(rol.enumValues).nullable(),
+    jugador: z.string().nullable().openapi({ description: 'Jugador del club que se vinculará' }),
+    cuentaExiste: z.boolean().openapi({
+      description: 'Si ya hay una cuenta con ese email: entonces hay que iniciar sesión',
+    }),
+  })
+  .openapi('InvitacionAbierta')
+
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0]
+
+// La invitación del token, si se puede usar; si no, el error que lo explica. En la transacción de
+// aceptarla, bloqueada: si llegan dos a la vez, la segunda ya la ve usada.
+async function invitacionDeToken(token: string, tx?: Tx) {
+  const consulta = (tx ?? db)
+    .select()
+    .from(invitaciones)
+    .where(eq(invitaciones.tokenHash, hashToken(token)))
+  const [invitacion] = tx ? await consulta.for('update') : await consulta
+  if (!invitacion) {
+    throw new ErrorApi(404, 'invitacion_no_valida', 'El enlace de la invitación no es válido')
+  }
+  const otra = 'Pide a quien te invitó que te envíe otra.'
+  if (invitacion.usadaEn) {
+    throw new ErrorApi(410, 'invitacion_usada', `Esta invitación ya se ha usado. ${otra}`)
+  }
+  if (invitacion.revocadaEn) {
+    throw new ErrorApi(410, 'invitacion_revocada', `Esta invitación se ha anulado. ${otra}`)
+  }
+  if (invitacion.expira.getTime() <= Date.now()) {
+    throw new ErrorApi(410, 'invitacion_caducada', `Esta invitación ha caducado. ${otra}`)
+  }
+  return invitacion
+}
+
+const iniciaSesion = (email: string) =>
+  new ErrorApi(
+    401,
+    'inicia_sesion',
+    `Ya hay una cuenta con ${email}: inicia sesión para aceptar la invitación`,
+  )
+
+const erroresPublicos = {
+  404: json(EsquemaError, 'El enlace no es válido'),
+  410: json(EsquemaError, 'Usada, anulada o caducada'),
+}
+
+export const rutasInvitacionesPublicas = () =>
+  new OpenAPIHono({ defaultHook: validacionFallida })
+    .openapi(
+      createRoute({
+        method: 'post',
+        path: '/invitaciones/consultar',
+        tags: ['Invitaciones'],
+        summary: 'Ver una invitación',
+        description:
+          'Pública, con el token del enlace en el cuerpo. No cambia nada: dice a qué invita y si ya hay una cuenta con ese email.',
+        request: { body: { content: { 'application/json': { schema: CuerpoToken } } } },
+        responses: {
+          200: json(EsquemaInvitacionAbierta, 'Invitación'),
+          400: json(EsquemaError, 'Datos no válidos'),
+          ...erroresPublicos,
+        },
+      }),
+      async (c) => {
+        const invitacion = await invitacionDeToken(c.req.valid('json').token)
+        const [club] = await db
+          .select({ nombre: clubes.nombre })
+          .from(clubes)
+          .where(eq(clubes.id, invitacion.clubId))
+        const [plantilla] = invitacion.plantillaId
+          ? await db
+              .select({
+                id: plantillas.id,
+                nombre: plantillas.nombre,
+                temporada: plantillas.temporada,
+              })
+              .from(plantillas)
+              .where(eq(plantillas.id, invitacion.plantillaId))
+          : []
+        const [jugador] = invitacion.jugadorId
+          ? await db
+              .select({ nombre: nombreJugador })
+              .from(jugadores)
+              .where(eq(jugadores.id, invitacion.jugadorId))
+          : []
+        return c.json(
+          {
+            email: invitacion.email,
+            club: club?.nombre ?? '',
+            clubId: invitacion.clubId,
+            plantilla: plantilla ?? null,
+            rol: invitacion.rol,
+            jugador: jugador?.nombre ?? null,
+            cuentaExiste: (await usuarioConEmail(invitacion.email)) !== undefined,
+          },
+          200,
+        )
+      },
+    )
+    .openapi(
+      createRoute({
+        method: 'post',
+        path: '/invitaciones/aceptar',
+        tags: ['Invitaciones'],
+        summary: 'Aceptar una invitación',
+        description: `Pública, con el token del enlace en el cuerpo. La invitación es para un email: si ya hay una cuenta con él, hay que haber iniciado sesión con ella; si no, se crea con \`nombre\` y \`contrasena\` (mínimo ${LONGITUD_MINIMA_CONTRASENA} caracteres) y se inicia la sesión. Crea la membresía con el rol de la invitación (o hace administrador del club) y vincula el jugador, si lo hay. De un solo uso.`,
+        request: { body: { content: { 'application/json': { schema: CuerpoAceptar } } } },
+        responses: {
+          200: json(
+            z
+              .object({ clubId: z.uuid(), plantillaId: z.uuid().nullable() })
+              .openapi('InvitacionAceptada'),
+            'Aceptada; si se ha creado la cuenta, con la cookie de sesión',
+          ),
+          400: json(EsquemaError, 'Datos no válidos'),
+          401: json(EsquemaError, 'Ya hay una cuenta con ese email: inicia sesión'),
+          403: json(EsquemaError, 'Has entrado con otro email'),
+          409: json(EsquemaError, 'El jugador ya tiene otra cuenta'),
+          ...erroresPublicos,
+        },
+      }),
+      async (c) => {
+        const { token, nombre, contrasena } = c.req.valid('json')
+        const cabeceras = c.req.raw.headers
+        const previa = await invitacionDeToken(token)
+        const sesion = await auth.api.getSession({ headers: cabeceras })
+        const existente = await usuarioConEmail(previa.email)
+
+        if (sesion && normalizarEmail(sesion.user.email) !== previa.email) {
+          throw new ErrorApi(
+            403,
+            'otro_email',
+            `Has entrado como ${sesion.user.email} y la invitación es para ${previa.email}: cierra sesión para aceptarla`,
+          )
+        }
+        if (existente && !sesion) throw iniciaSesion(previa.email)
+        const nuevaCuenta = !existente
+        if (nuevaCuenta) {
+          const faltan: { campo: string; mensaje: string }[] = []
+          if (!nombre) faltan.push({ campo: 'nombre', mensaje: 'Escribe tu nombre' })
+          if (!contrasena || contrasena.length < LONGITUD_MINIMA_CONTRASENA) {
+            faltan.push({
+              campo: 'contrasena',
+              mensaje: `La contraseña debe tener al menos ${LONGITUD_MINIMA_CONTRASENA} caracteres`,
+            })
+          }
+          if (faltan.length > 0) throw new ErrorApi(400, 'validacion', 'Revisa los datos', faltan)
+        }
+        // El mismo algoritmo con el que Better Auth la comprobará al iniciar sesión
+        const hash = nuevaCuenta
+          ? await (await auth.$context).password.hash(contrasena ?? '')
+          : null
+
+        const { invitacion, usuarioId } = await db
+          .transaction(async (tx) => {
+            const invitacion = await invitacionDeToken(token, tx)
+            let usuarioId = existente?.id
+            if (!usuarioId) {
+              const [usuario] = await tx
+                .insert(user)
+                .values({ name: nombre ?? '', email: invitacion.email, emailVerified: true })
+                .returning({ id: user.id })
+              if (!usuario) throw new Error('No se pudo crear el usuario')
+              usuarioId = usuario.id
+              await tx.insert(account).values({
+                accountId: usuarioId,
+                providerId: 'credential',
+                userId: usuarioId,
+                password: hash,
+              })
+            }
+
+            if (invitacion.plantillaId && invitacion.rol) {
+              // Si ya era miembro, se queda con el rol de la invitación
+              await tx
+                .insert(membresias)
+                .values({ plantillaId: invitacion.plantillaId, usuarioId, rol: invitacion.rol })
+                .onConflictDoUpdate({
+                  target: [membresias.plantillaId, membresias.usuarioId],
+                  set: { rol: invitacion.rol },
+                })
+            } else {
+              await tx
+                .insert(adminsClub)
+                .values({ clubId: invitacion.clubId, usuarioId })
+                .onConflictDoNothing()
+            }
+
+            if (invitacion.jugadorId) {
+              const [jugador] = await tx
+                .select({ usuarioId: jugadores.usuarioId })
+                .from(jugadores)
+                .where(eq(jugadores.id, invitacion.jugadorId))
+                .for('update')
+              if (jugador?.usuarioId && jugador.usuarioId !== usuarioId) {
+                throw new ErrorApi(
+                  409,
+                  'jugador_con_usuario',
+                  'Ese jugador ya está vinculado a otra cuenta: pide que te inviten de nuevo',
+                )
+              }
+              await tx
+                .update(jugadores)
+                .set({ usuarioId })
+                .where(eq(jugadores.id, invitacion.jugadorId))
+            }
+
+            await tx
+              .update(invitaciones)
+              .set({ usadaEn: new Date() })
+              .where(eq(invitaciones.id, invitacion.id))
+            return { invitacion, usuarioId }
+          })
+          .catch((error: unknown) => {
+            const restriccion = restriccionViolada(error)
+            if (restriccion === 'jugadores_usuario_por_club') {
+              throw new ErrorApi(
+                409,
+                'usuario_con_jugador',
+                'Tu cuenta ya está vinculada a otro jugador del club',
+              )
+            }
+            // Alguien ha creado la cuenta con ese email mientras tanto
+            if (restriccion === 'user_email_unique') throw iniciaSesion(previa.email)
+            throw error
+          })
+
+        if (nuevaCuenta) {
+          registrarEvento('cuenta_creada', {
+            usuarioId,
+            invitacionId: invitacion.id,
+            ip: ipDe(cabeceras),
+          })
+        }
+        registrarEvento('invitacion_aceptada', {
+          usuarioId,
+          invitacionId: invitacion.id,
+          ...(invitacion.plantillaId
+            ? { plantillaId: invitacion.plantillaId, rol: invitacion.rol }
+            : { clubId: invitacion.clubId, rol: 'administrador del club' }),
+        })
+
+        const respuesta = c.json(
+          { clubId: invitacion.clubId, plantillaId: invitacion.plantillaId },
+          200,
+        )
+        // Cuenta nueva: se entra directamente, con la sesión que crea Better Auth
+        if (nuevaCuenta) {
+          const entrada = await auth.api.signInEmail({
+            body: { email: invitacion.email, password: contrasena ?? '' },
+            headers: cabeceras,
+            asResponse: true,
+          })
+          for (const cookie of entrada.headers.getSetCookie()) {
+            respuesta.headers.append('set-cookie', cookie)
+          }
+        }
+        return respuesta
       },
     )

@@ -782,6 +782,99 @@
           "enlace"
         ]
       },
+      "InvitacionAbierta": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "club": {
+            "type": "string",
+            "example": "CD Rexional"
+          },
+          "clubId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "plantilla": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "nombre": {
+                "type": "string"
+              },
+              "temporada": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "nombre",
+              "temporada"
+            ],
+            "description": "null en las de administrador del club"
+          },
+          "rol": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "admin",
+              "entrenador",
+              "delegado",
+              "jugador",
+              null
+            ]
+          },
+          "jugador": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Jugador del club que se vinculará"
+          },
+          "cuentaExiste": {
+            "type": "boolean",
+            "description": "Si ya hay una cuenta con ese email: entonces hay que iniciar sesión"
+          }
+        },
+        "required": [
+          "email",
+          "club",
+          "clubId",
+          "plantilla",
+          "rol",
+          "jugador",
+          "cuentaExiste"
+        ]
+      },
+      "InvitacionAceptada": {
+        "type": "object",
+        "properties": {
+          "clubId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "plantillaId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "clubId",
+          "plantillaId"
+        ]
+      },
       "Horario": {
         "type": [
           "object",
@@ -5591,6 +5684,189 @@
           },
           "404": {
             "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/invitaciones/consultar": {
+      "post": {
+        "tags": [
+          "Invitaciones"
+        ],
+        "summary": "Ver una invitación",
+        "description": "Pública, con el token del enlace en el cuerpo. No cambia nada: dice a qué invita y si ya hay una cuenta con ese email.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "minLength": 20,
+                    "maxLength": 100
+                  }
+                },
+                "required": [
+                  "token"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Invitación",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitacionAbierta"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "El enlace no es válido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Usada, anulada o caducada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/invitaciones/aceptar": {
+      "post": {
+        "tags": [
+          "Invitaciones"
+        ],
+        "summary": "Aceptar una invitación",
+        "description": "Pública, con el token del enlace en el cuerpo. La invitación es para un email: si ya hay una cuenta con él, hay que haber iniciado sesión con ella; si no, se crea con `nombre` y `contrasena` (mínimo 10 caracteres) y se inicia la sesión. Crea la membresía con el rol de la invitación (o hace administrador del club) y vincula el jugador, si lo hay. De un solo uso.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "minLength": 20,
+                    "maxLength": 100
+                  },
+                  "nombre": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80,
+                    "description": "Solo al crear la cuenta"
+                  },
+                  "contrasena": {
+                    "type": "string",
+                    "maxLength": 128,
+                    "description": "Solo al crear la cuenta; mínimo 10 caracteres"
+                  }
+                },
+                "required": [
+                  "token"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Aceptada; si se ha creado la cuenta, con la cookie de sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitacionAceptada"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Ya hay una cuenta con ese email: inicia sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Has entrado con otro email",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "El enlace no es válido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "El jugador ya tiene otra cuenta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Usada, anulada o caducada",
             "content": {
               "application/json": {
                 "schema": {

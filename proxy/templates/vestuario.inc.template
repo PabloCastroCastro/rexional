@@ -42,6 +42,13 @@ location /api/ {
         proxy_pass $backend;
     }
 
+    # Invitaciones (GH-50): consultar y aceptar con el token, sin sesión; el mismo límite que el login
+    location /api/invitaciones/ {
+        limit_req zone=invitacion burst=5 nodelay;
+        limit_req zone=api burst=100 nodelay;
+        proxy_pass $backend;
+    }
+
     # Avisos de violación de la CSP que envía el navegador: pequeños y con su propio límite
     location = /api/csp {
         limit_req zone=csp burst=20 nodelay;

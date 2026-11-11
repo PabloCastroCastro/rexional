@@ -1,4 +1,5 @@
 import { createBrowserRouter, Navigate } from 'react-router'
+import { PaginaInvitacion } from './auth/PaginaInvitacion'
 import { PaginaLogin } from './auth/PaginaLogin'
 import { RequiereSesion } from './auth/RequiereSesion'
 import { PaginaConfiguracion } from './configuracion/PaginaConfiguracion'
@@ -30,9 +31,10 @@ import { Inicio } from './plantillas/Inicio'
 import { PaginaElegirPlantilla } from './plantillas/PaginaElegirPlantilla'
 import { PlantillaActiva } from './plantillas/PlantillaActiva'
 
-// /login es la única ruta sin sesión. La plantilla activa va en la URL: /plantillas/:plantillaId/<sección>
+// /login e /invitacion son las únicas rutas sin sesión. La plantilla activa va en la URL: /plantillas/:plantillaId/<sección>
 export const rutas = [
   { path: '/login', element: <PaginaLogin /> },
+  { path: '/invitacion', element: <PaginaInvitacion /> },
   // Catálogo de componentes: solo en desarrollo, no existe en la versión compilada
   ...(import.meta.env.DEV
     ? [
