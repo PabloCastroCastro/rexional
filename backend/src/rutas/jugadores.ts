@@ -1,5 +1,5 @@
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
-import { and, asc, desc, eq, ilike, ne, or, sql } from 'drizzle-orm'
+import { type AnyColumn, and, asc, desc, eq, ilike, ne, or, sql } from 'drizzle-orm'
 import { db } from '../db/cliente.js'
 import { fichas, jugadores, plantillas, posicion, tipoFicha } from '../db/schema/index.js'
 import { ErrorApi, EsquemaError, validacionFallida } from '../errores.js'
@@ -124,13 +124,18 @@ export const porNombre = [
 export const nombreCompleto = sql<string>`concat_ws(' ', ${jugadores.nombre}, ${jugadores.apellidos})`
 
 // Procedencia del invitado: la plantilla de su ficha propia de la temporada o, sin ella, el texto
-// de su alta. De las fichas propias, null
-export const procedenciaFicha = sql<
-  string | null
->`case when ${fichas.tipo} = 'invitado' then coalesce((
+// de su alta. De las fichas propias, null. procedenciaDe, para un alias de fichas
+export const procedenciaDe = (ficha: {
+  tipo: AnyColumn
+  jugadorId: AnyColumn
+  temporada: AnyColumn
+  procedencia: AnyColumn
+}) => sql<string | null>`case when ${ficha.tipo} = 'invitado' then coalesce((
   select p.nombre from fichas f join plantillas p on p.id = f.plantilla_id
-  where f.jugador_id = ${fichas.jugadorId} and f.temporada = ${fichas.temporada} and f.tipo = 'propia'
-), ${fichas.procedencia}) end`
+  where f.jugador_id = ${ficha.jugadorId} and f.temporada = ${ficha.temporada} and f.tipo = 'propia'
+), ${ficha.procedencia}) end`
+
+export const procedenciaFicha = procedenciaDe(fichas)
 
 export const columnasJugadorPlantilla = {
   jugadorId: jugadores.id,

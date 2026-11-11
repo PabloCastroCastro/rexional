@@ -16,7 +16,7 @@ import { validacionFallida } from '../errores.js'
 import type { TipoEvento } from '../estadisticas.js'
 import { type EnvPlantilla, requireRol } from '../permisos.js'
 import { estadisticasDePlantilla } from './estadisticas.js'
-import { porNombre } from './jugadores.js'
+import { porNombre, procedenciaDe, procedenciaFicha } from './jugadores.js'
 import { errores, ParamPlantilla } from './partidos.js'
 
 // Exportación de los datos de la temporada en Excel (GH-170): un .xlsx con una hoja por tabla
@@ -42,6 +42,10 @@ const ESTADOS_ASISTENCIA = { asiste: 'Asiste', falta: 'Falta', justificada: 'Jus
 // Las fechas de la base son 'AAAA-MM-DD': como fecha de Excel, sin zona horaria
 const fecha = (texto: string) => new Date(`${texto}T00:00:00Z`)
 const hora = (texto: string | null) => texto?.slice(0, 5) ?? null
+// Columna «Invitado» (GH-189): su procedencia, o vacía si el jugador es de la plantilla
+const invitado = (j: { tipo: string | null; procedencia: string | null }) =>
+  j.tipo === 'invitado' ? (j.procedencia ?? 'Sí') : null
+
 const nombre = (j: { nombre: string | null; apellidos: string | null }) =>
   j.nombre === null ? null : j.apellidos ? `${j.nombre} ${j.apellidos}` : j.nombre
 
@@ -97,6 +101,8 @@ export async function libroTemporada(plantillaId: string) {
       nombre: jugadores.nombre,
       apellidos: jugadores.apellidos,
       dorsal: ficha.dorsal,
+      tipoFicha: ficha.tipo,
+      procedencia: procedenciaDe(ficha),
     })
     .from(eventosPartido)
     .innerJoin(partidos, eq(partidos.id, eventosPartido.partidoId))
@@ -114,6 +120,8 @@ export async function libroTemporada(plantillaId: string) {
       nombre: jugadores.nombre,
       apellidos: jugadores.apellidos,
       dorsal: fichas.dorsal,
+      tipo: fichas.tipo,
+      procedencia: procedenciaFicha,
       titular: participaciones.titular,
       minutos: participaciones.minutos,
     })
@@ -139,6 +147,8 @@ export async function libroTemporada(plantillaId: string) {
       nombre: jugadores.nombre,
       apellidos: jugadores.apellidos,
       dorsal: fichas.dorsal,
+      tipo: fichas.tipo,
+      procedencia: procedenciaFicha,
       estado: asistencias.estado,
     })
     .from(asistencias)
@@ -194,6 +204,7 @@ export async function libroTemporada(plantillaId: string) {
         ['Minuto', 8],
         ['Tipo', 14],
         ['Jugador', 28],
+        ['Invitado', 16],
         ['Dorsal', 8],
       ],
       listaEventos.map((e) => [
@@ -202,6 +213,7 @@ export async function libroTemporada(plantillaId: string) {
         e.minuto,
         TIPOS[e.tipo],
         nombre(e),
+        invitado({ tipo: e.tipoFicha, procedencia: e.procedencia }),
         e.dorsal,
       ]),
     ),
@@ -211,6 +223,7 @@ export async function libroTemporada(plantillaId: string) {
         ['Fecha', 12],
         ['Rival', 30],
         ['Jugador', 28],
+        ['Invitado', 16],
         ['Dorsal', 8],
         ['Titular', 10],
         ['Minutos', 9],
@@ -219,6 +232,7 @@ export async function libroTemporada(plantillaId: string) {
         fecha(p.fecha),
         p.rival,
         nombre(p),
+        invitado(p),
         p.dorsal,
         p.titular ? 'Titular' : 'Suplente',
         p.minutos,
@@ -229,6 +243,7 @@ export async function libroTemporada(plantillaId: string) {
       [
         ['Dorsal', 8],
         ['Jugador', 28],
+        ['Invitado', 16],
         ['Baja', 6],
         ['Partidos', 9],
         ['Titularidades', 13],
@@ -247,6 +262,7 @@ export async function libroTemporada(plantillaId: string) {
       estadisticas.map((j) => [
         j.dorsal,
         nombre(j),
+        invitado(j),
         j.activo ? null : 'Sí',
         j.partidos,
         j.titularidades,
@@ -269,6 +285,7 @@ export async function libroTemporada(plantillaId: string) {
         ['Fecha', 12],
         ['Hora', 7],
         ['Jugador', 28],
+        ['Invitado', 16],
         ['Dorsal', 8],
         ['Estado', 12],
       ],
@@ -276,6 +293,7 @@ export async function libroTemporada(plantillaId: string) {
         fecha(a.fecha),
         hora(a.hora),
         nombre(a),
+        invitado(a),
         a.dorsal,
         ESTADOS_ASISTENCIA[a.estado],
       ]),

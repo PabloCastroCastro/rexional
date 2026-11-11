@@ -68,6 +68,8 @@ export function construirLectura(
   club: string,
   candidatos: Candidato[],
   correcciones: Correcciones = {},
+  // Jugadores de las otras plantillas del club en la temporada (GH-189)
+  otros: Candidato[] = [],
 ): Lectura {
   const { lado, seguro } = nuestroLado(ficha, partido, club)
   const nuestro = ficha[lado]
@@ -75,6 +77,16 @@ export function construirLectura(
   const plantilla = [...nuestro.titulares, ...nuestro.suplentes]
 
   const asignados = emparejar(plantilla, candidatos)
+  // Segunda pasada: los nombres sin emparejar, entre los de otras plantillas. Así uno de otra
+  // plantilla que se llame igual que alguien de esta no le quita el puesto
+  if (otros.length > 0) {
+    const usados = new Set([...asignados.values()].filter(Boolean))
+    const segunda = emparejar(
+      plantilla.filter((p) => !asignados.get(p.nombre)),
+      otros.filter((o) => !usados.has(o.jugadorId)),
+    )
+    for (const [nombre, jugadorId] of segunda) if (jugadorId) asignados.set(nombre, jugadorId)
+  }
   for (const c of correcciones.jugadores ?? []) {
     const persona = plantilla.find((p) => normalizar(p.nombre) === normalizar(c.nombre))
     if (persona) asignados.set(persona.nombre, c.jugadorId)

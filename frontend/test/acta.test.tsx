@@ -213,3 +213,27 @@ describe('acta del partido', () => {
     expect(screen.queryByRole('heading', { name: 'Acta del partido' })).not.toBeInTheDocument()
   })
 })
+
+describe('jugadores de otras plantillas en el acta (GH-189)', () => {
+  it('se eligen en el grupo «De otras plantillas» y se registran con los demás', async () => {
+    conActa()
+    manejadores['GET /api/plantillas/p1/invitables'] = () =>
+      json([{ jugadorId: 'j9', nombre: 'Issa', apellidos: 'Ndong', plantilla: 'Juvenil A' }])
+    abrir('/plantillas/p1/partidos/p1/acta')
+    const selector = await screen.findByLabelText('NDONG, ISSA')
+    const grupo = within(selector).getByRole('group', { name: 'De otras plantillas' })
+    expect(within(grupo).getByRole('option')).toHaveTextContent('Issa Ndong · Juvenil A')
+    await userEvent.selectOptions(selector, 'j9')
+    // Ya elegido, los cambios muestran su nombre
+    expect(screen.getByRole('heading', { name: 'Cambios' }).closest('section')).toHaveTextContent(
+      'Issa Ndong',
+    )
+    await userEvent.selectOptions(screen.getByLabelText('Daniel Gómez García'), 'amarilla')
+    await userEvent.click(screen.getByRole('button', { name: 'Registrar el acta' }))
+    await waitFor(() =>
+      expect(enviado('POST /api/plantillas/p1/partidos/p1/acta/confirmar')[0]).toMatchObject({
+        jugadores: expect.arrayContaining([{ nombre: 'NDONG, ISSA', jugadorId: 'j9' }]),
+      }),
+    )
+  })
+})

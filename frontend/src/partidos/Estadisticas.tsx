@@ -5,6 +5,7 @@ import { Cargando } from '../componentes/Cargando'
 import { BotonesPdf } from '../componentes/CompartirPdf'
 import { EstadoVacio } from '../componentes/EstadoVacio'
 import { Selector } from '../componentes/Selector'
+import { MarcaInvitado } from '../jugadores/BuscadorInvitables'
 import { nombreCompleto, puedeGestionarJugadores } from '../jugadores/datos'
 import { Dorsal } from '../jugadores/PaginaPlantilla'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
@@ -370,6 +371,10 @@ function Clasificaciones({
                     <Link to={`/plantillas/${plantilla.id}/jugadores/${j.jugadorId}`}>
                       {nombreCompleto(j)}
                     </Link>
+                    {j.tipo === 'invitado' && <MarcaInvitado />}
+                    {j.tipo === 'invitado' && j.procedencia && (
+                      <span className={estilos.secundario}> · {j.procedencia}</span>
+                    )}
                     {!j.activo && <span className={estilos.secundario}> · baja</span>}
                   </th>
                   {actual.columnas.map((c) => (
