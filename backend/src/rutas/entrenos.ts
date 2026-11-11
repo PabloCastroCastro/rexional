@@ -15,7 +15,7 @@ import { ErrorApi, EsquemaError, validacionFallida } from '../errores.js'
 import { hoy, sumarDias } from '../fechas.js'
 import { type EnvPlantilla, requireRol, rolAlcanza } from '../permisos.js'
 import { EsquemaFecha, EsquemaHora, EsquemaUuid, restriccionViolada } from '../validacion.js'
-import { EsquemaPosicion, porNombre } from './jugadores.js'
+import { EsquemaPosicion, EsquemaTipoFicha, porNombre, procedenciaFicha } from './jugadores.js'
 
 // Calendario de entrenos y asistencia (secciones 2.3 y 7). Los entrenos se planifican antes de pasar
 // lista: los crea el horario semanal de la plantilla o se crean sueltos, y un día puede tener varios
@@ -56,6 +56,8 @@ const EsquemaEntreno = z
         dorsal: z.number().int().nullable(),
         posicion: EsquemaPosicion.nullable(),
         activo: z.boolean(),
+        tipo: EsquemaTipoFicha,
+        procedencia: z.string().nullable(),
         estado: EsquemaEstado.nullable(),
         motivo: z.string().nullable(),
       }),
@@ -87,6 +89,7 @@ const EsquemaAsistenciaJugador = EsquemaRecuentos.extend({
   nombre: z.string(),
   apellidos: z.string().nullable(),
   activo: z.boolean(),
+  tipo: EsquemaTipoFicha,
   porcentaje: z
     .int()
     .nullable()
@@ -168,7 +171,8 @@ async function buscarEntreno(plantillaId: string, entrenoId: string) {
   return entreno
 }
 
-// Un entreno con su lista: los jugadores activos y los de baja que tienen asistencia registrada en él
+// Un entreno con su lista: los jugadores activos (de los invitados, los que están en la dinámica del
+// equipo) y los demás que tienen asistencia registrada en él
 async function detalleEntreno(plantillaId: string, entrenoId: string) {
   const entreno = await buscarEntreno(plantillaId, entrenoId)
   const filas = await db
@@ -179,6 +183,8 @@ async function detalleEntreno(plantillaId: string, entrenoId: string) {
       dorsal: fichas.dorsal,
       posicion: fichas.posicion,
       activo: fichas.activo,
+      tipo: fichas.tipo,
+      procedencia: procedenciaFicha,
       estado: asistencias.estado,
       motivo: asistencias.motivo,
     })
@@ -191,10 +197,18 @@ async function detalleEntreno(plantillaId: string, entrenoId: string) {
     .where(
       and(
         eq(fichas.plantillaId, plantillaId),
-        or(eq(fichas.activo, true), sql`${asistencias.estado} is not null`),
+        or(
+          and(eq(fichas.activo, true), eq(fichas.enDinamica, true)),
+          sql`${asistencias.estado} is not null`,
+        ),
       ),
     )
-    .orderBy(sql`${fichas.dorsal} asc nulls last`, ...porNombre, asc(jugadores.id))
+    .orderBy(
+      asc(fichas.tipo),
+      sql`${fichas.dorsal} asc nulls last`,
+      ...porNombre,
+      asc(jugadores.id),
+    )
 
   const recuentos = { asiste: 0, justificada: 0, falta: 0 }
   for (const f of filas) if (f.estado) recuentos[f.estado] += 1
@@ -637,7 +651,7 @@ export const rutasEntrenos = () =>
         tags: ['Entrenos'],
         summary: 'Pasar lista',
         description:
-          'Delegado o superior. Guarda la lista completa del entreno: quien no aparece queda sin registrar, y una lista vacía lo deja sin asistencia (el entreno sigue en el calendario). No admite entrenos futuros.',
+          'Delegado o superior. Guarda la lista completa del entreno: quien no aparece queda sin registrar, y una lista vacía lo deja sin asistencia (el entreno sigue en el calendario). No admite entrenos futuros ni, entre los invitados, a los que solo vienen a los partidos, salvo que ya tengan asistencia en ese entreno.',
         middleware: [requireRol('delegado')] as const,
         request: {
           params: ParamEntreno,
@@ -664,7 +678,13 @@ export const rutasEntrenos = () =>
         }
         if (lista.length > 0) {
           const conFicha = await db
-            .select({ jugadorId: fichas.jugadorId })
+            .select({
+              jugadorId: fichas.jugadorId,
+              admitido: sql<boolean>`${fichas.enDinamica} or exists (
+                select 1 from ${asistencias}
+                where ${asistencias.entrenoId} = ${entreno.id} and ${asistencias.jugadorId} = ${fichas.jugadorId}
+              )`,
+            })
             .from(fichas)
             .where(
               and(
@@ -676,6 +696,14 @@ export const rutasEntrenos = () =>
               ),
             )
           if (conFicha.length !== lista.length) throw sinFicha()
+          // Invitado solo para partidos (GH-187): se conserva lo que ya tenía, pero no se le añade
+          if (conFicha.some((f) => !f.admitido)) {
+            throw new ErrorApi(
+              400,
+              'fuera_de_dinamica',
+              'Algún invitado de la lista solo viene a los partidos: no se le pasa lista',
+            )
+          }
         }
 
         try {
@@ -712,7 +740,7 @@ export const rutasEntrenos = () =>
         tags: ['Entrenos'],
         summary: 'Asistencia por jugador',
         description:
-          'Asistencias, justificadas, faltas y porcentaje de cada jugador de la plantilla (también de las bajas). El porcentaje es asistencias / entrenos con estado registrado, y null si no tiene ninguno. El rol jugador solo recibe el suyo.',
+          'Asistencias, justificadas, faltas y porcentaje de cada jugador de la plantilla (también de las bajas; de los invitados solo para partidos, los que tienen alguna asistencia registrada). El porcentaje es asistencias / entrenos con estado registrado, y null si no tiene ninguno. El rol jugador solo recibe el suyo.',
         middleware: [requireRol('jugador')] as const,
         request: { params: ParamPlantilla },
         responses: { 200: json(z.array(EsquemaAsistenciaJugador), 'Asistencia'), ...errores },
@@ -724,6 +752,7 @@ export const rutasEntrenos = () =>
             nombre: jugadores.nombre,
             apellidos: jugadores.apellidos,
             activo: fichas.activo,
+            tipo: fichas.tipo,
             asiste: recuento('asiste'),
             justificada: recuento('justificada'),
             falta: recuento('falta'),
@@ -739,7 +768,14 @@ export const rutasEntrenos = () =>
           )
           .where(eq(fichas.plantillaId, c.var.plantilla.id))
           .groupBy(jugadores.id, fichas.plantillaId, fichas.jugadorId)
-          .orderBy(sql`${fichas.dorsal} asc nulls last`, ...porNombre, asc(jugadores.id))
+          // Los invitados solo para partidos, si no tienen asistencias registradas, no salen
+          .having(sql`${fichas.enDinamica} or count(${asistencias.estado}) > 0`)
+          .orderBy(
+            asc(fichas.tipo),
+            sql`${fichas.dorsal} asc nulls last`,
+            ...porNombre,
+            asc(jugadores.id),
+          )
 
         const conPorcentaje = filas.map((f) => {
           const total = f.asiste + f.justificada + f.falta

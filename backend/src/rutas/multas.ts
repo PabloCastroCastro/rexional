@@ -318,9 +318,16 @@ async function buscarMulta(plantillaId: string, multaId: string) {
   return multa
 }
 
-async function exigirFicha(plantillaId: string, jugadorId: string, estado: 400 | 404) {
+// Con enDinamica, además, que no sea un invitado solo para partidos (GH-187): para poner multas,
+// no para cobrar las que ya tiene
+async function exigirFicha(
+  plantillaId: string,
+  jugadorId: string,
+  estado: 400 | 404,
+  { enDinamica = false } = {},
+) {
   const [ficha] = await db
-    .select({ jugadorId: fichas.jugadorId })
+    .select({ enDinamica: fichas.enDinamica })
     .from(fichas)
     .where(and(eq(fichas.plantillaId, plantillaId), eq(fichas.jugadorId, jugadorId)))
   if (!ficha) {
@@ -329,6 +336,14 @@ async function exigirFicha(plantillaId: string, jugadorId: string, estado: 400 |
       'jugador_sin_ficha',
       'jugadorId',
       'Ese jugador no tiene ficha en esta plantilla',
+    )
+  }
+  if (enDinamica && !ficha.enDinamica) {
+    throw errorCampo(
+      400,
+      'fuera_de_dinamica',
+      'jugadorId',
+      'Es un invitado solo para partidos: no tiene multas',
     )
   }
 }
@@ -363,8 +378,8 @@ const CuerpoMultaLibre = z
 export type RangoMultas = { desde?: string; hasta?: string }
 
 // Por jugador de la plantilla, lo puesto, lo pagado y lo pendiente de las multas del rango (por su
-// fecha). Salen todos los de ficha activa, aunque no tengan multas, y los dados de baja que tengan
-// alguna. Primero el que más debe.
+// fecha). Salen todos los de ficha activa, aunque no tengan multas, y los dados de baja y los
+// invitados solo para partidos que tengan alguna. Primero el que más debe.
 export async function informeMultas(plantillaId: string, { desde, hasta }: RangoMultas) {
   const pendiente = sumaCentimos(sql`${multas.fechaPago} is null`)
   const jugadoresInforme = await db
@@ -393,7 +408,7 @@ export async function informeMultas(plantillaId: string, { desde, hasta }: Rango
     )
     .where(eq(fichas.plantillaId, plantillaId))
     .groupBy(jugadores.id, fichas.plantillaId, fichas.jugadorId)
-    .having(sql`${fichas.activo} or count(${multas.id}) > 0`)
+    .having(sql`(${fichas.activo} and ${fichas.enDinamica}) or count(${multas.id}) > 0`)
     .orderBy(desc(pendiente), ...porNombre, asc(jugadores.id))
   const suma = (campo: 'totalCentimos' | 'pagadoCentimos' | 'pendienteCentimos') =>
     jugadoresInforme.reduce((total, j) => total + j[campo], 0)
@@ -478,7 +493,7 @@ export const rutasMultasJugadores = () =>
         tags: ['Multas'],
         summary: 'Poner una multa',
         description:
-          'Delegado o superior. Con `motivoId`, copia la descripción y el importe del motivo activo del catálogo (el importe se puede cambiar); con `motivo`, texto libre e importe obligatorio. La fecha, por defecto, es hoy.',
+          'Delegado o superior. Con `motivoId`, copia la descripción y el importe del motivo activo del catálogo (el importe se puede cambiar); con `motivo`, texto libre e importe obligatorio. La fecha, por defecto, es hoy. No se multa a los invitados que solo vienen a los partidos.',
         middleware: [requireRol('delegado'), sinMultas] as const,
         request: {
           params: ParamPlantilla,
@@ -498,7 +513,7 @@ export const rutasMultasJugadores = () =>
       async (c) => {
         const datos = c.req.valid('json')
         const plantillaId = c.var.plantilla.id
-        await exigirFicha(plantillaId, datos.jugadorId, 400)
+        await exigirFicha(plantillaId, datos.jugadorId, 400, { enDinamica: true })
 
         let motivo: string
         let importe: number | undefined = datos.importeCentimos
