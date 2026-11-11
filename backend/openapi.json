@@ -2599,6 +2599,10 @@
               "null"
             ]
           },
+          "invitado": {
+            "type": "boolean",
+            "description": "Si juega en la plantilla como invitado (GH-188)"
+          },
           "motivoId": {
             "type": [
               "string",
@@ -2633,6 +2637,7 @@
           "nombre",
           "apellidos",
           "dorsal",
+          "invitado",
           "motivoId",
           "motivo",
           "importeCentimos",

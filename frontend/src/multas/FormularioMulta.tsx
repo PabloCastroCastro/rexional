@@ -137,11 +137,15 @@ function Contenido({
         error={errores.jugadorId}
       >
         <option value="">Elige el jugador</option>
-        {jugadores.data?.map((j) => (
-          <option key={j.jugadorId} value={j.jugadorId}>
-            {j.dorsal === null ? '–' : j.dorsal} · {nombreCompleto(j)}
-          </option>
-        ))}
+        {/* Los invitados solo para partidos no tienen multas (GH-188) */}
+        {jugadores.data
+          ?.filter((j) => j.enDinamica)
+          .map((j) => (
+            <option key={j.jugadorId} value={j.jugadorId}>
+              {j.dorsal === null ? '–' : j.dorsal} · {nombreCompleto(j)}
+              {j.tipo === 'invitado' && ' (invitado)'}
+            </option>
+          ))}
       </Selector>
 
       <Selector

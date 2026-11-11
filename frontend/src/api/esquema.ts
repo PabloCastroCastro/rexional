@@ -8117,6 +8117,8 @@ export interface components {
             nombre: string;
             apellidos: string | null;
             dorsal: number | null;
+            /** @description Si juega en la plantilla como invitado (GH-188) */
+            invitado: boolean;
             /**
              * Format: uuid
              * @description null si es un motivo libre

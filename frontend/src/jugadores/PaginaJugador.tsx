@@ -10,11 +10,13 @@ import { euros, useMultas } from '../multas/datos'
 import { resumenEstadisticas, useEstadisticas, useTrayectoriaEstadisticas } from '../partidos/datos'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
 import { useBajaYReactivacion } from './acciones'
+import { MarcaInvitado } from './BuscadorInvitables'
 import {
   type JugadorPlantilla,
   nombreCompleto,
   POSICIONES,
   puedeGestionarJugadores,
+  textoInvitado,
   useTrayectoria,
 } from './datos'
 import { FormularioJugador, type ModoFormulario } from './FormularioJugador'
@@ -93,8 +95,15 @@ export function PaginaJugador() {
         <div className={estilos.texto}>
           <h1>{nombreCompleto(jugador)}</h1>
           <span className={estilos.secundario}>
-            {jugador.posicion ? POSICIONES[jugador.posicion] : 'Sin posición'}
-            {!jugador.activo && ' · De baja'}
+            {[
+              jugador.posicion ? POSICIONES[jugador.posicion] : 'Sin posición',
+              jugador.tipo === 'invitado' && textoInvitado(jugador),
+              jugador.tipo === 'invitado' &&
+                (jugador.enDinamica ? 'En la dinámica' : 'Solo partidos'),
+              !jugador.activo && 'De baja',
+            ]
+              .filter(Boolean)
+              .join(' · ')}
           </span>
         </div>
       </div>
@@ -190,6 +199,7 @@ export function PaginaJugador() {
                   <strong>
                     {f.plantilla}
                     {f.plantillaId === plantilla.id && ' (esta plantilla)'}
+                    {f.tipo === 'invitado' && <MarcaInvitado />}
                   </strong>
                   <span className={estilos.secundario}>
                     {[

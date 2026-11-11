@@ -8,9 +8,11 @@ import { Campo } from '../componentes/Campo'
 import { HojaInferior } from '../componentes/HojaInferior'
 import { Selector } from '../componentes/Selector'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
+import { BuscadorInvitables } from './BuscadorInvitables'
 import {
   CLAVE_JUGADORES,
   type JugadorClub,
+  type JugadorInvitable,
   type JugadorPlantilla,
   nombreCompleto,
   POSICIONES,
@@ -19,8 +21,9 @@ import {
 } from './datos'
 import estilos from './Jugadores.module.css'
 
-// Alta: un jugador nuevo en el club o uno que ya es del club. Edición: datos del jugador y de su
-// ficha; al reactivar con el dorsal ocupado se abre con el error para elegir otro.
+// Alta: un jugador nuevo en el club, uno que ya es del club o un invitado (GH-188): de otra plantilla
+// del club o de fuera, con su procedencia. Edición: datos del jugador y de su ficha; al reactivar con
+// el dorsal ocupado se abre con el error para elegir otro.
 export type ModoFormulario =
   | { tipo: 'alta' }
   | { tipo: 'editar'; jugador: JugadorPlantilla; reactivar?: boolean; errorDorsal?: string }
@@ -51,8 +54,13 @@ function Contenido({ modo, alCerrar }: { modo: ModoFormulario; alCerrar: () => v
   const { avisar } = useAvisos()
   const editando = modo.tipo === 'editar' ? modo.jugador : null
 
-  const [origen, setOrigen] = useState<'nuevo' | 'club'>('nuevo')
+  const [origen, setOrigen] = useState<'nuevo' | 'club' | 'invitado'>('nuevo')
   const [elegido, setElegido] = useState<JugadorClub | null>(null)
+  const [invitado, setInvitado] = useState<JugadorInvitable | null>(null)
+  // Invitado que no es del club: alta rápida con su procedencia
+  const [deFuera, setDeFuera] = useState(false)
+  const [procedencia, setProcedencia] = useState('')
+  const [enDinamica, setEnDinamica] = useState(editando?.enDinamica ?? false)
   const [nombre, setNombre] = useState(editando?.nombre ?? '')
   const [apellidos, setApellidos] = useState(editando?.apellidos ?? '')
   const [dorsal, setDorsal] = useState(editando?.dorsal?.toString() ?? '')
@@ -75,6 +83,8 @@ function Contenido({ modo, alCerrar }: { modo: ModoFormulario; alCerrar: () => v
                 apellidos: apellidos.trim() || null,
               }),
               ...(modo.tipo === 'editar' && modo.reactivar && { activo: true }),
+              ...(editando.tipo === 'invitado' &&
+                enDinamica !== editando.enDinamica && { enDinamica }),
             },
           }),
         )
@@ -83,9 +93,20 @@ function Contenido({ modo, alCerrar }: { modo: ModoFormulario; alCerrar: () => v
         api.POST('/api/plantillas/{id}/jugadores', {
           params: { path: { id: plantilla.id } },
           body:
-            origen === 'club' && elegido
-              ? { jugadorId: elegido.id, ...ficha }
-              : { nombre: nombre.trim(), apellidos: apellidos.trim() || null, ...ficha },
+            origen === 'invitado'
+              ? invitado
+                ? { invitado: true, jugadorId: invitado.jugadorId, enDinamica, ...ficha }
+                : {
+                    invitado: true,
+                    nombre: nombre.trim(),
+                    apellidos: apellidos.trim() || null,
+                    procedencia: procedencia.trim(),
+                    enDinamica,
+                    ...ficha,
+                  }
+              : origen === 'club' && elegido
+                ? { jugadorId: elegido.id, ...ficha }
+                : { nombre: nombre.trim(), apellidos: apellidos.trim() || null, ...ficha },
         }),
       )
     },
@@ -117,11 +138,29 @@ function Contenido({ modo, alCerrar }: { modo: ModoFormulario; alCerrar: () => v
       setErrores({ general: 'Elige un jugador del club' })
       return
     }
+    if (origen === 'invitado' && !editando && !invitado && !deFuera) {
+      setErrores({ general: 'Elige un jugador de otra plantilla o da de alta a alguien de fuera' })
+      return
+    }
+    if (origen === 'invitado' && deFuera && !procedencia.trim()) {
+      setErrores({ procedencia: 'Indica de dónde viene' })
+      return
+    }
     guardar.mutate()
   }
 
-  const pidiendoNombre = editando !== null || origen === 'nuevo'
-  const pidiendoFicha = pidiendoNombre || elegido !== null
+  const cambiarOrigen = (nuevo: typeof origen) => {
+    setOrigen(nuevo)
+    setErrores({})
+  }
+
+  const pidiendoNombre =
+    editando !== null || origen === 'nuevo' || (origen === 'invitado' && deFuera)
+  const pidiendoFicha =
+    pidiendoNombre ||
+    (origen === 'club' && elegido !== null) ||
+    (origen === 'invitado' && invitado !== null)
+  const esInvitado = editando ? editando.tipo === 'invitado' : origen === 'invitado'
 
   return (
     <form className={estilos.formulario} onSubmit={enviarFormulario} noValidate>
@@ -131,24 +170,48 @@ function Contenido({ modo, alCerrar }: { modo: ModoFormulario; alCerrar: () => v
           <button
             type="button"
             aria-pressed={origen === 'nuevo'}
-            onClick={() => {
-              setOrigen('nuevo')
-              setErrores({})
-            }}
+            onClick={() => cambiarOrigen('nuevo')}
           >
             Nuevo en el club
           </button>
           <button
             type="button"
             aria-pressed={origen === 'club'}
-            onClick={() => {
-              setOrigen('club')
-              setErrores({})
-            }}
+            onClick={() => cambiarOrigen('club')}
           >
             Ya es del club
           </button>
+          <button
+            type="button"
+            aria-pressed={origen === 'invitado'}
+            onClick={() => cambiarOrigen('invitado')}
+          >
+            Invitado
+          </button>
         </fieldset>
+      )}
+
+      {!editando && origen === 'invitado' && !deFuera && (
+        <>
+          {invitado ? (
+            <div className={estilos.elegido}>
+              <span>
+                <strong>{nombreCompleto(invitado)}</strong>
+                <span className={estilos.secundario}>{invitado.plantilla}</span>
+              </span>
+              <Boton variante="texto" onClick={() => setInvitado(null)}>
+                Cambiar
+              </Boton>
+            </div>
+          ) : (
+            <BuscadorInvitables plantillaId={plantilla.id} alElegir={setInvitado} />
+          )}
+          {!invitado && (
+            <Boton variante="texto" onClick={() => setDeFuera(true)}>
+              Es de fuera del club
+            </Boton>
+          )}
+        </>
       )}
 
       {pidiendoNombre ? (
@@ -174,7 +237,7 @@ function Contenido({ modo, alCerrar }: { modo: ModoFormulario; alCerrar: () => v
               : 'Opcionales.'
           }
         />
-      ) : elegido ? (
+      ) : origen !== 'club' ? null : elegido ? (
         <div className={estilos.elegido}>
           <span>
             <strong>{nombreCompleto(elegido)}</strong>
@@ -188,6 +251,49 @@ function Contenido({ modo, alCerrar }: { modo: ModoFormulario; alCerrar: () => v
         <BuscadorClub temporada={plantilla.temporada} alElegir={setElegido} />
       )}
 
+      {!editando && origen === 'invitado' && deFuera && (
+        <>
+          <Campo
+            etiqueta="Procedencia"
+            required
+            autoComplete="off"
+            value={procedencia}
+            onChange={(e) => setProcedencia(e.target.value)}
+            error={errores.procedencia}
+            ayuda="De dónde viene: un club asociado, a prueba…"
+          />
+          <div className={estilos.atajos}>
+            <Boton variante="secundario" onClick={() => setProcedencia('A prueba')}>
+              A prueba
+            </Boton>
+            <Boton variante="secundario" onClick={() => setProcedencia('Club asociado: ')}>
+              Club asociado
+            </Boton>
+            <Boton variante="texto" onClick={() => setDeFuera(false)}>
+              Buscar en el club
+            </Boton>
+          </div>
+        </>
+      )}
+
+      {pidiendoFicha && esInvitado && (
+        <label className={estilos.interruptor}>
+          <input
+            type="checkbox"
+            role="switch"
+            aria-checked={enDinamica}
+            checked={enDinamica}
+            onChange={(e) => setEnDinamica(e.target.checked)}
+          />
+          <span>
+            En la dinámica del equipo
+            <span className={estilos.secundario}>
+              Apagado: solo partidos. Encendido: también entrenos y multas.
+            </span>
+          </span>
+        </label>
+      )}
+
       {pidiendoFicha && (
         <div className={estilos.dosColumnas}>
           <Campo
@@ -199,7 +305,7 @@ function Contenido({ modo, alCerrar }: { modo: ModoFormulario; alCerrar: () => v
             value={dorsal}
             onChange={(e) => setDorsal(e.target.value)}
             error={errores.dorsal}
-            ayuda="Opcional, de 0 a 99"
+            ayuda={esInvitado ? 'Opcional; puede coincidir con otro' : 'Opcional, de 0 a 99'}
           />
           <Selector
             etiqueta="Posición"

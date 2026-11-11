@@ -245,6 +245,9 @@ const EsquemaMulta = z
     nombre: z.string(),
     apellidos: z.string().nullable(),
     dorsal: z.number().int().nullable(),
+    invitado: z
+      .boolean()
+      .openapi({ description: 'Si juega en la plantilla como invitado (GH-188)' }),
     motivoId: z.uuid().nullable().openapi({ description: 'null si es un motivo libre' }),
     motivo: z.string().openapi({ example: 'Llegar tarde al entreno' }),
     importeCentimos: z.int().openapi({ example: 200 }),
@@ -277,6 +280,7 @@ const columnasMulta = {
   nombre: jugadores.nombre,
   apellidos: jugadores.apellidos,
   dorsal: fichas.dorsal,
+  invitado: sql<boolean>`${fichas.tipo} = 'invitado'`,
   motivoId: multas.motivoId,
   motivo: multas.motivo,
   importeCentimos: multas.importeCentimos,

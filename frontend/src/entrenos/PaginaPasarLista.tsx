@@ -23,6 +23,7 @@ import { Cargando } from '../componentes/Cargando'
 import { useConfirmacion } from '../componentes/Confirmacion'
 import { EstadoVacio } from '../componentes/EstadoVacio'
 import { HojaInferior } from '../componentes/HojaInferior'
+import { MarcaInvitado } from '../jugadores/BuscadorInvitables'
 import { nombreCompleto, puedeGestionarJugadores } from '../jugadores/datos'
 import { Dorsal } from '../jugadores/PaginaPlantilla'
 import { resumenPlan } from '../planificacion/datos'
@@ -486,6 +487,7 @@ function Lista({ entreno }: { entreno: Entreno }) {
                 <Dorsal dorsal={j.dorsal} />
                 <span className={estilos.nombre}>
                   {nombreCompleto(j)}
+                  {j.tipo === 'invitado' && <MarcaInvitado />}
                   {!j.activo && <span className={estilos.baja}> baja</span>}
                 </span>
                 <fieldset className={estilos.estados}>
