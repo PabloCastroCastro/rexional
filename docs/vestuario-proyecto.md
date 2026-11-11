@@ -663,13 +663,15 @@ Prefijo `/api`. JSON. Todas las rutas de la plantilla cuelgan de `/plantillas`, 
 | | `PATCH /clubes/:cid` (nombre, colores) · `PUT /clubes/:cid/escudo` (multipart) | Administrador del club |
 | | `GET /clubes/:cid/jugadores?q=` (jugadores del club, para añadirlos a una plantilla) | Delegado en alguna plantilla del club |
 | | `GET /clubes/:cid/jugadores/:jid` (ficha y trayectoria por temporadas) | Delegado en alguna plantilla del club (jugador: solo la suya) |
+| | `POST /clubes/:cid/ficha-federacion` (lee la ficha del equipo en PDF y empareja sus jugadores con los del club, sin guardar nada; GH-197) | Delegado en alguna plantilla del club |
 | | `GET/POST /clubes/:cid/admins` · `DELETE /clubes/:cid/admins/:uid` (nunca el último) | Administrador del club |
 | Plantillas | `GET /plantillas?club=` (las mías con su club y mi rol efectivo, por club y temporada; el administrador del club ve todas las de su club) | Autenticado |
-| | `POST /plantillas` (`clubId`, nombre, categoría, temporada y plantilla anterior opcional) | Administrador del club indicado |
+| | `POST /plantillas` (`clubId`, nombre, categoría, temporada, plantilla anterior opcional y `jugadores` opcional: del club o nuevos, con ficha propia; todos o ninguno) | Administrador del club indicado |
 | | `GET /plantillas/:id` · `PATCH /plantillas/:id` (nombre, categoría) | Miembro · Entrenador |
 | | `DELETE /plantillas/:id` (con confirmación del nombre; borra también sus datos) | Administrador del club |
 | Jugadores | `GET /plantillas/:id/jugadores?activos=` (fichas con los datos del jugador) | Miembro (jugador: asistencia y deuda solo suyas) |
 | | `POST /plantillas/:id/jugadores` (jugador nuevo o `jugador_id` existente del club) · `PATCH /plantillas/:id/jugadores/:jid` | Delegado |
+| | `POST /plantillas/:id/jugadores/lote` (varios con ficha propia, sin dorsal; todos o ninguno; GH-197) | Delegado |
 | Entrenos | `GET /plantillas/:id/horario` | Miembro |
 | | `PUT /plantillas/:id/horario` (crea y rehace sus entrenos) · `DELETE /plantillas/:id/horario` | Delegado |
 | | `GET /plantillas/:id/entrenos?desde=&hasta=` (con recuentos por estado) | Miembro |

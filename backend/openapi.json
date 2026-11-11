@@ -520,6 +520,178 @@
           "fichas"
         ]
       },
+      "FichaEquipoLeida": {
+        "type": "object",
+        "properties": {
+          "equipo": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "Sofan S.D. \"B\""
+          },
+          "categoria": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "2ª Futgal"
+          },
+          "jugadores": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "ficha": {
+                  "type": "string",
+                  "description": "Como sale en la ficha, con las tildes arregladas",
+                  "example": "FERNÁNDEZ CASTRO, IVÁN"
+                },
+                "nombre": {
+                  "type": "string",
+                  "example": "Iván"
+                },
+                "apellidos": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "example": "Fernández Castro"
+                },
+                "funcion": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Tipo de licencia del jugador o función en el cuerpo técnico",
+                  "example": "Aficionado"
+                },
+                "jugadorId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "El jugador del club que parece ser; null si no hay uno claro"
+                }
+              },
+              "required": [
+                "ficha",
+                "nombre",
+                "apellidos",
+                "funcion",
+                "jugadorId"
+              ]
+            }
+          },
+          "cuerpoTecnico": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "ficha": {
+                  "type": "string",
+                  "description": "Como sale en la ficha, con las tildes arregladas",
+                  "example": "FERNÁNDEZ CASTRO, IVÁN"
+                },
+                "nombre": {
+                  "type": "string",
+                  "example": "Iván"
+                },
+                "apellidos": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "example": "Fernández Castro"
+                },
+                "funcion": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Tipo de licencia del jugador o función en el cuerpo técnico",
+                  "example": "Aficionado"
+                }
+              },
+              "required": [
+                "ficha",
+                "nombre",
+                "apellidos",
+                "funcion"
+              ]
+            },
+            "description": "Técnicos, delegados y auxiliares; solo informativo"
+          },
+          "club": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "nombre": {
+                  "type": "string"
+                },
+                "apellidos": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "fichas": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "plantillaId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "plantilla": {
+                        "type": "string"
+                      },
+                      "temporada": {
+                        "type": "string"
+                      },
+                      "tipo": {
+                        "type": "string",
+                        "enum": [
+                          "propia",
+                          "invitado"
+                        ],
+                        "description": "`propia`: es de la plantilla; `invitado`: juega con ella sin dejar la suya"
+                      }
+                    },
+                    "required": [
+                      "plantillaId",
+                      "plantilla",
+                      "temporada",
+                      "tipo"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "id",
+                "nombre",
+                "apellidos",
+                "fichas"
+              ]
+            },
+            "description": "Los jugadores del club con sus fichas, para saber en la vista previa si ya están en la plantilla o tienen ficha propia en otra la temporada elegida, y para emparejar a mano"
+          }
+        },
+        "required": [
+          "equipo",
+          "categoria",
+          "jugadores",
+          "cuerpoTecnico",
+          "club"
+        ]
+      },
       "Invitacion": {
         "type": "object",
         "properties": {
@@ -3594,6 +3766,52 @@
                       "null"
                     ],
                     "format": "uuid"
+                  },
+                  "jugadores": {
+                    "type": "array",
+                    "items": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "jugadorId": {
+                              "type": "string",
+                              "format": "uuid"
+                            }
+                          },
+                          "required": [
+                            "jugadorId"
+                          ],
+                          "additionalProperties": false,
+                          "title": "Jugador del club"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "nombre": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 80
+                            },
+                            "apellidos": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "minLength": 1,
+                              "maxLength": 80
+                            }
+                          },
+                          "required": [
+                            "nombre"
+                          ],
+                          "additionalProperties": false,
+                          "title": "Jugador nuevo en el club"
+                        }
+                      ]
+                    },
+                    "maxItems": 80,
+                    "description": "Jugadores con ficha propia desde el principio (de la ficha de la federación, GH-197): del club o nuevos. Si alguno ya tiene ficha propia esa temporada, no se crea nada."
                   }
                 },
                 "required": [
@@ -4657,6 +4875,248 @@
           },
           "404": {
             "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/clubes/{cid}/ficha-federacion": {
+      "post": {
+        "tags": [
+          "Plantillas"
+        ],
+        "summary": "Leer la ficha del equipo de la federación",
+        "description": "Delegado o superior en alguna plantilla del club. La ficha del equipo en PDF de la Federación Gallega (como mucho 2 MB), en el campo `archivo`. Devuelve el equipo, la categoría, los jugadores emparejados con los del club y el cuerpo técnico, sin crear nada; el PDF no se guarda. Para crear la plantilla con sus jugadores, `POST /plantillas` con `jugadores`; para añadirlos a una que ya existe, `POST /plantillas/{id}/jugadores/lote`.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "cid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "archivo": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ficha leída",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FichaEquipoLeida"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "No es un PDF o no es la ficha de un equipo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Pasa de 2 MB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/jugadores/lote": {
+      "post": {
+        "tags": [
+          "Jugadores"
+        ],
+        "summary": "Añadir varios jugadores a la plantilla",
+        "description": "Delegado o superior. Con ficha propia y sin dorsal ni posición, como al importar la ficha de la federación (GH-197): jugadores del club (`jugadorId`) o nuevos (`nombre` y `apellidos`). Todos o ninguno: si alguno ya está en la plantilla o tiene ficha propia en otra esa temporada, no se añade nadie.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "jugadores": {
+                    "type": "array",
+                    "items": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "jugadorId": {
+                              "type": "string",
+                              "format": "uuid"
+                            }
+                          },
+                          "required": [
+                            "jugadorId"
+                          ],
+                          "additionalProperties": false,
+                          "title": "Jugador del club"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "nombre": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 80
+                            },
+                            "apellidos": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "minLength": 1,
+                              "maxLength": 80
+                            }
+                          },
+                          "required": [
+                            "nombre"
+                          ],
+                          "additionalProperties": false,
+                          "title": "Jugador nuevo en el club"
+                        }
+                      ]
+                    },
+                    "maxItems": 80
+                  }
+                },
+                "required": [
+                  "jugadores"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Los jugadores añadidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/JugadorPlantilla"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Alguno ya tiene ficha en la temporada",
             "content": {
               "application/json": {
                 "schema": {

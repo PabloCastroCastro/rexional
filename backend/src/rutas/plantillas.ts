@@ -7,6 +7,7 @@ import { ErrorApi, EsquemaError, validacionFallida } from '../errores.js'
 import { borrarCarpeta, carpetaDePlantilla } from '../medios/almacen.js'
 import { type EnvPlantilla, type Rol, requireRol, requireSesion } from '../permisos.js'
 import { EsquemaTemporada, EsquemaTexto, EsquemaUuid, restriccionViolada } from '../validacion.js'
+import { altaEnLote, EsquemaJugadoresLote, errorDeLote } from './fichaEquipo.js'
 
 // Plantillas: una categoría del club en una temporada (secciones 2.1 y 7). Todas sus rutas cuelgan de
 // /plantillas; al crearla, el club va en el cuerpo.
@@ -159,6 +160,10 @@ export const rutasPlantillas = () =>
                   categoria: EsquemaTexto('La categoría'),
                   temporada: EsquemaTemporada,
                   plantillaAnteriorId: EsquemaUuid.nullable().optional(),
+                  jugadores: EsquemaJugadoresLote.optional().openapi({
+                    description:
+                      'Jugadores con ficha propia desde el principio (de la ficha de la federación, GH-197): del club o nuevos. Si alguno ya tiene ficha propia esa temporada, no se crea nada.',
+                  }),
                 }),
               },
             },
@@ -172,7 +177,7 @@ export const rutasPlantillas = () =>
         },
       }),
       async (c) => {
-        const datos = c.req.valid('json')
+        const { jugadores, ...datos } = c.req.valid('json')
         const usuarioId = c.var.usuario.id
 
         const [club] = await db
@@ -218,7 +223,7 @@ export const rutasPlantillas = () =>
         }
 
         try {
-          // La plantilla y su catálogo de multas, en la misma transacción
+          // La plantilla, su catálogo de multas y sus jugadores, en la misma transacción
           const plantilla = await db.transaction(async (tx) => {
             const [creada] = await tx
               .insert(plantillas)
@@ -231,6 +236,7 @@ export const rutasPlantillas = () =>
               .returning(columnasPlantilla)
             if (!creada) throw new Error('No se pudo crear la plantilla')
             await crearCatalogo(tx, creada.id, creada.plantillaAnteriorId)
+            if (jugadores?.length) await altaEnLote(tx, creada, jugadores)
             return creada
           })
           return c.json({ ...plantilla, rol: 'admin' as const, esAdminClub: true }, 201)
@@ -238,7 +244,7 @@ export const rutasPlantillas = () =>
           if (restriccionViolada(error) === 'plantillas_nombre_unico') {
             throw plantillaDuplicada(datos.nombre, datos.temporada)
           }
-          throw error
+          throw errorDeLote(error)
         }
       },
     )
