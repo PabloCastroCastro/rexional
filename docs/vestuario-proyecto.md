@@ -404,10 +404,13 @@ La participación de un jugador en una plantilla (una temporada).
 | plantilla_id | uuid → plantillas | PK compuesta, cascade |
 | jugador_id | uuid → jugadores | PK compuesta, cascade |
 | club_id | uuid | Garantiza que jugador y plantilla son del mismo club, con las FK compuestas `(plantilla_id, club_id, temporada) → plantillas` y `(jugador_id, club_id) → jugadores` |
-| temporada | text | Copia de la temporada de la plantilla, garantizada por la FK compuesta. Único `(jugador_id, temporada)`: una ficha por temporada |
-| dorsal | smallint | 0–99, nullable. Único por plantilla entre activos (índice parcial) |
+| temporada | text | Copia de la temporada de la plantilla, garantizada por la FK compuesta. Único `(jugador_id, temporada)` entre las propias (índice parcial): una ficha propia por temporada |
+| dorsal | smallint | 0–99, nullable. Único por plantilla entre las propias activas (índice parcial) |
 | posicion | enum `portero, defensa, centrocampista, delantero` | nullable |
 | activo | boolean | por defecto true (baja lógica) |
+| tipo | enum `propia, invitado` | por defecto `propia`. Invitado: juega con la plantilla sin dejar la suya (GH-187) |
+| en_dinamica | boolean | por defecto true; siempre true en las propias (check). En un invitado, false si solo viene a los partidos: no sale en los entrenos ni tiene multas, y lo que ya tenía se conserva |
+| procedencia | text | nullable, solo en invitados: de dónde viene si no tiene ficha propia en el club esa temporada («Club asociado: X», «A prueba»). Si la tiene, la procedencia es esa plantilla y no se guarda |
 | created_at | timestamptz | |
 
 ### entrenos

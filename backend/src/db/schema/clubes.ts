@@ -23,6 +23,9 @@ export const rol = pgEnum('rol', ['admin', 'entrenador', 'delegado', 'jugador'])
 
 export const posicion = pgEnum('posicion', ['portero', 'defensa', 'centrocampista', 'delantero'])
 
+// Propia: el jugador es de la plantilla. Invitado: juega con ella sin dejar la suya (GH-187)
+export const tipoFicha = pgEnum('tipo_ficha', ['propia', 'invitado'])
+
 const noVacio = (columna: AnyPgColumn): SQL => sql`btrim(${columna}) <> ''`
 
 const colorHex = (columna: AnyPgColumn): SQL => sql`${columna} ~ '^#[0-9a-fA-F]{6}$'`
@@ -156,6 +159,12 @@ export const fichas = pgTable(
     dorsal: smallint('dorsal'),
     posicion: posicion('posicion'),
     activo: boolean('activo').notNull().default(true),
+    tipo: tipoFicha('tipo').notNull().default('propia'),
+    // Entrenos y multas: apagado, el invitado solo viene a los partidos. Las propias, siempre
+    enDinamica: boolean('en_dinamica').notNull().default(true),
+    // Del invitado que no tiene ficha propia en el club esa temporada («Club asociado: X», «A
+    // prueba»). Si la tiene, la procedencia es esa plantilla y no se guarda
+    procedencia: text('procedencia'),
     createdAt: creadoEn(),
   },
   (t) => [
@@ -171,10 +180,19 @@ export const fichas = pgTable(
       columns: [t.jugadorId, t.clubId],
       foreignColumns: [jugadores.id, jugadores.clubId],
     }).onDelete('cascade'),
-    unique('fichas_una_por_temporada').on(t.jugadorId, t.temporada),
+    // Una ficha propia por temporada; de invitado, las que haga falta
+    uniqueIndex('fichas_una_propia_por_temporada')
+      .on(t.jugadorId, t.temporada)
+      .where(sql`${t.tipo} = 'propia'`),
     uniqueIndex('fichas_dorsal_unico_activos')
       .on(t.plantillaId, t.dorsal)
-      .where(sql`${t.activo} AND ${t.dorsal} IS NOT NULL`),
+      .where(sql`${t.activo} AND ${t.dorsal} IS NOT NULL AND ${t.tipo} = 'propia'`),
+    index('fichas_jugador_temporada_idx').on(t.jugadorId, t.temporada),
     check('fichas_dorsal_rango', sql`${t.dorsal} BETWEEN 0 AND 99`),
+    check('fichas_propia_en_dinamica', sql`${t.tipo} = 'invitado' OR ${t.enDinamica}`),
+    check(
+      'fichas_procedencia_invitado',
+      sql`${t.procedencia} IS NULL OR (${t.tipo} = 'invitado' AND ${noVacio(t.procedencia)})`,
+    ),
   ],
 )

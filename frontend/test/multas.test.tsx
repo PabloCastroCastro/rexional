@@ -31,8 +31,21 @@ const JUGADORES: JugadorPlantilla[] = [
     dorsal: 1,
     posicion: null,
     activo: true,
+    tipo: 'propia',
+    enDinamica: true,
+    procedencia: null,
   },
-  { jugadorId: 'j2', nombre: 'Zoe', apellidos: null, dorsal: 7, posicion: null, activo: true },
+  {
+    jugadorId: 'j2',
+    nombre: 'Zoe',
+    apellidos: null,
+    dorsal: 7,
+    posicion: null,
+    activo: true,
+    tipo: 'propia',
+    enDinamica: true,
+    procedencia: null,
+  },
 ]
 
 const motivo = (

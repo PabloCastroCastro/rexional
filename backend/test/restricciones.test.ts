@@ -174,7 +174,7 @@ describe('fichas', () => {
           temporada: '2026-27',
         }),
       )
-      expect(r).toBe('fichas_una_por_temporada')
+      expect(r).toBe('fichas_una_propia_por_temporada')
     }))
 
   it('rechaza un jugador de otro club, declare el club que declare', () =>

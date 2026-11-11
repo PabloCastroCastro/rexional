@@ -36,6 +36,8 @@ const jugador = (
   dorsal,
   posicion: null,
   activo: true,
+  tipo: 'propia',
+  procedencia: null,
   estado: null,
   motivo: null,
   ...extra,

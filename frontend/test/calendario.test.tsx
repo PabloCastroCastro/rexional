@@ -52,6 +52,8 @@ const detalle = (r: ResumenEntreno): Entreno => ({
       dorsal: 1,
       posicion: null,
       activo: true,
+      tipo: 'propia',
+      procedencia: null,
       estado: null,
       motivo: null,
     },

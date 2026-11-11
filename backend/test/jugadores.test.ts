@@ -387,6 +387,9 @@ describe('jugadores del club', () => {
           dorsal: 8,
           posicion: 'centrocampista',
           activo: true,
+          tipo: 'propia',
+          enDinamica: true,
+          procedencia: null,
         },
         {
           plantillaId: ids.seniorAnterior,
@@ -396,6 +399,9 @@ describe('jugadores del club', () => {
           dorsal: 9,
           posicion: 'centrocampista',
           activo: true,
+          tipo: 'propia',
+          enDinamica: true,
+          procedencia: null,
         },
       ],
     })

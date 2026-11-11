@@ -9,6 +9,7 @@ import {
   gte,
   inArray,
   lt,
+  ne,
   notInArray,
   or,
   sql,
@@ -39,7 +40,7 @@ import {
   EsquemaUuid,
   restriccionViolada,
 } from '../validacion.js'
-import { EsquemaPosicion, porNombre } from './jugadores.js'
+import { EsquemaPosicion, EsquemaTipoFicha, porNombre, procedenciaFicha } from './jugadores.js'
 
 // Partidos y convocatorias (secciones 2.4 y 7). La convocatoria, el resultado y lo que pasa en el
 // partido son información del equipo: lo ve cualquier miembro. Convocar exige ficha activa en la plantilla; quien ya estaba convocado y causa
@@ -92,6 +93,11 @@ const EsquemaJugadorConvocatoria = z
     dorsal: z.number().int().nullable(),
     posicion: EsquemaPosicion.nullable(),
     activo: z.boolean(),
+    tipo: EsquemaTipoFicha,
+    procedencia: z
+      .string()
+      .nullable()
+      .openapi({ description: 'De los invitados, de dónde vienen', example: 'Juvenil A' }),
     convocado: z.boolean(),
     titular: z
       .boolean()
@@ -162,6 +168,45 @@ export async function buscarPartido(plantillaId: string, partidoId: string) {
   return partido
 }
 
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0]
+
+// Ficha de invitado, solo para partidos, a quien no tiene ficha en la plantilla pero sí ficha
+// propia activa en otra del club esa temporada (GH-187). Al convocarlo o al confirmar el acta
+export async function crearFichasInvitado(
+  tx: Tx,
+  plantilla: { id: string; clubId: string; temporada: string },
+  jugadorIds: string[],
+) {
+  if (jugadorIds.length === 0) return
+  const invitables = await tx
+    .select({ jugadorId: fichas.jugadorId })
+    .from(fichas)
+    .where(
+      and(
+        inArray(fichas.jugadorId, jugadorIds),
+        eq(fichas.clubId, plantilla.clubId),
+        eq(fichas.temporada, plantilla.temporada),
+        eq(fichas.tipo, 'propia'),
+        eq(fichas.activo, true),
+        ne(fichas.plantillaId, plantilla.id),
+      ),
+    )
+  if (invitables.length === 0) return
+  await tx
+    .insert(fichas)
+    .values(
+      invitables.map(({ jugadorId }) => ({
+        plantillaId: plantilla.id,
+        jugadorId,
+        clubId: plantilla.clubId,
+        temporada: plantilla.temporada,
+        tipo: 'invitado' as const,
+        enDinamica: false,
+      })),
+    )
+    .onConflictDoNothing()
+}
+
 // El partido, la lista para convocar (los activos y los de baja que ya estaban convocados) con la
 // participación de cada uno, y los eventos
 export async function detallePartido(plantillaId: string, partidoId: string) {
@@ -174,6 +219,8 @@ export async function detallePartido(plantillaId: string, partidoId: string) {
       dorsal: fichas.dorsal,
       posicion: fichas.posicion,
       activo: fichas.activo,
+      tipo: fichas.tipo,
+      procedencia: procedenciaFicha,
       convocado: sql<boolean>`${convocados.jugadorId} is not null`,
       titular: participaciones.titular,
       minutos: participaciones.minutos,
@@ -197,7 +244,12 @@ export async function detallePartido(plantillaId: string, partidoId: string) {
         or(eq(fichas.activo, true), sql`${convocados.jugadorId} is not null`),
       ),
     )
-    .orderBy(sql`${fichas.dorsal} asc nulls last`, ...porNombre, asc(jugadores.id))
+    .orderBy(
+      asc(fichas.tipo),
+      sql`${fichas.dorsal} asc nulls last`,
+      ...porNombre,
+      asc(jugadores.id),
+    )
   const eventos = await db
     .select({
       id: eventosPartido.id,
@@ -464,7 +516,7 @@ export const rutasPartidos = () =>
         tags: ['Partidos'],
         summary: 'Convocar',
         description:
-          'Delegado o superior. Guarda la lista completa de convocados. Cada jugador nuevo en la convocatoria debe tener ficha activa en la plantilla; quien ya estaba convocado puede seguir aunque haya causado baja. No se puede quitar a quien tiene estadísticas en el partido.',
+          'Delegado o superior. Guarda la lista completa de convocados. Cada jugador nuevo en la convocatoria debe tener ficha activa en la plantilla o ficha propia activa en otra plantilla del club esa temporada: entonces se le crea su ficha de invitado, solo para partidos (GH-187). Quien ya estaba convocado puede seguir aunque haya causado baja. No se puede quitar a quien tiene estadísticas en el partido.',
         middleware: [requireRol('delegado')] as const,
         request: {
           params: ParamPartido,
@@ -506,6 +558,7 @@ export const rutasPartidos = () =>
           if (!bloqueado) throw noEncontrado()
 
           if (lista.length > 0) {
+            await crearFichasInvitado(tx, c.var.plantilla, lista)
             const convocables = await tx
               .select({ jugadorId: fichas.jugadorId })
               .from(fichas)
@@ -524,7 +577,7 @@ export const rutasPartidos = () =>
               throw new ErrorApi(
                 400,
                 'jugador_no_convocable',
-                'Solo se convoca a jugadores con ficha activa en la plantilla',
+                'Solo se convoca a jugadores con ficha activa en la plantilla o en otra del club',
               )
             }
           }

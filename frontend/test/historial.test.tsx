@@ -75,6 +75,7 @@ const resumen = (
     nombre,
     apellidos: null,
     activo: true,
+    tipo: 'propia',
     asiste,
     justificada,
     falta,
@@ -89,6 +90,9 @@ const ficha = (jugadorId: string, nombre: string, dorsal: number): JugadorPlanti
   dorsal,
   posicion: null,
   activo: true,
+  tipo: 'propia',
+  enDinamica: true,
+  procedencia: null,
 })
 
 describe('historial de entrenos', () => {

@@ -78,6 +78,9 @@ export function PaginaJugador() {
     dorsal: ficha.dorsal,
     posicion: ficha.posicion,
     activo: ficha.activo,
+    tipo: ficha.tipo,
+    enDinamica: ficha.enDinamica,
+    procedencia: ficha.procedencia,
   }
   const gestiona = puedeGestionarJugadores(plantilla)
 
