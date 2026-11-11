@@ -520,6 +520,96 @@
           "fichas"
         ]
       },
+      "Invitacion": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string"
+          },
+          "rol": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "admin",
+              "entrenador",
+              "delegado",
+              "jugador",
+              null
+            ],
+            "description": "null en las de administrador del club"
+          },
+          "jugadorId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "jugador": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Nombre del jugador del club que se vinculará",
+            "example": "Brais"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "pendiente",
+              "caducada"
+            ]
+          },
+          "expira": {
+            "type": "string",
+            "example": "2026-11-18T12:00:00.000Z"
+          },
+          "creadaEn": {
+            "type": "string"
+          },
+          "creadaPor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Nombre de quien invitó"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "rol",
+          "jugadorId",
+          "jugador",
+          "estado",
+          "expira",
+          "creadaEn",
+          "creadaPor"
+        ]
+      },
+      "InvitacionCreada": {
+        "type": "object",
+        "properties": {
+          "invitacion": {
+            "$ref": "#/components/schemas/Invitacion"
+          },
+          "enlace": {
+            "type": "string",
+            "description": "Enlace para aceptarla. Solo se devuelve ahora: para volver a enviarlo hay que invitar de nuevo (la anterior queda revocada)",
+            "example": "https://vestuario.example/invitacion#…"
+          }
+        },
+        "required": [
+          "invitacion",
+          "enlace"
+        ]
+      },
       "Horario": {
         "type": [
           "object",
@@ -4544,6 +4634,480 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/invitaciones": {
+      "get": {
+        "tags": [
+          "Invitaciones"
+        ],
+        "summary": "Invitaciones pendientes de la plantilla",
+        "description": "Admin. Las que no se han usado ni revocado, la más reciente primero; las caducadas, con estado `caducada`. El enlace no se vuelve a mostrar.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Invitaciones",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Invitacion"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Invitaciones"
+        ],
+        "summary": "Invitar a la plantilla",
+        "description": "Admin. Invita a un email con un rol; con rol jugador se puede indicar el jugador del club (con ficha en la plantilla y sin usuario) al que se vinculará su cuenta. Devuelve el enlace, de un solo uso y válido 7 días; solo ahora. Invitar otra vez al mismo email revoca la invitación anterior.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "example": "brais@example.com"
+                  },
+                  "rol": {
+                    "type": "string",
+                    "enum": [
+                      "admin",
+                      "entrenador",
+                      "delegado",
+                      "jugador"
+                    ]
+                  },
+                  "jugadorId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid",
+                    "description": "Solo con rol jugador: jugador con ficha en la plantilla, sin usuario vinculado"
+                  }
+                },
+                "required": [
+                  "email",
+                  "rol"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Invitación creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitacionCreada"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Ya es miembro de la plantilla o el jugador ya tiene usuario",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/invitaciones/{iid}": {
+      "delete": {
+        "tags": [
+          "Invitaciones"
+        ],
+        "summary": "Revocar una invitación",
+        "description": "Admin. El enlace deja de valer. Solo las que no se han usado.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "iid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Invitación revocada"
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/clubes/{cid}/invitaciones": {
+      "get": {
+        "tags": [
+          "Invitaciones"
+        ],
+        "summary": "Invitaciones pendientes como administrador del club",
+        "description": "Solo administradores del club. Igual que las de la plantilla.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "cid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Invitaciones",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Invitacion"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Invitaciones"
+        ],
+        "summary": "Invitar como administrador del club",
+        "description": "Solo administradores del club. Devuelve el enlace, de un solo uso y válido 7 días; solo ahora. Invitar otra vez al mismo email revoca la invitación anterior.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "cid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "example": "brais@example.com"
+                  }
+                },
+                "required": [
+                  "email"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Invitación creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitacionCreada"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Ya es administrador del club",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/clubes/{cid}/invitaciones/{iid}": {
+      "delete": {
+        "tags": [
+          "Invitaciones"
+        ],
+        "summary": "Revocar una invitación como administrador del club",
+        "description": "Solo administradores del club. Solo las que no se han usado.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "cid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "iid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Invitación revocada"
           },
           "401": {
             "description": "Sin sesión",
