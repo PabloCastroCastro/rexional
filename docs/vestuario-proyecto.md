@@ -643,6 +643,8 @@ Planificación de un partido (GH-147): la charla, el plan táctico, el rival… 
 | revocada_en | timestamptz | nullable |
 | creada_por | uuid → user | |
 
+El enlace (`/invitacion#<token>`) se devuelve solo al crear la invitación y lo comparte quien invita: la app no envía correos. El token va detrás de `#` para que no llegue al servidor ni quede en los registros. Caduca a los 7 días y se usa una vez. Hay una sola invitación pendiente por email en cada plantilla (o como administrador del club): invitar de nuevo revoca la anterior. El jugador vinculado, solo con el rol jugador (GH-49).
+
 **Reglas generales:** al crear un club, su creador pasa a ser administrador del club (`admins_club`) en la misma transacción. Al crear una plantilla se crea su catálogo de multas (copiado de la plantilla anterior o el de por defecto) en la misma transacción. No hace falta crear membresía para el creador, porque como administrador del club ya es admin de la plantilla. Las garantías que no expresa una clave foránea se validan en la capa de servicio y se cubren con tests. Nunca se edita una migración ya desplegada.
 
 ---
@@ -700,7 +702,7 @@ Prefijo `/api`. JSON. Todas las rutas de la plantilla cuelgan de `/plantillas`, 
 | | `GET /plantillas/:id/multas/resumen` | Delegado |
 | Miembros | `GET /plantillas/:id/miembros` · `PATCH/DELETE /plantillas/:id/miembros/:uid` | Miembro / Admin |
 | Invitaciones | `GET/POST /plantillas/:id/invitaciones` · `DELETE /plantillas/:id/invitaciones/:iid` (revocar) | Admin |
-| | `POST /clubes/:cid/invitaciones` (como administrador del club) | Administrador del club |
+| | `GET/POST /clubes/:cid/invitaciones` · `DELETE /clubes/:cid/invitaciones/:iid` (como administrador del club) | Administrador del club |
 | | `POST /invitaciones/aceptar` | Público con token |
 
 Pasar lista y convocar se guardan como lista completa en una sola petición.

@@ -16,6 +16,8 @@ export type EventoSeguridad =
   | 'contrasena_cambiada'
   | 'sesion_cerrada'
   | 'csp_violada'
+  | 'invitacion_creada'
+  | 'invitacion_revocada'
 
 // Los que indican un problema van como aviso; el resto, como información
 const AVISOS = new Set<EventoSeguridad>([
