@@ -17,6 +17,8 @@ const fila = (
   apellidos: null,
   dorsal,
   activo: true,
+  tipo: 'propia',
+  procedencia: null,
   partidos: 0,
   titularidades: 0,
   minutos: 0,
@@ -417,5 +419,25 @@ describe('ficha del jugador', () => {
     const temporadas = screen.getByRole('region', { name: 'Temporadas en el club' })
     expect(await within(temporadas).findByText(/6 partidos · 5 goles/)).toBeInTheDocument()
     expect(temporadas).not.toHaveTextContent('0 partidos')
+  })
+})
+
+describe('invitados en las estadísticas (GH-189)', () => {
+  it('salen marcados con su procedencia', async () => {
+    conEstadisticas(senior26, {
+      ...ESTADISTICAS,
+      jugadores: [
+        ...ESTADISTICAS.jugadores,
+        fila('j9', 'Mateo', 11, {
+          tipo: 'invitado',
+          procedencia: 'Juvenil A',
+          partidos: 1,
+          minutos: 30,
+          goles: 1,
+        }),
+      ],
+    })
+    await abrirEstadisticas()
+    expect(filas('Goles')).toContainEqual(['11Dorsal 11', 'MateoInvitado · Juvenil A', '1'])
   })
 })

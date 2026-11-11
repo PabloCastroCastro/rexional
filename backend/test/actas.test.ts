@@ -357,3 +357,88 @@ describe('completar los goles del rival de los partidos ya registrados', () => {
     expect(delPartido(await completarGolesRival(db, { aplicar: true }))?.estado).toBe('ya_tenia')
   })
 })
+
+describe('jugadores de otras plantillas en el acta (GH-189)', () => {
+  it('se emparejan, se les crea la ficha de invitado y cuentan en las estadísticas', async () => {
+    const clubId = clubesCreados[0] ?? ''
+    const res = await pedir('POST', '/plantillas', 'admin', {
+      clubId,
+      nombre: 'Juvenil',
+      categoria: 'juvenil',
+      temporada: '2026-27',
+    })
+    const juvenil = (await res.json()).id as string
+    const [noel, sinJugar] = await db
+      .insert(jugadores)
+      .values([
+        { clubId, nombre: 'Noel', apellidos: 'Barreiro Núñez' },
+        { clubId, nombre: 'Brais', apellidos: 'Sin Minutos' },
+      ])
+      .returning()
+    await db.insert(fichas).values(
+      [noel, sinJugar].map((j) => ({
+        plantillaId: juvenil,
+        jugadorId: j?.id ?? '',
+        clubId,
+        temporada: '2026-27',
+        dorsal: j === noel ? 9 : 11,
+      })),
+    )
+    // Invitado sin haber jugado: no sale en las estadísticas
+    await db.insert(fichas).values({
+      plantillaId: ids.senior ?? '',
+      jugadorId: sinJugar?.id ?? '',
+      clubId,
+      temporada: '2026-27',
+      tipo: 'invitado',
+      enDinamica: false,
+    })
+
+    const pid = await crearPartido()
+    const { lectura } = (await (await subir(pid, FICHA)).json()) as { lectura: Lectura }
+    // Noel no encaja con nadie de la plantilla; sí con el del juvenil
+    const todos = [...lectura.titulares, ...lectura.suplentes]
+    expect(todos.find((j) => j.nombre === 'BARREIRO NÚÑEZ, NOEL')?.jugadorId).toBe(noel?.id)
+    expect(todos.filter((j) => j.jugadorId)).toHaveLength(16)
+
+    const confirmado = await pedir('POST', ruta(pid, '/acta/confirmar'), 'delegado', {})
+    expect(confirmado.status).toBe(200)
+    const partido = await confirmado.json()
+    expect(
+      (partido.jugadores as { jugadorId: string }[]).find((j) => j.jugadorId === noel?.id),
+    ).toMatchObject({ convocado: true, tipo: 'invitado', procedencia: 'Juvenil', minutos: 31 })
+    const [ficha] = await db
+      .select()
+      .from(fichas)
+      .where(and(eq(fichas.plantillaId, ids.senior ?? ''), eq(fichas.jugadorId, noel?.id ?? '')))
+    expect(ficha).toMatchObject({ tipo: 'invitado', enDinamica: false })
+
+    const est = await (
+      await pedir('GET', `/plantillas/${ids.senior}/estadisticas`, 'delegado')
+    ).json()
+    const filas = est.jugadores as { jugadorId: string; tipo: string; procedencia: string | null }[]
+    expect(filas.find((j) => j.jugadorId === noel?.id)).toMatchObject({
+      tipo: 'invitado',
+      procedencia: 'Juvenil',
+      partidos: 1,
+    })
+    expect(filas.at(-1)?.jugadorId).toBe(noel?.id)
+    expect(filas.some((j) => j.jugadorId === sinJugar?.id)).toBe(false)
+
+    // En su trayectoria, lo jugado como invitado con el Senior
+    const trayectoria = await (
+      await pedir('GET', `/clubes/${clubId}/jugadores/${noel?.id}/estadisticas`, 'delegado')
+    ).json()
+    expect(trayectoria.temporadas).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ plantilla: 'Senior', tipo: 'invitado', partidos: 1 }),
+        expect.objectContaining({ plantilla: 'Juvenil', tipo: 'propia', partidos: 0 }),
+      ]),
+    )
+    expect(trayectoria.totales.partidos).toBe(1)
+
+    // Y en el Excel, con la columna «Invitado»
+    const xlsx = await pedir('GET', `/plantillas/${ids.senior}/exportacion.xlsx`, 'delegado')
+    expect(xlsx.status).toBe(200)
+  })
+})

@@ -19,7 +19,12 @@ import { Boton } from '../componentes/Boton'
 import { Cargando } from '../componentes/Cargando'
 import { EstadoVacio } from '../componentes/EstadoVacio'
 import { textoFecha } from '../entrenos/datos'
-import { nombreCompleto, puedeGestionarJugadores, useJugadores } from '../jugadores/datos'
+import {
+  nombreCompleto,
+  puedeGestionarJugadores,
+  useInvitables,
+  useJugadores,
+} from '../jugadores/datos'
 import { Dorsal } from '../jugadores/PaginaPlantilla'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
 import {
@@ -141,6 +146,8 @@ export function PaginaActa() {
   const acta = useActa(plantilla.id, partidoId)
   const activos = useJugadores(plantilla.id, true)
   const bajas = useJugadores(plantilla.id, false)
+  // Jugadores de otras plantillas del club: también pueden estar en el acta (GH-189)
+  const otras = useInvitables(plantilla.id, '', true)
   const ficha = `/plantillas/${plantilla.id}/partidos/${partidoId}`
 
   const volver = (
@@ -150,11 +157,17 @@ export function PaginaActa() {
     </Link>
   )
 
-  if (partido.isPending || acta.isPending || activos.isPending || bajas.isPending) {
+  if (
+    partido.isPending ||
+    acta.isPending ||
+    activos.isPending ||
+    bajas.isPending ||
+    otras.isPending
+  ) {
     return <Cargando />
   }
-  if (partido.isError || acta.isError || activos.isError || bajas.isError) {
-    const error = partido.error ?? acta.error ?? activos.error ?? bajas.error
+  if (partido.isError || acta.isError || activos.isError || bajas.isError || otras.isError) {
+    const error = partido.error ?? acta.error ?? activos.error ?? bajas.error ?? otras.error
     return (
       <div className={estilos.pagina}>
         {volver}
@@ -181,6 +194,7 @@ export function PaginaActa() {
       partido={partido.data}
       lectura={lectura}
       jugadores={[...activos.data, ...bajas.data]}
+      otras={otras.data.map((j) => ({ ...j, dorsal: null }))}
       volver={volver}
     />
   )
@@ -193,16 +207,19 @@ const conClave = <T,>(lista: T[], prefijo: string) =>
 type Tarjeta = 'amarilla' | 'roja'
 
 type Opcion = { jugadorId: string; nombre: string; apellidos: string | null; dorsal: number | null }
+type OpcionOtra = Opcion & { plantilla: string }
 
 function Revision({
   partido,
   lectura,
   jugadores,
+  otras,
   volver,
 }: {
   partido: Partido
   lectura: LecturaActa
   jugadores: Opcion[]
+  otras: OpcionOtra[]
   volver: ReactNode
 }) {
   const plantilla = usePlantillaActiva()
@@ -218,7 +235,7 @@ function Revision({
   )
   const [error, setError] = useState<string | null>(null)
 
-  const porId = new Map(jugadores.map((j) => [j.jugadorId, j]))
+  const porId = new Map([...jugadores, ...otras].map((j) => [j.jugadorId, j]))
   // Nombre de la app del elegido para una persona del acta, o el del acta si no cuenta
   const nombreDe = (nombreActa: string) => {
     const jugador = porId.get(elegidos[nombreActa] ?? '')
@@ -277,6 +294,15 @@ function Revision({
               {j.dorsal ?? '–'} · {nombreCompleto(j)}
             </option>
           ))}
+          {otras.length > 0 && (
+            <optgroup label="De otras plantillas">
+              {otras.map((j) => (
+                <option key={j.jugadorId} value={j.jugadorId}>
+                  {nombreCompleto(j)} · {j.plantilla}
+                </option>
+              ))}
+            </optgroup>
+          )}
         </select>
       </label>
     </li>

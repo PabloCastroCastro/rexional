@@ -29,7 +29,7 @@ import {
   rolAlcanza,
 } from '../permisos.js'
 import { EsquemaUuid } from '../validacion.js'
-import { porNombre } from './jugadores.js'
+import { EsquemaTipoFicha, porNombre, procedenciaFicha } from './jugadores.js'
 import {
   buscarPartido,
   detallePartido,
@@ -106,6 +106,11 @@ const EsquemaEstadisticasJugador = z
     apellidos: z.string().nullable(),
     dorsal: z.int().nullable(),
     activo: z.boolean(),
+    tipo: EsquemaTipoFicha,
+    procedencia: z
+      .string()
+      .nullable()
+      .openapi({ description: 'De los invitados, de dónde vienen', example: 'Juvenil A' }),
     ...datosEstadisticas,
     entrenos: z.int().openapi({
       description: 'Entrenos de la plantilla a los que ha ido (solo se pasa lista hasta hoy)',
@@ -178,6 +183,7 @@ const EsquemaTrayectoria = z
         plantilla: z.string(),
         temporada: z.string(),
         dorsal: z.int().nullable(),
+        tipo: EsquemaTipoFicha,
         ...datosEstadisticas,
       }),
     ),
@@ -483,7 +489,7 @@ export const rutasEstadisticas = () =>
         tags: ['Estadísticas'],
         summary: 'Estadísticas de la temporada',
         description:
-          'Resultados del equipo y, por jugador, partidos, titularidades, minutos, goles, asistencias y tarjetas en los partidos jugados de la plantilla, los entrenos a los que ha ido y los goles a favor y en contra con él en el campo. El rol jugador solo ve su fila.',
+          'Resultados del equipo y, por jugador, partidos, titularidades, minutos, goles, asistencias y tarjetas en los partidos jugados de la plantilla, los entrenos a los que ha ido y los goles a favor y en contra con él en el campo. De los invitados, solo los que han jugado, detrás de los propios y con su procedencia. El rol jugador solo ve su fila.',
         middleware: [requireRol('jugador')] as const,
         request: { params: ParamPartido.pick({ id: true }) },
         responses: { 200: json(EsquemaEstadisticasPlantilla, 'Estadísticas'), ...errores },
@@ -534,6 +540,8 @@ export async function estadisticasDePlantilla(plantillaId: string, soloJugador?:
       apellidos: jugadores.apellidos,
       dorsal: fichas.dorsal,
       activo: fichas.activo,
+      tipo: fichas.tipo,
+      procedencia: procedenciaFicha,
       ...a.columnas,
       entrenos: sql<number>`coalesce(${asistidos.entrenos}, 0)::int`,
     })
@@ -553,9 +561,16 @@ export async function estadisticasDePlantilla(plantillaId: string, soloJugador?:
         eq(fichas.plantillaId, plantillaId),
         // Sin jugador vinculado, ninguna fila
         soloJugador === undefined ? undefined : sql`${fichas.jugadorId} = ${soloJugador}`,
+        // De los invitados, solo los que han jugado (GH-189)
+        sql`(${fichas.tipo} = 'propia' or ${a.enCampo.jugadorId} is not null or ${a.eventos.jugadorId} is not null)`,
       ),
     )
-    .orderBy(sql`${fichas.dorsal} asc nulls last`, ...porNombre, asc(jugadores.id))
+    .orderBy(
+      asc(fichas.tipo),
+      sql`${fichas.dorsal} asc nulls last`,
+      ...porNombre,
+      asc(jugadores.id),
+    )
   const { encajados, aFavor, golesPorMinuto } = await golesEnCampoDePlantilla(plantillaId)
   return {
     equipo: {
@@ -717,6 +732,7 @@ export const rutasEstadisticasClub = () =>
           plantilla: plantillas.nombre,
           temporada: plantillas.temporada,
           dorsal: fichas.dorsal,
+          tipo: fichas.tipo,
           ...a.columnas,
         })
         .from(fichas)

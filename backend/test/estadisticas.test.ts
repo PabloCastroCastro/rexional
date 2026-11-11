@@ -606,38 +606,56 @@ describe('exportación a Excel', () => {
     expect(partidosHoja.some((f) => f[5] === 'Programado')).toBe(true)
 
     expect(hoja('Eventos').slice(1)).toEqual([
-      [dia('2025-10-05'), 'Rosalía Mera', 10, 'Gol', 'J1', 1],
-      [dia('2025-10-05'), 'Rosalía Mera', 10, 'Asistencia', 'J2', 2],
-      [dia('2025-10-05'), 'Rosalía Mera', 50, 'Gol', 'J1', 1],
-      [dia('2025-10-05'), 'Rosalía Mera', 55, 'Amarilla', 'J2', 2],
-      [dia('2025-10-05'), 'Rosalía Mera', 60, 'Sale', 'J2', 2],
+      [dia('2025-10-05'), 'Rosalía Mera', 10, 'Gol', 'J1', null, 1],
+      [dia('2025-10-05'), 'Rosalía Mera', 10, 'Asistencia', 'J2', null, 2],
+      [dia('2025-10-05'), 'Rosalía Mera', 50, 'Gol', 'J1', null, 1],
+      [dia('2025-10-05'), 'Rosalía Mera', 55, 'Amarilla', 'J2', null, 2],
+      [dia('2025-10-05'), 'Rosalía Mera', 60, 'Sale', 'J2', null, 2],
       // El gol del rival, sin jugador
-      [dia('2025-10-05'), 'Rosalía Mera', 70, 'Gol del rival', null, null],
+      [dia('2025-10-05'), 'Rosalía Mera', 70, 'Gol del rival', null, null, null],
     ])
     expect(hoja('Participaciones').slice(1)).toEqual([
-      [dia('2025-10-05'), 'Rosalía Mera', 'J1', 1, 'Titular', 90],
-      [dia('2025-10-05'), 'Rosalía Mera', 'J2', 2, 'Titular', 60],
+      [dia('2025-10-05'), 'Rosalía Mera', 'J1', null, 1, 'Titular', 90],
+      [dia('2025-10-05'), 'Rosalía Mera', 'J2', null, 2, 'Titular', 60],
     ])
 
     const jugadoresHoja = hoja('Jugadores')
     expect(jugadoresHoja[0]?.slice(0, 7)).toEqual([
       'Dorsal',
       'Jugador',
+      'Invitado',
       'Baja',
       'Partidos',
       'Titularidades',
       'Minutos',
-      'Goles',
     ])
-    expect(jugadoresHoja[1]).toEqual([1, 'J1', null, 1, 1, 90, 2, 0, 0, 0, 0, 2, 2, 90, 1, 90])
+    expect(jugadoresHoja[1]).toEqual([
+      1,
+      'J1',
+      null,
+      null,
+      1,
+      1,
+      90,
+      2,
+      0,
+      0,
+      0,
+      0,
+      2,
+      2,
+      90,
+      1,
+      90,
+    ])
 
     // Sin el motivo de la ausencia
     expect(hoja('Asistencia')).toEqual([
-      ['Fecha', 'Hora', 'Jugador', 'Dorsal', 'Estado'],
-      [dia('2025-10-01'), null, 'J1', 1, 'Asiste'],
-      [dia('2025-10-01'), null, 'J2', 2, 'Asiste'],
-      [dia('2025-10-03'), null, 'J1', 1, 'Asiste'],
-      [dia('2025-10-03'), null, 'J2', 2, 'Justificada'],
+      ['Fecha', 'Hora', 'Jugador', 'Invitado', 'Dorsal', 'Estado'],
+      [dia('2025-10-01'), null, 'J1', null, 1, 'Asiste'],
+      [dia('2025-10-01'), null, 'J2', null, 2, 'Asiste'],
+      [dia('2025-10-03'), null, 'J1', null, 1, 'Asiste'],
+      [dia('2025-10-03'), null, 'J2', null, 2, 'Justificada'],
     ])
   })
 })

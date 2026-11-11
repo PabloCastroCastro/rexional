@@ -1546,6 +1546,22 @@
           "activo": {
             "type": "boolean"
           },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "propia",
+              "invitado"
+            ],
+            "description": "`propia`: es de la plantilla; `invitado`: juega con ella sin dejar la suya"
+          },
+          "procedencia": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "De los invitados, de dónde vienen",
+            "example": "Juvenil A"
+          },
           "partidos": {
             "type": "integer",
             "description": "Partidos jugados (con algún minuto)"
@@ -1599,6 +1615,8 @@
           "apellidos",
           "dorsal",
           "activo",
+          "tipo",
+          "procedencia",
           "partidos",
           "titularidades",
           "minutos",
@@ -1651,6 +1669,14 @@
                     "null"
                   ]
                 },
+                "tipo": {
+                  "type": "string",
+                  "enum": [
+                    "propia",
+                    "invitado"
+                  ],
+                  "description": "`propia`: es de la plantilla; `invitado`: juega con ella sin dejar la suya"
+                },
                 "partidos": {
                   "type": "integer",
                   "description": "Partidos jugados (con algún minuto)"
@@ -1683,6 +1709,7 @@
                 "plantilla",
                 "temporada",
                 "dorsal",
+                "tipo",
                 "partidos",
                 "titularidades",
                 "minutos",
@@ -6938,7 +6965,7 @@
           "Estadísticas"
         ],
         "summary": "Estadísticas de la temporada",
-        "description": "Resultados del equipo y, por jugador, partidos, titularidades, minutos, goles, asistencias y tarjetas en los partidos jugados de la plantilla, los entrenos a los que ha ido y los goles a favor y en contra con él en el campo. El rol jugador solo ve su fila.",
+        "description": "Resultados del equipo y, por jugador, partidos, titularidades, minutos, goles, asistencias y tarjetas en los partidos jugados de la plantilla, los entrenos a los que ha ido y los goles a favor y en contra con él en el campo. De los invitados, solo los que han jugado, detrás de los propios y con su procedencia. El rol jugador solo ve su fila.",
         "parameters": [
           {
             "schema": {
@@ -7443,7 +7470,7 @@
           "Actas"
         ],
         "summary": "Registrar el acta",
-        "description": "Delegado o superior. Con las correcciones de la revisión, registra el acta con la fuente «acta»: la convocatoria pasa a ser la del acta (se conserva a quien tiene estadísticas a mano), se guardan resultado, titulares, cambios, goles y tarjetas, y competición, lugar y hora se rellenan si estaban vacíos. Volver a confirmar sustituye lo importado antes.",
+        "description": "Delegado o superior. Con las correcciones de la revisión, registra el acta con la fuente «acta»: la convocatoria pasa a ser la del acta (se conserva a quien tiene estadísticas a mano; a los jugadores de otras plantillas del club se les crea su ficha de invitado, solo para partidos), se guardan resultado, titulares, cambios, goles y tarjetas, y competición, lugar y hora se rellenan si estaban vacíos. Volver a confirmar sustituye lo importado antes.",
         "parameters": [
           {
             "schema": {

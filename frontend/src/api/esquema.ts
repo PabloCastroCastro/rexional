@@ -3416,7 +3416,7 @@ export interface paths {
         };
         /**
          * Estadísticas de la temporada
-         * @description Resultados del equipo y, por jugador, partidos, titularidades, minutos, goles, asistencias y tarjetas en los partidos jugados de la plantilla, los entrenos a los que ha ido y los goles a favor y en contra con él en el campo. El rol jugador solo ve su fila.
+         * @description Resultados del equipo y, por jugador, partidos, titularidades, minutos, goles, asistencias y tarjetas en los partidos jugados de la plantilla, los entrenos a los que ha ido y los goles a favor y en contra con él en el campo. De los invitados, solo los que han jugado, detrás de los propios y con su procedencia. El rol jugador solo ve su fila.
          */
         get: {
             parameters: {
@@ -3890,7 +3890,7 @@ export interface paths {
         put?: never;
         /**
          * Registrar el acta
-         * @description Delegado o superior. Con las correcciones de la revisión, registra el acta con la fuente «acta»: la convocatoria pasa a ser la del acta (se conserva a quien tiene estadísticas a mano), se guardan resultado, titulares, cambios, goles y tarjetas, y competición, lugar y hora se rellenan si estaban vacíos. Volver a confirmar sustituye lo importado antes.
+         * @description Delegado o superior. Con las correcciones de la revisión, registra el acta con la fuente «acta»: la convocatoria pasa a ser la del acta (se conserva a quien tiene estadísticas a mano; a los jugadores de otras plantillas del club se les crea su ficha de invitado, solo para partidos), se guardan resultado, titulares, cambios, goles y tarjetas, y competición, lugar y hora se rellenan si estaban vacíos. Volver a confirmar sustituye lo importado antes.
          */
         post: {
             parameters: {
@@ -7863,6 +7863,16 @@ export interface components {
             apellidos: string | null;
             dorsal: number | null;
             activo: boolean;
+            /**
+             * @description `propia`: es de la plantilla; `invitado`: juega con ella sin dejar la suya
+             * @enum {string}
+             */
+            tipo: "propia" | "invitado";
+            /**
+             * @description De los invitados, de dónde vienen
+             * @example Juvenil A
+             */
+            procedencia: string | null;
             /** @description Partidos jugados (con algún minuto) */
             partidos: number;
             titularidades: number;
@@ -7895,6 +7905,11 @@ export interface components {
                 plantilla: string;
                 temporada: string;
                 dorsal: number | null;
+                /**
+                 * @description `propia`: es de la plantilla; `invitado`: juega con ella sin dejar la suya
+                 * @enum {string}
+                 */
+                tipo: "propia" | "invitado";
                 /** @description Partidos jugados (con algún minuto) */
                 partidos: number;
                 titularidades: number;
