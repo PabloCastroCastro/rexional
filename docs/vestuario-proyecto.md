@@ -2186,3 +2186,18 @@ Ampliación de GH-58 y GH-177, sin ciclo: hacerla solo si los logs de Docker y e
 - [ ] Los administradores del club ven qué ha pasado, cuándo y desde qué dispositivo con los miembros de su club, sin la IP ni datos de otros clubes
 - [ ] Ni contraseñas ni tokens; los fallos de login con un email que no existe, con su hash
 - [ ] Tests
+
+#### GH-197
+**Título:** Crear una plantilla desde la ficha de la federación
+**Etiquetas:** feature, backend, frontend
+
+Sin ciclo. Facilitar la creación de plantillas con los datos de la federación: la ficha del equipo en PDF que publica la Federación Gallega de Fútbol (club, nombre del equipo, categoría y licencias de jugadores, técnicos, delegados y auxiliares), la misma fuente que el acta y el calendario.
+
+**Criterios de aceptación**
+- [ ] Lectura de la ficha del equipo en PDF: nombre del equipo, categoría y jugadores («APELLIDOS, NOMBRE»); técnicos, delegados y auxiliares aparte. Se arreglan las tildes mal codificadas de la federación («LÃ“PEZ» → «López»; «Ã•», ambiguo, como Á) y los nombres pasan de mayúsculas a «Diego» / «Blanco Cambon». Un PDF que no es una ficha de equipo se explica y no se importa
+- [ ] En «Nueva plantilla», opción «Desde la ficha de la federación»: al subir el PDF se rellenan el nombre y la categoría (editables) y se elige la temporada; después, la vista previa de los jugadores y se crea todo junto (solo administradores del club)
+- [ ] En «Añadir jugador» de una plantilla que ya existe, una pestaña más, «Desde la federación», con la misma vista previa: para completarla o volver a importarla con licencias nuevas (delegado o superior)
+- [ ] Vista previa: cada jugador emparejado con los del club como en el acta (sin tildes ni mayúsculas): nuevo en el club (se da de alta), ya es del club (se le crea la ficha), ya está en la plantilla (se omite) o con ficha propia en otra plantilla esta temporada (se omite, con aviso). Cada fila se puede desmarcar, emparejar con otro jugador o corregir de nombre; nada se guarda hasta confirmar
+- [ ] Sin dorsal ni posición (la ficha no los trae). Los jugadores de la plantilla que no están en la ficha salen como aviso, sin tocarlos
+- [ ] Cuerpo técnico solo informativo (la ficha no trae emails): sirve para saber a quién invitar (GH-51)
+- [ ] Tests con una ficha de ejemplo
