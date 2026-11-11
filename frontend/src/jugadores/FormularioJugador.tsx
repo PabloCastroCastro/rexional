@@ -18,11 +18,21 @@ import {
   POSICIONES,
   type Posicion,
   useBuscarJugadores,
+  useJugadores,
 } from './datos'
+import {
+  type FichaLeida,
+  type FilaFicha,
+  faltaNombre,
+  filasDe,
+  jugadoresDelLote,
+  SubirFicha,
+  VistaPreviaFicha,
+} from './FichaFederacion'
 import estilos from './Jugadores.module.css'
 
-// Alta: un jugador nuevo en el club, uno que ya es del club o un invitado (GH-188): de otra plantilla
-// del club o de fuera, con su procedencia. Edición: datos del jugador y de su ficha; al reactivar con
+// Alta: un jugador nuevo en el club, uno que ya es del club, un invitado (GH-188): de otra plantilla
+// del club o de fuera, con su procedencia, o varios desde la ficha de la federación (GH-197). Edición: datos del jugador y de su ficha; al reactivar con
 // el dorsal ocupado se abre con el error para elegir otro.
 export type ModoFormulario =
   | { tipo: 'alta' }
@@ -54,7 +64,7 @@ function Contenido({ modo, alCerrar }: { modo: ModoFormulario; alCerrar: () => v
   const { avisar } = useAvisos()
   const editando = modo.tipo === 'editar' ? modo.jugador : null
 
-  const [origen, setOrigen] = useState<'nuevo' | 'club' | 'invitado'>('nuevo')
+  const [origen, setOrigen] = useState<'nuevo' | 'club' | 'invitado' | 'federacion'>('nuevo')
   const [elegido, setElegido] = useState<JugadorClub | null>(null)
   const [invitado, setInvitado] = useState<JugadorInvitable | null>(null)
   // Invitado que no es del club: alta rápida con su procedencia
@@ -162,34 +172,48 @@ function Contenido({ modo, alCerrar }: { modo: ModoFormulario; alCerrar: () => v
     (origen === 'invitado' && invitado !== null)
   const esInvitado = editando ? editando.tipo === 'invitado' : origen === 'invitado'
 
+  const segmentos = !editando && (
+    <fieldset className={estilos.segmentos}>
+      <legend className="solo-lectores">Tipo de alta</legend>
+      <button
+        type="button"
+        aria-pressed={origen === 'nuevo'}
+        onClick={() => cambiarOrigen('nuevo')}
+      >
+        Nuevo en el club
+      </button>
+      <button type="button" aria-pressed={origen === 'club'} onClick={() => cambiarOrigen('club')}>
+        Ya es del club
+      </button>
+      <button
+        type="button"
+        aria-pressed={origen === 'invitado'}
+        onClick={() => cambiarOrigen('invitado')}
+      >
+        Invitado
+      </button>
+      <button
+        type="button"
+        aria-pressed={origen === 'federacion'}
+        onClick={() => cambiarOrigen('federacion')}
+      >
+        Desde la federación
+      </button>
+    </fieldset>
+  )
+
+  if (origen === 'federacion') {
+    return (
+      <div className={estilos.formulario}>
+        {segmentos}
+        <DesdeLaFederacion alCerrar={alCerrar} />
+      </div>
+    )
+  }
+
   return (
     <form className={estilos.formulario} onSubmit={enviarFormulario} noValidate>
-      {!editando && (
-        <fieldset className={estilos.segmentos}>
-          <legend className="solo-lectores">Tipo de alta</legend>
-          <button
-            type="button"
-            aria-pressed={origen === 'nuevo'}
-            onClick={() => cambiarOrigen('nuevo')}
-          >
-            Nuevo en el club
-          </button>
-          <button
-            type="button"
-            aria-pressed={origen === 'club'}
-            onClick={() => cambiarOrigen('club')}
-          >
-            Ya es del club
-          </button>
-          <button
-            type="button"
-            aria-pressed={origen === 'invitado'}
-            onClick={() => cambiarOrigen('invitado')}
-          >
-            Invitado
-          </button>
-        </fieldset>
-      )}
+      {segmentos}
 
       {!editando && origen === 'invitado' && !deFuera && (
         <>
@@ -410,5 +434,111 @@ function BuscadorClub({
         </ul>
       )}
     </div>
+  )
+}
+
+// Desde la ficha de la federación (GH-197): para completar la plantilla o volver a importarla con
+// licencias nuevas. Los que ya están se omiten; los que tienen ficha en otra plantilla, también.
+function DesdeLaFederacion({ alCerrar }: { alCerrar: () => void }) {
+  const plantilla = usePlantillaActiva()
+  const cliente = useQueryClient()
+  const { avisar } = useAvisos()
+  const jugadores = useJugadores(plantilla.id, true)
+  const [leida, setLeida] = useState<FichaLeida | null>(null)
+  const [filas, setFilas] = useState<FilaFicha[]>([])
+  const [error, setError] = useState<string | null>(null)
+  const destino = { temporada: plantilla.temporada, plantillaId: plantilla.id }
+  const lote = leida ? jugadoresDelLote(filas, leida, destino) : []
+
+  // Los de la plantilla (con ficha propia) que no salen en la ficha
+  const enLaFicha = new Set(filas.map((f) => f.jugadorId))
+  const ausentes = (jugadores.data ?? [])
+    .filter((j) => j.tipo === 'propia' && !enLaFicha.has(j.jugadorId))
+    .map(nombreCompleto)
+
+  const anadir = useMutation({
+    mutationFn: () =>
+      datos(
+        api.POST('/api/plantillas/{id}/jugadores/lote', {
+          params: { path: { id: plantilla.id } },
+          body: { jugadores: lote },
+        }),
+      ),
+    onSuccess: async (nuevos) => {
+      await cliente.invalidateQueries({ queryKey: CLAVE_JUGADORES })
+      avisar({
+        tipo: 'exito',
+        mensaje:
+          nuevos.length === 1
+            ? '1 jugador añadido a la plantilla'
+            : `${nuevos.length} jugadores añadidos a la plantilla`,
+      })
+      alCerrar()
+    },
+    onError: (e) => setError(e instanceof Error ? e.message : 'No se han podido añadir'),
+  })
+
+  function confirmar() {
+    setError(null)
+    if (faltaNombre(filas)) {
+      setError('Escribe el nombre de todos los jugadores nuevos')
+      return
+    }
+    anadir.mutate()
+  }
+
+  return (
+    <>
+      {leida ? (
+        <p className={estilos.secundario}>
+          Ficha de <strong>{leida.equipo ?? 'equipo sin nombre'}</strong>
+          {leida.categoria && ` · ${leida.categoria}`}
+        </p>
+      ) : (
+        <p className={estilos.secundario}>
+          Sube la ficha del equipo en PDF de la Federación Gallega. Revisa los jugadores antes de
+          añadirlos: entran sin dorsal ni posición.
+        </p>
+      )}
+      <SubirFicha
+        clubId={plantilla.clubId}
+        texto={leida ? 'Elegir otro PDF' : 'Elegir el PDF'}
+        variante={leida ? 'secundario' : 'primario'}
+        alLeer={(nueva) => {
+          setLeida(nueva)
+          setFilas(filasDe(nueva))
+          setError(null)
+        }}
+      />
+      {leida && (
+        <VistaPreviaFicha
+          leida={leida}
+          filas={filas}
+          alCambiar={setFilas}
+          destino={destino}
+          ausentes={ausentes}
+        />
+      )}
+      {error && (
+        <p className={estilos.error} role="alert">
+          {error}
+        </p>
+      )}
+      <div className={estilos.acciones}>
+        <Boton variante="secundario" onClick={alCerrar}>
+          Cancelar
+        </Boton>
+        {leida && (
+          <Boton
+            cargando={anadir.isPending}
+            disabled={lote.length === 0}
+            icono={<UserPlus aria-hidden size={18} />}
+            onClick={confirmar}
+          >
+            {lote.length === 1 ? 'Añadir 1 jugador' : `Añadir ${lote.length} jugadores`}
+          </Boton>
+        )}
+      </div>
+    </>
   )
 }
