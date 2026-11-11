@@ -10,6 +10,7 @@ import { useConfirmacion } from '../componentes/Confirmacion'
 import { EstadoVacio } from '../componentes/EstadoVacio'
 import { Selector } from '../componentes/Selector'
 import { hoy, textoFecha } from '../entrenos/datos'
+import { MarcaInvitado } from '../jugadores/BuscadorInvitables'
 import { nombreCompleto, puedeGestionarJugadores, useJugadores } from '../jugadores/datos'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
 import { CLAVE_MULTAS, type EstadoMulta, euros, type Multa, useMultas } from './datos'
@@ -74,6 +75,7 @@ export function PaginaListaMultas() {
             {jugadores.data?.map((j) => (
               <option key={j.jugadorId} value={j.jugadorId}>
                 {nombreCompleto(j)}
+                {j.tipo === 'invitado' && ' (invitado)'}
               </option>
             ))}
           </Selector>
@@ -173,7 +175,10 @@ function FilaMulta({ multa, gestiona }: { multa: Multa; gestiona: boolean }) {
   return (
     <div className={estilos.fila} data-cobrada={cobrada}>
       <span className={estilos.texto}>
-        <strong>{nombre}</strong>
+        <strong>
+          {nombre}
+          {multa.invitado && <MarcaInvitado />}
+        </strong>
         <span>{multa.motivo}</span>
         <span className={estilos.secundario}>
           {textoFecha(multa.fecha)}

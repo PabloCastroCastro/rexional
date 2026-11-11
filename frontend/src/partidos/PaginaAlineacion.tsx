@@ -8,6 +8,7 @@ import { Boton } from '../componentes/Boton'
 import { Cargando } from '../componentes/Cargando'
 import { EstadoVacio } from '../componentes/EstadoVacio'
 import { textoFecha } from '../entrenos/datos'
+import { MarcaInvitado } from '../jugadores/BuscadorInvitables'
 import { nombreCompleto } from '../jugadores/datos'
 import { Dorsal } from '../jugadores/PaginaPlantilla'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
@@ -120,7 +121,10 @@ function Alineacion({ partido }: { partido: Partido }) {
                     </span>
                     <Dorsal dorsal={j.dorsal} />
                     <span className={estilos.texto}>
-                      <span className={estilos.nombre}>{nombreCompleto(j)}</span>
+                      <span className={estilos.nombre}>
+                        {nombreCompleto(j)}
+                        {j.tipo === 'invitado' && <MarcaInvitado />}
+                      </span>
                       <span className={estilos.secundario}>{titular ? 'Titular' : 'Suplente'}</span>
                     </span>
                   </label>

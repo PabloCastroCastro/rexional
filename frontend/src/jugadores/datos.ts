@@ -60,3 +60,23 @@ export const nombreCompleto = (j: { nombre: string; apellidos?: string | null })
 // Gestionar jugadores: delegado o superior (sección 3)
 export const puedeGestionarJugadores = (plantilla: { rol: string; esAdminClub: boolean }) =>
   plantilla.esAdminClub || plantilla.rol !== 'jugador'
+
+export type JugadorInvitable = components['schemas']['JugadorInvitable']
+
+// Jugadores de las otras plantillas del club en la temporada, para invitarlos (GH-188)
+export const useInvitables = (plantillaId: string, q: string, activa: boolean) =>
+  useQuery({
+    queryKey: [...CLAVE_JUGADORES, 'invitables', plantillaId, q],
+    queryFn: () =>
+      datos(
+        api.GET('/api/plantillas/{id}/invitables', {
+          params: { path: { id: plantillaId }, query: q ? { q } : {} },
+        }),
+      ),
+    enabled: activa,
+    placeholderData: keepPreviousData,
+  })
+
+// "Invitado · Juvenil A", o solo "Invitado" si no se sabe de dónde viene
+export const textoInvitado = (j: { procedencia?: string | null }) =>
+  j.procedencia ? `Invitado · ${j.procedencia}` : 'Invitado'

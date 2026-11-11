@@ -74,6 +74,7 @@ const multa = (id: string, jugador: JugadorPlantilla, extra: Partial<Multa> = {}
   nombre: jugador.nombre,
   apellidos: jugador.apellidos,
   dorsal: jugador.dorsal,
+  invitado: jugador.tipo === 'invitado',
   motivoId: 'm1',
   motivo: 'Llegar tarde al entreno',
   importeCentimos: 200,
