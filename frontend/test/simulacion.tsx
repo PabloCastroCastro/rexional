@@ -85,6 +85,7 @@ export const plantilla = (
 export const SIN_RESPUESTAS = {
   respuestas: { voy: 0, duda: 0, noVoy: 0, sinResponder: 0 },
   miRespuesta: null,
+  miMotivo: null,
   miEstado: null,
   cierreRespuestas: '2099-12-31T20:00:00+01:00',
   respuestasAbiertas: true,

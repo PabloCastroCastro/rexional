@@ -1083,6 +1083,13 @@
                 ],
                 "description": "Respuesta del jugador vinculado al usuario; null si no ha respondido"
               },
+              "miMotivo": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Motivo de su respuesta («duda» o «no_voy»), si lo indicó"
+              },
               "cierreRespuestas": {
                 "type": "string",
                 "description": "Hasta cuándo puede responder el jugador: el inicio del entreno (o el final del día si no tiene hora) menos la hora límite de la plantilla",
@@ -1096,6 +1103,7 @@
               "miEstado",
               "respuestas",
               "miRespuesta",
+              "miMotivo",
               "cierreRespuestas",
               "respuestasAbiertas"
             ]

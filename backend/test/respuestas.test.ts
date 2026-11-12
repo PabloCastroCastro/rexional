@@ -55,6 +55,7 @@ type Listado = {
   id: string
   respuestas: { voy: number; duda: number; noVoy: number; sinResponder: number }
   miRespuesta: string | null
+  miMotivo: string | null
   cierreRespuestas: string
   respuestasAbiertas: boolean
 }
@@ -144,6 +145,12 @@ describe('el jugador responde', () => {
 
     res = await responder(ids.manana ?? '', { respuesta: 'no_voy', motivo: '  Trabajo  ' })
     expect(await res.json()).toMatchObject({ respuesta: 'no_voy', motivo: 'Trabajo' })
+    // En el listado, su respuesta con su motivo (GH-211); el delegado no tiene respuesta propia
+    expect(await delListado('manana', 'jugador')).toMatchObject({
+      miRespuesta: 'no_voy',
+      miMotivo: 'Trabajo',
+    })
+    expect((await delListado('manana'))?.miMotivo).toBeNull()
 
     expect((await pedir('DELETE', `${base()}/${ids.manana}/respuesta`, 'jugador')).status).toBe(204)
     expect((await delListado('manana', 'jugador'))?.miRespuesta).toBeNull()

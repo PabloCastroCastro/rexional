@@ -631,3 +631,13 @@ li > .cierre {
   font-weight: var(--peso-normal);
   text-overflow: ellipsis;
 }
+
+/* Motivo de su respuesta, con «Duda» o «No voy» (GH-211) */
+.motivoMio {
+  min-height: var(--altura-tactil);
+  padding: 0 var(--espacio-3);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-m);
+  background: var(--color-superficie);
+  font-size: max(16px, var(--texto-base));
+}

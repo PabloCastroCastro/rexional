@@ -101,7 +101,9 @@ describe('el jugador', () => {
     const control = await screen.findByRole('group', { name: '¿Vas a este entreno?' })
     expect(screen.getByText(/Puedes cambiarla hasta el jueves a las 20:00/)).toBeInTheDocument()
     await userEvent.click(within(control).getByRole('button', { name: 'Duda' }))
-    expect(enviado('PUT /api/plantillas/p1/entrenos/e1/respuesta')).toEqual([{ respuesta: 'duda' }])
+    expect(enviado('PUT /api/plantillas/p1/entrenos/e1/respuesta')).toEqual([
+      { respuesta: 'duda', motivo: null },
+    ])
   })
 
   it('tocar la respuesta elegida la quita', async () => {
@@ -117,11 +119,43 @@ describe('el jugador', () => {
     )
   })
 
-  it('pasada la hora límite, ve su respuesta y que están cerradas', async () => {
-    conProximos(jugadorBrais, proximo({ miRespuesta: 'no_voy', respuestasAbiertas: false }))
+  it('pasada la hora límite, ve su respuesta con su motivo y que están cerradas', async () => {
+    conProximos(
+      jugadorBrais,
+      proximo({ miRespuesta: 'no_voy', miMotivo: 'Trabajo', respuestasAbiertas: false }),
+    )
     abrir('/plantillas/p1/entrenos')
-    expect(await screen.findByText('Respondiste «No voy». Respuestas cerradas')).toBeInTheDocument()
+    expect(
+      await screen.findByText('Respondiste «No voy»: Trabajo. Respuestas cerradas'),
+    ).toBeInTheDocument()
+    expect(screen.queryByLabelText('Motivo (opcional)')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Voy' })).not.toBeInTheDocument()
+  })
+
+  it('con «Duda» o «No voy» indica el motivo, que se conserva al cambiar entre las dos (GH-211)', async () => {
+    conProximos(jugadorBrais, proximo({ miRespuesta: 'no_voy', miMotivo: null }))
+    manejadores['PUT /api/plantillas/p1/entrenos/e1/respuesta'] = async (peticion) =>
+      json({ jugadorId: 'j1', ...((await peticion.json()) as object) })
+    abrir('/plantillas/p1/entrenos')
+    const motivo = await screen.findByLabelText('Motivo (opcional)')
+    await userEvent.type(motivo, ' Trabajo {Enter}')
+    await userEvent.click(screen.getByRole('button', { name: 'Duda' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Voy' }))
+    expect(enviado('PUT /api/plantillas/p1/entrenos/e1/respuesta')).toEqual([
+      { respuesta: 'no_voy', motivo: 'Trabajo' },
+      { respuesta: 'duda', motivo: 'Trabajo' },
+      { respuesta: 'voy', motivo: null },
+    ])
+  })
+
+  it('con «Voy» no hay campo de motivo', async () => {
+    conProximos(jugadorBrais, proximo({ miRespuesta: 'voy' }))
+    abrir('/plantillas/p1/entrenos')
+    expect(await screen.findByRole('button', { name: 'Voy' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    expect(screen.queryByLabelText('Motivo (opcional)')).not.toBeInTheDocument()
   })
 
   it('ve el recuento sin nombres', async () => {
