@@ -178,7 +178,7 @@ Este documento recoge todas las decisiones funcionales, técnicas y de organizac
 
 - El admin invita a una persona por email con un rol y, si es jugador, vinculada a su ficha de la plantilla.
 - Enlace de invitación de un solo uso con caducidad.
-- Delegado: mismas capacidades de gestión que el entrenador, salvo gestionar accesos, la configuración de la plantilla y la biblioteca de ejercicios y planificación (que solo puede consultar). Ver la tabla de la sección 3.
+- Delegado: mismas capacidades de gestión que el entrenador, incluida la biblioteca de ejercicios y la planificación, salvo gestionar accesos y la configuración de la plantilla. Ver la tabla de la sección 3.
 - Jugador: ve plantilla, convocatorias, partidos y catálogo de multas; ve **solo sus propias** asistencias, multas y estadísticas acumuladas. No modifica nada.
 - El admin puede cambiar el rol o revocar el acceso de cualquier miembro.
 - Un administrador del club puede invitar por email a otra persona como administrador del club.
