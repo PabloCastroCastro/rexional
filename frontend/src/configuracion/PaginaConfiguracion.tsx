@@ -5,6 +5,7 @@ import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
 import { Administradores } from './Administradores'
 import estilos from './Configuracion.module.css'
 import { DatosPlantilla } from './DatosPlantilla'
+import { IdentidadClub } from './IdentidadClub'
 import { Miembros } from './Miembros'
 import { NombreClub } from './NombreClub'
 import { PlantillasClub } from './PlantillasClub'
@@ -61,6 +62,13 @@ export function PaginaConfiguracion() {
             descripcion="Solo los administradores del club ven estas opciones."
           >
             <NombreClub club={club} />
+          </Seccion>
+
+          <Seccion
+            titulo="Identidad del club"
+            descripcion="El escudo y los colores se aplican a todas las plantillas del club."
+          >
+            <IdentidadClub club={club} />
           </Seccion>
 
           <Seccion

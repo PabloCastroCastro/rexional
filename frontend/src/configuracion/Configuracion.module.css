@@ -231,3 +231,119 @@
   color: var(--color-peligro);
   font-size: var(--texto-sm);
 }
+
+/* Identidad del club (GH-30): escudo y colores */
+.grupo {
+  display: grid;
+  gap: var(--espacio-3);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.grupo > legend {
+  margin-bottom: var(--espacio-2);
+  padding: 0;
+  font-weight: var(--peso-fuerte);
+}
+
+.escudo {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+}
+
+.escudo img,
+.escudo svg {
+  flex: none;
+  border-radius: var(--radio-m);
+  object-fit: contain;
+}
+
+.colores {
+  display: grid;
+  gap: var(--espacio-2);
+}
+
+.color {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  min-height: var(--altura-tactil);
+  font-weight: var(--peso-medio);
+  cursor: pointer;
+}
+
+.color > span {
+  display: grid;
+}
+
+.color input {
+  flex: none;
+  width: var(--altura-tactil);
+  height: var(--altura-tactil);
+  padding: 2px;
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-m);
+  background: var(--color-superficie);
+  cursor: pointer;
+}
+
+/* Vista previa con los colores elegidos: las variables del tema, solo dentro del recuadro */
+.vistaPrevia {
+  overflow: hidden;
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-l);
+  background: var(--color-superficie);
+}
+
+.vistaCabecera {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  padding: var(--espacio-2) var(--espacio-3);
+  background: var(--color-primario);
+  color: var(--color-sobre-primario);
+  font-weight: var(--peso-fuerte);
+}
+
+.vistaCabecera svg,
+.vistaCabecera img {
+  border-radius: var(--radio-s);
+  object-fit: contain;
+}
+
+.vistaCuerpo {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-4);
+  padding: var(--espacio-3);
+}
+
+.vistaBoton {
+  padding: var(--espacio-2) var(--espacio-4);
+  border-radius: var(--radio-completo);
+  background: var(--color-primario);
+  color: var(--color-sobre-primario);
+  font-weight: var(--peso-medio);
+}
+
+.vistaEnlace {
+  color: var(--acento-claro, var(--color-acento));
+  font-weight: var(--peso-medio);
+  text-decoration: underline;
+}
+
+@media (prefers-color-scheme: dark) {
+  .vistaEnlace {
+    color: var(--acento-oscuro, var(--color-acento));
+  }
+}
+
+.vistaIndicador {
+  width: 2rem;
+  height: 3px;
+  margin-left: auto;
+  border-radius: var(--radio-completo);
+  background: var(--color-secundario);
+}
