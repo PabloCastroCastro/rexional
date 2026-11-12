@@ -78,6 +78,9 @@ const MATRIZ: Ruta[] = [
   ['club', 'DELETE', '/plantillas/{id}', { confirmacion: 'otro nombre' }],
   ['ver', 'GET', '/clubes/{cid}'],
   ['club', 'PATCH', '/clubes/{cid}'],
+  ['club', 'PUT', '/clubes/{cid}/escudo'],
+  ['club', 'DELETE', '/clubes/{cid}/escudo'],
+  ['ver', 'GET', '/clubes/{cid}/escudo'],
   ['club', 'GET', '/clubes/{cid}/admins'],
   ['club', 'DELETE', '/clubes/{cid}/admins/{uid}'],
 

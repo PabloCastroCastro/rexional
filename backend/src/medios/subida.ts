@@ -35,15 +35,23 @@ const demasiadoGrande = (tipo: TipoArchivo['tipo'], maximo: number) =>
   )
 
 // «medios»: fotos y vídeos de un ejercicio. «planificacion»: PDF o fotos de un partido (GH-147), con
-// el límite de las fotos
-export type Admite = 'medios' | 'planificacion'
+// el límite de las fotos. «escudo»: el escudo del club (GH-28), solo PNG o WebP y con su límite
+export type Admite = 'medios' | 'planificacion' | 'escudo'
+
+const ESCUDO = ['image/png', 'image/webp']
+const escudoGrande = (maximo: number) =>
+  new ErrorApi(
+    413,
+    'archivo_demasiado_grande',
+    `El escudo no puede pasar de ${Math.round(maximo / MB)} MB`,
+  )
 
 export async function recibirArchivo(
   peticion: Request,
   admite: Admite = 'medios',
 ): Promise<Subida> {
   await preparar()
-  const { maxFotoBytes, maxVideoBytes } = config.subidas
+  const { maxFotoBytes, maxVideoBytes, maxEscudoBytes } = config.subidas
   const tipoContenido = peticion.headers.get('content-type') ?? ''
   if (!tipoContenido.startsWith('multipart/form-data') || !peticion.body) {
     throw new ErrorApi(
@@ -68,7 +76,12 @@ export async function recibirArchivo(
         files: 1,
         fields: 10,
         fieldSize: 2000,
-        fileSize: admite === 'medios' ? Math.max(maxFotoBytes, maxVideoBytes) : maxFotoBytes,
+        fileSize:
+          admite === 'medios'
+            ? Math.max(maxFotoBytes, maxVideoBytes)
+            : admite === 'escudo'
+              ? maxEscudoBytes
+              : maxFotoBytes,
       },
     })
 
@@ -107,7 +120,17 @@ export async function recibirArchivo(
           if (cabecera.length < BYTES_CABECERA && bytes < BYTES_CABECERA) return
           const detectado =
             admite === 'planificacion' && esPdf(cabecera) ? PDF : detectarTipo(cabecera)
-          if (detectado === 'heic') {
+          if (admite === 'escudo') {
+            if (!detectado || detectado === 'heic' || !ESCUDO.includes(detectado.mime)) {
+              return cortar(
+                new ErrorApi(
+                  415,
+                  'tipo_no_admitido',
+                  'El escudo tiene que ser una imagen PNG o WebP',
+                ),
+              )
+            }
+          } else if (detectado === 'heic') {
             return cortar(
               new ErrorApi(
                 415,
@@ -115,8 +138,7 @@ export async function recibirArchivo(
                 'Las fotos HEIC no se admiten: en el iPhone, elige la foto desde el navegador (se convierte a JPEG) o expórtala como JPEG',
               ),
             )
-          }
-          if (!detectado || (admite === 'planificacion' && detectado.tipo === 'video')) {
+          } else if (!detectado || (admite === 'planificacion' && detectado.tipo === 'video')) {
             return cortar(
               new ErrorApi(
                 415,
@@ -129,14 +151,20 @@ export async function recibirArchivo(
           }
           tipo = detectado
         }
+        if (admite === 'escudo') {
+          if (bytes > maxEscudoBytes) cortar(escudoGrande(maxEscudoBytes))
+          return
+        }
         const maximo = tipo.tipo === 'video' ? maxVideoBytes : maxFotoBytes
         if (bytes > maximo) cortar(demasiadoGrande(tipo.tipo, maximo))
       })
       archivo.on('limit', () =>
         cortar(
-          admite === 'medios'
-            ? demasiadoGrande(tipo?.tipo ?? 'video', maxVideoBytes)
-            : demasiadoGrande(tipo?.tipo ?? 'pdf', maxFotoBytes),
+          admite === 'escudo'
+            ? escudoGrande(maxEscudoBytes)
+            : admite === 'medios'
+              ? demasiadoGrande(tipo?.tipo ?? 'video', maxVideoBytes)
+              : demasiadoGrande(tipo?.tipo ?? 'pdf', maxFotoBytes),
         ),
       )
       archivo.on('end', () => {

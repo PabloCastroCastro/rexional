@@ -12,6 +12,7 @@ type Tipo = 'general' | 'costosas'
 
 const RUTAS_COSTOSAS: [metodo: string, ruta: RegExp][] = [
   ['POST', /\/medios$/],
+  ['PUT', /\/clubes\/[^/]+\/escudo$/],
   ['POST', /\/partidos\/[^/]+\/archivos$/],
   ['POST', /\/partidos\/[^/]+\/acta$/],
   ['POST', /\/partidos\/calendario\/leer$/],

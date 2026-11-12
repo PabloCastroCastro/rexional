@@ -133,7 +133,9 @@
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "description": "URL del escudo (cambia con cada escudo nuevo, así se puede guardar en caché); null si no tiene",
+            "example": "/api/clubes/0199…/escudo?v=0199…"
           },
           "colorPrincipal": {
             "type": "string",
@@ -3153,11 +3155,15 @@
           },
           "maxVideoBytes": {
             "type": "integer"
+          },
+          "maxEscudoBytes": {
+            "type": "integer"
           }
         },
         "required": [
           "maxFotoBytes",
-          "maxVideoBytes"
+          "maxVideoBytes",
+          "maxEscudoBytes"
         ]
       },
       "MotivoMulta": {
@@ -3924,6 +3930,228 @@
           },
           "409": {
             "description": "Es el último administrador",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/clubes/{cid}/escudo": {
+      "put": {
+        "tags": [
+          "Clubes"
+        ],
+        "summary": "Subir o cambiar el escudo del club",
+        "description": "Solo los administradores del club. Multipart, en el campo «archivo»: PNG o WebP (se comprueba el contenido, no la extensión), hasta MAX_ESCUDO_MB (2 MB por defecto). Se guarda como WebP de hasta 512 px por lado, sin recortar y sin metadatos; el anterior se borra.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "cid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Club con el escudo nuevo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Club"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Falta el archivo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Demasiado grande",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "No es PNG ni WebP",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Clubes"
+        ],
+        "summary": "Quitar el escudo del club",
+        "description": "Solo los administradores del club. Vuelve el logo genérico.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "cid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Club sin escudo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Club"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Clubes"
+        ],
+        "summary": "Escudo del club",
+        "description": "Cualquier miembro de una plantilla del club. WebP con caché larga: la URL que dan las respuestas (con ?v=) cambia con cada escudo nuevo.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "cid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 64
+            },
+            "required": false,
+            "name": "v",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "El escudo",
+            "content": {
+              "image/webp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
             "content": {
               "application/json": {
                 "schema": {
@@ -12817,7 +13045,7 @@
         "tags": [
           "Ejercicios"
         ],
-        "summary": "Tamaño máximo de las fotos y los vídeos",
+        "summary": "Tamaño máximo de las fotos, los vídeos y el escudo",
         "description": "Para comprobarlo antes de subir. Cualquier usuario con sesión.",
         "responses": {
           "200": {

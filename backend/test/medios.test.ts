@@ -227,7 +227,11 @@ describe('fotos', () => {
 
   it('los límites se consultan con sesión', async () => {
     const res = await pedir('GET', '/medios/limites', 'jugador')
-    expect(await res.json()).toEqual({ maxFotoBytes: 1024 * 1024, maxVideoBytes: 2 * 1024 * 1024 })
+    expect(await res.json()).toEqual({
+      maxFotoBytes: 1024 * 1024,
+      maxVideoBytes: 2 * 1024 * 1024,
+      maxEscudoBytes: 2 * 1024 * 1024,
+    })
     expect((await pedir('GET', '/medios/limites')).status).toBe(401)
   })
 

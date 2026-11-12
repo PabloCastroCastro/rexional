@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process'
-import { unlink } from 'node:fs/promises'
+import { mkdir, readFile, unlink } from 'node:fs/promises'
 import { eq } from 'drizzle-orm'
 import sharp from 'sharp'
 import { db } from '../db/cliente.js'
@@ -16,6 +16,10 @@ import { absoluta, borrar, carpetaDeClub, mover, nueva, tamano } from './almacen
 
 const LADO_FOTO = 1920
 const LADO_MINIATURA = 480
+const LADO_ESCUDO = 512
+
+// Errores de sharp con una imagen dañada o que no es lo que dice ser
+const IMAGEN_ILEGIBLE = /unsupported image format|Input (file|buffer) (contains|has corrupt)/i
 
 const miniaturaDe = (entrada: string | Buffer, salida: string) =>
   sharp(entrada)
@@ -28,6 +32,30 @@ const miniaturaDe = (entrada: string | Buffer, salida: string) =>
     })
     .webp({ quality: 70 })
     .toFile(absoluta(salida))
+
+// Escudo del club (GH-28): WebP de hasta 512 px por lado, sin recortar, con su transparencia y sin
+// metadatos
+export async function procesarEscudo(temporal: string, carpeta: string) {
+  const archivo = nueva(carpeta, 'webp')
+  try {
+    // Como mucho unos pocos MB: se procesa en memoria y no queda ningún archivo abierto
+    const original = await readFile(temporal)
+    await unlink(temporal)
+    await mkdir(absoluta(carpeta), { recursive: true })
+    await sharp(original)
+      .resize({ width: LADO_ESCUDO, height: LADO_ESCUDO, fit: 'inside', withoutEnlargement: true })
+      .webp({ quality: 90, alphaQuality: 100 })
+      .toFile(absoluta(archivo))
+    return archivo
+  } catch (error) {
+    await borrar(archivo)
+    await unlink(temporal).catch(() => {})
+    if (error instanceof Error && IMAGEN_ILEGIBLE.test(error.message)) {
+      throw new ErrorApi(415, 'tipo_no_admitido', 'El escudo está dañado o no se puede leer')
+    }
+    throw error
+  }
+}
 
 // En la carpeta indicada (la del club para un ejercicio, la del partido para su planificación).
 // La planificación no lleva miniatura: se lista con un icono
@@ -49,10 +77,7 @@ export async function procesarFoto(temporal: string, carpeta: string, conMiniatu
   } catch (error) {
     await borrar(`${archivo}.original`, archivo, miniatura)
     await unlink(temporal).catch(() => {})
-    if (
-      error instanceof Error &&
-      /unsupported image format|Input file contains/i.test(error.message)
-    ) {
+    if (error instanceof Error && IMAGEN_ILEGIBLE.test(error.message)) {
       throw new ErrorApi(415, 'tipo_no_admitido', 'La foto está dañada o no se puede leer')
     }
     throw error

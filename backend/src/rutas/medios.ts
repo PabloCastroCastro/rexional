@@ -292,12 +292,14 @@ export const rutasMedios = () =>
         method: 'get',
         path: '/medios/limites',
         tags: ['Ejercicios'],
-        summary: 'Tamaño máximo de las fotos y los vídeos',
+        summary: 'Tamaño máximo de las fotos, los vídeos y el escudo',
         description: 'Para comprobarlo antes de subir. Cualquier usuario con sesión.',
         middleware: [requireSesion()] as const,
         responses: {
           200: json(
-            z.object({ maxFotoBytes: z.int(), maxVideoBytes: z.int() }).openapi('LimitesMedios'),
+            z
+              .object({ maxFotoBytes: z.int(), maxVideoBytes: z.int(), maxEscudoBytes: z.int() })
+              .openapi('LimitesMedios'),
             'Límites',
           ),
           401: json(EsquemaError, 'Sin sesión'),
@@ -308,6 +310,7 @@ export const rutasMedios = () =>
           {
             maxFotoBytes: config.subidas.maxFotoBytes,
             maxVideoBytes: config.subidas.maxVideoBytes,
+            maxEscudoBytes: config.subidas.maxEscudoBytes,
           },
           200,
         ),
