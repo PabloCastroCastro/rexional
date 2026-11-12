@@ -9,6 +9,7 @@ import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
 import {
   type EntrenoListado,
   type Estado,
+  hoy,
   type ResumenEntreno,
   textoFecha,
   textoHoras,
@@ -19,6 +20,7 @@ import {
 } from './datos'
 import estilos from './Entrenos.module.css'
 import { Porcentaje } from './Porcentaje'
+import { MiRespuesta, RecuentoRespuestas } from './Respuestas'
 
 const ESTADOS: Record<Estado, { texto: string; icono: typeof Check; clase?: string }> = {
   asiste: { texto: 'Asististe', icono: Check, clase: estilos.asiste },
@@ -26,8 +28,9 @@ const ESTADOS: Record<Estado, { texto: string; icono: typeof Check; clase?: stri
   falta: { texto: 'Faltaste', icono: X, clase: estilos.falta },
 }
 
-// Pestaña Entrenos del rol jugador (GH-52): su porcentaje y recuento, los próximos entrenos y, por
-// mes, su estado en cada entreno pasado. Solo consulta: pasar lista es cosa del cuerpo técnico.
+// Pestaña Entrenos del rol jugador (GH-52): su porcentaje y recuento, los próximos entrenos con su
+// respuesta a si va (GH-204) y, por mes, su estado en cada entreno pasado. Pasar lista es cosa del
+// cuerpo técnico.
 export function PaginaMiAsistencia() {
   const plantilla = usePlantillaActiva()
   const resumen = useResumenAsistencia(plantilla.id)
@@ -45,8 +48,14 @@ export function PaginaMiAsistencia() {
   }
 
   const mia = resumen.data.find((r) => r.jugadorId === plantilla.jugadorId)
+  // Los de hoy sin lista pasada aún son próximos: se puede responder si va (GH-209). Al pasar lista,
+  // bajan al historial con su estado.
+  const deHoy = historial.data
+    .filter((e) => e.fecha === hoy() && e.asiste + e.justificada + e.falta === 0)
+    .sort((a, b) => (a.hora ?? '').localeCompare(b.hora ?? ''))
+  const siguientes = [...deHoy, ...proximos.data]
   const meses: { mes: string; entrenos: EntrenoListado[] }[] = []
-  for (const e of historial.data) {
+  for (const e of historial.data.filter((e) => !deHoy.includes(e))) {
     const mes = textoMes(e.fecha)
     if (meses.at(-1)?.mes !== mes) meses.push({ mes, entrenos: [] })
     meses.at(-1)?.entrenos.push(e)
@@ -63,22 +72,24 @@ export function PaginaMiAsistencia() {
         </span>
       </section>
 
-      {proximos.data.length > 0 && (
+      {siguientes.length > 0 && (
         <section aria-label="Próximos">
           <h2 className={estilos.mes}>Próximos</h2>
           <ul className={estilos.lista}>
-            {proximos.data.map((e) => (
+            {siguientes.map((e) => (
               <li key={e.id}>
                 <Fila entreno={e} enlace={rutaPlan(plantilla.id, e.id)}>
                   <span className={estilos.planResumen}>{resumenPlan(e) ?? 'Sin plan'}</span>
+                  <RecuentoRespuestas respuestas={e.respuestas} />
                 </Fila>
+                <MiRespuesta entreno={e} />
               </li>
             ))}
           </ul>
         </section>
       )}
 
-      {meses.length === 0 && proximos.data.length === 0 && (
+      {meses.length === 0 && siguientes.length === 0 && (
         <EstadoVacio
           icono={<ClipboardCheck size={32} />}
           titulo="Todavía no hay entrenos"

@@ -99,8 +99,10 @@ a.fila:hover {
   width: 2.5rem;
   height: 2.5rem;
   border-radius: var(--radio-completo);
-  background: var(--color-primario);
-  color: var(--color-sobre-primario);
+  /* Con el color secundario del club (GH-221); el borde suave lo separa del fondo si es muy claro */
+  background: var(--color-secundario);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-texto) 15%, transparent);
+  color: var(--color-sobre-secundario);
   font-weight: var(--peso-fuerte);
   font-variant-numeric: tabular-nums;
 }

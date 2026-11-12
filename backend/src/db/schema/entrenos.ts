@@ -11,9 +11,11 @@ import {
   primaryKey,
   text,
   time,
+  timestamp,
   unique,
   uuid,
 } from 'drizzle-orm/pg-core'
+import { user } from './auth.js'
 import { fichas, plantillas } from './clubes.js'
 import { creadoEn, id } from './comun.js'
 
@@ -23,6 +25,9 @@ import { creadoEn, id } from './comun.js'
 // en ejercicios.ts.
 
 export const estadoAsistencia = pgEnum('estado_asistencia', ['asiste', 'justificada', 'falta'])
+
+// Si el jugador piensa ir a un entreno futuro (GH-204): la intención, no la asistencia real
+export const respuestaEntreno = pgEnum('respuesta_entreno', ['voy', 'duda', 'no_voy'])
 
 export const entrenos = pgTable(
   'entrenos',
@@ -102,6 +107,41 @@ export const asistencias = pgTable(
     check(
       'asistencias_motivo_justificada',
       sql`${t.motivo} IS NULL OR (${t.estado} = 'justificada' AND btrim(${t.motivo}) <> '')`,
+    ),
+  ],
+)
+
+// Respuestas de los jugadores a si van a un entreno (GH-204), aparte de la asistencia: pasar lista no
+// las cambia ni ellas rellenan la lista
+export const respuestasEntreno = pgTable(
+  'respuestas_entreno',
+  {
+    entrenoId: uuid('entreno_id').notNull(),
+    jugadorId: uuid('jugador_id').notNull(),
+    // Copia de la plantilla del entreno: garantiza que el jugador tiene ficha en ella
+    plantillaId: uuid('plantilla_id').notNull(),
+    respuesta: respuestaEntreno('respuesta').notNull(),
+    motivo: text('motivo'),
+    // Quién la apuntó: el propio jugador o alguien del cuerpo técnico
+    respondidoPor: uuid('respondido_por').references(() => user.id, { onDelete: 'set null' }),
+    respondidoEn: timestamp('respondido_en', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.entrenoId, t.jugadorId] }),
+    foreignKey({
+      name: 'respuestas_entreno_fk',
+      columns: [t.entrenoId, t.plantillaId],
+      foreignColumns: [entrenos.id, entrenos.plantillaId],
+    }).onDelete('cascade'),
+    foreignKey({
+      name: 'respuestas_ficha_fk',
+      columns: [t.plantillaId, t.jugadorId],
+      foreignColumns: [fichas.plantillaId, fichas.jugadorId],
+    }).onDelete('cascade'),
+    // El motivo, solo con duda o no voy, y nunca vacío
+    check(
+      'respuestas_motivo_valido',
+      sql`${t.motivo} IS NULL OR (${t.respuesta} <> 'voy' AND btrim(${t.motivo}) <> '')`,
     ),
   ],
 )

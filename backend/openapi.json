@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "API de Vestuario",
-    "version": "1.8.0",
+    "version": "1.9.0",
     "description": "API REST de Vestuario. Todas las rutas cuelgan de /api. Errores con el formato { error: { codigo, mensaje, detalles? } }."
   },
   "components": {
@@ -133,7 +133,9 @@
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "description": "URL del escudo (cambia con cada escudo nuevo, así se puede guardar en caché); null si no tiene",
+            "example": "/api/clubes/0199…/escudo?v=0199…"
           },
           "colorPrincipal": {
             "type": "string",
@@ -258,6 +260,10 @@
             "type": "boolean",
             "description": "false si la plantilla no usa multas (no se ven ni se pueden poner)"
           },
+          "horasLimiteRespuesta": {
+            "type": "integer",
+            "description": "Horas antes del inicio de cada entreno hasta las que los jugadores pueden responder si van (GH-204)"
+          },
           "rol": {
             "type": "string",
             "enum": [
@@ -288,6 +294,7 @@
           "temporada",
           "plantillaAnteriorId",
           "multasActivas",
+          "horasLimiteRespuesta",
           "rol",
           "esAdminClub",
           "jugadorId"
@@ -1040,10 +1047,67 @@
                   null
                 ],
                 "description": "Estado del jugador vinculado al usuario en este entreno; null si no tiene o no está registrado"
+              },
+              "respuestas": {
+                "type": "object",
+                "properties": {
+                  "voy": {
+                    "type": "integer"
+                  },
+                  "duda": {
+                    "type": "integer"
+                  },
+                  "noVoy": {
+                    "type": "integer"
+                  },
+                  "sinResponder": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "voy",
+                  "duda",
+                  "noVoy",
+                  "sinResponder"
+                ],
+                "description": "Respuestas a si van (GH-204) de los jugadores activos en la dinámica: no identifican a nadie"
+              },
+              "miRespuesta": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "voy",
+                  "duda",
+                  "no_voy",
+                  null
+                ],
+                "description": "Respuesta del jugador vinculado al usuario; null si no ha respondido"
+              },
+              "miMotivo": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Motivo de su respuesta («duda» o «no_voy»), si lo indicó"
+              },
+              "cierreRespuestas": {
+                "type": "string",
+                "description": "Hasta cuándo puede responder el jugador: el inicio del entreno (o el final del día si no tiene hora) menos la hora límite de la plantilla",
+                "example": "2026-11-17T20:00:00+01:00"
+              },
+              "respuestasAbiertas": {
+                "type": "boolean"
               }
             },
             "required": [
-              "miEstado"
+              "miEstado",
+              "respuestas",
+              "miRespuesta",
+              "miMotivo",
+              "cierreRespuestas",
+              "respuestasAbiertas"
             ]
           }
         ]
@@ -1248,6 +1312,25 @@
                     "string",
                     "null"
                   ]
+                },
+                "respuesta": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "enum": [
+                    "voy",
+                    "duda",
+                    "no_voy",
+                    null
+                  ],
+                  "description": "Si dijo que iba (GH-204); no rellena el estado"
+                },
+                "motivoRespuesta": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 }
               },
               "required": [
@@ -1260,7 +1343,9 @@
                 "tipo",
                 "procedencia",
                 "estado",
-                "motivo"
+                "motivo",
+                "respuesta",
+                "motivoRespuesta"
               ]
             }
           }
@@ -1327,6 +1412,50 @@
               "porcentaje"
             ]
           }
+        ]
+      },
+      "RespuestaEntreno": {
+        "type": "object",
+        "properties": {
+          "jugadorId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "respuesta": {
+            "type": "string",
+            "enum": [
+              "voy",
+              "duda",
+              "no_voy"
+            ]
+          },
+          "motivo": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "jugadorId",
+          "respuesta",
+          "motivo"
+        ]
+      },
+      "MensajeRespuestas": {
+        "type": "object",
+        "properties": {
+          "texto": {
+            "type": "string"
+          },
+          "whatsapp": {
+            "type": "string",
+            "example": "https://wa.me/?text=…"
+          }
+        },
+        "required": [
+          "texto",
+          "whatsapp"
         ]
       },
       "CalendarioLeido": {
@@ -3026,11 +3155,15 @@
           },
           "maxVideoBytes": {
             "type": "integer"
+          },
+          "maxEscudoBytes": {
+            "type": "integer"
           }
         },
         "required": [
           "maxFotoBytes",
-          "maxVideoBytes"
+          "maxVideoBytes",
+          "maxEscudoBytes"
         ]
       },
       "MotivoMulta": {
@@ -3568,8 +3701,8 @@
         "tags": [
           "Clubes"
         ],
-        "summary": "Cambiar el nombre del club",
-        "description": "Solo los administradores del club. El escudo y los colores llegan en el ciclo 5.",
+        "summary": "Cambiar el nombre o los colores del club",
+        "description": "Solo los administradores del club. Los colores, en hexadecimal (#rrggbb), son comunes a todas las plantillas del club; con null vuelven a los de por defecto. El escudo tiene su propia ruta.",
         "parameters": [
           {
             "schema": {
@@ -3591,11 +3724,26 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 80
+                  },
+                  "colorPrincipal": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "pattern": "^#[0-9a-fA-F]{6}$",
+                    "example": "#14553d",
+                    "description": "El color principal; null vuelve al de por defecto"
+                  },
+                  "colorSecundario": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "pattern": "^#[0-9a-fA-F]{6}$",
+                    "example": "#14553d",
+                    "description": "El color secundario; null vuelve al de por defecto"
                   }
                 },
-                "required": [
-                  "nombre"
-                ],
                 "additionalProperties": false
               }
             }
@@ -3782,6 +3930,228 @@
           },
           "409": {
             "description": "Es el último administrador",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/clubes/{cid}/escudo": {
+      "put": {
+        "tags": [
+          "Clubes"
+        ],
+        "summary": "Subir o cambiar el escudo del club",
+        "description": "Solo los administradores del club. Multipart, en el campo «archivo»: PNG o WebP (se comprueba el contenido, no la extensión), hasta MAX_ESCUDO_MB (2 MB por defecto). Se guarda como WebP de hasta 512 px por lado, sin recortar y sin metadatos; el anterior se borra.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "cid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Club con el escudo nuevo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Club"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Falta el archivo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Demasiado grande",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "No es PNG ni WebP",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Clubes"
+        ],
+        "summary": "Quitar el escudo del club",
+        "description": "Solo los administradores del club. Vuelve el logo genérico.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "cid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Club sin escudo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Club"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Clubes"
+        ],
+        "summary": "Escudo del club",
+        "description": "Cualquier miembro de una plantilla del club. WebP con caché larga: la URL que dan las respuestas (con ?v=) cambia con cada escudo nuevo.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "cid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 64
+            },
+            "required": false,
+            "name": "v",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "El escudo",
+            "content": {
+              "image/webp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
             "content": {
               "application/json": {
                 "schema": {
@@ -4070,7 +4440,7 @@
         "tags": [
           "Plantillas"
         ],
-        "summary": "Cambiar el nombre, la categoría o si usa multas",
+        "summary": "Cambiar el nombre, la categoría, si usa multas o la hora límite de respuesta",
         "description": "Entrenador o superior. La temporada no se modifica. Desactivar las multas las oculta y bloquea sin borrar nada: al reactivarlas vuelven como estaban.",
         "parameters": [
           {
@@ -4101,6 +4471,11 @@
                   },
                   "multasActivas": {
                     "type": "boolean"
+                  },
+                  "horasLimiteRespuesta": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 72
                   }
                 },
                 "additionalProperties": false
@@ -7020,6 +7395,461 @@
                   "items": {
                     "$ref": "#/components/schemas/AsistenciaJugador"
                   }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/entrenos/{eid}/respuesta": {
+      "put": {
+        "tags": [
+          "Entrenos"
+        ],
+        "summary": "Responder si voy a un entreno",
+        "description": "El jugador vinculado al usuario, con ficha activa en la dinámica de la plantilla, hasta la hora límite. Motivo opcional con «duda» o «no_voy».",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "eid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "respuesta": {
+                    "type": "string",
+                    "enum": [
+                      "voy",
+                      "duda",
+                      "no_voy"
+                    ]
+                  },
+                  "motivo": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 200
+                  }
+                },
+                "required": [
+                  "respuesta"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Respuesta guardada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaEntreno"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Respuestas cerradas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Entrenos"
+        ],
+        "summary": "Quitar mi respuesta a un entreno",
+        "description": "Como responder: el propio jugador, hasta la hora límite.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "eid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Respuesta quitada"
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Respuestas cerradas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/entrenos/{eid}/respuestas/{jid}": {
+      "put": {
+        "tags": [
+          "Entrenos"
+        ],
+        "summary": "Apuntar la respuesta de un jugador",
+        "description": "Delegado o superior, para cualquier jugador con ficha activa en la dinámica y también pasada la hora límite (por ejemplo, si avisa por teléfono).",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "eid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "jid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "respuesta": {
+                    "type": "string",
+                    "enum": [
+                      "voy",
+                      "duda",
+                      "no_voy"
+                    ]
+                  },
+                  "motivo": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 200
+                  }
+                },
+                "required": [
+                  "respuesta"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Respuesta guardada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaEntreno"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Entrenos"
+        ],
+        "summary": "Quitar la respuesta de un jugador",
+        "description": "Delegado o superior, también pasada la hora límite.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "eid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "jid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Respuesta quitada"
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/entrenos/{eid}/respuestas/mensaje": {
+      "get": {
+        "tags": [
+          "Entrenos"
+        ],
+        "summary": "Resumen de respuestas para WhatsApp",
+        "description": "Delegado o superior. Quién va, quién está en duda, quién no y quién no ha respondido (de los jugadores activos en la dinámica), con el enlace para responder en la app, y el enlace wa.me para compartirlo.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "eid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Mensaje",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MensajeRespuestas"
                 }
               }
             }
@@ -12215,7 +13045,7 @@
         "tags": [
           "Ejercicios"
         ],
-        "summary": "Tamaño máximo de las fotos y los vídeos",
+        "summary": "Tamaño máximo de las fotos, los vídeos y el escudo",
         "description": "Para comprobarlo antes de subir. Cualquier usuario con sesión.",
         "responses": {
           "200": {

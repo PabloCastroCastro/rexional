@@ -73,12 +73,23 @@ export const plantilla = (
   temporada,
   plantillaAnteriorId: null,
   multasActivas: true,
+  horasLimiteRespuesta: 0,
   rol: 'admin',
   esAdminClub: true,
   jugadorId: null,
   club: clubRexional,
   ...extra,
 })
+
+// Campos del listado de entrenos con las respuestas a si van (GH-204): nadie ha respondido
+export const SIN_RESPUESTAS = {
+  respuestas: { voy: 0, duda: 0, noVoy: 0, sinResponder: 0 },
+  miRespuesta: null,
+  miMotivo: null,
+  miEstado: null,
+  cierreRespuestas: '2099-12-31T20:00:00+01:00',
+  respuestasAbiertas: true,
+} as const
 
 export const senior26 = plantilla('p1', 'Senior', '2026-27')
 export const juvenil26 = plantilla('p2', 'Juvenil', '2026-27')

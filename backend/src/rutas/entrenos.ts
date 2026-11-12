@@ -9,6 +9,9 @@ import {
   fichas,
   horarios,
   jugadores,
+  plantillas,
+  respuestaEntreno,
+  respuestasEntreno,
   type SesionHorario,
 } from '../db/schema/index.js'
 import { ErrorApi, EsquemaError, validacionFallida } from '../errores.js'
@@ -26,6 +29,10 @@ const ESTADOS = estadoAsistencia.enumValues
 type Estado = (typeof ESTADOS)[number]
 
 const EsquemaEstado = z.enum(ESTADOS)
+
+// Respuesta del jugador a si va a un entreno (GH-204)
+export const EsquemaRespuesta = z.enum(respuestaEntreno.enumValues)
+type Respuesta = z.infer<typeof EsquemaRespuesta>
 
 const EsquemaRecuentos = z
   .object({ asiste: z.int(), justificada: z.int(), falta: z.int() })
@@ -50,6 +57,24 @@ const EsquemaEntrenoListado = EsquemaResumenEntreno.extend({
     description:
       'Estado del jugador vinculado al usuario en este entreno; null si no tiene o no está registrado',
   }),
+  respuestas: z
+    .object({ voy: z.int(), duda: z.int(), noVoy: z.int(), sinResponder: z.int() })
+    .openapi({
+      description:
+        'Respuestas a si van (GH-204) de los jugadores activos en la dinámica: no identifican a nadie',
+    }),
+  miRespuesta: EsquemaRespuesta.nullable().openapi({
+    description: 'Respuesta del jugador vinculado al usuario; null si no ha respondido',
+  }),
+  miMotivo: z.string().nullable().openapi({
+    description: 'Motivo de su respuesta («duda» o «no_voy»), si lo indicó',
+  }),
+  cierreRespuestas: z.string().openapi({
+    description:
+      'Hasta cuándo puede responder el jugador: el inicio del entreno (o el final del día si no tiene hora) menos la hora límite de la plantilla',
+    example: '2026-11-17T20:00:00+01:00',
+  }),
+  respuestasAbiertas: z.boolean(),
 }).openapi('EntrenoListado')
 
 const EsquemaEntreno = z
@@ -68,6 +93,10 @@ const EsquemaEntreno = z
         procedencia: z.string().nullable(),
         estado: EsquemaEstado.nullable(),
         motivo: z.string().nullable(),
+        respuesta: EsquemaRespuesta.nullable().openapi({
+          description: 'Si dijo que iba (GH-204); no rellena el estado',
+        }),
+        motivoRespuesta: z.string().nullable(),
       }),
     ),
   })
@@ -137,6 +166,48 @@ const miEstado = (jugadorId: string | null) =>
     ? sql<Estado | null>`(array_agg(${asistencias.estado}) filter (where ${asistencias.jugadorId} = ${jugadorId}))[1]`
     : sql<Estado | null>`null`
 
+// --- Respuestas a si van (GH-204) ---
+
+// Fichas que pueden responder: activas y en la dinámica del equipo (no los invitados solo para partidos)
+const elegibles = sql<number>`(select count(*)::int from ${fichas} f
+  where f.plantilla_id = ${entrenos.plantillaId} and f.activo and f.en_dinamica)`
+
+const respuestasDe = (respuesta: Respuesta) =>
+  sql<number>`(select count(*)::int from ${respuestasEntreno} r
+    join ${fichas} f on f.plantilla_id = r.plantilla_id and f.jugador_id = r.jugador_id
+    where r.entreno_id = ${entrenos.id} and r.respuesta = ${respuesta} and f.activo and f.en_dinamica)`
+
+const miRespuesta = (jugadorId: string | null) =>
+  jugadorId
+    ? sql<Respuesta | null>`(select r.respuesta from ${respuestasEntreno} r
+        where r.entreno_id = ${entrenos.id} and r.jugador_id = ${jugadorId})`
+    : sql<Respuesta | null>`null`
+
+const miMotivo = (jugadorId: string | null) =>
+  jugadorId
+    ? sql<string | null>`(select r.motivo from ${respuestasEntreno} r
+        where r.entreno_id = ${entrenos.id} and r.jugador_id = ${jugadorId})`
+    : sql<string | null>`null`
+
+// Cierre de las respuestas: el inicio del entreno en Madrid (o el final del día si no tiene hora)
+// menos las horas límite de la plantilla
+export const cierre = (horas: number) =>
+  sql`((${entrenos.fecha}::timestamp + coalesce(${entrenos.hora}::interval, interval '24 hours'))
+    at time zone 'Europe/Madrid') - make_interval(hours => ${horas}::int)`
+
+export const columnasCierre = (horas: number) => ({
+  cierreRespuestas: sql<string>`to_json(${cierre(horas)}) #>> '{}'`,
+  respuestasAbiertas: sql<boolean>`now() < ${cierre(horas)}`,
+})
+
+export async function horasLimite(plantillaId: string) {
+  const [fila] = await db
+    .select({ horas: plantillas.horasLimiteRespuesta })
+    .from(plantillas)
+    .where(eq(plantillas.id, plantillaId))
+  return fila?.horas ?? 0
+}
+
 // Las horas sin segundos ("20:00")
 const horaEntreno = sql<string | null>`to_char(${entrenos.hora}, 'HH24:MI')`
 const horaFinEntreno = sql<string | null>`to_char(${entrenos.horaFin}, 'HH24:MI')`
@@ -162,6 +233,14 @@ const columnasEntreno = {
   duracionPlan: sql<number>`(${duracionDelPlan})`,
 }
 
+const sinRespuestas = () =>
+  notExists(
+    db
+      .select({ uno: sql`1` })
+      .from(respuestasEntreno)
+      .where(eq(respuestasEntreno.entrenoId, entrenos.id)),
+  )
+
 const sinAsistencias = () =>
   notExists(
     db.select({ uno: sql`1` }).from(asistencias).where(eq(asistencias.entrenoId, entrenos.id)),
@@ -176,7 +255,7 @@ const visibles = <T extends { jugadorId: string }>(
     ? filas
     : filas.filter((f) => f.jugadorId === variables.jugadorId)
 
-async function buscarEntreno(plantillaId: string, entrenoId: string) {
+export async function buscarEntreno(plantillaId: string, entrenoId: string) {
   const [entreno] = await db
     .select(columnasEntreno)
     .from(entrenos)
@@ -201,12 +280,21 @@ async function detalleEntreno(plantillaId: string, entrenoId: string) {
       procedencia: procedenciaFicha,
       estado: asistencias.estado,
       motivo: asistencias.motivo,
+      respuesta: respuestasEntreno.respuesta,
+      motivoRespuesta: respuestasEntreno.motivo,
     })
     .from(fichas)
     .innerJoin(jugadores, eq(jugadores.id, fichas.jugadorId))
     .leftJoin(
       asistencias,
       and(eq(asistencias.jugadorId, fichas.jugadorId), eq(asistencias.entrenoId, entreno.id)),
+    )
+    .leftJoin(
+      respuestasEntreno,
+      and(
+        eq(respuestasEntreno.jugadorId, fichas.jugadorId),
+        eq(respuestasEntreno.entrenoId, entreno.id),
+      ),
     )
     .where(
       and(
@@ -304,8 +392,8 @@ const sinPlan = () =>
     ),
   )
 
-// Borra los entrenos futuros del horario que aún no tienen asistencia ni plan (los que tienen algo se
-// conservan)
+// Borra los entrenos futuros del horario que aún no tienen asistencia, plan ni respuestas de los
+// jugadores (los que tienen algo se conservan)
 async function borrarFuturosDelHorario(
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
   plantillaId: string,
@@ -319,6 +407,7 @@ async function borrarFuturosDelHorario(
         gte(entrenos.fecha, hoy()),
         sinAsistencias(),
         sinPlan(),
+        sinRespuestas(),
       ),
     )
     .returning({ id: entrenos.id })
@@ -488,6 +577,13 @@ export const rutasEntrenos = () =>
             justificada: recuento('justificada'),
             falta: recuento('falta'),
             miEstado: miEstado(c.var.jugadorId),
+            voy: respuestasDe('voy'),
+            duda: respuestasDe('duda'),
+            noVoy: respuestasDe('no_voy'),
+            elegibles,
+            miRespuesta: miRespuesta(c.var.jugadorId),
+            miMotivo: miMotivo(c.var.jugadorId),
+            ...columnasCierre(await horasLimite(c.var.plantilla.id)),
           })
           .from(entrenos)
           .leftJoin(asistencias, eq(asistencias.entrenoId, entrenos.id))
@@ -500,7 +596,18 @@ export const rutasEntrenos = () =>
           )
           .groupBy(entrenos.id)
           .orderBy(desc(entrenos.fecha), sql`${entrenos.hora} asc nulls first`)
-        return c.json(filas, 200)
+        return c.json(
+          filas.map(({ voy, duda, noVoy, elegibles, ...f }) => ({
+            ...f,
+            respuestas: {
+              voy,
+              duda,
+              noVoy,
+              sinResponder: Math.max(0, elegibles - voy - duda - noVoy),
+            },
+          })),
+          200,
+        )
       },
     )
     .openapi(

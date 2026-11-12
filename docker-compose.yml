@@ -69,6 +69,8 @@ services:
       # Tamaño máximo de cada foto y vídeo de los ejercicios (MAX_SUBIDA del proxy debe cubrirlos)
       MAX_FOTO_MB: ${MAX_FOTO_MB:-15}
       MAX_VIDEO_MB: ${MAX_VIDEO_MB:-150}
+      # Tamaño máximo del escudo del club (GH-28)
+      MAX_ESCUDO_MB: ${MAX_ESCUDO_MB:-2}
       # Límites de cada usuario y bloqueo de cuentas (GH-58; ver .env.example)
       LIMITE_PETICIONES_MINUTO: ${LIMITE_PETICIONES_MINUTO:-300}
       LIMITE_COSTOSAS_10MIN: ${LIMITE_COSTOSAS_10MIN:-30}

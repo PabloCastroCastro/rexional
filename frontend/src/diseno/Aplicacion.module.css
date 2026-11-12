@@ -15,10 +15,8 @@
     calc(var(--espacio-4) + env(safe-area-inset-left, 0px));
   background: var(--color-primario);
   color: var(--color-sobre-primario);
-}
-
-.logo {
-  border-radius: var(--radio-s);
+  /* Franja con el color secundario del club, como en la camiseta (GH-221) */
+  border-bottom: 3px solid var(--color-secundario);
 }
 
 /* Botón con el club y la plantilla activa: abre el cambio de plantilla */
@@ -84,6 +82,7 @@
 }
 
 .enlace {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -102,4 +101,17 @@
 
 .activo svg {
   stroke-width: 2.5;
+}
+
+/* Indicador de la sección activa, con el color secundario del club (GH-29) */
+.activo::before {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 2rem;
+  height: 3px;
+  border-radius: 0 0 var(--radio-completo) var(--radio-completo);
+  background: var(--color-secundario);
+  content: "";
+  transform: translateX(-50%);
 }

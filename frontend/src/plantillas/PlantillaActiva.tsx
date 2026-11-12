@@ -1,9 +1,10 @@
 import { ShieldAlert } from 'lucide-react'
-import { createContext, useContext, useEffect } from 'react'
+import { createContext, useContext, useEffect, useLayoutEffect } from 'react'
 import { Link, Outlet, useParams } from 'react-router'
 import { useSesion } from '../auth/sesion'
 import { Cargando } from '../componentes/Cargando'
 import { EstadoVacio } from '../componentes/EstadoVacio'
+import { aplicarTema } from '../diseno/tema'
 import { guardarUltimaPlantilla, type Plantilla, usePlantillas } from './datos'
 
 const Contexto = createContext<Plantilla | null>(null)
@@ -26,6 +27,13 @@ export function PlantillaActiva() {
   useEffect(() => {
     if (plantilla && usuarioId) guardarUltimaPlantilla(usuarioId, plantilla.id)
   }, [plantilla, usuarioId])
+
+  // Los colores del club de la plantilla, en toda la aplicación y antes de pintar (GH-29)
+  const colorPrincipal = plantilla?.club.colorPrincipal
+  const colorSecundario = plantilla?.club.colorSecundario
+  useLayoutEffect(() => {
+    if (colorPrincipal && colorSecundario) aplicarTema({ colorPrincipal, colorSecundario })
+  }, [colorPrincipal, colorSecundario])
 
   if (plantillas.isPending) return <Cargando />
   if (!plantilla) {

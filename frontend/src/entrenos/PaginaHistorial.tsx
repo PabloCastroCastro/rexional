@@ -3,9 +3,10 @@ import { Link, Navigate } from 'react-router'
 import { Cargando } from '../componentes/Cargando'
 import { EstadoVacio } from '../componentes/EstadoVacio'
 import { puedeGestionarJugadores } from '../jugadores/datos'
-import { resumenPlan, rutaPlan } from '../planificacion/datos'
+import { resumenPlan } from '../planificacion/datos'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
 import {
+  hoy,
   type ResumenEntreno,
   textoFecha,
   textoHoras,
@@ -14,6 +15,7 @@ import {
   useProximos,
 } from './datos'
 import estilos from './Entrenos.module.css'
+import { RecuentoRespuestas } from './Respuestas'
 
 // Próximos entrenos y, debajo, los pasados por mes, el más reciente primero (la API ya los ordena).
 // Cada uno abre ese día y esa sesión en pasar lista, para pasarla o corregirla.
@@ -47,8 +49,13 @@ export function PaginaHistorial() {
     )
   }
 
+  // Los de hoy sin lista pasada aún son próximos, con el recuento de respuestas (GH-215)
+  const deHoy = historial.data
+    .filter((e) => e.fecha === hoy() && e.asiste + e.justificada + e.falta === 0)
+    .sort((a, b) => (a.hora ?? '').localeCompare(b.hora ?? ''))
+  const siguientes = [...deHoy, ...proximos.data]
   const meses: { mes: string; entrenos: ResumenEntreno[] }[] = []
-  for (const e of historial.data) {
+  for (const e of historial.data.filter((e) => !deHoy.includes(e))) {
     const mes = textoMes(e.fecha)
     if (meses.at(-1)?.mes !== mes) meses.push({ mes, entrenos: [] })
     meses.at(-1)?.entrenos.push(e)
@@ -56,17 +63,18 @@ export function PaginaHistorial() {
 
   return (
     <div className={estilos.meses}>
-      {proximos.data.length > 0 && (
+      {siguientes.length > 0 && (
         <section aria-label="Próximos">
           <h2 className={estilos.mes}>Próximos</h2>
           <ul className={estilos.lista}>
-            {proximos.data.map((e) => (
+            {siguientes.map((e) => (
               <li key={e.id}>
-                {/* Un entreno futuro se abre por su plan: aún no se pasa lista */}
-                <Link to={rutaPlan(plantilla.id, e.id)} className={estilos.entreno}>
+                {/* Un entreno futuro se abre en su día: el plan y quién va (GH-204) */}
+                <Link to={enlace(e)} className={estilos.entreno}>
                   <span className={estilos.nombre}>
                     {cuando(e)}
                     <span className={estilos.planResumen}>{resumenPlan(e) ?? 'Sin plan'}</span>
+                    <RecuentoRespuestas respuestas={e.respuestas} />
                   </span>
                   <ChevronRight aria-hidden size={20} className={estilos.secundario} />
                 </Link>

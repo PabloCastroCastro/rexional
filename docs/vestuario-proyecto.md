@@ -105,6 +105,7 @@ Este documento recoge todas las decisiones funcionales, técnicas y de organizac
 - Marcar de nuevo el estado seleccionado lo deja sin registrar.
 - Historial de entrenos con el recuento de cada estado y los próximos entrenos; los pasados sin lista se marcan; desde el historial se puede abrir y corregir un entreno pasado.
 - Porcentaje de asistencia por jugador: asistencias / entrenos en los que tiene estado registrado.
+- **Respuestas a si van** (GH-204), en lugar de la encuesta de WhatsApp: cada jugador con ficha activa en la dinámica responde **voy**, **duda** o **no voy** (con motivo opcional en las dos últimas) a cada próximo entreno, hasta la **hora límite** de la plantilla (horas antes del inicio, de 0 a 72; 0 por defecto, hasta la hora de inicio; sin hora, hasta el final del día). La fija el entrenador o superior. El cuerpo técnico ve quién va en el día de cada próximo entreno, apunta o corrige respuestas (también pasada la hora límite) y comparte un resumen para WhatsApp con el enlace a la app. Es la intención de ir: se guarda aparte de la asistencia, que se sigue pasando en la lista, donde la respuesta se ve solo como pista. Al cambiar el horario, los entrenos futuros con respuestas no se rehacen.
 
 ### 2.4 Partidos y convocatorias
 
@@ -129,10 +130,12 @@ Este documento recoge todas las decisiones funcionales, técnicas y de organizac
 - Pantalla de configuración con dos partes:
   - **Datos de la plantilla** (entrenador o superior): nombre y categoría. La temporada es fija.
   - **Identidad del club** (solo administradores del club): nombre del club, escudo y dos colores (principal y secundario), comunes a todas sus categorías.
-- Escudo en PNG o WebP (SVG excluido inicialmente por seguridad), tamaño máximo configurable.
+- Escudo en PNG o WebP (SVG excluido inicialmente por seguridad), tamaño máximo configurable (`MAX_ESCUDO_MB`, 2 MB por defecto). Se guarda como WebP de hasta 512 px por lado, sin recortar y sin metadatos, y se puede quitar para volver al logo genérico.
 - Vista previa en vivo de la aplicación con los colores elegidos.
 - Al cambiar de plantilla activa, toda la interfaz adopta el escudo y los colores de su club.
 - Contraste automático: el texto sobre el color principal se muestra en blanco o negro según su luminosidad.
+- El color principal va tal cual en la cabecera, los botones y los dorsales; en textos y acentos sobre la superficie se oscurece (o, en modo oscuro, se aclara) lo justo para cumplir WCAG AA. El secundario, en la franja bajo la cabecera, los dorsales (con texto blanco u oscuro según su contraste), el indicador de la sección activa y el escudo genérico de los clubes sin escudo (GH-29, GH-221). En la cabecera, el escudo va sobre una placa clara para que se distinga del color del club.
+- Al abrir la app se aplican al momento los colores de la última plantilla abierta, sin parpadeo de los colores por defecto.
 
 ### 2.7 Estadísticas de partido (ciclo posterior)
 
@@ -201,6 +204,7 @@ Además, a nivel de club existe el **administrador del club**. Quien crea un clu
 | Ver plantilla, partidos, convocatorias, catálogo de multas | Sí | Sí | Sí | Sí |
 | Gestionar jugadores de la plantilla, entrenos, partidos y convocatorias | Sí | Sí | Sí | No |
 | Ver asistencias, multas y estadísticas | Todas | Todas | Todas | Solo las suyas |
+| Responder si va a un entreno | De cualquiera, también pasada la hora límite | Ídem | Ídem | Solo la suya, hasta la hora límite |
 | Registrar y cobrar multas, editar catálogo | Sí | Sí | Sí | No |
 | Registrar estadísticas de partido | Sí | Sí | Sí | No |
 | Ver ejercicios y sesiones planificadas | Sí | Sí | Sí | Sí |
@@ -216,7 +220,7 @@ Los permisos se aplican **siempre en el backend**. El frontend solo oculta lo qu
 **Visibilidad para el rol jugador**
 
 - **Plantilla:** ve nombre, dorsal y posición de todos, pero el porcentaje de asistencia y la deuda de multas solo los suyos. El backend no envía esos campos de otros jugadores.
-- **Entrenos:** ve fechas y recuentos agregados de cada entreno (no identifican a nadie), pero el detalle por jugador solo en su fila.
+- **Entrenos:** ve fechas y recuentos agregados de cada entreno, también los de las respuestas a si van (no identifican a nadie), pero el detalle por jugador solo en su fila.
 - **Partidos:** el resultado y los eventos de cada partido (goles, tarjetas, cambios) son información pública del partido, igual que el acta, y los ve todo miembro. Las estadísticas **acumuladas** de temporada solo las suyas.
 - **Multas:** solo las suyas; ni el resumen de caja ni las deudas de otros.
 
@@ -346,7 +350,7 @@ Tablas de autenticación gestionadas por Better Auth (`user`, `session`, `accoun
 |---|---|---|
 | id | uuid | PK |
 | nombre | text | obligatorio |
-| escudo | text | ruta del archivo, nullable |
+| escudo | text | nullable. Ruta del archivo en `uploads` (`clubes/<club>/<uuid>.webp`); la API da la URL `/api/clubes/:cid/escudo?v=<uuid>`, que cambia con cada escudo |
 | color_principal | text | hex, por defecto `#14553d` |
 | color_secundario | text | hex, por defecto `#f2c230` |
 | creado_por | uuid → user | |
@@ -372,6 +376,7 @@ Una categoría del club en una temporada. Es la unidad de trabajo.
 | plantilla_anterior_id | uuid → plantillas | nullable, set null. La misma plantilla en la temporada anterior; del mismo club y de una temporada anterior (validado en el servicio) |
 | creado_por | uuid → user | |
 | multas_activas | boolean | por defecto true; false si la plantilla no usa multas |
+| horas_limite_respuesta | smallint | de 0 a 72, por defecto 0: horas antes del inicio de un entreno hasta las que los jugadores pueden responder si van (GH-204) |
 | created_at | timestamptz | |
 
 ### membresias
@@ -447,6 +452,19 @@ Horario semanal de entrenos de una plantilla (uno por plantilla).
 | plantilla_id | uuid | Garantiza que el jugador tiene ficha en la plantilla del entreno, con las FK compuestas `(entreno_id, plantilla_id) → entrenos` y `(plantilla_id, jugador_id) → fichas`, ambas cascade |
 | estado | enum `asiste, justificada, falta` | |
 | motivo | text | opcional, solo con `justificada` y nunca vacío |
+
+### respuestas_entreno
+Si un jugador piensa ir a un entreno (GH-204). Es la intención, no la asistencia: pasar lista no la cambia.
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| entreno_id | uuid → entrenos | PK compuesta, cascade |
+| jugador_id | uuid | PK compuesta |
+| plantilla_id | uuid | Garantiza que el jugador tiene ficha en la plantilla del entreno, como en `asistencias` |
+| respuesta | enum `voy, duda, no_voy` | |
+| motivo | text | opcional, solo con `duda` o `no_voy` y nunca vacío |
+| respondido_por | uuid → user | set null. El jugador o quien la apuntó del cuerpo técnico |
+| respondido_en | timestamptz | |
 
 ### partidos
 | Campo | Tipo | Notas |
@@ -662,7 +680,8 @@ Prefijo `/api`. JSON. Todas las rutas de la plantilla cuelgan de `/plantillas`, 
 | Clubes | `GET /clubes` (los míos: los que administro, aunque no tengan plantillas, y aquellos en los que tengo un rol) | Autenticado |
 | | `POST /clubes` (el creador pasa a ser administrador) | Autenticado |
 | | `GET /clubes/:cid` (datos e identidad visual) | Miembro de alguna plantilla del club |
-| | `PATCH /clubes/:cid` (nombre, colores) · `PUT /clubes/:cid/escudo` (multipart) | Administrador del club |
+| | `PATCH /clubes/:cid` (nombre y colores en hexadecimal; null vuelve al color por defecto) · `PUT` · `DELETE /clubes/:cid/escudo` (multipart: PNG o WebP) | Administrador del club |
+| | `GET /clubes/:cid/escudo` (WebP con caché larga) | Miembro del club |
 | | `GET /clubes/:cid/jugadores?q=` (jugadores del club, para añadirlos a una plantilla) | Delegado en alguna plantilla del club |
 | | `GET /clubes/:cid/jugadores/:jid` (ficha y trayectoria por temporadas) | Delegado en alguna plantilla del club (jugador: solo la suya) |
 | | `POST /clubes/:cid/ficha-federacion` (lee la ficha del equipo en PDF y empareja sus jugadores con los del club, sin guardar nada; GH-197) | Delegado en alguna plantilla del club |
@@ -681,6 +700,8 @@ Prefijo `/api`. JSON. Todas las rutas de la plantilla cuelgan de `/plantillas`, 
 | | `GET /plantillas/:id/entrenos/:eid` | Miembro (jugador: solo su fila) |
 | | `PUT /plantillas/:id/entrenos/:eid/asistencias` (lista completa; no en entrenos futuros) | Delegado |
 | | `GET /plantillas/:id/asistencia/resumen` | Miembro (jugador: solo suyo) |
+| | `PUT` · `DELETE /plantillas/:id/entrenos/:eid/respuesta` (voy, duda o no voy, hasta la hora límite; el listado de entrenos lleva los recuentos, la respuesta propia y el cierre) | Jugador con ficha activa en la dinámica: solo la suya |
+| | `PUT` · `DELETE /plantillas/:id/entrenos/:eid/respuestas/:jid` (también pasada la hora límite) · `GET .../respuestas/mensaje` (resumen para WhatsApp) | Delegado |
 | Ejercicios | `GET /clubes/:cid/ejercicios?categoria=&etiqueta=&q=&archivados=no|si|todos` (búsqueda sin tildes) · `GET .../ejercicios/etiquetas` · `GET /clubes/:cid/ejercicios/:eid` (con sus medios y cuántos planes o modelos lo usan) | Miembro de alguna plantilla del club |
 | | `POST /clubes/:cid/ejercicios` · `PATCH/DELETE /clubes/:cid/ejercicios/:eid` (`archivado`; borrar solo si no se ha usado: 409) · `POST .../:eid/duplicar` (con copia de los archivos) | Delegado o superior en alguna plantilla del club |
 | | `POST /clubes/:cid/ejercicios/:eid/medios` (foto o vídeo, multipart en streaming) · `POST .../medios/enlace` · `PATCH/DELETE .../medios/:mid` (pie; borrar quita los archivos) · `PUT .../medios/orden` | Delegado o superior en alguna plantilla del club |
@@ -780,15 +801,16 @@ Una issue está terminada cuando: cumple sus criterios de aceptación en el ento
 | 2 · Entrenos | Pasar lista, historial y porcentaje de asistencia | v1.0.0 |
 | 3 · Convocatorias | Partidos, convocados y mensaje de WhatsApp | v1.0.0 |
 | 4 · Multas | Catálogo, registro, cobro, deudas y caja. Paridad con el MVP y primer despliegue en el servidor | v1.0.0 |
-| 5 · Personalización y temporadas | Escudo y colores por club, y cambio de temporada | en parte en v1.1.0, con GH-101 y GH-102; el resto, pendiente |
+| 5 · Personalización | Escudo y colores por club | v1.1.0, con GH-101 y GH-102, y v1.9.0, con GH-27, GH-28, GH-29, GH-30 y GH-221 |
 | 6 · Estadísticas | Resultado, participaciones, eventos, estadísticas de temporada y trayectoria de cada jugador | v1.1.0; después se añadieron GH-134, GH-147, GH-149, GH-151, GH-153 y GH-155, en v1.3.0, GH-164, en v1.4.0, GH-168, en v1.5.0, y GH-154, pendiente |
 | 7 · Planificación de entrenos | Biblioteca de ejercicios con fotos y vídeos, y sesiones planificadas | v1.2.0 |
 | 8 · Operación | Backups automáticos, restauración, logs y actualizaciones | en parte en v1.2.0, con GH-45 y GH-46; el resto, pendiente |
-| 9 · Exportar y compartir | Exportar y compartir sesiones y multas en PDF o texto, los datos de la temporada en Excel y asistencia desde WhatsApp | en parte en v1.3.0, con GH-131 y GH-132, y en v1.5.0, con GH-170; el resto, pendiente |
+| 9 · Exportar y compartir | Exportar y compartir sesiones y multas en PDF o texto, los datos de la temporada en Excel y asistencia desde WhatsApp | en parte en v1.3.0, con GH-131 y GH-132, en v1.5.0, con GH-170, y en v1.9.0, con GH-204 (y sus arreglos GH-209, GH-211 y GH-215); el resto, pendiente |
 | 10 · Roles en uso | Invitaciones, delegados y jugadores | v1.8.0, con GH-49, GH-50, GH-51, GH-52 y GH-53 |
 | 11 · Exposición pública | Bastionado, aislamiento, cabeceras, límites y publicación con Tailscale Funnel | en parte en v1.6.0, con GH-54, GH-55, GH-57, GH-58, GH-177 y GH-56 (Funnel activo desde el 2026-11-11); v2.0.0, prevista |
 | 12 · Asistente de ejercicios | Claves de API, diagrama táctico del ejercicio y generación de imágenes, animación y PDF en el servidor | v2.1.0, prevista |
 | 13 · Jugadores invitados | Convocar y, si el entrenador quiere, meter en la dinámica del equipo a jugadores de otra plantilla, de un club asociado o a prueba | v1.7.0, con GH-187, GH-188 y GH-189 |
+| 14 · Cambio de temporada | Crear las plantillas de la temporada nueva a partir de las de la anterior | antes de la temporada 2027-28, prevista |
 
 Versión publicada en los ciclos ya cerrados y prevista en el resto. Los ciclos 1 a 3 no tuvieron release propia: se publicaron juntos en la v1.0.0. Lo que queda abierto de un ciclo ya publicado sale en la release siguiente a terminarlo.
 
@@ -818,15 +840,16 @@ Versión publicada en los ciclos ya cerrados y prevista en el resto. Los ciclos 
 | Ciclo 2 · Entrenos | Pasar lista, historial y porcentaje de asistencia (v1.0.0) |
 | Ciclo 3 · Convocatorias | Partidos, convocados y mensaje de WhatsApp (v1.0.0) |
 | Ciclo 4 · Multas | Catálogo, registro, cobro, deudas y caja. Paridad con el MVP y primer despliegue en el servidor (v1.0.0) |
-| Ciclo 5 · Personalización y temporadas | Escudo y colores por club, y cambio de temporada (en parte en v1.1.0, con GH-101 y GH-102; el resto, pendiente) |
+| Ciclo 5 · Personalización | Escudo y colores por club (v1.1.0, con GH-101 y GH-102, y v1.9.0, con GH-27, GH-28, GH-29, GH-30 y GH-221) |
 | Ciclo 6 · Estadísticas | Resultado, participaciones, eventos, estadísticas de temporada y trayectoria de cada jugador (v1.1.0; después se añadieron GH-134, GH-147, GH-149, GH-151, GH-153 y GH-155, en v1.3.0, GH-164, en v1.4.0, GH-168, en v1.5.0, y GH-154, pendiente) |
 | Ciclo 7 · Planificación de entrenos | Biblioteca de ejercicios con fotos y vídeos, y sesiones planificadas (v1.2.0) |
 | Ciclo 8 · Operación | Backups automáticos, restauración, logs y actualizaciones (en parte en v1.2.0, con GH-45 y GH-46; el resto, pendiente) |
-| Ciclo 9 · Exportar y compartir | Exportar y compartir sesiones y multas en PDF o texto, los datos de la temporada en Excel y asistencia desde WhatsApp (en parte en v1.3.0, con GH-131 y GH-132, y en v1.5.0, con GH-170; el resto, pendiente) |
+| Ciclo 9 · Exportar y compartir | Exportar y compartir sesiones y multas en PDF o texto, los datos de la temporada en Excel y asistencia desde WhatsApp (en parte en v1.3.0, con GH-131 y GH-132, en v1.5.0, con GH-170, y en v1.9.0, con GH-204 y sus arreglos GH-209, GH-211 y GH-215; el resto, pendiente) |
 | Ciclo 10 · Roles en uso | Invitaciones, delegados y jugadores (v1.8.0, con GH-49, GH-50, GH-51, GH-52 y GH-53) |
 | Ciclo 11 · Exposición pública | Publicación con Tailscale Funnel en la Raspberry compartida: bastionado, aislamiento de Vestuario, cabeceras, límites de peticiones por usuario e IP y paso a producción pública (en parte en v1.6.0, con GH-54, GH-55, GH-57, GH-58, GH-177 y GH-56, con Funnel activo desde el 2026-11-11; v2.0.0, prevista) |
 | Ciclo 12 · Asistente de ejercicios | Claves de API, diagrama táctico del ejercicio y generación de imágenes, animación y PDF en el servidor (v2.1.0, prevista) |
 | Ciclo 13 · Jugadores invitados | Convocar y, si el entrenador quiere, meter en la dinámica del equipo a jugadores de otra plantilla del club (juveniles, equipo B), de un club asociado o a prueba (v1.7.0, con GH-187, GH-188 y GH-189) |
+| Ciclo 14 · Cambio de temporada | Crear las plantillas de la temporada nueva a partir de las de la anterior, copiando jugadores y cuerpo técnico (antes de la temporada 2027-28) |
 
 ### 11.3 Issues
 
@@ -1288,7 +1311,7 @@ Comprobar que la aplicación cubre todo lo que hacía el MVP inicial antes de pu
 
 ---
 
-### Milestone: Ciclo 5 · Personalización y temporadas
+### Milestone: Ciclo 5 · Personalización
 
 #### GH-27
 **Título:** API de configuración visual del club
@@ -1337,22 +1360,6 @@ Completa la configuración de GH-70 con el escudo y los colores. Depende de GH-2
 **Criterios de aceptación**
 - [ ] Identidad del club (solo administradores del club): subir y cambiar el escudo con vista previa, selectores de color con vista previa en vivo antes de guardar y restablecer los colores por defecto
 - [ ] Aviso de que el escudo y los colores se aplican a todas las plantillas del club
-
-#### GH-63
-**Título:** Cambio de temporada
-**Etiquetas:** feature, backend, frontend
-
-Crear las plantillas de una temporada nueva a partir de las de la anterior (sección 2.1). Cada plantilla se crea con `POST /api/plantillas`; no hay una operación propia de cambio de temporada. Depende de GH-7, GH-8 y GH-22.
-
-**Criterios de aceptación**
-- [ ] `POST /api/plantillas` admite `copiar: { jugadores, cuerpoTecnico }` junto con `plantillaAnteriorId`: copia las fichas activas (dorsal y posición) y las membresías de la plantilla anterior en la misma transacción. Los jugadores que ya tengan ficha en otra plantilla de la temporada se omiten y se indican en la respuesta
-- [ ] Cada plantilla nueva puede cambiar de nombre y categoría respecto a la anterior (p. ej. Alevín → Infantil)
-- [ ] Los jugadores que cambian de categoría se añaden a su nueva plantilla desde los jugadores del club (GH-8)
-- [ ] El catálogo de multas se copia siempre de la plantilla anterior; las multas no (la caja empieza de cero cada temporada)
-- [ ] Las multas pendientes de la temporada anterior siguen en su plantilla y se pueden consultar y cobrar
-- [ ] Asistente en el frontend (solo administradores del club): elegir qué plantillas de la temporada anterior continúan, con qué nombre y categoría, y qué copiar, con un resumen antes de confirmar
-- [ ] La temporada anterior sigue consultable; el selector muestra primero la nueva
-- [ ] Tests
 
 #### GH-101
 **Título:** Multas opcionales por plantilla
@@ -1850,6 +1857,28 @@ Un informe con todo lo de un jugador en la temporada, no solo los partidos: asis
 
 Por decidir al empezar: qué apartados entran y si también se hace el informe de toda la plantilla.
 
+#### GH-204
+**Título:** Marcar si voy a los próximos entrenos
+**Etiquetas:** feature, db, backend, frontend
+
+Depende de GH-52. Implementa la opción «enlace a la app» de GH-133: en lugar de la encuesta de WhatsApp, cada jugador marca en la app si va a cada entreno, y el cuerpo técnico tiene el resumen.
+
+La respuesta es la **intención** de ir, distinta de la **asistencia real** que se registra al pasar lista: se guardan por separado y una no pisa a la otra.
+
+**Criterios de aceptación**
+- [ ] Tabla nueva `respuestas_entreno` (entreno, jugador, plantilla, respuesta `voy` / `duda` / `no_voy`, motivo opcional para `duda` y `no_voy`, fecha de la respuesta), con las mismas garantías de ficha que `asistencias` y borrado en cascada con el entreno
+- [ ] Hora límite configurable por plantilla: horas antes del inicio del entreno hasta las que se puede responder (por defecto 0, hasta la hora de inicio; si el entreno no tiene hora, se cuenta desde el final del día). La cambia el entrenador o superior en la configuración de la plantilla
+- [ ] El jugador responde solo por sí mismo y solo en entrenos futuros, hasta la hora límite; pasada, no admite cambios (409) y la app lo indica («Respuestas cerradas»)
+- [ ] Responden los jugadores con ficha propia o invitados en la dinámica; los invitados solo para partidos, no
+- [ ] En «Mi asistencia» (GH-52), cada próximo entreno tiene «Voy» / «Duda» / «No voy» y muestra su respuesta y hasta cuándo puede cambiarla; marcar de nuevo la elegida la quita
+- [ ] El delegado o superior puede apuntar o corregir la respuesta de un jugador (por ejemplo, si avisa por teléfono), también pasada la hora límite
+- [ ] Al pasar lista, la respuesta de cada jugador se ve como pista junto a su nombre; no rellena el estado
+- [ ] En el historial del cuerpo técnico, cada próximo entreno muestra el recuento: van, en duda, no van, sin responder
+- [ ] Resumen para WhatsApp de un entreno, como el mensaje de convocatoria: quién va, quién está en duda, quién no y quién no ha respondido, con copiar y compartir
+- [ ] Visibilidad según la sección 3: el jugador ve su respuesta y el recuento agregado, no las respuestas de los demás
+- [ ] Al cambiar el horario, los entrenos futuros con respuestas se tratan como los que tienen asistencia: no se rehacen
+- [ ] Documento actualizado (2.3, modelo de datos, API y sección 3) y tests
+
 #### GH-170
 **Título:** Exportar los datos de la temporada a Excel
 **Etiquetas:** feature, backend, frontend
@@ -2142,6 +2171,28 @@ Depende de GH-187.
 - [ ] Al importar el acta, los nombres sin emparejar se buscan también entre los jugadores de las otras plantillas del club en la temporada; al confirmar se crea su ficha de invitado (con `en_dinamica` apagado)
 - [ ] Las estadísticas y las exportaciones de la plantilla incluyen a los invitados que han jugado, marcados con su procedencia
 - [ ] La trayectoria del jugador muestra también lo jugado como invitado y con qué plantilla
+- [ ] Tests
+
+---
+
+### Milestone: Ciclo 14 · Cambio de temporada
+
+Sacado del ciclo 5 el 2026-11-12: no tiene que ver con la identidad visual y solo hace falta antes de cada temporada.
+
+#### GH-63
+**Título:** Cambio de temporada
+**Etiquetas:** feature, backend, frontend
+
+Crear las plantillas de una temporada nueva a partir de las de la anterior (sección 2.1). Cada plantilla se crea con `POST /api/plantillas`; no hay una operación propia de cambio de temporada. Depende de GH-7, GH-8 y GH-22.
+
+**Criterios de aceptación**
+- [ ] `POST /api/plantillas` admite `copiar: { jugadores, cuerpoTecnico }` junto con `plantillaAnteriorId`: copia las fichas activas (dorsal y posición) y las membresías de la plantilla anterior en la misma transacción. Los jugadores que ya tengan ficha en otra plantilla de la temporada se omiten y se indican en la respuesta
+- [ ] Cada plantilla nueva puede cambiar de nombre y categoría respecto a la anterior (p. ej. Alevín → Infantil)
+- [ ] Los jugadores que cambian de categoría se añaden a su nueva plantilla desde los jugadores del club (GH-8)
+- [ ] El catálogo de multas se copia siempre de la plantilla anterior; las multas no (la caja empieza de cero cada temporada)
+- [ ] Las multas pendientes de la temporada anterior siguen en su plantilla y se pueden consultar y cobrar
+- [ ] Asistente en el frontend (solo administradores del club): elegir qué plantillas de la temporada anterior continúan, con qué nombre y categoría, y qué copiar, con un resumen antes de confirmar
+- [ ] La temporada anterior sigue consultable; el selector muestra primero la nueva
 - [ ] Tests
 
 ---

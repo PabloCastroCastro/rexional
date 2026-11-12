@@ -44,6 +44,7 @@ import {
 } from './datos'
 import estilos from './Entrenos.module.css'
 import { type Asistencia, type EstadoGuardado, useGuardadoAutomatico } from './guardado'
+import { PistaRespuesta, RespuestasDeHoy, RespuestasEntreno } from './Respuestas'
 
 const ESTADOS: { estado: Estado; texto: string; icono: typeof Check }[] = [
   { estado: 'asiste', texto: 'Asiste', icono: Check },
@@ -167,6 +168,7 @@ export function PaginaPasarLista() {
           <p className={estilos.aviso}>
             Este entreno aún no ha llegado: la lista se pasa el mismo día.
           </p>
+          {gestiona && <RespuestasEntreno entreno={elegida} />}
           {gestiona && (
             <AccionesEntreno entreno={elegida} alCambiarHora={() => setCambiandoHora(true)} />
           )}
@@ -179,6 +181,10 @@ export function PaginaPasarLista() {
         </p>
       ) : gestiona ? (
         <>
+          {/* Antes de pasar lista, quién dijo que iba (GH-215) */}
+          {elegida.asiste + elegida.justificada + elegida.falta === 0 && (
+            <RespuestasDeHoy entreno={elegida} />
+          )}
           {/* Cada entreno empieza con su propio estado local y su propio guardado */}
           <Lista key={entreno.data.id} entreno={entreno.data} />
           <AccionesEntreno entreno={elegida} alCambiarHora={() => setCambiandoHora(true)} />
@@ -489,6 +495,7 @@ function Lista({ entreno }: { entreno: Entreno }) {
                   {nombreCompleto(j)}
                   {j.tipo === 'invitado' && <MarcaInvitado />}
                   {!j.activo && <span className={estilos.baja}> baja</span>}
+                  <PistaRespuesta jugador={j} />
                 </span>
                 <fieldset className={estilos.estados}>
                   <legend className="solo-lectores">Asistencia de {nombreCompleto(j)}</legend>

@@ -380,8 +380,8 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Cambiar el nombre del club
-         * @description Solo los administradores del club. El escudo y los colores llegan en el ciclo 5.
+         * Cambiar el nombre o los colores del club
+         * @description Solo los administradores del club. Los colores, en hexadecimal (#rrggbb), son comunes a todas las plantillas del club; con null vuelven a los de por defecto. El escudo tiene su propia ruta.
          */
         patch: {
             parameters: {
@@ -395,7 +395,17 @@ export interface paths {
             requestBody?: {
                 content: {
                     "application/json": {
-                        nombre: string;
+                        nombre?: string;
+                        /**
+                         * @description El color principal; null vuelve al de por defecto
+                         * @example #14553d
+                         */
+                        colorPrincipal?: string | null;
+                        /**
+                         * @description El color secundario; null vuelve al de por defecto
+                         * @example #14553d
+                         */
+                        colorSecundario?: string | null;
                     };
                 };
             };
@@ -576,6 +586,207 @@ export interface paths {
                 };
                 /** @description Es el último administrador */
                 409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/clubes/{cid}/escudo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Escudo del club
+         * @description Cualquier miembro de una plantilla del club. WebP con caché larga: la URL que dan las respuestas (con ?v=) cambia con cada escudo nuevo.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    v?: string;
+                };
+                header?: never;
+                path: {
+                    cid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description El escudo */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "image/webp": string;
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        /**
+         * Subir o cambiar el escudo del club
+         * @description Solo los administradores del club. Multipart, en el campo «archivo»: PNG o WebP (se comprueba el contenido, no la extensión), hasta MAX_ESCUDO_MB (2 MB por defecto). Se guarda como WebP de hasta 512 px por lado, sin recortar y sin metadatos; el anterior se borra.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    cid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Club con el escudo nuevo */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Club"];
+                    };
+                };
+                /** @description Falta el archivo */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Demasiado grande */
+                413: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No es PNG ni WebP */
+                415: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /**
+         * Quitar el escudo del club
+         * @description Solo los administradores del club. Vuelve el logo genérico.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    cid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Club sin escudo */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Club"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -866,7 +1077,7 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Cambiar el nombre, la categoría o si usa multas
+         * Cambiar el nombre, la categoría, si usa multas o la hora límite de respuesta
          * @description Entrenador o superior. La temporada no se modifica. Desactivar las multas las oculta y bloquea sin borrar nada: al reactivarlas vuelven como estaban.
          */
         patch: {
@@ -884,6 +1095,7 @@ export interface paths {
                         nombre?: string;
                         categoria?: string;
                         multasActivas?: boolean;
+                        horasLimiteRespuesta?: number;
                     };
                 };
             };
@@ -3140,6 +3352,369 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["AsistenciaJugador"][];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plantillas/{id}/entrenos/{eid}/respuesta": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Responder si voy a un entreno
+         * @description El jugador vinculado al usuario, con ficha activa en la dinámica de la plantilla, hasta la hora límite. Motivo opcional con «duda» o «no_voy».
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    eid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        respuesta: "voy" | "duda" | "no_voy";
+                        motivo?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Respuesta guardada */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RespuestaEntreno"];
+                    };
+                };
+                /** @description Datos no válidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Respuestas cerradas */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /**
+         * Quitar mi respuesta a un entreno
+         * @description Como responder: el propio jugador, hasta la hora límite.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    eid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Respuesta quitada */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Respuestas cerradas */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plantillas/{id}/entrenos/{eid}/respuestas/{jid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Apuntar la respuesta de un jugador
+         * @description Delegado o superior, para cualquier jugador con ficha activa en la dinámica y también pasada la hora límite (por ejemplo, si avisa por teléfono).
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    eid: string;
+                    jid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        respuesta: "voy" | "duda" | "no_voy";
+                        motivo?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Respuesta guardada */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RespuestaEntreno"];
+                    };
+                };
+                /** @description Datos no válidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /**
+         * Quitar la respuesta de un jugador
+         * @description Delegado o superior, también pasada la hora límite.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    eid: string;
+                    jid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Respuesta quitada */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plantillas/{id}/entrenos/{eid}/respuestas/mensaje": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Resumen de respuestas para WhatsApp
+         * @description Delegado o superior. Quién va, quién está en duda, quién no y quién no ha respondido (de los jugadores activos en la dinámica), con el enlace para responder en la app, y el enlace wa.me para compartirlo.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    eid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Mensaje */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MensajeRespuestas"];
                     };
                 };
                 /** @description Sin sesión */
@@ -7250,7 +7825,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Tamaño máximo de las fotos y los vídeos
+         * Tamaño máximo de las fotos, los vídeos y el escudo
          * @description Para comprobarlo antes de subir. Cualquier usuario con sesión.
          */
         get: {
@@ -8403,6 +8978,10 @@ export interface components {
             /** Format: uuid */
             id: string;
             nombre: string;
+            /**
+             * @description URL del escudo (cambia con cada escudo nuevo, así se puede guardar en caché); null si no tiene
+             * @example /api/clubes/0199…/escudo?v=0199…
+             */
             escudo: string | null;
             /** @example #14553d */
             colorPrincipal: string;
@@ -8443,6 +9022,8 @@ export interface components {
             plantillaAnteriorId: string | null;
             /** @description false si la plantilla no usa multas (no se ven ni se pueden poner) */
             multasActivas: boolean;
+            /** @description Horas antes del inicio de cada entreno hasta las que los jugadores pueden responder si van (GH-204) */
+            horasLimiteRespuesta: number;
             /**
              * @description Rol efectivo del usuario en la plantilla
              * @enum {string}
@@ -8694,6 +9275,26 @@ export interface components {
              * @enum {string|null}
              */
             miEstado: "asiste" | "justificada" | "falta" | null;
+            /** @description Respuestas a si van (GH-204) de los jugadores activos en la dinámica: no identifican a nadie */
+            respuestas: {
+                voy: number;
+                duda: number;
+                noVoy: number;
+                sinResponder: number;
+            };
+            /**
+             * @description Respuesta del jugador vinculado al usuario; null si no ha respondido
+             * @enum {string|null}
+             */
+            miRespuesta: "voy" | "duda" | "no_voy" | null;
+            /** @description Motivo de su respuesta («duda» o «no_voy»), si lo indicó */
+            miMotivo: string | null;
+            /**
+             * @description Hasta cuándo puede responder el jugador: el inicio del entreno (o el final del día si no tiene hora) menos la hora límite de la plantilla
+             * @example 2026-11-17T20:00:00+01:00
+             */
+            cierreRespuestas: string;
+            respuestasAbiertas: boolean;
         };
         ResumenEntreno: components["schemas"]["RecuentosAsistencia"] & {
             /** Format: uuid */
@@ -8754,6 +9355,12 @@ export interface components {
                 /** @enum {string|null} */
                 estado: "asiste" | "justificada" | "falta" | null;
                 motivo: string | null;
+                /**
+                 * @description Si dijo que iba (GH-204); no rellena el estado
+                 * @enum {string|null}
+                 */
+                respuesta: "voy" | "duda" | "no_voy" | null;
+                motivoRespuesta: string | null;
             }[];
         };
         AsistenciaJugador: components["schemas"]["RecuentosAsistencia"] & {
@@ -8769,6 +9376,18 @@ export interface components {
             tipo: "propia" | "invitado";
             /** @description Asistencias / entrenos con estado registrado, de 0 a 100 */
             porcentaje: number | null;
+        };
+        RespuestaEntreno: {
+            /** Format: uuid */
+            jugadorId: string;
+            /** @enum {string} */
+            respuesta: "voy" | "duda" | "no_voy";
+            motivo: string | null;
+        };
+        MensajeRespuestas: {
+            texto: string;
+            /** @example https://wa.me/?text=… */
+            whatsapp: string;
         };
         CalendarioLeido: {
             /** @example TERCERA FUTGAL, A CORUÑA | GRUPO 1 */
@@ -9202,6 +9821,7 @@ export interface components {
         LimitesMedios: {
             maxFotoBytes: number;
             maxVideoBytes: number;
+            maxEscudoBytes: number;
         };
         MotivoMulta: {
             /** Format: uuid */

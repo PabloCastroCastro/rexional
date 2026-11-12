@@ -14,6 +14,7 @@ import { ErrorApi, EsquemaError, validacionFallida } from '../errores.js'
 import { borrarCarpeta, carpetaDePlantilla } from '../medios/almacen.js'
 import { type EnvPlantilla, type Rol, requireRol, requireSesion } from '../permisos.js'
 import { EsquemaTemporada, EsquemaTexto, EsquemaUuid, restriccionViolada } from '../validacion.js'
+import { urlEscudo } from './clubes.js'
 import { altaEnLote, EsquemaJugadoresLote, errorDeLote } from './fichaEquipo.js'
 
 // Plantillas: una categoría del club en una temporada (secciones 2.1 y 7). Todas sus rutas cuelgan de
@@ -31,6 +32,10 @@ export const EsquemaPlantilla = z
     plantillaAnteriorId: z.uuid().nullable(),
     multasActivas: z.boolean().openapi({
       description: 'false si la plantilla no usa multas (no se ven ni se pueden poner)',
+    }),
+    horasLimiteRespuesta: z.int().openapi({
+      description:
+        'Horas antes del inicio de cada entreno hasta las que los jugadores pueden responder si van (GH-204)',
     }),
     rol: z.enum(ROLES).openapi({ description: 'Rol efectivo del usuario en la plantilla' }),
     esAdminClub: z.boolean(),
@@ -72,6 +77,7 @@ const columnasPlantilla = {
   temporada: plantillas.temporada,
   plantillaAnteriorId: plantillas.plantillaAnteriorId,
   multasActivas: plantillas.multasActivas,
+  horasLimiteRespuesta: plantillas.horasLimiteRespuesta,
 }
 
 // Jugador del usuario (el vinculado en el club) si tiene ficha en la plantilla; si no, null
@@ -125,7 +131,7 @@ export const rutasPlantillas = () =>
             club: {
               id: clubes.id,
               nombre: clubes.nombre,
-              escudo: clubes.escudo,
+              escudo: urlEscudo,
               colorPrincipal: clubes.colorPrincipal,
               colorSecundario: clubes.colorSecundario,
             },
@@ -314,7 +320,7 @@ export const rutasPlantillas = () =>
         method: 'patch',
         path: '/plantillas/{id}',
         tags: ['Plantillas'],
-        summary: 'Cambiar el nombre, la categoría o si usa multas',
+        summary: 'Cambiar el nombre, la categoría, si usa multas o la hora límite de respuesta',
         description:
           'Entrenador o superior. La temporada no se modifica. Desactivar las multas las oculta y bloquea sin borrar nada: al reactivarlas vuelven como estaban.',
         middleware: [requireRol('entrenador')] as const,
@@ -328,10 +334,16 @@ export const rutasPlantillas = () =>
                     nombre: EsquemaTexto('El nombre').optional(),
                     categoria: EsquemaTexto('La categoría').optional(),
                     multasActivas: z.boolean().optional(),
+                    horasLimiteRespuesta: z
+                      .int('La hora límite son horas enteras')
+                      .min(0, 'La hora límite va de 0 a 72 horas')
+                      .max(72, 'La hora límite va de 0 a 72 horas')
+                      .optional(),
                   })
                   .strict()
                   .refine((d) => Object.values(d).some((v) => v !== undefined), {
-                    message: 'Indica el nombre, la categoría o si usa multas',
+                    message:
+                      'Indica el nombre, la categoría, si usa multas o la hora límite de respuesta',
                   }),
               },
             },

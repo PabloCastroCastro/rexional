@@ -29,6 +29,7 @@ import { rutasPartidos } from './rutas/partidos.js'
 import { rutasModelosSesion, rutasPlanes } from './rutas/planes.js'
 import { rutasPlanificacion } from './rutas/planificacion.js'
 import { rutasPlantillas } from './rutas/plantillas.js'
+import { rutasRespuestas } from './rutas/respuestas.js'
 import { rutasSalud } from './rutas/salud.js'
 import { rutasVideos } from './rutas/videos.js'
 
@@ -36,7 +37,7 @@ export const infoOpenApi = {
   openapi: '3.1.0',
   info: {
     title: 'API de Vestuario',
-    version: '1.8.0',
+    version: '1.9.0',
     description:
       'API REST de Vestuario. Todas las rutas cuelgan de /api. Errores con el formato { error: { codigo, mensaje, detalles? } }.',
   },
@@ -84,6 +85,7 @@ export function crearApp(dependencias: Partial<Dependencias> = {}) {
   app.route('/', rutasInvitacionesPublicas())
   app.route('/', rutasMiembros())
   app.route('/', rutasEntrenos())
+  app.route('/', rutasRespuestas())
   // Antes que los partidos: en /partidos/calendario, «calendario» no es el id de un partido
   app.route('/', rutasCalendario())
   app.route('/', rutasPartidos())
