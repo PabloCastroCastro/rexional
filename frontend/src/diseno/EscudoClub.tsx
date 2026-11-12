@@ -1,14 +1,26 @@
+import estilos from './EscudoClub.module.css'
+
 // Escudo del club (GH-29): el que subió el club o, si no tiene, el genérico de Vestuario dibujado con
-// los colores del club activo. Decorativo: el nombre del club va siempre al lado.
+// los colores del club activo. Decorativo: el nombre del club va siempre al lado. Con placa, sobre un
+// fondo claro, para la cabecera del color del club (GH-221).
 export function EscudoClub({
   escudo,
   tamano = 32,
   className,
+  conPlaca = false,
 }: {
   escudo: string | null
   tamano?: number
   className?: string
+  conPlaca?: boolean
 }) {
+  if (conPlaca) {
+    return (
+      <span className={[estilos.placa, className].filter(Boolean).join(' ')} data-placa>
+        <EscudoClub escudo={escudo} tamano={tamano - 6} />
+      </span>
+    )
+  }
   if (escudo) {
     return <img src={escudo} alt="" width={tamano} height={tamano} className={className} />
   }

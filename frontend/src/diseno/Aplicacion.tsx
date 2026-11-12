@@ -33,7 +33,7 @@ export function Aplicacion() {
         Saltar al contenido
       </a>
       <header className={estilos.cabecera}>
-        <EscudoClub escudo={plantilla.club.escudo} className={estilos.logo} />
+        <EscudoClub escudo={plantilla.club.escudo} tamano={36} conPlaca />
         <button
           type="button"
           className={estilos.plantilla}

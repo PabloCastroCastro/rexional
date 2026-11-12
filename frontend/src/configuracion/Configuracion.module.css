@@ -305,6 +305,20 @@
   background: var(--color-primario);
   color: var(--color-sobre-primario);
   font-weight: var(--peso-fuerte);
+  border-bottom: 3px solid var(--color-secundario);
+}
+
+.vistaDorsal {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radio-completo);
+  background: var(--color-secundario);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-texto) 15%, transparent);
+  color: var(--color-sobre-secundario);
+  font-weight: var(--peso-fuerte);
 }
 
 .vistaCabecera svg,
