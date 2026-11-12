@@ -259,6 +259,30 @@ describe('el cuerpo técnico', () => {
     expect(within(lista).getByText('Dijo que no iba: Trabajo')).toBeInTheDocument()
     // No rellena el estado
     expect(within(lista).queryAllByRole('button', { pressed: true })).toHaveLength(0)
+
+    // Antes de pasar lista, encima, quién va y el resumen para WhatsApp (GH-215)
+    const respuestas = screen.getByRole('region', { name: 'Respuestas' })
+    expect(
+      within(respuestas).getByText('1 va · 0 dudan · 1 no va · 1 sin responder'),
+    ).toBeInTheDocument()
+    expect(await within(respuestas).findByText('Resumen para WhatsApp')).toBeInTheDocument()
+  })
+
+  it('en el historial, el entreno de hoy sin lista va en los próximos con su recuento (GH-215)', async () => {
+    const deHoy = proximo({
+      id: 'hoy',
+      fecha: '2026-10-14',
+      respuestas: { voy: 0, duda: 0, noVoy: 1, sinResponder: 2 },
+    })
+    conProximos(senior26, deHoy)
+    manejadores['GET /api/plantillas/p1/entrenos'] = (peticion) =>
+      json(new URL(peticion.url).searchParams.get('desde') ? [] : [deHoy])
+    abrir('/plantillas/p1/entrenos/historial')
+    const proximos = await screen.findByRole('region', { name: 'Próximos' })
+    expect(within(proximos).getByText(/^Hoy/)).toBeInTheDocument()
+    expect(
+      within(proximos).getByText('0 van · 0 dudan · 1 no va · 2 sin responder'),
+    ).toBeInTheDocument()
   })
 })
 

@@ -187,6 +187,26 @@ export function PistaRespuesta({
   )
 }
 
+// Entreno de hoy aún sin lista (GH-215): encima de la lista, el recuento y el resumen para WhatsApp
+export function RespuestasDeHoy({ entreno }: { entreno: EntrenoListado }) {
+  const plantilla = usePlantillaActiva()
+  const mensaje = useMensajeRespuestas(plantilla.id, entreno.id)
+  return (
+    <section aria-label="Respuestas" className={estilos.seccionRespuestas}>
+      <p>
+        <strong>¿Quién va? </strong>
+        <RecuentoRespuestas respuestas={entreno.respuestas} />
+      </p>
+      {mensaje.data && (
+        <details className={estilos.resumenHoy}>
+          <summary>Resumen para WhatsApp</summary>
+          <MensajeCompartible {...mensaje.data} />
+        </details>
+      )}
+    </section>
+  )
+}
+
 const useMensajeRespuestas = (plantillaId: string, entrenoId: string) =>
   useQuery({
     queryKey: [...CLAVE_ENTRENOS, plantillaId, entrenoId, 'respuestas', 'mensaje'],

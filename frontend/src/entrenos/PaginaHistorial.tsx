@@ -6,6 +6,7 @@ import { puedeGestionarJugadores } from '../jugadores/datos'
 import { resumenPlan } from '../planificacion/datos'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
 import {
+  hoy,
   type ResumenEntreno,
   textoFecha,
   textoHoras,
@@ -48,8 +49,13 @@ export function PaginaHistorial() {
     )
   }
 
+  // Los de hoy sin lista pasada aún son próximos, con el recuento de respuestas (GH-215)
+  const deHoy = historial.data
+    .filter((e) => e.fecha === hoy() && e.asiste + e.justificada + e.falta === 0)
+    .sort((a, b) => (a.hora ?? '').localeCompare(b.hora ?? ''))
+  const siguientes = [...deHoy, ...proximos.data]
   const meses: { mes: string; entrenos: ResumenEntreno[] }[] = []
-  for (const e of historial.data) {
+  for (const e of historial.data.filter((e) => !deHoy.includes(e))) {
     const mes = textoMes(e.fecha)
     if (meses.at(-1)?.mes !== mes) meses.push({ mes, entrenos: [] })
     meses.at(-1)?.entrenos.push(e)
@@ -57,11 +63,11 @@ export function PaginaHistorial() {
 
   return (
     <div className={estilos.meses}>
-      {proximos.data.length > 0 && (
+      {siguientes.length > 0 && (
         <section aria-label="Próximos">
           <h2 className={estilos.mes}>Próximos</h2>
           <ul className={estilos.lista}>
-            {proximos.data.map((e) => (
+            {siguientes.map((e) => (
               <li key={e.id}>
                 {/* Un entreno futuro se abre en su día: el plan y quién va (GH-204) */}
                 <Link to={enlace(e)} className={estilos.entreno}>

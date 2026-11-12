@@ -2,7 +2,16 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Entreno, JugadorEntreno } from '../src/entrenos/datos'
-import { abrir, conDatos, json, manejadores, peticiones, ruta, senior26 } from './simulacion'
+import {
+  abrir,
+  conDatos,
+  json,
+  manejadores,
+  peticiones,
+  ruta,
+  SIN_RESPUESTAS,
+  senior26,
+} from './simulacion'
 
 // Hoy es miércoles 14 de octubre de 2026 en Madrid. Solo se simula la fecha: los temporizadores son
 // reales, así que el guardado automático tarda lo que tarda de verdad.
@@ -70,7 +79,7 @@ function conEntrenos(dias: Record<string, JugadorEntreno[]>, p = senior26) {
   manejadores['GET /api/plantillas/p1/entrenos'] = (peticion) => {
     const desde = new URL(peticion.url).searchParams.get('desde')
     const delDia = actuales[desde ?? '']
-    return json(delDia ? [{ ...delDia, ...delDia.recuentos }] : [])
+    return json(delDia ? [{ ...delDia, ...delDia.recuentos, ...SIN_RESPUESTAS }] : [])
   }
   for (const [fecha, jugadores] of Object.entries(dias)) {
     actuales[fecha] = entreno(fecha, jugadores)
