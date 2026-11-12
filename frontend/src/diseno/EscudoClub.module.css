@@ -1,0 +1,17 @@
+/* Placa clara bajo el escudo en la cabecera (GH-221): el escudo suele llevar los colores del club y,
+   sobre su color, no se distinguiría */
+.placa {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  padding: 3px;
+  border-radius: var(--radio-m);
+  background: #ffffff;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 8%);
+}
+
+.placa > img,
+.placa > svg {
+  border-radius: var(--radio-s);
+  object-fit: contain;
+}

@@ -17,12 +17,6 @@
   color: var(--color-sobre-primario);
 }
 
-.logo {
-  flex: none;
-  border-radius: var(--radio-s);
-  object-fit: contain;
-}
-
 /* Botón con el club y la plantilla activa: abre el cambio de plantilla */
 .plantilla {
   display: grid;

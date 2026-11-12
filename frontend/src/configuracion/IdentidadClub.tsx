@@ -264,7 +264,7 @@ function Colores({ club }: { club: Club }) {
         aria-label="Vista previa"
       >
         <div className={estilos.vistaCabecera}>
-          <EscudoClub escudo={club.escudo} tamano={28} />
+          <EscudoClub escudo={club.escudo} tamano={32} conPlaca />
           <span>{club.nombre}</span>
         </div>
         <div className={estilos.vistaCuerpo}>

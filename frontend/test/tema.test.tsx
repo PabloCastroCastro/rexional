@@ -101,6 +101,8 @@ describe('aplicar el tema', () => {
     abrir('/plantillas/p1/mas')
     const cabecera = await screen.findByRole('banner')
     expect(cabecera.querySelector('img')).toHaveAttribute('src', '/api/clubes/c2/escudo?v=abc')
+    // Sobre una placa clara: con los colores del club no se distinguiría de la cabecera (GH-221)
+    expect(cabecera.querySelector('[data-placa] img')).not.toBeNull()
   })
 
   it('en el selector, cada club con su escudo', async () => {
