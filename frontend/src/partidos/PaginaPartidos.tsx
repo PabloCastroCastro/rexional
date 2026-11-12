@@ -119,7 +119,7 @@ export function PaginaPartidos() {
         >
           {partidos.data.map((p) => (
             <li key={p.id}>
-              <TarjetaPartido partido={p} />
+              <TarjetaPartido partido={p} conMiConvocatoria={!gestiona && !!plantilla.jugadorId} />
             </li>
           ))}
         </ul>
@@ -134,7 +134,14 @@ export function PaginaPartidos() {
   )
 }
 
-function TarjetaPartido({ partido: p }: { partido: ResumenPartido }) {
+// Al rol jugador con ficha se le dice si está convocado, en vez de cuántos (GH-52)
+function TarjetaPartido({
+  partido: p,
+  conMiConvocatoria,
+}: {
+  partido: ResumenPartido
+  conMiConvocatoria: boolean
+}) {
   const lugar = textoLocal(p.local)
   return (
     <Link to={p.id} className={estilos.tarjeta}>
@@ -155,7 +162,13 @@ function TarjetaPartido({ partido: p }: { partido: ResumenPartido }) {
         <span className={estilos.detalles}>
           {lugar && <span className={estilos.etiqueta}>{lugar}</span>}
           {p.competicion && <span>{p.competicion}</span>}
-          {p.convocados > 0 ? (
+          {p.convocados > 0 && conMiConvocatoria ? (
+            p.meConvocan ? (
+              <span className={estilos.meConvocan}>Convocado</span>
+            ) : (
+              <span>No convocado</span>
+            )
+          ) : p.convocados > 0 ? (
             <span>
               {p.convocados} {p.convocados === 1 ? 'convocado' : 'convocados'}
             </span>

@@ -2,7 +2,14 @@ import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
 import { and, asc, desc, eq, isNotNull, or } from 'drizzle-orm'
 import { crearCatalogo } from '../catalogoMultas.js'
 import { db } from '../db/cliente.js'
-import { adminsClub, clubes, membresias, plantillas } from '../db/schema/index.js'
+import {
+  adminsClub,
+  clubes,
+  fichas,
+  jugadores,
+  membresias,
+  plantillas,
+} from '../db/schema/index.js'
 import { ErrorApi, EsquemaError, validacionFallida } from '../errores.js'
 import { borrarCarpeta, carpetaDePlantilla } from '../medios/almacen.js'
 import { type EnvPlantilla, type Rol, requireRol, requireSesion } from '../permisos.js'
@@ -27,6 +34,10 @@ export const EsquemaPlantilla = z
     }),
     rol: z.enum(ROLES).openapi({ description: 'Rol efectivo del usuario en la plantilla' }),
     esAdminClub: z.boolean(),
+    jugadorId: z.uuid().nullable().openapi({
+      description:
+        'Jugador vinculado al usuario si tiene ficha (activa o de baja) en esta plantilla; si no, null',
+    }),
   })
   .openapi('Plantilla')
 
@@ -61,6 +72,16 @@ const columnasPlantilla = {
   temporada: plantillas.temporada,
   plantillaAnteriorId: plantillas.plantillaAnteriorId,
   multasActivas: plantillas.multasActivas,
+}
+
+// Jugador del usuario (el vinculado en el club) si tiene ficha en la plantilla; si no, null
+async function fichaDelUsuario(plantillaId: string, jugadorId: string | null) {
+  if (!jugadorId) return null
+  const [ficha] = await db
+    .select({ jugadorId: fichas.jugadorId })
+    .from(fichas)
+    .where(and(eq(fichas.plantillaId, plantillaId), eq(fichas.jugadorId, jugadorId)))
+  return ficha?.jugadorId ?? null
 }
 
 const plantillaDuplicada = (nombre: string, temporada: string) =>
@@ -100,6 +121,7 @@ export const rutasPlantillas = () =>
             ...columnasPlantilla,
             rolMembresia: membresias.rol,
             adminClub: adminsClub.usuarioId,
+            jugadorId: fichas.jugadorId,
             club: {
               id: clubes.id,
               nombre: clubes.nombre,
@@ -117,6 +139,15 @@ export const rutasPlantillas = () =>
           .leftJoin(
             adminsClub,
             and(eq(adminsClub.clubId, plantillas.clubId), eq(adminsClub.usuarioId, usuarioId)),
+          )
+          // Su ficha en la plantilla, si su cuenta está vinculada a un jugador del club
+          .leftJoin(
+            jugadores,
+            and(eq(jugadores.clubId, plantillas.clubId), eq(jugadores.usuarioId, usuarioId)),
+          )
+          .leftJoin(
+            fichas,
+            and(eq(fichas.plantillaId, plantillas.id), eq(fichas.jugadorId, jugadores.id)),
           )
           .where(
             and(
@@ -239,7 +270,10 @@ export const rutasPlantillas = () =>
             if (jugadores?.length) await altaEnLote(tx, creada, jugadores)
             return creada
           })
-          return c.json({ ...plantilla, rol: 'admin' as const, esAdminClub: true }, 201)
+          return c.json(
+            { ...plantilla, rol: 'admin' as const, esAdminClub: true, jugadorId: null },
+            201,
+          )
         } catch (error) {
           if (restriccionViolada(error) === 'plantillas_nombre_unico') {
             throw plantillaDuplicada(datos.nombre, datos.temporada)
@@ -264,7 +298,15 @@ export const rutasPlantillas = () =>
           .from(plantillas)
           .where(eq(plantillas.id, c.var.plantilla.id))
         if (!plantilla) throw new ErrorApi(404, 'no_encontrado', 'No existe la plantilla')
-        return c.json({ ...plantilla, rol: c.var.rol, esAdminClub: c.var.esAdminClub }, 200)
+        return c.json(
+          {
+            ...plantilla,
+            rol: c.var.rol,
+            esAdminClub: c.var.esAdminClub,
+            jugadorId: await fichaDelUsuario(plantilla.id, c.var.jugadorId),
+          },
+          200,
+        )
       },
     )
     .openapi(
@@ -311,7 +353,15 @@ export const rutasPlantillas = () =>
             .where(eq(plantillas.id, c.var.plantilla.id))
             .returning(columnasPlantilla)
           if (!plantilla) throw new ErrorApi(404, 'no_encontrado', 'No existe la plantilla')
-          return c.json({ ...plantilla, rol: c.var.rol, esAdminClub: c.var.esAdminClub }, 200)
+          return c.json(
+            {
+              ...plantilla,
+              rol: c.var.rol,
+              esAdminClub: c.var.esAdminClub,
+              jugadorId: await fichaDelUsuario(plantilla.id, c.var.jugadorId),
+            },
+            200,
+          )
         } catch (error) {
           if (restriccionViolada(error) === 'plantillas_nombre_unico') {
             throw plantillaDuplicada(cambios.nombre ?? '', c.var.plantilla.temporada)

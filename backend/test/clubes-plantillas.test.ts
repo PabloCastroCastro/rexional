@@ -275,6 +275,48 @@ describe('mis plantillas', () => {
     expect(delJugador.map((p: { id: string }) => p.id)).toEqual([ids.juvenil26])
   })
 
+  it('cada plantilla indica el jugador del usuario solo si tiene ficha en ella (GH-52)', async () => {
+    const sinFicha = await (await pedir('GET', `/plantillas/${ids.juvenil26}`, 'jugador')).json()
+    expect(sinFicha.jugadorId).toBeNull()
+
+    // Su cuenta, vinculada a un jugador del club con ficha en el Juvenil pero no en el Senior
+    const [vinculado] = await db
+      .insert(jugadores)
+      .values({ clubId: ids.club ?? '', nombre: 'Jugador', usuarioId: ids.jugador ?? '' })
+      .returning({ id: jugadores.id })
+    await db.insert(fichas).values({
+      plantillaId: ids.juvenil26 ?? '',
+      clubId: ids.club ?? '',
+      temporada: '2026-27',
+      jugadorId: vinculado?.id ?? '',
+    })
+    await db
+      .insert(membresias)
+      .values({ plantillaId: ids.senior26 ?? '', usuarioId: ids.jugador ?? '', rol: 'jugador' })
+
+    const lista = await (await pedir('GET', `/plantillas?club=${ids.club}`, 'jugador')).json()
+    expect(lista.map((p: { id: string; jugadorId: string | null }) => [p.id, p.jugadorId])).toEqual(
+      [
+        [ids.juvenil26, vinculado?.id],
+        [ids.senior26, null],
+      ],
+    )
+    const una = await (await pedir('GET', `/plantillas/${ids.juvenil26}`, 'jugador')).json()
+    expect(una.jugadorId).toBe(vinculado?.id)
+    const delAdmin = await (await pedir('GET', `/plantillas/${ids.juvenil26}`, 'admin')).json()
+    expect(delAdmin.jugadorId).toBeNull()
+
+    await db
+      .delete(membresias)
+      .where(
+        and(
+          eq(membresias.plantillaId, ids.senior26 ?? ''),
+          eq(membresias.usuarioId, ids.jugador ?? ''),
+        ),
+      )
+    await db.delete(jugadores).where(eq(jugadores.id, vinculado?.id ?? ''))
+  })
+
   it('sin sesión: 401; un club mal escrito: 400', async () => {
     expect((await pedir('GET', '/plantillas')).status).toBe(401)
     expect((await pedir('GET', '/plantillas?club=otro', 'admin')).status).toBe(400)

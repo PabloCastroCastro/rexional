@@ -81,8 +81,20 @@ const datosPartido = {
   golesContra: z.int().nullable().openapi({ example: 1 }),
 }
 
+// Si el jugador está entre los convocados del partido de la fila agrupada
+const meConvocan = (jugadorId: string | null) =>
+  jugadorId
+    ? sql<boolean>`coalesce(bool_or(${convocados.jugadorId} = ${jugadorId}), false)`
+    : sql<boolean>`false`
+
 const EsquemaResumenPartido = z
-  .object({ ...datosPartido, convocados: z.int() })
+  .object({
+    ...datosPartido,
+    convocados: z.int(),
+    meConvocan: z.boolean().openapi({
+      description: 'true si el jugador vinculado al usuario está convocado (GH-52)',
+    }),
+  })
   .openapi('ResumenPartido')
 
 const EsquemaJugadorConvocatoria = z
@@ -374,7 +386,11 @@ export const rutasPartidos = () =>
         const { cuando } = c.req.valid('query')
         const proximos = cuando === 'proximos'
         const filas = await db
-          .select({ ...columnasPartido, convocados: count(convocados.jugadorId) })
+          .select({
+            ...columnasPartido,
+            convocados: count(convocados.jugadorId),
+            meConvocan: meConvocan(c.var.jugadorId),
+          })
           .from(partidos)
           .leftJoin(convocados, eq(convocados.partidoId, partidos.id))
           .where(

@@ -2689,7 +2689,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ResumenEntreno"][];
+                        "application/json": components["schemas"]["EntrenoListado"][];
                     };
                 };
                 /** @description Fechas no válidas */
@@ -8449,6 +8449,11 @@ export interface components {
              */
             rol: "admin" | "entrenador" | "delegado" | "jugador";
             esAdminClub: boolean;
+            /**
+             * Format: uuid
+             * @description Jugador vinculado al usuario si tiene ficha (activa o de baja) en esta plantilla; si no, null
+             */
+            jugadorId: string | null;
         };
         JugadorPlantilla: {
             /** Format: uuid */
@@ -8683,6 +8688,13 @@ export interface components {
             /** @example 20:00 */
             horaFin?: string | null;
         };
+        EntrenoListado: components["schemas"]["ResumenEntreno"] & {
+            /**
+             * @description Estado del jugador vinculado al usuario en este entreno; null si no tiene o no está registrado
+             * @enum {string|null}
+             */
+            miEstado: "asiste" | "justificada" | "falta" | null;
+        };
         ResumenEntreno: components["schemas"]["RecuentosAsistencia"] & {
             /** Format: uuid */
             id: string;
@@ -8816,6 +8828,8 @@ export interface components {
             /** @example 1 */
             golesContra: number | null;
             convocados: number;
+            /** @description true si el jugador vinculado al usuario está convocado (GH-52) */
+            meConvocan: boolean;
         };
         Partido: {
             /** Format: uuid */

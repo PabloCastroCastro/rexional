@@ -175,6 +175,7 @@ Los identificadores son UUID v7 generados por PostgreSQL (`uuidv7()`).
 |---|---|---|
 | `admin@rexional.test` | `vestuario-dev` | Administradora del CD Rexional |
 | `entrenador@rexional.test` | `vestuario-dev` | Entrenador del Juvenil 2025-26 y del Senior 2026-27 |
+| `jugador@rexional.test` | `vestuario-dev` | Jugador del Senior 2026-27, vinculado a Brais Iglesias |
 | `admin@ejemplo.test` | `vestuario-dev` | Administradora de la UD Ejemplo |
 
 ## Desarrollo

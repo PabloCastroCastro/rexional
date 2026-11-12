@@ -59,19 +59,22 @@ export function PaginaPlantilla() {
         )}
       </div>
 
-      <fieldset className={estilos.segmentos}>
-        <legend className="solo-lectores">Ver</legend>
-        <button type="button" aria-pressed={!verBajas} onClick={() => setParametros({})}>
-          Activos
-        </button>
-        <button
-          type="button"
-          aria-pressed={verBajas}
-          onClick={() => setParametros({ ver: 'bajas' })}
-        >
-          Bajas
-        </button>
-      </fieldset>
+      {/* Las bajas son cosa del cuerpo técnico: el rol jugador ve solo la plantilla activa */}
+      {gestiona && (
+        <fieldset className={estilos.segmentos}>
+          <legend className="solo-lectores">Ver</legend>
+          <button type="button" aria-pressed={!verBajas} onClick={() => setParametros({})}>
+            Activos
+          </button>
+          <button
+            type="button"
+            aria-pressed={verBajas}
+            onClick={() => setParametros({ ver: 'bajas' })}
+          >
+            Bajas
+          </button>
+        </fieldset>
+      )}
 
       {jugadores.isPending ? (
         <Cargando />
@@ -139,12 +142,15 @@ export function PaginaPlantilla() {
   )
 
   function fila(j: JugadorPlantilla) {
+    // El rol jugador solo abre su propia ficha (GH-52)
+    const propio = j.jugadorId === plantilla.jugadorId
     return (
       <li key={j.jugadorId}>
-        {gestiona ? (
+        {gestiona || propio ? (
           <Link to={j.jugadorId} className={estilos.fila}>
             <Datos
               jugador={j}
+              propio={propio}
               porcentaje={porcentajes.get(j.jugadorId)}
               deuda={deudas.get(j.jugadorId)}
               partidos={partidos.get(j.jugadorId)}
@@ -188,11 +194,13 @@ export function Dorsal({ dorsal }: { dorsal: number | null }) {
 
 function Datos({
   jugador,
+  propio = false,
   porcentaje,
   deuda,
   partidos,
 }: {
   jugador: JugadorPlantilla
+  propio?: boolean
   porcentaje: number | null | undefined
   deuda: number | undefined
   partidos: number | undefined
@@ -206,7 +214,8 @@ function Datos({
           {nombreCompleto(jugador)}
           {invitado && <MarcaInvitado />}
         </strong>
-        <span className={estilos.secundario}>
+        <span className={propio ? `${estilos.secundario} ${estilos.unaLinea}` : estilos.secundario}>
+          {propio && <span className={estilos.marcaPropia}>Tú</span>}
           {invitado
             ? [
                 jugador.procedencia,

@@ -2,16 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Entreno, JugadorEntreno } from '../src/entrenos/datos'
-import {
-  abrir,
-  conDatos,
-  json,
-  manejadores,
-  peticiones,
-  plantilla,
-  ruta,
-  senior26,
-} from './simulacion'
+import { abrir, conDatos, json, manejadores, peticiones, ruta, senior26 } from './simulacion'
 
 // Hoy es miércoles 14 de octubre de 2026 en Madrid. Solo se simula la fecha: los temporizadores son
 // reales, así que el guardado automático tarda lo que tarda de verdad.
@@ -235,23 +226,5 @@ describe('pasar lista', () => {
       [{ jugadorId: 'j1', estado: 'asiste' }],
       [{ jugadorId: 'j1', estado: 'asiste' }],
     ])
-  })
-})
-
-describe('sin permiso para pasar lista', () => {
-  it('el rol jugador ve los recuentos sin controles', async () => {
-    conEntrenos(
-      { [HOY]: [] },
-      plantilla('p1', 'Senior', '2026-27', { rol: 'jugador', esAdminClub: false }),
-    )
-    manejadores[`GET /api/plantillas/p1/entrenos/e-${HOY}`] = () =>
-      json({
-        ...entreno(HOY, []),
-        recuentos: { asiste: 9, justificada: 1, falta: 2 },
-      })
-    abrir('/plantillas/p1/entrenos')
-    expect(await screen.findByText('9 asisten · 1 justificada · 2 faltan')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Asiste' })).not.toBeInTheDocument()
-    expect(screen.getByText('Pasar lista es cosa del cuerpo técnico.')).toBeInTheDocument()
   })
 })

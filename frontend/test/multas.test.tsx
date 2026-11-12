@@ -318,7 +318,9 @@ describe('plantilla y rol jugador', () => {
   })
 
   it('el rol jugador ve sus multas y el catálogo, sin caja ni acciones', async () => {
-    conMultas(plantilla('p1', 'Senior', '2026-27', { rol: 'jugador', esAdminClub: false }))
+    conMultas(
+      plantilla('p1', 'Senior', '2026-27', { rol: 'jugador', esAdminClub: false, jugadorId: 'j1' }),
+    )
     abrir('/plantillas/p1/multas')
     const pestanas = await screen.findByRole('navigation', { name: 'Multas' })
     expect(

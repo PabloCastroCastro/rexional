@@ -1023,3 +1023,9 @@
   min-height: calc(var(--altura-tactil) + var(--espacio-3));
   padding: var(--espacio-2) var(--espacio-2) var(--espacio-2) var(--espacio-4);
 }
+
+/* El rol jugador ve si está convocado (GH-52) */
+.meConvocan {
+  color: var(--color-exito);
+  font-weight: var(--peso-medio);
+}

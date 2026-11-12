@@ -225,6 +225,29 @@ describe('convocatoria', () => {
     expect(proximos.find((p: Partido) => p.id === ids.p3)).toMatchObject({ convocados: 1 })
   })
 
+  it('cada partido indica si convocan al jugador vinculado al usuario (GH-52)', async () => {
+    await convocar(ids.p3 ?? '', [ids.Zoe])
+    const delPartido = (lista: { id: string; meConvocan: boolean }[]) =>
+      lista.find((p) => p.id === ids.p3)?.meConvocan
+
+    // Sin jugador vinculado, nunca
+    expect(delPartido(await (await pedir('GET', base(), 'jugador')).json())).toBe(false)
+
+    await db
+      .update(jugadores)
+      .set({ usuarioId: ids.jugador ?? '' })
+      .where(eq(jugadores.id, ids.Zoe ?? ''))
+    expect(delPartido(await (await pedir('GET', base(), 'jugador')).json())).toBe(true)
+    await convocar(ids.p3 ?? '', [ids.Brais])
+    expect(delPartido(await (await pedir('GET', base(), 'jugador')).json())).toBe(false)
+    expect(delPartido(await (await pedir('GET', base(), 'delegado')).json())).toBe(false)
+
+    await db
+      .update(jugadores)
+      .set({ usuarioId: null })
+      .where(eq(jugadores.id, ids.Zoe ?? ''))
+  })
+
   it('solo se convoca a jugadores con ficha activa en la plantilla o en otra del club', async () => {
     // A Bruno, de otra plantilla del club, sí: como invitado (test/invitados.test.ts)
     for (const lista of [[ids.Hugo], ['00000000-0000-7000-8000-000000000000']]) {

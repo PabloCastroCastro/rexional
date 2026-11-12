@@ -41,6 +41,7 @@ const resumen = (
   golesFavor: null,
   golesContra: null,
   convocados: 0,
+  meConvocan: false,
   ...extra,
 })
 

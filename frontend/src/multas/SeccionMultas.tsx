@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet } from 'react-router'
 import { EstadoVacio } from '../componentes/EstadoVacio'
 import { puedeConfigurar } from '../configuracion/PaginaConfiguracion'
 import { puedeGestionarJugadores } from '../jugadores/datos'
+import { SinFicha } from '../jugadores/SinFicha'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
 import estilos from './Multas.module.css'
 import { PaginaCaja } from './PaginaCaja'
@@ -63,5 +64,6 @@ export function SeccionMultas() {
 // Índice de la pestaña: la caja para quien gestiona; sus multas para el rol jugador
 export function IndiceMultas() {
   const plantilla = usePlantillaActiva()
-  return puedeGestionarJugadores(plantilla) ? <PaginaCaja /> : <PaginaListaMultas />
+  if (puedeGestionarJugadores(plantilla)) return <PaginaCaja />
+  return plantilla.jugadorId ? <PaginaListaMultas /> : <SinFicha que="tus multas" />
 }
