@@ -521,7 +521,7 @@
 }
 
 [data-tipo="gol"] .iconoEvento {
-  color: var(--color-primario);
+  color: var(--color-acento);
 }
 
 [data-tipo="amarilla"] .iconoEvento {

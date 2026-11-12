@@ -1,6 +1,7 @@
 /*
-  Tokens de diseño. Toda la aplicación usa estas variables y nunca colores sueltos: en el ciclo 5 el
-  tema de cada club se aplica cambiando --color-primario y --color-secundario (y sus "sobre-").
+  Tokens de diseño. Toda la aplicación usa estas variables y nunca colores sueltos. El tema de cada
+  club (GH-29, src/diseno/tema.ts) cambia --color-primario y --color-secundario, sus "sobre-" y el
+  acento legible sobre la superficie clara (--acento-claro) y la oscura (--acento-oscuro).
 */
 :root {
   color-scheme: light dark;
@@ -27,8 +28,9 @@
   --color-aviso: #9a5b00;
   --color-informacion: #1d5fb8;
   --color-foco: #1d6fd1;
-  /* Texto de enlaces y acentos sobre la superficie (en oscuro, el primario sería ilegible) */
-  --color-acento: var(--color-primario);
+  /* Texto de enlaces y acentos sobre la superficie: el primario del club, oscurecido si hace falta
+     para leerse (en oscuro, aclarado) */
+  --color-acento: var(--acento-claro, var(--color-primario));
 
   /* Tipografía: la del sistema, sin descargas */
   --fuente: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -85,7 +87,7 @@
     --color-aviso: #f0b04a;
     --color-informacion: #7fb2f5;
     --color-foco: #7fb2f5;
-    --color-acento: #7fd1aa;
+    --color-acento: var(--acento-oscuro, #7fd1aa);
     --sombra-2: 0 8px 24px rgb(0 0 0 / 50%);
   }
 }

@@ -6,6 +6,7 @@ import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
 import { SelectorPlantilla } from '../plantillas/SelectorPlantilla'
 import { ActualizacionPwa } from '../pwa/ActualizacionPwa'
 import estilos from './Aplicacion.module.css'
+import { EscudoClub } from './EscudoClub'
 
 const secciones = [
   { ruta: 'jugadores', texto: 'Plantilla', icono: Users },
@@ -32,13 +33,7 @@ export function Aplicacion() {
         Saltar al contenido
       </a>
       <header className={estilos.cabecera}>
-        <img
-          src={plantilla.club.escudo ?? '/logo.svg'}
-          alt=""
-          width={32}
-          height={32}
-          className={estilos.logo}
-        />
+        <EscudoClub escudo={plantilla.club.escudo} className={estilos.logo} />
         <button
           type="button"
           className={estilos.plantilla}
