@@ -1,4 +1,5 @@
 import { Check, ChevronRight } from 'lucide-react'
+import { EscudoClub } from '../diseno/EscudoClub'
 import { agruparPlantillas, type Plantilla } from './datos'
 import estilos from './ListaPlantillas.module.css'
 
@@ -11,13 +12,15 @@ type Props = {
 // Plantillas agrupadas por club y temporada (la más reciente primero), con su categoría
 export function ListaPlantillas({ plantillas, actualId, alElegir }: Props) {
   const grupos = agruparPlantillas(plantillas)
-  const variosClubes = grupos.length > 1
 
   return (
     <div className={estilos.lista}>
       {grupos.map(({ club, temporadas }) => (
         <section key={club.id} className={estilos.club} aria-label={club.nombre}>
-          {variosClubes && <h2 className={estilos.nombreClub}>{club.nombre}</h2>}
+          <h2 className={estilos.nombreClub}>
+            <EscudoClub escudo={club.escudo} tamano={28} className={estilos.escudo} />
+            {club.nombre}
+          </h2>
           {temporadas.map(({ temporada, plantillas: deLaTemporada }) => (
             <div key={temporada} className={estilos.temporada}>
               <h3 className={estilos.nombreTemporada}>Temporada {temporada}</h3>
@@ -34,10 +37,7 @@ export function ListaPlantillas({ plantillas, actualId, alElegir }: Props) {
                       >
                         <span className={estilos.texto}>
                           <span className={estilos.nombre}>{p.nombre}</span>
-                          <span className={estilos.detalle}>
-                            {p.categoria}
-                            {variosClubes ? '' : ` · ${club.nombre}`}
-                          </span>
+                          <span className={estilos.detalle}>{p.categoria}</span>
                         </span>
                         {actual ? (
                           <Check aria-label="Plantilla actual" size={20} />

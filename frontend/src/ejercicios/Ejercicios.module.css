@@ -144,7 +144,7 @@
   gap: var(--espacio-1);
   justify-self: start;
   min-height: var(--altura-tactil);
-  color: var(--color-primario);
+  color: var(--color-acento);
   font-weight: var(--peso-medio);
   text-decoration: none;
 }

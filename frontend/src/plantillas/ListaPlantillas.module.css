@@ -10,7 +10,16 @@
 }
 
 .nombreClub {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
   font-size: var(--texto-lg);
+}
+
+.escudo {
+  flex: none;
+  border-radius: var(--radio-s);
+  object-fit: contain;
 }
 
 .nombreTemporada {
