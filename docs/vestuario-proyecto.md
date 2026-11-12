@@ -801,11 +801,11 @@ Una issue está terminada cuando: cumple sus criterios de aceptación en el ento
 | 2 · Entrenos | Pasar lista, historial y porcentaje de asistencia | v1.0.0 |
 | 3 · Convocatorias | Partidos, convocados y mensaje de WhatsApp | v1.0.0 |
 | 4 · Multas | Catálogo, registro, cobro, deudas y caja. Paridad con el MVP y primer despliegue en el servidor | v1.0.0 |
-| 5 · Personalización | Escudo y colores por club | en parte en v1.1.0, con GH-101 y GH-102; el resto, pendiente |
+| 5 · Personalización | Escudo y colores por club | v1.1.0, con GH-101 y GH-102, y v1.9.0, con GH-27, GH-28, GH-29, GH-30 y GH-221 |
 | 6 · Estadísticas | Resultado, participaciones, eventos, estadísticas de temporada y trayectoria de cada jugador | v1.1.0; después se añadieron GH-134, GH-147, GH-149, GH-151, GH-153 y GH-155, en v1.3.0, GH-164, en v1.4.0, GH-168, en v1.5.0, y GH-154, pendiente |
 | 7 · Planificación de entrenos | Biblioteca de ejercicios con fotos y vídeos, y sesiones planificadas | v1.2.0 |
 | 8 · Operación | Backups automáticos, restauración, logs y actualizaciones | en parte en v1.2.0, con GH-45 y GH-46; el resto, pendiente |
-| 9 · Exportar y compartir | Exportar y compartir sesiones y multas en PDF o texto, los datos de la temporada en Excel y asistencia desde WhatsApp | en parte en v1.3.0, con GH-131 y GH-132, y en v1.5.0, con GH-170; el resto, pendiente |
+| 9 · Exportar y compartir | Exportar y compartir sesiones y multas en PDF o texto, los datos de la temporada en Excel y asistencia desde WhatsApp | en parte en v1.3.0, con GH-131 y GH-132, en v1.5.0, con GH-170, y en v1.9.0, con GH-204 (y sus arreglos GH-209, GH-211 y GH-215); el resto, pendiente |
 | 10 · Roles en uso | Invitaciones, delegados y jugadores | v1.8.0, con GH-49, GH-50, GH-51, GH-52 y GH-53 |
 | 11 · Exposición pública | Bastionado, aislamiento, cabeceras, límites y publicación con Tailscale Funnel | en parte en v1.6.0, con GH-54, GH-55, GH-57, GH-58, GH-177 y GH-56 (Funnel activo desde el 2026-11-11); v2.0.0, prevista |
 | 12 · Asistente de ejercicios | Claves de API, diagrama táctico del ejercicio y generación de imágenes, animación y PDF en el servidor | v2.1.0, prevista |
@@ -840,11 +840,11 @@ Versión publicada en los ciclos ya cerrados y prevista en el resto. Los ciclos 
 | Ciclo 2 · Entrenos | Pasar lista, historial y porcentaje de asistencia (v1.0.0) |
 | Ciclo 3 · Convocatorias | Partidos, convocados y mensaje de WhatsApp (v1.0.0) |
 | Ciclo 4 · Multas | Catálogo, registro, cobro, deudas y caja. Paridad con el MVP y primer despliegue en el servidor (v1.0.0) |
-| Ciclo 5 · Personalización | Escudo y colores por club (en parte en v1.1.0, con GH-101 y GH-102; el resto, pendiente) |
+| Ciclo 5 · Personalización | Escudo y colores por club (v1.1.0, con GH-101 y GH-102, y v1.9.0, con GH-27, GH-28, GH-29, GH-30 y GH-221) |
 | Ciclo 6 · Estadísticas | Resultado, participaciones, eventos, estadísticas de temporada y trayectoria de cada jugador (v1.1.0; después se añadieron GH-134, GH-147, GH-149, GH-151, GH-153 y GH-155, en v1.3.0, GH-164, en v1.4.0, GH-168, en v1.5.0, y GH-154, pendiente) |
 | Ciclo 7 · Planificación de entrenos | Biblioteca de ejercicios con fotos y vídeos, y sesiones planificadas (v1.2.0) |
 | Ciclo 8 · Operación | Backups automáticos, restauración, logs y actualizaciones (en parte en v1.2.0, con GH-45 y GH-46; el resto, pendiente) |
-| Ciclo 9 · Exportar y compartir | Exportar y compartir sesiones y multas en PDF o texto, los datos de la temporada en Excel y asistencia desde WhatsApp (en parte en v1.3.0, con GH-131 y GH-132, y en v1.5.0, con GH-170; el resto, pendiente) |
+| Ciclo 9 · Exportar y compartir | Exportar y compartir sesiones y multas en PDF o texto, los datos de la temporada en Excel y asistencia desde WhatsApp (en parte en v1.3.0, con GH-131 y GH-132, en v1.5.0, con GH-170, y en v1.9.0, con GH-204 y sus arreglos GH-209, GH-211 y GH-215; el resto, pendiente) |
 | Ciclo 10 · Roles en uso | Invitaciones, delegados y jugadores (v1.8.0, con GH-49, GH-50, GH-51, GH-52 y GH-53) |
 | Ciclo 11 · Exposición pública | Publicación con Tailscale Funnel en la Raspberry compartida: bastionado, aislamiento de Vestuario, cabeceras, límites de peticiones por usuario e IP y paso a producción pública (en parte en v1.6.0, con GH-54, GH-55, GH-57, GH-58, GH-177 y GH-56, con Funnel activo desde el 2026-11-11; v2.0.0, prevista) |
 | Ciclo 12 · Asistente de ejercicios | Claves de API, diagrama táctico del ejercicio y generación de imágenes, animación y PDF en el servidor (v2.1.0, prevista) |
