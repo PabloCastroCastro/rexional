@@ -253,7 +253,7 @@ function Colores({ club }: { club: Club }) {
           />
           <span>
             Secundario
-            <span className={estilos.descripcion}>Detalles · {secundario}</span>
+            <span className={estilos.descripcion}>Franja y dorsales · {secundario}</span>
           </span>
         </label>
       </div>
@@ -268,6 +268,7 @@ function Colores({ club }: { club: Club }) {
           <span>{club.nombre}</span>
         </div>
         <div className={estilos.vistaCuerpo}>
+          <span className={estilos.vistaDorsal}>7</span>
           <span className={estilos.vistaBoton}>Botón</span>
           <span className={estilos.vistaEnlace}>Enlace</span>
           <span className={estilos.vistaIndicador} aria-hidden="true" />

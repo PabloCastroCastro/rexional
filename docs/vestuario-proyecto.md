@@ -134,7 +134,7 @@ Este documento recoge todas las decisiones funcionales, técnicas y de organizac
 - Vista previa en vivo de la aplicación con los colores elegidos.
 - Al cambiar de plantilla activa, toda la interfaz adopta el escudo y los colores de su club.
 - Contraste automático: el texto sobre el color principal se muestra en blanco o negro según su luminosidad.
-- El color principal va tal cual en la cabecera, los botones y los dorsales; en textos y acentos sobre la superficie se oscurece (o, en modo oscuro, se aclara) lo justo para cumplir WCAG AA. El secundario se usa en detalles: el indicador de la sección activa y el escudo genérico de los clubes sin escudo (GH-29).
+- El color principal va tal cual en la cabecera, los botones y los dorsales; en textos y acentos sobre la superficie se oscurece (o, en modo oscuro, se aclara) lo justo para cumplir WCAG AA. El secundario, en la franja bajo la cabecera, los dorsales (con texto blanco u oscuro según su contraste), el indicador de la sección activa y el escudo genérico de los clubes sin escudo (GH-29, GH-221). En la cabecera, el escudo va sobre una placa clara para que se distinga del color del club.
 - Al abrir la app se aplican al momento los colores de la última plantilla abierta, sin parpadeo de los colores por defecto.
 
 ### 2.7 Estadísticas de partido (ciclo posterior)
