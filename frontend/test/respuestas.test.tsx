@@ -134,6 +134,30 @@ describe('el jugador', () => {
       await screen.findByText('3 van · 1 duda · 0 no van · 5 sin responder'),
     ).toBeInTheDocument()
   })
+
+  it('el entreno de hoy sin lista pasada está en los próximos; con lista, en el historial (GH-209)', async () => {
+    const deHoy = proximo({ id: 'hoy', fecha: '2026-10-14' })
+    conProximos()
+    manejadores['GET /api/plantillas/p1/entrenos'] = (peticion) =>
+      json(new URL(peticion.url).searchParams.get('desde') ? [] : [deHoy])
+    abrir('/plantillas/p1/entrenos')
+    const proximos = await screen.findByRole('region', { name: 'Próximos' })
+    expect(within(proximos).getByText(/^Hoy/)).toBeInTheDocument()
+    expect(
+      within(proximos).getByRole('group', { name: '¿Vas a este entreno?' }),
+    ).toBeInTheDocument()
+  })
+
+  it('con la lista ya pasada, el entreno de hoy baja al historial con su estado', async () => {
+    const deHoy = proximo({ id: 'hoy', fecha: '2026-10-14', asiste: 12, miEstado: 'asiste' })
+    conProximos()
+    manejadores['GET /api/plantillas/p1/entrenos'] = (peticion) =>
+      json(new URL(peticion.url).searchParams.get('desde') ? [] : [deHoy])
+    abrir('/plantillas/p1/entrenos')
+    const octubre = await screen.findByRole('region', { name: 'octubre de 2026' })
+    expect(within(octubre).getByText('Asististe')).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Próximos' })).not.toBeInTheDocument()
+  })
 })
 
 describe('el cuerpo técnico', () => {
