@@ -9072,6 +9072,8 @@ export interface components {
              * @enum {string|null}
              */
             miRespuesta: "voy" | "duda" | "no_voy" | null;
+            /** @description Motivo de su respuesta («duda» o «no_voy»), si lo indicó */
+            miMotivo: string | null;
             /**
              * @description Hasta cuándo puede responder el jugador: el inicio del entreno (o el final del día si no tiene hora) menos la hora límite de la plantilla
              * @example 2026-11-17T20:00:00+01:00

@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Check, CircleHelp, X } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { api, datos, enviar } from '../api/cliente'
 import type { components } from '../api/esquema'
 import { useAvisos } from '../componentes/Avisos'
@@ -79,31 +80,48 @@ function ControlRespuesta({
 }
 
 // Rol jugador: su respuesta a un próximo entreno, mientras esté abierto
+// Con «Duda» o «No voy» puede indicar el motivo (GH-211): se guarda al salir del campo o con Intro, y
+// se conserva al cambiar entre las dos
 export function MiRespuesta({ entreno }: { entreno: EntrenoListado }) {
   const plantilla = usePlantillaActiva()
   const cliente = useQueryClient()
   const { avisar } = useAvisos()
+  const [motivo, setMotivo] = useState(entreno.miMotivo ?? '')
   const ruta = { params: { path: { id: plantilla.id, eid: entreno.id } } }
+
+  // Si cambia lo guardado (otra pestaña, el cuerpo técnico), el campo lo sigue
+  useEffect(() => setMotivo(entreno.miMotivo ?? ''), [entreno.miMotivo])
+
   const cambiar = useMutation({
-    mutationFn: (respuesta: Respuesta | null) =>
+    mutationFn: ({ respuesta, motivo }: { respuesta: Respuesta | null; motivo: string | null }) =>
       respuesta
         ? enviar(
             api.PUT('/api/plantillas/{id}/entrenos/{eid}/respuesta', {
               ...ruta,
-              body: { respuesta },
+              body: { respuesta, motivo: respuesta === 'voy' ? null : motivo },
             }),
           )
         : enviar(api.DELETE('/api/plantillas/{id}/entrenos/{eid}/respuesta', ruta)),
     onSuccess: () => cliente.invalidateQueries({ queryKey: CLAVE_ENTRENOS }),
     onError: (error) => avisar({ tipo: 'error', mensaje: error.message }),
   })
-  const valor = cambiar.isPending ? (cambiar.variables ?? null) : entreno.miRespuesta
+  const valor = cambiar.isPending ? (cambiar.variables?.respuesta ?? null) : entreno.miRespuesta
+  const conMotivo = valor === 'duda' || valor === 'no_voy'
+
+  function guardarMotivo() {
+    const limpio = motivo.trim() || null
+    if (!conMotivo || limpio === (entreno.miMotivo ?? null)) return
+    cambiar.mutate({ respuesta: valor, motivo: limpio })
+  }
 
   if (!entreno.respuestasAbiertas) {
     const elegida = RESPUESTAS.find((r) => r.valor === entreno.miRespuesta)
     return (
       <p className={estilos.cierre}>
-        {elegida ? `Respondiste «${elegida.texto}». ` : ''}Respuestas cerradas
+        {elegida
+          ? `Respondiste «${elegida.texto}»${entreno.miMotivo ? `: ${entreno.miMotivo}` : ''}. `
+          : ''}
+        Respuestas cerradas
       </p>
     )
   }
@@ -113,8 +131,27 @@ export function MiRespuesta({ entreno }: { entreno: EntrenoListado }) {
         valor={valor}
         etiqueta="¿Vas a este entreno?"
         deshabilitado={cambiar.isPending}
-        alElegir={(nueva) => cambiar.mutate(nueva)}
+        alElegir={(nueva) =>
+          cambiar.mutate({
+            respuesta: nueva,
+            motivo: nueva === 'voy' ? null : motivo.trim() || null,
+          })
+        }
       />
+      {conMotivo && (
+        <input
+          className={estilos.motivoMio}
+          aria-label="Motivo (opcional)"
+          placeholder="Motivo (opcional)"
+          maxLength={200}
+          value={motivo}
+          onChange={(e) => setMotivo(e.target.value)}
+          onBlur={guardarMotivo}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') e.currentTarget.blur()
+          }}
+        />
+      )}
       <p className={estilos.cierre}>Puedes cambiarla {textoCierre(entreno.cierreRespuestas)}</p>
     </div>
   )

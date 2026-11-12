@@ -66,6 +66,9 @@ const EsquemaEntrenoListado = EsquemaResumenEntreno.extend({
   miRespuesta: EsquemaRespuesta.nullable().openapi({
     description: 'Respuesta del jugador vinculado al usuario; null si no ha respondido',
   }),
+  miMotivo: z.string().nullable().openapi({
+    description: 'Motivo de su respuesta («duda» o «no_voy»), si lo indicó',
+  }),
   cierreRespuestas: z.string().openapi({
     description:
       'Hasta cuándo puede responder el jugador: el inicio del entreno (o el final del día si no tiene hora) menos la hora límite de la plantilla',
@@ -179,6 +182,12 @@ const miRespuesta = (jugadorId: string | null) =>
     ? sql<Respuesta | null>`(select r.respuesta from ${respuestasEntreno} r
         where r.entreno_id = ${entrenos.id} and r.jugador_id = ${jugadorId})`
     : sql<Respuesta | null>`null`
+
+const miMotivo = (jugadorId: string | null) =>
+  jugadorId
+    ? sql<string | null>`(select r.motivo from ${respuestasEntreno} r
+        where r.entreno_id = ${entrenos.id} and r.jugador_id = ${jugadorId})`
+    : sql<string | null>`null`
 
 // Cierre de las respuestas: el inicio del entreno en Madrid (o el final del día si no tiene hora)
 // menos las horas límite de la plantilla
@@ -573,6 +582,7 @@ export const rutasEntrenos = () =>
             noVoy: respuestasDe('no_voy'),
             elegibles,
             miRespuesta: miRespuesta(c.var.jugadorId),
+            miMotivo: miMotivo(c.var.jugadorId),
             ...columnasCierre(await horasLimite(c.var.plantilla.id)),
           })
           .from(entrenos)
