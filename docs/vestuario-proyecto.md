@@ -130,7 +130,7 @@ Este documento recoge todas las decisiones funcionales, técnicas y de organizac
 - Pantalla de configuración con dos partes:
   - **Datos de la plantilla** (entrenador o superior): nombre y categoría. La temporada es fija.
   - **Identidad del club** (solo administradores del club): nombre del club, escudo y dos colores (principal y secundario), comunes a todas sus categorías.
-- Escudo en PNG o WebP (SVG excluido inicialmente por seguridad), tamaño máximo configurable.
+- Escudo en PNG o WebP (SVG excluido inicialmente por seguridad), tamaño máximo configurable (`MAX_ESCUDO_MB`, 2 MB por defecto). Se guarda como WebP de hasta 512 px por lado, sin recortar y sin metadatos, y se puede quitar para volver al logo genérico.
 - Vista previa en vivo de la aplicación con los colores elegidos.
 - Al cambiar de plantilla activa, toda la interfaz adopta el escudo y los colores de su club.
 - Contraste automático: el texto sobre el color principal se muestra en blanco o negro según su luminosidad.
@@ -348,7 +348,7 @@ Tablas de autenticación gestionadas por Better Auth (`user`, `session`, `accoun
 |---|---|---|
 | id | uuid | PK |
 | nombre | text | obligatorio |
-| escudo | text | ruta del archivo, nullable |
+| escudo | text | nullable. Ruta del archivo en `uploads` (`clubes/<club>/<uuid>.webp`); la API da la URL `/api/clubes/:cid/escudo?v=<uuid>`, que cambia con cada escudo |
 | color_principal | text | hex, por defecto `#14553d` |
 | color_secundario | text | hex, por defecto `#f2c230` |
 | creado_por | uuid → user | |
@@ -678,7 +678,8 @@ Prefijo `/api`. JSON. Todas las rutas de la plantilla cuelgan de `/plantillas`, 
 | Clubes | `GET /clubes` (los míos: los que administro, aunque no tengan plantillas, y aquellos en los que tengo un rol) | Autenticado |
 | | `POST /clubes` (el creador pasa a ser administrador) | Autenticado |
 | | `GET /clubes/:cid` (datos e identidad visual) | Miembro de alguna plantilla del club |
-| | `PATCH /clubes/:cid` (nombre y colores en hexadecimal; null vuelve al color por defecto) · `PUT /clubes/:cid/escudo` (multipart) | Administrador del club |
+| | `PATCH /clubes/:cid` (nombre y colores en hexadecimal; null vuelve al color por defecto) · `PUT` · `DELETE /clubes/:cid/escudo` (multipart: PNG o WebP) | Administrador del club |
+| | `GET /clubes/:cid/escudo` (WebP con caché larga) | Miembro del club |
 | | `GET /clubes/:cid/jugadores?q=` (jugadores del club, para añadirlos a una plantilla) | Delegado en alguna plantilla del club |
 | | `GET /clubes/:cid/jugadores/:jid` (ficha y trayectoria por temporadas) | Delegado en alguna plantilla del club (jugador: solo la suya) |
 | | `POST /clubes/:cid/ficha-federacion` (lee la ficha del equipo en PDF y empareja sus jugadores con los del club, sin guardar nada; GH-197) | Delegado en alguna plantilla del club |

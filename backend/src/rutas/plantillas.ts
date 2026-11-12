@@ -14,6 +14,7 @@ import { ErrorApi, EsquemaError, validacionFallida } from '../errores.js'
 import { borrarCarpeta, carpetaDePlantilla } from '../medios/almacen.js'
 import { type EnvPlantilla, type Rol, requireRol, requireSesion } from '../permisos.js'
 import { EsquemaTemporada, EsquemaTexto, EsquemaUuid, restriccionViolada } from '../validacion.js'
+import { urlEscudo } from './clubes.js'
 import { altaEnLote, EsquemaJugadoresLote, errorDeLote } from './fichaEquipo.js'
 
 // Plantillas: una categoría del club en una temporada (secciones 2.1 y 7). Todas sus rutas cuelgan de
@@ -130,7 +131,7 @@ export const rutasPlantillas = () =>
             club: {
               id: clubes.id,
               nombre: clubes.nombre,
-              escudo: clubes.escudo,
+              escudo: urlEscudo,
               colorPrincipal: clubes.colorPrincipal,
               colorSecundario: clubes.colorSecundario,
             },

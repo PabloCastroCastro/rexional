@@ -7,6 +7,7 @@ import { config } from '../config.js'
 // guarda la ruta relativa; los nombres se generan, nunca se usa el nombre original:
 //   ejercicios/<club>/<uuid>.webp|mp4|webm   fotos, vídeos y miniaturas
 //   partidos/<plantilla>/<partido>/<uuid>.pdf|webp   planificación de un partido (GH-147)
+//   clubes/<club>/<uuid>.webp                el escudo del club (GH-28)
 //   pendientes/<uuid>.<ext>                  vídeos subidos que esperan su procesado
 //   tmp/<uuid>                               subidas en curso
 
@@ -25,6 +26,8 @@ export const nueva = (carpeta: string, extension: string) =>
   `${carpeta}/${randomUUID()}.${extension}`
 
 export const carpetaDeClub = (clubId: string) => `ejercicios/${clubId}`
+
+export const carpetaDeEscudo = (clubId: string) => `clubes/${clubId}`
 
 // Los archivos de un partido van en su carpeta: al borrar el partido o la plantilla se borra entera
 export const carpetaDePlantilla = (plantillaId: string) => `partidos/${plantillaId}`

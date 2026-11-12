@@ -33,6 +33,8 @@ const esquema = z.object({
   SUBIDAS_DIR: z.string().min(1).default('uploads'),
   MAX_FOTO_MB: z.coerce.number().int().min(1).max(100).default(15),
   MAX_VIDEO_MB: z.coerce.number().int().min(1).max(2000).default(150),
+  // Escudo del club (GH-28)
+  MAX_ESCUDO_MB: z.coerce.number().int().min(1).max(20).default(2),
   // Límites de cada usuario con sesión (GH-58): peticiones por minuto, y peticiones costosas (subidas,
   // PDF, Excel) cada 10 minutos. Y fallos seguidos de login con un email antes de bloquearlo
   LIMITE_PETICIONES_MINUTO: z.coerce.number().int().min(1).default(300),
@@ -48,7 +50,7 @@ export type Config = {
   secretoAuth: string
   urlPublica: string
   nivelLog: z.infer<typeof esquema>['LOG_LEVEL']
-  subidas: { dir: string; maxFotoBytes: number; maxVideoBytes: number }
+  subidas: { dir: string; maxFotoBytes: number; maxVideoBytes: number; maxEscudoBytes: number }
   limites: { peticionesPorMinuto: number; costosasCada10Min: number; fallosLoginBloqueo: number }
 }
 
@@ -89,6 +91,7 @@ export function leerConfig(env: Record<string, string | undefined>): Config {
       dir: e.SUBIDAS_DIR,
       maxFotoBytes: e.MAX_FOTO_MB * 1024 * 1024,
       maxVideoBytes: e.MAX_VIDEO_MB * 1024 * 1024,
+      maxEscudoBytes: e.MAX_ESCUDO_MB * 1024 * 1024,
     },
     limites: {
       peticionesPorMinuto: e.LIMITE_PETICIONES_MINUTO,

@@ -600,6 +600,207 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/clubes/{cid}/escudo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Escudo del club
+         * @description Cualquier miembro de una plantilla del club. WebP con caché larga: la URL que dan las respuestas (con ?v=) cambia con cada escudo nuevo.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    v?: string;
+                };
+                header?: never;
+                path: {
+                    cid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description El escudo */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "image/webp": string;
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        /**
+         * Subir o cambiar el escudo del club
+         * @description Solo los administradores del club. Multipart, en el campo «archivo»: PNG o WebP (se comprueba el contenido, no la extensión), hasta MAX_ESCUDO_MB (2 MB por defecto). Se guarda como WebP de hasta 512 px por lado, sin recortar y sin metadatos; el anterior se borra.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    cid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Club con el escudo nuevo */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Club"];
+                    };
+                };
+                /** @description Falta el archivo */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Demasiado grande */
+                413: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No es PNG ni WebP */
+                415: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /**
+         * Quitar el escudo del club
+         * @description Solo los administradores del club. Vuelve el logo genérico.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    cid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Club sin escudo */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Club"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/plantillas": {
         parameters: {
             query?: never;
@@ -7624,7 +7825,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Tamaño máximo de las fotos y los vídeos
+         * Tamaño máximo de las fotos, los vídeos y el escudo
          * @description Para comprobarlo antes de subir. Cualquier usuario con sesión.
          */
         get: {
@@ -8777,6 +8978,10 @@ export interface components {
             /** Format: uuid */
             id: string;
             nombre: string;
+            /**
+             * @description URL del escudo (cambia con cada escudo nuevo, así se puede guardar en caché); null si no tiene
+             * @example /api/clubes/0199…/escudo?v=0199…
+             */
             escudo: string | null;
             /** @example #14553d */
             colorPrincipal: string;
@@ -9616,6 +9821,7 @@ export interface components {
         LimitesMedios: {
             maxFotoBytes: number;
             maxVideoBytes: number;
+            maxEscudoBytes: number;
         };
         MotivoMulta: {
             /** Format: uuid */
