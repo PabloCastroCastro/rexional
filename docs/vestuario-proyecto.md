@@ -730,6 +730,7 @@ Pasar lista y convocar se guardan como lista completa en una sola petición.
 - Partido jugado (ciclo 6): resultado, titulares, registro de eventos por minuto.
 - Estadísticas (ciclo 6): tabla de la temporada de la plantilla con la estadística elegida y ordenable por columna, y trayectoria de cada jugador.
 - Miembros e invitaciones (ciclo 10).
+- Rol jugador (ciclo 10): las mismas pestañas, solo de consulta. En Plantilla, su fila marcada como «Tú» es la única que abre ficha (sin bajas); en Entrenos, «Mi asistencia» (su porcentaje y su estado en cada entreno) en lugar de pasar lista e historial; en Partidos, si está convocado; en Multas, las suyas; en Más, «Mis estadísticas» (su ficha). Sin ficha vinculada en la plantilla, un aviso en lugar de listas vacías.
 
 **Criterios transversales:** diseño adaptable (móvil primero), foco visible y navegación por teclado, respeto a `prefers-reduced-motion`, modo claro/oscuro, estados vacíos que invitan a actuar, mensajes de error que indican qué pasó y cómo resolverlo.
 

@@ -124,6 +124,13 @@ a.fila:hover {
   white-space: nowrap;
 }
 
+/* La fila propia, en una sola línea con la marca «Tú» (GH-52) */
+.unaLinea {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .secundario {
   color: var(--color-texto-suave);
   font-size: var(--texto-sm);
@@ -371,4 +378,20 @@ a.fila:hover {
   gap: var(--espacio-1);
   margin: 0 0 var(--espacio-2);
   padding-left: var(--espacio-4);
+}
+
+/* El propio jugador (GH-52): marca «Tú» delante de su posición */
+.marcaPropia {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  margin-right: var(--espacio-2);
+  padding: 0 var(--espacio-2);
+  border-radius: var(--radio-completo);
+  background: color-mix(in srgb, var(--color-acento) 12%, transparent);
+  color: var(--color-acento);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-medio);
+  line-height: 1.5rem;
+  vertical-align: middle;
 }

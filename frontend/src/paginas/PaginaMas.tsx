@@ -1,11 +1,12 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { ChevronRight, KeyRound, LogOut, Settings } from 'lucide-react'
+import { ChartColumn, ChevronRight, KeyRound, LogOut, Settings } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { api, datos } from '../api/cliente'
 import { cerrarSesion, useSesion } from '../auth/sesion'
 import { Boton } from '../componentes/Boton'
 import { puedeConfigurar } from '../configuracion/PaginaConfiguracion'
+import { puedeGestionarJugadores } from '../jugadores/datos'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
 import estilos from './PaginaMas.module.css'
 
@@ -67,6 +68,18 @@ export function PaginaMas() {
         <dd>{__VERSION__}</dd>
       </dl>
 
+      {/* El rol jugador tiene sus estadísticas en su ficha (GH-52) */}
+      {!puedeGestionarJugadores(plantilla) && plantilla.jugadorId && (
+        <Link
+          to={`/plantillas/${plantilla.id}/jugadores/${plantilla.jugadorId}`}
+          className={estilos.enlace}
+        >
+          <ChartColumn aria-hidden size={20} />
+          <span>Mis estadísticas</span>
+          <ChevronRight aria-hidden size={20} />
+        </Link>
+      )}
+
       <Link to={`/plantillas/${plantilla.id}/mas/cuenta`} className={estilos.enlace}>
         <KeyRound aria-hidden size={20} />
         <span>Cuenta: sesiones y contraseña</span>
@@ -80,8 +93,6 @@ export function PaginaMas() {
           <ChevronRight aria-hidden size={20} />
         </Link>
       )}
-
-      <p className={estilos.nota}>Las estadísticas llegarán en el ciclo 6.</p>
 
       <Boton
         variante="secundario"

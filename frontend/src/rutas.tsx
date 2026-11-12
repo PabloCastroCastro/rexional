@@ -9,8 +9,7 @@ import { PaginaEjercicio } from './ejercicios/PaginaEjercicio'
 import { PaginaEjercicios } from './ejercicios/PaginaEjercicios'
 import { PaginaHistorial } from './entrenos/PaginaHistorial'
 import { PaginaHorario } from './entrenos/PaginaHorario'
-import { PaginaPasarLista } from './entrenos/PaginaPasarLista'
-import { SeccionEntrenos } from './entrenos/SeccionEntrenos'
+import { IndiceEntrenos, SeccionEntrenos } from './entrenos/SeccionEntrenos'
 import { PaginaJugador } from './jugadores/PaginaJugador'
 import { PaginaPlantilla } from './jugadores/PaginaPlantilla'
 import { PaginaCatalogo } from './multas/PaginaCatalogo'
@@ -70,7 +69,7 @@ export const rutas = [
                 path: 'entrenos',
                 element: <SeccionEntrenos />,
                 children: [
-                  { index: true, element: <PaginaPasarLista /> },
+                  { index: true, element: <IndiceEntrenos /> },
                   { path: 'historial', element: <PaginaHistorial /> },
                   { path: 'horario', element: <PaginaHorario /> },
                   { path: 'ejercicios', element: <PaginaEjercicios /> },

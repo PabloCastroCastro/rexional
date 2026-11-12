@@ -498,3 +498,14 @@
   font-size: var(--texto-sm);
   font-weight: var(--peso-normal);
 }
+
+/* Mi asistencia (GH-52): su porcentaje y su recuento */
+.miResumen {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  padding: var(--espacio-3) var(--espacio-4);
+  border-radius: var(--radio-l);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra-1);
+}

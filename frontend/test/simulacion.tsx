@@ -75,6 +75,7 @@ export const plantilla = (
   multasActivas: true,
   rol: 'admin',
   esAdminClub: true,
+  jugadorId: null,
   club: clubRexional,
   ...extra,
 })

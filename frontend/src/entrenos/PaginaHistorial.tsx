@@ -1,5 +1,5 @@
 import { Check, ChevronRight, ClipboardCheck, FileText, X } from 'lucide-react'
-import { Link } from 'react-router'
+import { Link, Navigate } from 'react-router'
 import { Cargando } from '../componentes/Cargando'
 import { EstadoVacio } from '../componentes/EstadoVacio'
 import { puedeGestionarJugadores } from '../jugadores/datos'
@@ -24,6 +24,8 @@ export function PaginaHistorial() {
   const base = `/plantillas/${plantilla.id}/entrenos`
   const enlace = (e: ResumenEntreno) => `${base}?fecha=${e.fecha}&entreno=${e.id}`
 
+  // El rol jugador ve su asistencia en el índice de la pestaña (GH-52)
+  if (!puedeGestionarJugadores(plantilla)) return <Navigate to={base} replace />
   if (historial.isPending || proximos.isPending) return <Cargando />
   if (historial.isError || proximos.isError) {
     return (

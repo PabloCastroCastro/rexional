@@ -58,7 +58,12 @@ type Resumen = {
 
 async function entrenosEntre(desde: string, hasta: string, quien = 'delegado') {
   const res = await pedir('GET', `${base()}/entrenos?desde=${desde}&hasta=${hasta}`, quien)
-  return (await res.json()) as (Resumen & { asiste: number; justificada: number; falta: number })[]
+  return (await res.json()) as (Resumen & {
+    asiste: number
+    justificada: number
+    falta: number
+    miEstado: string | null
+  })[]
 }
 
 async function crearEntreno(fecha: string, hora?: string) {
@@ -392,7 +397,8 @@ describe('permisos', () => {
   })
 
   it('el rol jugador ve los recuentos, pero de los jugadores solo su fila', async () => {
-    expect(await entrenosEntre(DIA1, DIA2, 'jugador')).toHaveLength(2)
+    const sinVincular = await entrenosEntre(DIA1, DIA2, 'jugador')
+    expect(sinVincular.map((e) => e.miEstado)).toEqual([null, null])
 
     // Sin jugador vinculado a su usuario, no recibe ninguna fila
     let entreno = await (await pedir('GET', `${base()}/entrenos/${ids.dia2}`, 'jugador')).json()
@@ -405,6 +411,15 @@ describe('permisos', () => {
       .where(eq(jugadores.id, ids.Zoe ?? ''))
     entreno = await (await pedir('GET', `${base()}/entrenos/${ids.dia2}`, 'jugador')).json()
     expect(filas(entreno)).toEqual([['Zoe', 'asiste']])
+
+    // En el listado, su estado en cada entreno (GH-52); el del delegado, sin jugador, es null
+    const lista = await entrenosEntre(DIA1, DIA2, 'jugador')
+    expect(lista.map((e) => [e.fecha, e.miEstado])).toEqual([
+      [DIA2, 'asiste'],
+      [DIA1, 'justificada'],
+    ])
+    const delDelegado = await entrenosEntre(DIA1, DIA2)
+    expect(delDelegado.map((e) => e.miEstado)).toEqual([null, null])
 
     const resumen = await (await pedir('GET', `${base()}/asistencia/resumen`, 'jugador')).json()
     expect(resumen).toEqual([expect.objectContaining({ nombre: 'Zoe', porcentaje: 50 })])

@@ -167,8 +167,15 @@ export function PaginaJugador() {
                     multasPendientes.data.length === 1 ? 'multa' : 'multas'
                   }`}
             </span>
-            <Link to={`/plantillas/${plantilla.id}/multas/lista?jugador=${jugadorId}&estado=todas`}>
-              Ver sus multas
+            {/* El rol jugador tiene las suyas en el índice de Multas (GH-52) */}
+            <Link
+              to={
+                gestiona
+                  ? `/plantillas/${plantilla.id}/multas/lista?jugador=${jugadorId}&estado=todas`
+                  : `/plantillas/${plantilla.id}/multas?estado=todas`
+              }
+            >
+              {gestiona ? 'Ver sus multas' : 'Ver tus multas'}
             </Link>
           </p>
         </section>

@@ -270,6 +270,14 @@
           },
           "esAdminClub": {
             "type": "boolean"
+          },
+          "jugadorId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Jugador vinculado al usuario si tiene ficha (activa o de baja) en esta plantilla; si no, null"
           }
         },
         "required": [
@@ -281,7 +289,8 @@
           "plantillaAnteriorId",
           "multasActivas",
           "rol",
-          "esAdminClub"
+          "esAdminClub",
+          "jugadorId"
         ]
       },
       "JugadorPlantilla": {
@@ -1011,6 +1020,34 @@
           "hora"
         ]
       },
+      "EntrenoListado": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ResumenEntreno"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "miEstado": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "asiste",
+                  "justificada",
+                  "falta",
+                  null
+                ],
+                "description": "Estado del jugador vinculado al usuario en este entreno; null si no tiene o no está registrado"
+              }
+            },
+            "required": [
+              "miEstado"
+            ]
+          }
+        ]
+      },
       "ResumenEntreno": {
         "allOf": [
           {
@@ -1501,6 +1538,10 @@
           },
           "convocados": {
             "type": "integer"
+          },
+          "meConvocan": {
+            "type": "boolean",
+            "description": "true si el jugador vinculado al usuario está convocado (GH-52)"
           }
         },
         "required": [
@@ -1515,7 +1556,8 @@
           "estado",
           "golesFavor",
           "golesContra",
-          "convocados"
+          "convocados",
+          "meConvocan"
         ]
       },
       "Partido": {
@@ -6400,7 +6442,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/ResumenEntreno"
+                    "$ref": "#/components/schemas/EntrenoListado"
                   }
                 }
               }

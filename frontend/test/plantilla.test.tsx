@@ -89,18 +89,20 @@ describe('lista de la plantilla', () => {
     expect(screen.getByRole('dialog', { name: 'Añadir jugador' })).toBeInTheDocument()
   })
 
-  it('el rol jugador ve la lista sin controles de edición', async () => {
+  it('el rol jugador ve la lista sin controles de edición y solo abre su ficha (GH-52)', async () => {
     conJugadores(
-      [BRAIS],
-      plantilla('p1', 'Senior', '2026-27', { rol: 'jugador', esAdminClub: false }),
+      [BRAIS, ZOE],
+      plantilla('p1', 'Senior', '2026-27', { rol: 'jugador', esAdminClub: false, jugadorId: 'j2' }),
     )
     abrir('/plantillas/p1/jugadores')
     const lista = await screen.findByRole('list', { name: 'Jugadores' })
-    expect(within(lista).queryByRole('link')).not.toBeInTheDocument()
+    const enlaces = within(lista).getAllByRole('link')
+    expect(enlaces).toHaveLength(1)
+    expect(enlaces[0]).toHaveAttribute('href', '/plantillas/p1/jugadores/j2')
+    expect(within(enlaces[0] as HTMLElement).getByText('Tú')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Añadir' })).not.toBeInTheDocument()
-
-    await userEvent.click(screen.getByRole('button', { name: 'Bajas' }))
-    expect(await screen.findByText('No hay bajas')).toBeInTheDocument()
+    // Las bajas son cosa del cuerpo técnico
+    expect(screen.queryByRole('button', { name: 'Bajas' })).not.toBeInTheDocument()
   })
 
   it('el estado vacío del rol jugador no invita a añadir', async () => {
