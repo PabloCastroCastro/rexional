@@ -55,6 +55,9 @@ def informe(titulo, eventos, nginx, usuarios):
             return f"email desconocido ({e['emailResumen']})"
         return "desconocido"
 
+    def persona(usuario_id):
+        return usuarios.get(usuario_id, f"usuario {usuario_id}") if usuario_id else "?"
+
     por_tipo = defaultdict(list)
     for e in eventos:
         por_tipo[e["evento"]].append(e)
@@ -108,6 +111,22 @@ def informe(titulo, eventos, nginx, usuarios):
             lambda e: f"{e.get('time', '')}  {quien(e)} desde {e.get('ip', '?')}")
     salida.append("")
     salida.append(f"Sesiones cerradas: {len(por_tipo['sesion_cerrada'])}")
+    seccion(salida, "Invitaciones creadas", por_tipo["invitacion_creada"],
+            lambda e: f"{e.get('time', '')}  {quien(e)} invita como {e.get('rol')} "
+                      f"a {e.get('emailResumen', '?')}")
+    seccion(salida, "Invitaciones revocadas", por_tipo["invitacion_revocada"],
+            lambda e: f"{e.get('time', '')}  {quien(e)} revoca la de {e.get('emailResumen', '?')}")
+    seccion(salida, "Invitaciones aceptadas", por_tipo["invitacion_aceptada"],
+            lambda e: f"{e.get('time', '')}  {quien(e)} entra como {e.get('rol')}")
+    seccion(salida, "Cuentas creadas", por_tipo["cuenta_creada"],
+            lambda e: f"{e.get('time', '')}  {quien(e)} desde {e.get('ip', '?')}")
+    seccion(salida, "Roles cambiados", por_tipo["rol_cambiado"],
+            lambda e: f"{e.get('time', '')}  {quien(e)} pone a {persona(e.get('miembroId'))} "
+                      f"como {e.get('rol')}")
+    seccion(salida, "Accesos retirados", por_tipo["acceso_retirado"],
+            lambda e: f"{e.get('time', '')}  {quien(e)} retira a {persona(e.get('miembroId'))}")
+    seccion(salida, "Administradores del club retirados", por_tipo["admin_club_retirado"],
+            lambda e: f"{e.get('time', '')}  {quien(e)} retira a {persona(e.get('retiradoId'))}")
     return "\n".join(salida) + "\n"
 
 

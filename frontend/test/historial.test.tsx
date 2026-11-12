@@ -157,16 +157,6 @@ describe('historial de entrenos', () => {
       '/plantillas/p1/entrenos/horario',
     )
   })
-
-  it('el rol jugador ve el estado vacío sin la invitación', async () => {
-    conDatos({
-      plantillas: [plantilla('p1', 'Senior', '2026-27', { rol: 'jugador', esAdminClub: false })],
-    })
-    manejadores['GET /api/plantillas/p1/entrenos'] = () => json([])
-    abrir('/plantillas/p1/entrenos/historial')
-    expect(await screen.findByText('Todavía no hay entrenos')).toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: 'Fijar el horario' })).not.toBeInTheDocument()
-  })
 })
 
 describe('asistencia en la plantilla', () => {

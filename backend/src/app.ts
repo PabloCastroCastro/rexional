@@ -14,8 +14,15 @@ import { rutasEjercicios } from './rutas/ejercicios.js'
 import { rutasEntrenos } from './rutas/entrenos.js'
 import { rutasEstadisticas, rutasEstadisticasClub } from './rutas/estadisticas.js'
 import { rutasExportacion } from './rutas/exportacion.js'
+import { rutasFichaEquipoClub, rutasFichaEquipoPlantilla } from './rutas/fichaEquipo.js'
+import {
+  rutasInvitacionesClub,
+  rutasInvitacionesPlantilla,
+  rutasInvitacionesPublicas,
+} from './rutas/invitaciones.js'
 import { rutasJugadoresClub, rutasJugadoresPlantilla } from './rutas/jugadores.js'
 import { rutasMedios, rutasMediosClub } from './rutas/medios.js'
+import { rutasMiembros } from './rutas/miembros.js'
 import { rutasMultas, rutasMultasJugadores } from './rutas/multas.js'
 import { rutasNotas } from './rutas/notas.js'
 import { rutasPartidos } from './rutas/partidos.js'
@@ -29,7 +36,7 @@ export const infoOpenApi = {
   openapi: '3.1.0',
   info: {
     title: 'API de Vestuario',
-    version: '1.7.0',
+    version: '1.8.0',
     description:
       'API REST de Vestuario. Todas las rutas cuelgan de /api. Errores con el formato { error: { codigo, mensaje, detalles? } }.',
   },
@@ -70,6 +77,12 @@ export function crearApp(dependencias: Partial<Dependencias> = {}) {
   app.route('/', rutasPlantillas())
   app.route('/', rutasJugadoresPlantilla())
   app.route('/', rutasJugadoresClub())
+  app.route('/', rutasFichaEquipoClub())
+  app.route('/', rutasFichaEquipoPlantilla())
+  app.route('/', rutasInvitacionesPlantilla())
+  app.route('/', rutasInvitacionesClub())
+  app.route('/', rutasInvitacionesPublicas())
+  app.route('/', rutasMiembros())
   app.route('/', rutasEntrenos())
   // Antes que los partidos: en /partidos/calendario, «calendario» no es el id de un partido
   app.route('/', rutasCalendario())

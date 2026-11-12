@@ -1,11 +1,12 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { Eye, EyeOff, LogIn } from 'lucide-react'
+import { LogIn } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router'
 import { ErrorApi } from '../api/cliente'
 import { Boton } from '../componentes/Boton'
 import { Campo } from '../componentes/Campo'
 import { Cargando } from '../componentes/Cargando'
+import { CampoContrasena } from './CampoContrasena'
 import estilos from './PaginaLogin.module.css'
 import { CLAVE_SESION, consumirSesionCaducada, iniciarSesion, useSesion } from './sesion'
 
@@ -18,7 +19,6 @@ export function PaginaLogin() {
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [verContrasena, setVerContrasena] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [enviando, setEnviando] = useState(false)
   const [caducada] = useState(consumirSesionCaducada)
@@ -71,25 +71,13 @@ export function PaginaLogin() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
-        <div className={estilos.contrasena}>
-          <Campo
-            etiqueta="Contraseña"
-            type={verContrasena ? 'text' : 'password'}
-            autoComplete="current-password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          <button
-            type="button"
-            className={estilos.ver}
-            onClick={() => setVerContrasena((v) => !v)}
-            aria-label={verContrasena ? 'Ocultar la contraseña' : 'Mostrar la contraseña'}
-            aria-pressed={verContrasena}
-          >
-            {verContrasena ? <EyeOff aria-hidden size={20} /> : <Eye aria-hidden size={20} />}
-          </button>
-        </div>
+        <CampoContrasena
+          etiqueta="Contraseña"
+          autoComplete="current-password"
+          required
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
         <Boton
           type="submit"
           anchoCompleto

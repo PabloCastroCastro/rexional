@@ -23,8 +23,8 @@
 /* Control segmentado: Activos/Bajas, Nuevo/Del club */
 .segmentos {
   display: grid;
-  grid-auto-columns: 1fr;
-  grid-auto-flow: column;
+  /* En una fila si caben; con cuatro opciones en el móvil, de dos en dos */
+  grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
   gap: var(--espacio-1);
   margin: 0;
   padding: var(--espacio-1);
@@ -120,6 +120,13 @@ a.fila:hover {
 .texto strong {
   overflow: hidden;
   font-weight: var(--peso-medio);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* La fila propia, en una sola línea con la marca «Tú» (GH-52) */
+.unaLinea {
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -293,4 +300,98 @@ a.fila:hover {
   min-height: var(--altura-tactil);
   font-weight: var(--peso-medio);
   cursor: pointer;
+}
+
+/* Ficha de la federación (GH-197): vista previa de los jugadores */
+.aviso {
+  display: flex;
+  gap: var(--espacio-2);
+  padding: var(--espacio-3);
+  border-radius: var(--radio-m);
+  background: color-mix(in srgb, var(--color-aviso) 12%, transparent);
+  font-size: var(--texto-sm);
+}
+
+.aviso svg {
+  flex: none;
+  color: var(--color-aviso);
+}
+
+.filasFicha {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-m);
+}
+
+.filasFicha > li + li {
+  border-top: 1px solid var(--color-borde);
+}
+
+.filaFicha {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  padding: var(--espacio-1) var(--espacio-2) var(--espacio-1) var(--espacio-3);
+}
+
+.filaFicha label {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--espacio-3);
+  min-width: 0;
+  min-height: var(--altura-tactil);
+  cursor: pointer;
+}
+
+.filaFicha input {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  accent-color: var(--color-primario);
+}
+
+.filaFicha .secundario svg {
+  vertical-align: -2px;
+  color: var(--color-aviso);
+}
+
+.correccion {
+  display: grid;
+  gap: var(--espacio-3);
+  padding: 0 var(--espacio-3) var(--espacio-3);
+}
+
+.cuerpoTecnico summary {
+  min-height: var(--altura-tactil);
+  display: flex;
+  align-items: center;
+  font-weight: var(--peso-medio);
+  cursor: pointer;
+}
+
+.cuerpoTecnico ul {
+  display: grid;
+  gap: var(--espacio-1);
+  margin: 0 0 var(--espacio-2);
+  padding-left: var(--espacio-4);
+}
+
+/* El propio jugador (GH-52): marca «Tú» delante de su posición */
+.marcaPropia {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  margin-right: var(--espacio-2);
+  padding: 0 var(--espacio-2);
+  border-radius: var(--radio-completo);
+  background: color-mix(in srgb, var(--color-acento) 12%, transparent);
+  color: var(--color-acento);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-medio);
+  line-height: 1.5rem;
+  vertical-align: middle;
 }

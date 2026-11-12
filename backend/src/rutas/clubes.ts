@@ -4,6 +4,7 @@ import { db } from '../db/cliente.js'
 import { adminsClub, clubes, membresias, plantillas, user } from '../db/schema/index.js'
 import { ErrorApi, EsquemaError, validacionFallida } from '../errores.js'
 import { type EnvClub, requireAdminClub, requireRolEnClub, requireSesion } from '../permisos.js'
+import { registrarEvento } from '../seguridad.js'
 import { EsquemaTexto, EsquemaUuid } from '../validacion.js'
 
 // Clubes y sus administradores (sección 7). Las plantillas tienen sus propias rutas en plantillas.ts.
@@ -200,65 +201,12 @@ export const rutasClubes = () =>
     )
     .openapi(
       createRoute({
-        method: 'post',
-        path: '/clubes/{cid}/admins',
-        tags: ['Clubes'],
-        summary: 'Añadir un administrador',
-        description: 'El usuario debe existir. Las invitaciones por email llegan en el ciclo 10.',
-        middleware: [requireAdminClub()] as const,
-        request: {
-          params: ParamClub,
-          body: {
-            content: {
-              'application/json': {
-                schema: z.object({
-                  email: z.string().trim().toLowerCase().pipe(z.email('Email no válido')),
-                }),
-              },
-            },
-          },
-        },
-        responses: {
-          201: json(EsquemaAdministrador, 'Administrador añadido'),
-          400: json(EsquemaError, 'Datos no válidos'),
-          409: json(EsquemaError, 'Ya es administrador'),
-          ...errores,
-        },
-      }),
-      async (c) => {
-        const { email } = c.req.valid('json')
-        const [usuario] = await db
-          .select({ usuarioId: user.id, nombre: user.name, email: user.email })
-          .from(user)
-          .where(eq(user.email, email))
-        if (!usuario)
-          throw new ErrorApi(
-            404,
-            'usuario_no_encontrado',
-            `No hay ningún usuario con el email ${email}`,
-          )
-        const insertados = await db
-          .insert(adminsClub)
-          .values({ clubId: c.var.club.id, usuarioId: usuario.usuarioId })
-          .onConflictDoNothing()
-          .returning()
-        if (insertados.length === 0) {
-          throw new ErrorApi(
-            409,
-            'ya_es_administrador',
-            `${usuario.nombre} ya es administrador del club`,
-          )
-        }
-        return c.json(usuario, 201)
-      },
-    )
-    .openapi(
-      createRoute({
         method: 'delete',
         path: '/clubes/{cid}/admins/{uid}',
         tags: ['Clubes'],
         summary: 'Retirar un administrador',
-        description: 'Un club nunca se queda sin administradores.',
+        description:
+          'Un club nunca se queda sin administradores. Para añadir uno, se le invita (`POST /clubes/{cid}/invitaciones`).',
         middleware: [requireAdminClub()] as const,
         request: {
           params: ParamClub.extend({
@@ -293,6 +241,11 @@ export const rutasClubes = () =>
           await tx
             .delete(adminsClub)
             .where(and(eq(adminsClub.clubId, c.var.club.id), eq(adminsClub.usuarioId, uid)))
+        })
+        registrarEvento('admin_club_retirado', {
+          usuarioId: c.var.usuario.id,
+          clubId: c.var.club.id,
+          retiradoId: uid,
         })
         return c.body(null, 204)
       },

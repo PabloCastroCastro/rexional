@@ -178,7 +178,7 @@ Este documento recoge todas las decisiones funcionales, técnicas y de organizac
 
 - El admin invita a una persona por email con un rol y, si es jugador, vinculada a su ficha de la plantilla.
 - Enlace de invitación de un solo uso con caducidad.
-- Delegado: mismas capacidades de gestión que el entrenador, salvo gestionar accesos, la configuración de la plantilla y la biblioteca de ejercicios y planificación (que solo puede consultar). Ver la tabla de la sección 3.
+- Delegado: mismas capacidades de gestión que el entrenador, incluida la biblioteca de ejercicios y la planificación, salvo gestionar accesos y la configuración de la plantilla. Ver la tabla de la sección 3.
 - Jugador: ve plantilla, convocatorias, partidos y catálogo de multas; ve **solo sus propias** asistencias, multas y estadísticas acumuladas. No modifica nada.
 - El admin puede cambiar el rol o revocar el acceso de cualquier miembro.
 - Un administrador del club puede invitar por email a otra persona como administrador del club.
@@ -643,6 +643,10 @@ Planificación de un partido (GH-147): la charla, el plan táctico, el rival… 
 | revocada_en | timestamptz | nullable |
 | creada_por | uuid → user | |
 
+El enlace (`/invitacion#<token>`) se devuelve solo al crear la invitación y lo comparte quien invita: la app no envía correos. El token va detrás de `#` para que no llegue al servidor ni quede en los registros. Caduca a los 7 días y se usa una vez. Hay una sola invitación pendiente por email en cada plantilla (o como administrador del club): invitar de nuevo revoca la anterior. El jugador vinculado, solo con el rol jugador (GH-49).
+
+Al aceptarla (GH-50), la invitación es para su email: si no hay cuenta con él, se crea con nombre y contraseña (email ya verificado: el enlace lo demuestra) y se entra directamente; si la hay, hay que haber entrado con ella. Con la sesión de otro email no se acepta. Se crea la membresía con el rol de la invitación (si ya era miembro, se queda con ese rol) o se hace administrador del club, y se vincula el jugador. El token va siempre en el cuerpo de la petición, nunca en la URL.
+
 **Reglas generales:** al crear un club, su creador pasa a ser administrador del club (`admins_club`) en la misma transacción. Al crear una plantilla se crea su catálogo de multas (copiado de la plantilla anterior o el de por defecto) en la misma transacción. No hace falta crear membresía para el creador, porque como administrador del club ya es admin de la plantilla. Las garantías que no expresa una clave foránea se validan en la capa de servicio y se cubren con tests. Nunca se edita una migración ya desplegada.
 
 ---
@@ -661,13 +665,15 @@ Prefijo `/api`. JSON. Todas las rutas de la plantilla cuelgan de `/plantillas`, 
 | | `PATCH /clubes/:cid` (nombre, colores) · `PUT /clubes/:cid/escudo` (multipart) | Administrador del club |
 | | `GET /clubes/:cid/jugadores?q=` (jugadores del club, para añadirlos a una plantilla) | Delegado en alguna plantilla del club |
 | | `GET /clubes/:cid/jugadores/:jid` (ficha y trayectoria por temporadas) | Delegado en alguna plantilla del club (jugador: solo la suya) |
-| | `GET/POST /clubes/:cid/admins` · `DELETE /clubes/:cid/admins/:uid` (nunca el último) | Administrador del club |
+| | `POST /clubes/:cid/ficha-federacion` (lee la ficha del equipo en PDF y empareja sus jugadores con los del club, sin guardar nada; GH-197) | Delegado en alguna plantilla del club |
+| | `GET /clubes/:cid/admins` · `DELETE /clubes/:cid/admins/:uid` (nunca el último; para añadir uno se le invita, GH-51) | Administrador del club |
 | Plantillas | `GET /plantillas?club=` (las mías con su club y mi rol efectivo, por club y temporada; el administrador del club ve todas las de su club) | Autenticado |
-| | `POST /plantillas` (`clubId`, nombre, categoría, temporada y plantilla anterior opcional) | Administrador del club indicado |
+| | `POST /plantillas` (`clubId`, nombre, categoría, temporada, plantilla anterior opcional y `jugadores` opcional: del club o nuevos, con ficha propia; todos o ninguno) | Administrador del club indicado |
 | | `GET /plantillas/:id` · `PATCH /plantillas/:id` (nombre, categoría) | Miembro · Entrenador |
 | | `DELETE /plantillas/:id` (con confirmación del nombre; borra también sus datos) | Administrador del club |
 | Jugadores | `GET /plantillas/:id/jugadores?activos=` (fichas con los datos del jugador) | Miembro (jugador: asistencia y deuda solo suyas) |
 | | `POST /plantillas/:id/jugadores` (jugador nuevo o `jugador_id` existente del club) · `PATCH /plantillas/:id/jugadores/:jid` | Delegado |
+| | `POST /plantillas/:id/jugadores/lote` (varios con ficha propia, sin dorsal; todos o ninguno; GH-197) | Delegado |
 | Entrenos | `GET /plantillas/:id/horario` | Miembro |
 | | `PUT /plantillas/:id/horario` (crea y rehace sus entrenos) · `DELETE /plantillas/:id/horario` | Delegado |
 | | `GET /plantillas/:id/entrenos?desde=&hasta=` (con recuentos por estado) | Miembro |
@@ -698,10 +704,10 @@ Prefijo `/api`. JSON. Todas las rutas de la plantilla cuelgan de `/plantillas`, 
 | | `GET /plantillas/:id/multas?jugador=&estado=pendientes|cobradas` · `POST /plantillas/:id/multas` (del catálogo o libre) · `PATCH/DELETE /plantillas/:id/multas/:mid` (`fechaPago` cobra; `null` deshace) | Miembro (jugador: suyas) / Delegado |
 | | `POST /plantillas/:id/jugadores/:jid/saldar` | Delegado |
 | | `GET /plantillas/:id/multas/resumen` | Delegado |
-| Miembros | `GET /plantillas/:id/miembros` · `PATCH/DELETE /plantillas/:id/miembros/:uid` | Miembro / Admin |
+| Miembros | `GET /plantillas/:id/miembros` (con los administradores del club como heredados y los jugadores sin cuenta) · `PATCH /plantillas/:id/miembros/:uid` (rol) · `DELETE /plantillas/:id/miembros/:uid` (retirar el acceso; GH-51) | Admin |
 | Invitaciones | `GET/POST /plantillas/:id/invitaciones` · `DELETE /plantillas/:id/invitaciones/:iid` (revocar) | Admin |
-| | `POST /clubes/:cid/invitaciones` (como administrador del club) | Administrador del club |
-| | `POST /invitaciones/aceptar` | Público con token |
+| | `GET/POST /clubes/:cid/invitaciones` · `DELETE /clubes/:cid/invitaciones/:iid` (como administrador del club) | Administrador del club |
+| | `POST /invitaciones/consultar` (a qué invita y si ya hay cuenta) · `POST /invitaciones/aceptar` (crea la cuenta o pide la sesión de ese email; GH-50) | Público con el token en el cuerpo |
 
 Pasar lista y convocar se guardan como lista completa en una sola petición.
 
@@ -724,6 +730,7 @@ Pasar lista y convocar se guardan como lista completa en una sola petición.
 - Partido jugado (ciclo 6): resultado, titulares, registro de eventos por minuto.
 - Estadísticas (ciclo 6): tabla de la temporada de la plantilla con la estadística elegida y ordenable por columna, y trayectoria de cada jugador.
 - Miembros e invitaciones (ciclo 10).
+- Rol jugador (ciclo 10): las mismas pestañas, solo de consulta. En Plantilla, su fila marcada como «Tú» es la única que abre ficha (sin bajas); en Entrenos, «Mi asistencia» (su porcentaje y su estado en cada entreno) en lugar de pasar lista e historial; en Partidos, si está convocado; en Multas, las suyas; en Más, «Mis estadísticas» (su ficha). Sin ficha vinculada en la plantilla, un aviso en lugar de listas vacías.
 
 **Criterios transversales:** diseño adaptable (móvil primero), foco visible y navegación por teclado, respeto a `prefers-reduced-motion`, modo claro/oscuro, estados vacíos que invitan a actuar, mensajes de error que indican qué pasó y cómo resolverlo.
 
@@ -778,7 +785,7 @@ Una issue está terminada cuando: cumple sus criterios de aceptación en el ento
 | 7 · Planificación de entrenos | Biblioteca de ejercicios con fotos y vídeos, y sesiones planificadas | v1.2.0 |
 | 8 · Operación | Backups automáticos, restauración, logs y actualizaciones | en parte en v1.2.0, con GH-45 y GH-46; el resto, pendiente |
 | 9 · Exportar y compartir | Exportar y compartir sesiones y multas en PDF o texto, los datos de la temporada en Excel y asistencia desde WhatsApp | en parte en v1.3.0, con GH-131 y GH-132, y en v1.5.0, con GH-170; el resto, pendiente |
-| 10 · Roles en uso | Invitaciones, delegados y jugadores | v1.4.0, prevista |
+| 10 · Roles en uso | Invitaciones, delegados y jugadores | v1.8.0, con GH-49, GH-50, GH-51, GH-52 y GH-53 |
 | 11 · Exposición pública | Bastionado, aislamiento, cabeceras, límites y publicación con Tailscale Funnel | en parte en v1.6.0, con GH-54, GH-55, GH-57, GH-58, GH-177 y GH-56 (Funnel activo desde el 2026-11-11); v2.0.0, prevista |
 | 12 · Asistente de ejercicios | Claves de API, diagrama táctico del ejercicio y generación de imágenes, animación y PDF en el servidor | v2.1.0, prevista |
 | 13 · Jugadores invitados | Convocar y, si el entrenador quiere, meter en la dinámica del equipo a jugadores de otra plantilla, de un club asociado o a prueba | v1.7.0, con GH-187, GH-188 y GH-189 |
@@ -816,7 +823,7 @@ Versión publicada en los ciclos ya cerrados y prevista en el resto. Los ciclos 
 | Ciclo 7 · Planificación de entrenos | Biblioteca de ejercicios con fotos y vídeos, y sesiones planificadas (v1.2.0) |
 | Ciclo 8 · Operación | Backups automáticos, restauración, logs y actualizaciones (en parte en v1.2.0, con GH-45 y GH-46; el resto, pendiente) |
 | Ciclo 9 · Exportar y compartir | Exportar y compartir sesiones y multas en PDF o texto, los datos de la temporada en Excel y asistencia desde WhatsApp (en parte en v1.3.0, con GH-131 y GH-132, y en v1.5.0, con GH-170; el resto, pendiente) |
-| Ciclo 10 · Roles en uso | Invitaciones, delegados y jugadores (v1.4.0, prevista) |
+| Ciclo 10 · Roles en uso | Invitaciones, delegados y jugadores (v1.8.0, con GH-49, GH-50, GH-51, GH-52 y GH-53) |
 | Ciclo 11 · Exposición pública | Publicación con Tailscale Funnel en la Raspberry compartida: bastionado, aislamiento de Vestuario, cabeceras, límites de peticiones por usuario e IP y paso a producción pública (en parte en v1.6.0, con GH-54, GH-55, GH-57, GH-58, GH-177 y GH-56, con Funnel activo desde el 2026-11-11; v2.0.0, prevista) |
 | Ciclo 12 · Asistente de ejercicios | Claves de API, diagrama táctico del ejercicio y generación de imágenes, animación y PDF en el servidor (v2.1.0, prevista) |
 | Ciclo 13 · Jugadores invitados | Convocar y, si el entrenador quiere, meter en la dinámica del equipo a jugadores de otra plantilla del club (juveniles, equipo B), de un club asociado o a prueba (v1.7.0, con GH-187, GH-188 y GH-189) |
@@ -2184,3 +2191,18 @@ Ampliación de GH-58 y GH-177, sin ciclo: hacerla solo si los logs de Docker y e
 - [ ] Los administradores del club ven qué ha pasado, cuándo y desde qué dispositivo con los miembros de su club, sin la IP ni datos de otros clubes
 - [ ] Ni contraseñas ni tokens; los fallos de login con un email que no existe, con su hash
 - [ ] Tests
+
+#### GH-197
+**Título:** Crear una plantilla desde la ficha de la federación
+**Etiquetas:** feature, backend, frontend
+
+Sin ciclo. Facilitar la creación de plantillas con los datos de la federación: la ficha del equipo en PDF que publica la Federación Gallega de Fútbol (club, nombre del equipo, categoría y licencias de jugadores, técnicos, delegados y auxiliares), la misma fuente que el acta y el calendario.
+
+**Criterios de aceptación**
+- [ ] Lectura de la ficha del equipo en PDF: nombre del equipo, categoría y jugadores («APELLIDOS, NOMBRE»); técnicos, delegados y auxiliares aparte. Se arreglan las tildes mal codificadas de la federación («LÃ“PEZ» → «López»; «Ã•», ambiguo, como Á) y los nombres pasan de mayúsculas a «Diego» / «Blanco Cambon». Un PDF que no es una ficha de equipo se explica y no se importa
+- [ ] En «Nueva plantilla», opción «Desde la ficha de la federación»: al subir el PDF se rellenan el nombre y la categoría (editables) y se elige la temporada; después, la vista previa de los jugadores y se crea todo junto (solo administradores del club)
+- [ ] En «Añadir jugador» de una plantilla que ya existe, una pestaña más, «Desde la federación», con la misma vista previa: para completarla o volver a importarla con licencias nuevas (delegado o superior)
+- [ ] Vista previa: cada jugador emparejado con los del club como en el acta (sin tildes ni mayúsculas): nuevo en el club (se da de alta), ya es del club (se le crea la ficha), ya está en la plantilla (se omite) o con ficha propia en otra plantilla esta temporada (se omite, con aviso). Cada fila se puede desmarcar, emparejar con otro jugador o corregir de nombre; nada se guarda hasta confirmar
+- [ ] Sin dorsal ni posición (la ficha no los trae). Los jugadores de la plantilla que no están en la ficha salen como aviso, sin tocarlos
+- [ ] Cuerpo técnico solo informativo (la ficha no trae emails): sirve para saber a quién invitar (GH-51)
+- [ ] Tests con una ficha de ejemplo

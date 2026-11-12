@@ -69,6 +69,8 @@ const usuarios = [
   { n: 1, name: 'Ana Administradora', email: 'admin@rexional.test' },
   { n: 2, name: 'Tomás Entrenador', email: 'entrenador@rexional.test' },
   { n: 3, name: 'Olga Outeiro', email: 'admin@ejemplo.test' },
+  // Cuenta del jugador Brais Iglesias (rol jugador en el Senior 2026-27, GH-52)
+  { n: 4, name: 'Brais Iglesias', email: 'jugador@rexional.test' },
 ]
 
 const listaClubes = [
@@ -589,6 +591,7 @@ await db.transaction(async (tx) => {
     .values([
       { plantillaId: sid(PLANTILLA, 2), usuarioId: sid(USUARIO, 2), rol: 'entrenador' as const },
       { plantillaId: sid(PLANTILLA, 3), usuarioId: sid(USUARIO, 2), rol: 'entrenador' as const },
+      { plantillaId: sid(PLANTILLA, 3), usuarioId: sid(USUARIO, 4), rol: 'jugador' as const },
     ])
     .onConflictDoNothing()
 
@@ -603,6 +606,8 @@ await db.transaction(async (tx) => {
           clubId: sid(CLUB, club),
           nombre,
           apellidos: apellidos.join(' ') || null,
+          // Brais tiene cuenta: la de jugador@rexional.test
+          usuarioId: n === 1 ? sid(USUARIO, 4) : null,
         }
       }),
     )

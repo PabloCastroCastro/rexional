@@ -115,34 +115,20 @@ describe('clubes', () => {
 })
 
 describe('administradores del club', () => {
-  it('añadir un usuario existente por email', async () => {
-    const otro = await db
-      .select({ email: user.email })
-      .from(user)
-      .where(eq(user.id, ids['otro-admin'] ?? ''))
-    const res = await pedir('POST', `/clubes/${ids.club}/admins`, 'admin', {
-      email: otro[0]?.email.toUpperCase(),
-    })
-    expect(res.status).toBe(201)
-    expect((await res.json()).usuarioId).toBe(ids['otro-admin'])
+  it('se listan; ya no se añaden por email, sino con una invitación (GH-51)', async () => {
+    await db
+      .insert(adminsClub)
+      .values({ clubId: ids.club ?? '', usuarioId: ids['otro-admin'] ?? '' })
     const lista = await (await pedir('GET', `/clubes/${ids.club}/admins`, 'admin')).json()
-    expect(lista).toHaveLength(2)
-  })
-
-  it('un email desconocido: 404; un administrador repetido: 409', async () => {
-    const desconocido = await pedir('POST', `/clubes/${ids.club}/admins`, 'admin', {
-      email: 'nadie@prueba.test',
-    })
-    expect(desconocido.status).toBe(404)
-    expect((await desconocido.json()).error.codigo).toBe('usuario_no_encontrado')
+    expect(lista.map((a: { usuarioId: string }) => a.usuarioId).sort()).toEqual(
+      [ids.admin, ids['otro-admin']].sort(),
+    )
     const [otro] = await db
       .select({ email: user.email })
       .from(user)
       .where(eq(user.id, ids['otro-admin'] ?? ''))
-    const repetido = await pedir('POST', `/clubes/${ids.club}/admins`, 'admin', {
-      email: otro?.email,
-    })
-    expect(repetido.status).toBe(409)
+    const res = await pedir('POST', `/clubes/${ids.club}/admins`, 'admin', { email: otro?.email })
+    expect(res.status).toBe(404)
   })
 
   it('solo los administradores del club los gestionan', async () => {
@@ -287,6 +273,48 @@ describe('mis plantillas', () => {
     ])
     const delJugador = await (await pedir('GET', `/plantillas?club=${ids.club}`, 'jugador')).json()
     expect(delJugador.map((p: { id: string }) => p.id)).toEqual([ids.juvenil26])
+  })
+
+  it('cada plantilla indica el jugador del usuario solo si tiene ficha en ella (GH-52)', async () => {
+    const sinFicha = await (await pedir('GET', `/plantillas/${ids.juvenil26}`, 'jugador')).json()
+    expect(sinFicha.jugadorId).toBeNull()
+
+    // Su cuenta, vinculada a un jugador del club con ficha en el Juvenil pero no en el Senior
+    const [vinculado] = await db
+      .insert(jugadores)
+      .values({ clubId: ids.club ?? '', nombre: 'Jugador', usuarioId: ids.jugador ?? '' })
+      .returning({ id: jugadores.id })
+    await db.insert(fichas).values({
+      plantillaId: ids.juvenil26 ?? '',
+      clubId: ids.club ?? '',
+      temporada: '2026-27',
+      jugadorId: vinculado?.id ?? '',
+    })
+    await db
+      .insert(membresias)
+      .values({ plantillaId: ids.senior26 ?? '', usuarioId: ids.jugador ?? '', rol: 'jugador' })
+
+    const lista = await (await pedir('GET', `/plantillas?club=${ids.club}`, 'jugador')).json()
+    expect(lista.map((p: { id: string; jugadorId: string | null }) => [p.id, p.jugadorId])).toEqual(
+      [
+        [ids.juvenil26, vinculado?.id],
+        [ids.senior26, null],
+      ],
+    )
+    const una = await (await pedir('GET', `/plantillas/${ids.juvenil26}`, 'jugador')).json()
+    expect(una.jugadorId).toBe(vinculado?.id)
+    const delAdmin = await (await pedir('GET', `/plantillas/${ids.juvenil26}`, 'admin')).json()
+    expect(delAdmin.jugadorId).toBeNull()
+
+    await db
+      .delete(membresias)
+      .where(
+        and(
+          eq(membresias.plantillaId, ids.senior26 ?? ''),
+          eq(membresias.usuarioId, ids.jugador ?? ''),
+        ),
+      )
+    await db.delete(jugadores).where(eq(jugadores.id, vinculado?.id ?? ''))
   })
 
   it('sin sesión: 401; un club mal escrito: 400', async () => {

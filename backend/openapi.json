@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "API de Vestuario",
-    "version": "1.7.0",
+    "version": "1.8.0",
     "description": "API REST de Vestuario. Todas las rutas cuelgan de /api. Errores con el formato { error: { codigo, mensaje, detalles? } }."
   },
   "components": {
@@ -270,6 +270,14 @@
           },
           "esAdminClub": {
             "type": "boolean"
+          },
+          "jugadorId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Jugador vinculado al usuario si tiene ficha (activa o de baja) en esta plantilla; si no, null"
           }
         },
         "required": [
@@ -281,7 +289,8 @@
           "plantillaAnteriorId",
           "multasActivas",
           "rol",
-          "esAdminClub"
+          "esAdminClub",
+          "jugadorId"
         ]
       },
       "JugadorPlantilla": {
@@ -520,6 +529,441 @@
           "fichas"
         ]
       },
+      "FichaEquipoLeida": {
+        "type": "object",
+        "properties": {
+          "equipo": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "Sofan S.D. \"B\""
+          },
+          "categoria": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "2ª Futgal"
+          },
+          "jugadores": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "ficha": {
+                  "type": "string",
+                  "description": "Como sale en la ficha, con las tildes arregladas",
+                  "example": "FERNÁNDEZ CASTRO, IVÁN"
+                },
+                "nombre": {
+                  "type": "string",
+                  "example": "Iván"
+                },
+                "apellidos": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "example": "Fernández Castro"
+                },
+                "funcion": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Tipo de licencia del jugador o función en el cuerpo técnico",
+                  "example": "Aficionado"
+                },
+                "jugadorId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "El jugador del club que parece ser; null si no hay uno claro"
+                }
+              },
+              "required": [
+                "ficha",
+                "nombre",
+                "apellidos",
+                "funcion",
+                "jugadorId"
+              ]
+            }
+          },
+          "cuerpoTecnico": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "ficha": {
+                  "type": "string",
+                  "description": "Como sale en la ficha, con las tildes arregladas",
+                  "example": "FERNÁNDEZ CASTRO, IVÁN"
+                },
+                "nombre": {
+                  "type": "string",
+                  "example": "Iván"
+                },
+                "apellidos": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "example": "Fernández Castro"
+                },
+                "funcion": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Tipo de licencia del jugador o función en el cuerpo técnico",
+                  "example": "Aficionado"
+                }
+              },
+              "required": [
+                "ficha",
+                "nombre",
+                "apellidos",
+                "funcion"
+              ]
+            },
+            "description": "Técnicos, delegados y auxiliares; solo informativo"
+          },
+          "club": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "nombre": {
+                  "type": "string"
+                },
+                "apellidos": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "fichas": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "plantillaId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "plantilla": {
+                        "type": "string"
+                      },
+                      "temporada": {
+                        "type": "string"
+                      },
+                      "tipo": {
+                        "type": "string",
+                        "enum": [
+                          "propia",
+                          "invitado"
+                        ],
+                        "description": "`propia`: es de la plantilla; `invitado`: juega con ella sin dejar la suya"
+                      }
+                    },
+                    "required": [
+                      "plantillaId",
+                      "plantilla",
+                      "temporada",
+                      "tipo"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "id",
+                "nombre",
+                "apellidos",
+                "fichas"
+              ]
+            },
+            "description": "Los jugadores del club con sus fichas, para saber en la vista previa si ya están en la plantilla o tienen ficha propia en otra la temporada elegida, y para emparejar a mano"
+          }
+        },
+        "required": [
+          "equipo",
+          "categoria",
+          "jugadores",
+          "cuerpoTecnico",
+          "club"
+        ]
+      },
+      "Invitacion": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string"
+          },
+          "rol": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "admin",
+              "entrenador",
+              "delegado",
+              "jugador",
+              null
+            ],
+            "description": "null en las de administrador del club"
+          },
+          "jugadorId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "jugador": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Nombre del jugador del club que se vinculará",
+            "example": "Brais"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "pendiente",
+              "caducada"
+            ]
+          },
+          "expira": {
+            "type": "string",
+            "example": "2026-11-18T12:00:00.000Z"
+          },
+          "creadaEn": {
+            "type": "string"
+          },
+          "creadaPor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Nombre de quien invitó"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "rol",
+          "jugadorId",
+          "jugador",
+          "estado",
+          "expira",
+          "creadaEn",
+          "creadaPor"
+        ]
+      },
+      "InvitacionCreada": {
+        "type": "object",
+        "properties": {
+          "invitacion": {
+            "$ref": "#/components/schemas/Invitacion"
+          },
+          "enlace": {
+            "type": "string",
+            "description": "Enlace para aceptarla. Solo se devuelve ahora: para volver a enviarlo hay que invitar de nuevo (la anterior queda revocada)",
+            "example": "https://vestuario.example/invitacion#…"
+          }
+        },
+        "required": [
+          "invitacion",
+          "enlace"
+        ]
+      },
+      "InvitacionAbierta": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "club": {
+            "type": "string",
+            "example": "CD Rexional"
+          },
+          "clubId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "plantilla": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "nombre": {
+                "type": "string"
+              },
+              "temporada": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "nombre",
+              "temporada"
+            ],
+            "description": "null en las de administrador del club"
+          },
+          "rol": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "admin",
+              "entrenador",
+              "delegado",
+              "jugador",
+              null
+            ]
+          },
+          "jugador": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Jugador del club que se vinculará"
+          },
+          "cuentaExiste": {
+            "type": "boolean",
+            "description": "Si ya hay una cuenta con ese email: entonces hay que iniciar sesión"
+          }
+        },
+        "required": [
+          "email",
+          "club",
+          "clubId",
+          "plantilla",
+          "rol",
+          "jugador",
+          "cuentaExiste"
+        ]
+      },
+      "InvitacionAceptada": {
+        "type": "object",
+        "properties": {
+          "clubId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "plantillaId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "clubId",
+          "plantillaId"
+        ]
+      },
+      "MiembrosPlantilla": {
+        "type": "object",
+        "properties": {
+          "miembros": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MiembroPlantilla"
+            },
+            "description": "Primero los administradores del club; después, por nombre"
+          },
+          "jugadoresSinCuenta": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "jugadorId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "nombre": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "jugadorId",
+                "nombre"
+              ]
+            },
+            "description": "Jugadores con ficha propia activa y sin cuenta: a los que se puede invitar"
+          }
+        },
+        "required": [
+          "miembros",
+          "jugadoresSinCuenta"
+        ]
+      },
+      "MiembroPlantilla": {
+        "type": "object",
+        "properties": {
+          "usuarioId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "rol": {
+            "type": "string",
+            "enum": [
+              "admin",
+              "entrenador",
+              "delegado",
+              "jugador"
+            ]
+          },
+          "heredado": {
+            "type": "boolean",
+            "description": "Administrador del club: es admin de todas sus plantillas sin membresía"
+          },
+          "jugador": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Jugador del club vinculado a su cuenta",
+            "example": "Brais Pazos"
+          }
+        },
+        "required": [
+          "usuarioId",
+          "nombre",
+          "email",
+          "rol",
+          "heredado",
+          "jugador"
+        ]
+      },
       "Horario": {
         "type": [
           "object",
@@ -574,6 +1018,34 @@
         "required": [
           "dia",
           "hora"
+        ]
+      },
+      "EntrenoListado": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ResumenEntreno"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "miEstado": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "asiste",
+                  "justificada",
+                  "falta",
+                  null
+                ],
+                "description": "Estado del jugador vinculado al usuario en este entreno; null si no tiene o no está registrado"
+              }
+            },
+            "required": [
+              "miEstado"
+            ]
+          }
         ]
       },
       "ResumenEntreno": {
@@ -1066,6 +1538,10 @@
           },
           "convocados": {
             "type": "integer"
+          },
+          "meConvocan": {
+            "type": "boolean",
+            "description": "true si el jugador vinculado al usuario está convocado (GH-52)"
           }
         },
         "required": [
@@ -1080,7 +1556,8 @@
           "estado",
           "golesFavor",
           "golesContra",
-          "convocados"
+          "convocados",
+          "meConvocan"
         ]
       },
       "Partido": {
@@ -3240,103 +3717,6 @@
             }
           }
         }
-      },
-      "post": {
-        "tags": [
-          "Clubes"
-        ],
-        "summary": "Añadir un administrador",
-        "description": "El usuario debe existir. Las invitaciones por email llegan en el ciclo 10.",
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "required": true,
-            "name": "cid",
-            "in": "path"
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "email": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "email"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Administrador añadido",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AdministradorClub"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Datos no válidos",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Sin sesión",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Sin permiso",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "No existe",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Ya es administrador",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
       }
     },
     "/api/clubes/{cid}/admins/{uid}": {
@@ -3345,7 +3725,7 @@
           "Clubes"
         ],
         "summary": "Retirar un administrador",
-        "description": "Un club nunca se queda sin administradores.",
+        "description": "Un club nunca se queda sin administradores. Para añadir uno, se le invita (`POST /clubes/{cid}/invitaciones`).",
         "parameters": [
           {
             "schema": {
@@ -3504,6 +3884,52 @@
                       "null"
                     ],
                     "format": "uuid"
+                  },
+                  "jugadores": {
+                    "type": "array",
+                    "items": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "jugadorId": {
+                              "type": "string",
+                              "format": "uuid"
+                            }
+                          },
+                          "required": [
+                            "jugadorId"
+                          ],
+                          "additionalProperties": false,
+                          "title": "Jugador del club"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "nombre": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 80
+                            },
+                            "apellidos": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "minLength": 1,
+                              "maxLength": 80
+                            }
+                          },
+                          "required": [
+                            "nombre"
+                          ],
+                          "additionalProperties": false,
+                          "title": "Jugador nuevo en el club"
+                        }
+                      ]
+                    },
+                    "maxItems": 80,
+                    "description": "Jugadores con ficha propia desde el principio (de la ficha de la federación, GH-197): del club o nuevos. Si alguno ya tiene ficha propia esa temporada, no se crea nada."
                   }
                 },
                 "required": [
@@ -4578,6 +5004,1148 @@
         }
       }
     },
+    "/api/clubes/{cid}/ficha-federacion": {
+      "post": {
+        "tags": [
+          "Plantillas"
+        ],
+        "summary": "Leer la ficha del equipo de la federación",
+        "description": "Delegado o superior en alguna plantilla del club. La ficha del equipo en PDF de la Federación Gallega (como mucho 2 MB), en el campo `archivo`. Devuelve el equipo, la categoría, los jugadores emparejados con los del club y el cuerpo técnico, sin crear nada; el PDF no se guarda. Para crear la plantilla con sus jugadores, `POST /plantillas` con `jugadores`; para añadirlos a una que ya existe, `POST /plantillas/{id}/jugadores/lote`.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "cid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "archivo": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ficha leída",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FichaEquipoLeida"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "No es un PDF o no es la ficha de un equipo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Pasa de 2 MB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/jugadores/lote": {
+      "post": {
+        "tags": [
+          "Jugadores"
+        ],
+        "summary": "Añadir varios jugadores a la plantilla",
+        "description": "Delegado o superior. Con ficha propia y sin dorsal ni posición, como al importar la ficha de la federación (GH-197): jugadores del club (`jugadorId`) o nuevos (`nombre` y `apellidos`). Todos o ninguno: si alguno ya está en la plantilla o tiene ficha propia en otra esa temporada, no se añade nadie.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "jugadores": {
+                    "type": "array",
+                    "items": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "jugadorId": {
+                              "type": "string",
+                              "format": "uuid"
+                            }
+                          },
+                          "required": [
+                            "jugadorId"
+                          ],
+                          "additionalProperties": false,
+                          "title": "Jugador del club"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "nombre": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 80
+                            },
+                            "apellidos": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "minLength": 1,
+                              "maxLength": 80
+                            }
+                          },
+                          "required": [
+                            "nombre"
+                          ],
+                          "additionalProperties": false,
+                          "title": "Jugador nuevo en el club"
+                        }
+                      ]
+                    },
+                    "maxItems": 80
+                  }
+                },
+                "required": [
+                  "jugadores"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Los jugadores añadidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/JugadorPlantilla"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Alguno ya tiene ficha en la temporada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/invitaciones": {
+      "get": {
+        "tags": [
+          "Invitaciones"
+        ],
+        "summary": "Invitaciones pendientes de la plantilla",
+        "description": "Admin. Las que no se han usado ni revocado, la más reciente primero; las caducadas, con estado `caducada`. El enlace no se vuelve a mostrar.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Invitaciones",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Invitacion"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Invitaciones"
+        ],
+        "summary": "Invitar a la plantilla",
+        "description": "Admin. Invita a un email con un rol; con rol jugador se puede indicar el jugador del club (con ficha en la plantilla y sin usuario) al que se vinculará su cuenta. Devuelve el enlace, de un solo uso y válido 7 días; solo ahora. Invitar otra vez al mismo email revoca la invitación anterior.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "example": "brais@example.com"
+                  },
+                  "rol": {
+                    "type": "string",
+                    "enum": [
+                      "admin",
+                      "entrenador",
+                      "delegado",
+                      "jugador"
+                    ]
+                  },
+                  "jugadorId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid",
+                    "description": "Solo con rol jugador: jugador con ficha en la plantilla, sin usuario vinculado"
+                  }
+                },
+                "required": [
+                  "email",
+                  "rol"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Invitación creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitacionCreada"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Ya es miembro de la plantilla o el jugador ya tiene usuario",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/invitaciones/{iid}": {
+      "delete": {
+        "tags": [
+          "Invitaciones"
+        ],
+        "summary": "Revocar una invitación",
+        "description": "Admin. El enlace deja de valer. Solo las que no se han usado.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "iid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Invitación revocada"
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/clubes/{cid}/invitaciones": {
+      "get": {
+        "tags": [
+          "Invitaciones"
+        ],
+        "summary": "Invitaciones pendientes como administrador del club",
+        "description": "Solo administradores del club. Igual que las de la plantilla.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "cid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Invitaciones",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Invitacion"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Invitaciones"
+        ],
+        "summary": "Invitar como administrador del club",
+        "description": "Solo administradores del club. Devuelve el enlace, de un solo uso y válido 7 días; solo ahora. Invitar otra vez al mismo email revoca la invitación anterior.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "cid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "example": "brais@example.com"
+                  }
+                },
+                "required": [
+                  "email"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Invitación creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitacionCreada"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Ya es administrador del club",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/clubes/{cid}/invitaciones/{iid}": {
+      "delete": {
+        "tags": [
+          "Invitaciones"
+        ],
+        "summary": "Revocar una invitación como administrador del club",
+        "description": "Solo administradores del club. Solo las que no se han usado.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "cid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "iid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Invitación revocada"
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/invitaciones/consultar": {
+      "post": {
+        "tags": [
+          "Invitaciones"
+        ],
+        "summary": "Ver una invitación",
+        "description": "Pública, con el token del enlace en el cuerpo. No cambia nada: dice a qué invita y si ya hay una cuenta con ese email.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "minLength": 20,
+                    "maxLength": 100
+                  }
+                },
+                "required": [
+                  "token"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Invitación",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitacionAbierta"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "El enlace no es válido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Usada, anulada o caducada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/invitaciones/aceptar": {
+      "post": {
+        "tags": [
+          "Invitaciones"
+        ],
+        "summary": "Aceptar una invitación",
+        "description": "Pública, con el token del enlace en el cuerpo. La invitación es para un email: si ya hay una cuenta con él, hay que haber iniciado sesión con ella; si no, se crea con `nombre` y `contrasena` (mínimo 10 caracteres) y se inicia la sesión. Crea la membresía con el rol de la invitación (o hace administrador del club) y vincula el jugador, si lo hay. De un solo uso.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "minLength": 20,
+                    "maxLength": 100
+                  },
+                  "nombre": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80,
+                    "description": "Solo al crear la cuenta"
+                  },
+                  "contrasena": {
+                    "type": "string",
+                    "maxLength": 128,
+                    "description": "Solo al crear la cuenta; mínimo 10 caracteres"
+                  }
+                },
+                "required": [
+                  "token"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Aceptada; si se ha creado la cuenta, con la cookie de sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitacionAceptada"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Ya hay una cuenta con ese email: inicia sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Has entrado con otro email",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "El enlace no es válido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "El jugador ya tiene otra cuenta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Usada, anulada o caducada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/miembros": {
+      "get": {
+        "tags": [
+          "Miembros"
+        ],
+        "summary": "Miembros de la plantilla",
+        "description": "Admin. Los miembros con su rol y el jugador vinculado, y los administradores del club como heredados. También los jugadores sin cuenta, para invitarlos.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Miembros",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MiembrosPlantilla"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/miembros/{uid}": {
+      "patch": {
+        "tags": [
+          "Miembros"
+        ],
+        "summary": "Cambiar el rol de un miembro",
+        "description": "Admin. Solo los miembros de la plantilla; los administradores del club, no. El jugador vinculado no cambia.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "uid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "rol": {
+                    "type": "string",
+                    "enum": [
+                      "admin",
+                      "entrenador",
+                      "delegado",
+                      "jugador"
+                    ]
+                  }
+                },
+                "required": [
+                  "rol"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Rol cambiado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "rol": {
+                      "type": "string",
+                      "enum": [
+                        "admin",
+                        "entrenador",
+                        "delegado",
+                        "jugador"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "rol"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Miembros"
+        ],
+        "summary": "Retirar el acceso a la plantilla",
+        "description": "Admin. Borra la membresía; el jugador sigue vinculado a su cuenta (es del club). Los administradores del club se retiran desde el club.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "uid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Acceso retirado"
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/plantillas/{id}/horario": {
       "get": {
         "tags": [
@@ -4874,7 +6442,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/ResumenEntreno"
+                    "$ref": "#/components/schemas/EntrenoListado"
                   }
                 }
               }

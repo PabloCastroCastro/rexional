@@ -44,6 +44,14 @@ const datosEntreno = {
 
 const EsquemaResumenEntreno = EsquemaRecuentos.extend(datosEntreno).openapi('ResumenEntreno')
 
+// En el listado, además, el estado del jugador vinculado al usuario (GH-52)
+const EsquemaEntrenoListado = EsquemaResumenEntreno.extend({
+  miEstado: EsquemaEstado.nullable().openapi({
+    description:
+      'Estado del jugador vinculado al usuario en este entreno; null si no tiene o no está registrado',
+  }),
+}).openapi('EntrenoListado')
+
 const EsquemaEntreno = z
   .object({
     ...datosEntreno,
@@ -122,6 +130,12 @@ const diaSemana = (fecha: string) => new Date(`${fecha}T00:00:00Z`).getUTCDay() 
 
 const recuento = (estado: Estado) =>
   sql<number>`(count(${asistencias.estado}) filter (where ${asistencias.estado} = ${estado}))::int`
+
+// Estado de un jugador en el entreno de la fila agrupada; null si no hay jugador o no está registrado
+const miEstado = (jugadorId: string | null) =>
+  jugadorId
+    ? sql<Estado | null>`(array_agg(${asistencias.estado}) filter (where ${asistencias.jugadorId} = ${jugadorId}))[1]`
+    : sql<Estado | null>`null`
 
 // Las horas sin segundos ("20:00")
 const horaEntreno = sql<string | null>`to_char(${entrenos.hora}, 'HH24:MI')`
@@ -460,7 +474,7 @@ export const rutasEntrenos = () =>
           }),
         },
         responses: {
-          200: json(z.array(EsquemaResumenEntreno), 'Entrenos'),
+          200: json(z.array(EsquemaEntrenoListado), 'Entrenos'),
           400: json(EsquemaError, 'Fechas no válidas'),
           ...errores,
         },
@@ -473,6 +487,7 @@ export const rutasEntrenos = () =>
             asiste: recuento('asiste'),
             justificada: recuento('justificada'),
             falta: recuento('falta'),
+            miEstado: miEstado(c.var.jugadorId),
           })
           .from(entrenos)
           .leftJoin(asistencias, eq(asistencias.entrenoId, entrenos.id))

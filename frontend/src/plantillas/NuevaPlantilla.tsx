@@ -6,6 +6,15 @@ import { Boton } from '../componentes/Boton'
 import { Campo } from '../componentes/Campo'
 import { HojaInferior } from '../componentes/HojaInferior'
 import {
+  type FichaLeida,
+  type FilaFicha,
+  faltaNombre,
+  filasDe,
+  jugadoresDelLote,
+  SubirFicha,
+  VistaPreviaFicha,
+} from '../jugadores/FichaFederacion'
+import {
   CATEGORIAS,
   CLAVE_PLANTILLAS,
   type Club,
@@ -37,6 +46,9 @@ export function NuevaPlantilla({ abierta, alCerrar, clubes, plantillas, alCrear 
   const [temporada, setTemporada] = useState(actual)
   const [anteriorId, setAnteriorId] = useState('')
   const [errores, setErrores] = useState<Errores>({})
+  // Desde la ficha de la federación (GH-197): rellena nombre y categoría y trae los jugadores
+  const [leida, setLeida] = useState<FichaLeida | null>(null)
+  const [filas, setFilas] = useState<FilaFicha[]>([])
   const ids = { club: useId(), temporada: useId(), anterior: useId(), categorias: useId() }
 
   // Candidatas a plantilla anterior: del mismo club y de una temporada anterior
@@ -64,8 +76,13 @@ export function NuevaPlantilla({ abierta, alCerrar, clubes, plantillas, alCrear 
       setTemporada(actual)
       setAnteriorId('')
       setErrores({})
+      setLeida(null)
+      setFilas([])
     }
   }, [abierta, actual])
+
+  const destino = { temporada, plantillaId: null }
+  const lote = leida ? jugadoresDelLote(filas, leida, destino) : []
 
   const crear = useMutation({
     mutationFn: () =>
@@ -77,6 +94,7 @@ export function NuevaPlantilla({ abierta, alCerrar, clubes, plantillas, alCrear 
             categoria: categoria.trim(),
             temporada,
             plantillaAnteriorId: anteriorId || null,
+            ...(leida && { jugadores: lote }),
           },
         }),
       ),
@@ -105,6 +123,7 @@ export function NuevaPlantilla({ abierta, alCerrar, clubes, plantillas, alCrear 
     const faltan: Errores = {}
     if (!nombre.trim()) faltan.nombre = 'Escribe el nombre, p. ej. Senior o Infantil A'
     if (!categoria.trim()) faltan.categoria = 'Elige o escribe la categoría'
+    if (faltaNombre(filas)) faltan.general = 'Escribe el nombre de todos los jugadores nuevos'
     setErrores(faltan)
     if (Object.keys(faltan).length === 0) crear.mutate()
   }
@@ -125,7 +144,9 @@ export function NuevaPlantilla({ abierta, alCerrar, clubes, plantillas, alCrear 
             cargando={crear.isPending}
             icono={<Plus aria-hidden size={18} />}
           >
-            Crear
+            {leida
+              ? `Crear con ${lote.length} ${lote.length === 1 ? 'jugador' : 'jugadores'}`
+              : 'Crear'}
           </Boton>
         </>
       }
@@ -139,7 +160,16 @@ export function NuevaPlantilla({ abierta, alCerrar, clubes, plantillas, alCrear 
         {clubes.length > 1 && (
           <div className={estilos.campo}>
             <label htmlFor={ids.club}>Club</label>
-            <select id={ids.club} value={clubId} onChange={(e) => setClubId(e.target.value)}>
+            <select
+              id={ids.club}
+              value={clubId}
+              onChange={(e) => {
+                setClubId(e.target.value)
+                // Los jugadores leídos se emparejaron con los del otro club
+                setLeida(null)
+                setFilas([])
+              }}
+            >
               {clubes.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.nombre}
@@ -148,6 +178,24 @@ export function NuevaPlantilla({ abierta, alCerrar, clubes, plantillas, alCrear 
             </select>
           </div>
         )}
+        <div className={estilos.campo}>
+          <p className={estilos.ayuda}>
+            {leida
+              ? `Ficha de la federación leída: ${leida.jugadores.length} jugadores. Revisa el nombre y la categoría.`
+              : 'Con la ficha del equipo en PDF de la federación se rellenan el nombre, la categoría y los jugadores.'}
+          </p>
+          <SubirFicha
+            clubId={clubId}
+            texto={leida ? 'Elegir otra ficha' : 'Desde la ficha de la federación'}
+            alLeer={(nueva) => {
+              setLeida(nueva)
+              setFilas(filasDe(nueva))
+              if (nueva.equipo) setNombre(nueva.equipo)
+              if (nueva.categoria) setCategoria(nueva.categoria)
+              setErrores({})
+            }}
+          />
+        </div>
         <Campo
           etiqueta="Nombre"
           placeholder="Senior, Infantil A…"
@@ -201,6 +249,9 @@ export function NuevaPlantilla({ abierta, alCerrar, clubes, plantillas, alCrear 
           </select>
           <p className={estilos.ayuda}>Para seguir la historia de la plantilla año a año.</p>
         </div>
+        {leida && (
+          <VistaPreviaFicha leida={leida} filas={filas} alCambiar={setFilas} destino={destino} />
+        )}
       </form>
     </HojaInferior>
   )

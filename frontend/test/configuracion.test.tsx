@@ -26,6 +26,12 @@ const ADMINS = [
 function conClub(plantillas: Plantilla[], admins = ADMINS) {
   conDatos({ plantillas })
   manejadores['GET /api/clubes/c1/admins'] = () => json(admins)
+  manejadores['GET /api/clubes/c1/invitaciones'] = () => json([])
+  for (const p of plantillas) {
+    manejadores[`GET /api/plantillas/${p.id}/miembros`] = () =>
+      json({ miembros: [], jugadoresSinCuenta: [] })
+    manejadores[`GET /api/plantillas/${p.id}/invitaciones`] = () => json([])
+  }
 }
 
 const enviado = (clave: string) => peticiones.filter((p) => p.clave === clave).map((p) => p.cuerpo)
@@ -213,36 +219,29 @@ describe('administradores del club', () => {
     expect(within(bloque).getByText('berta@rexional.test')).toBeInTheDocument()
   })
 
-  it('añade un administrador por email y muestra el error si no existe', async () => {
+  it('invita a un administrador y muestra el enlace para compartirlo una vez', async () => {
     conClub([senior26])
-    manejadores['POST /api/clubes/c1/admins'] = async (peticion) => {
+    manejadores['POST /api/clubes/c1/invitaciones'] = async (peticion) => {
       const { email } = await peticion.json()
-      if (email === 'nadie@prueba.test') {
-        return json(
-          {
-            error: {
-              codigo: 'usuario_no_encontrado',
-              mensaje: `No hay ningún usuario con el email ${email}`,
-            },
-          },
-          404,
-        )
-      }
-      return json({ usuarioId: 'u7', nombre: 'Carlos', email }, 201)
+      return json(
+        {
+          invitacion: { id: 'i1', email, rol: null, jugadorId: null, jugador: null },
+          enlace: 'https://vestuario.test/invitacion#abc',
+        },
+        201,
+      )
     }
     abrir('/plantillas/p1/mas/configuracion')
-    await userEvent.click(await screen.findByRole('button', { name: 'Añadir administrador' }))
-    const hoja = screen.getByRole('dialog', { name: 'Añadir administrador' })
-    await userEvent.type(within(hoja).getByLabelText(/Email/), 'nadie@prueba.test')
-    await userEvent.click(within(hoja).getByRole('button', { name: 'Añadir' }))
-    expect(
-      await within(hoja).findByText('No hay ningún usuario con el email nadie@prueba.test'),
-    ).toBeInTheDocument()
-
-    await userEvent.clear(within(hoja).getByLabelText(/Email/))
+    await userEvent.click(await screen.findByRole('button', { name: 'Invitar administrador' }))
+    const hoja = screen.getByRole('dialog', { name: 'Invitar administrador' })
+    expect(within(hoja).queryByLabelText('Rol')).not.toBeInTheDocument()
     await userEvent.type(within(hoja).getByLabelText(/Email/), 'carlos@rexional.test')
-    await userEvent.click(within(hoja).getByRole('button', { name: 'Añadir' }))
-    expect(await screen.findByText('Carlos ya es administrador del club')).toBeInTheDocument()
+    await userEvent.click(within(hoja).getByRole('button', { name: 'Invitar' }))
+    expect(await within(hoja).findByText(/solo se muestra esta vez/)).toBeInTheDocument()
+    const mensaje = within(hoja).getByTestId('mensaje')
+    expect(mensaje).toHaveTextContent('Te invito a Vestuario como administrador de CD Rexional')
+    expect(mensaje).toHaveTextContent('https://vestuario.test/invitacion#abc')
+    expect(enviado('POST /api/clubes/c1/invitaciones')).toEqual([{ email: 'carlos@rexional.test' }])
   })
 
   it('retirar pide confirmación y muestra el error del último administrador', async () => {
@@ -259,7 +258,7 @@ describe('administradores del club', () => {
       )
     abrir('/plantillas/p1/mas/configuracion')
     const bloque = await screen.findByRole('region', { name: 'Administradores del club' })
-    expect(await within(bloque).findByText(/añade otro antes de retirarte/)).toBeInTheDocument()
+    expect(await within(bloque).findByText(/invita a otro antes de retirarte/)).toBeInTheDocument()
 
     await userEvent.click(within(bloque).getByRole('button', { name: `Retirar a ${USUARIO.name}` }))
     const confirmacion = screen.getByRole('alertdialog', { name: '¿Dejar de ser administrador?' })
@@ -280,5 +279,103 @@ describe('administradores del club', () => {
     )
     await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }))
     expect(enviado('DELETE /api/clubes/c1/admins/u9')).toEqual([])
+  })
+})
+
+describe('miembros de la plantilla', () => {
+  const MIEMBROS = {
+    miembros: [
+      {
+        usuarioId: 'u1',
+        nombre: 'Ana Administradora',
+        email: 'admin@rexional.test',
+        rol: 'admin',
+        heredado: true,
+        jugador: null,
+      },
+      {
+        usuarioId: 'u5',
+        nombre: 'Carlos',
+        email: 'carlos@rexional.test',
+        rol: 'jugador',
+        heredado: false,
+        jugador: 'Carlos Vila',
+      },
+    ],
+    jugadoresSinCuenta: [{ jugadorId: 'j2', nombre: 'Brais Pazos' }],
+  }
+
+  it('solo el admin los ve; el entrenador, no', async () => {
+    conClub([plantilla('p1', 'Senior', '2026-27', { rol: 'entrenador', esAdminClub: false })])
+    abrir('/plantillas/p1/mas/configuracion')
+    expect(await screen.findByRole('heading', { name: 'Esta plantilla' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Miembros' })).not.toBeInTheDocument()
+  })
+
+  it('lista los miembros; los administradores del club, sin acciones', async () => {
+    conClub([senior26])
+    manejadores['GET /api/plantillas/p1/miembros'] = () => json(MIEMBROS)
+    manejadores['GET /api/plantillas/p1/invitaciones'] = () =>
+      json([
+        {
+          id: 'i1',
+          email: 'dani@rexional.test',
+          rol: 'delegado',
+          jugadorId: null,
+          jugador: null,
+          estado: 'pendiente',
+          expira: '2026-11-18T12:00:00.000Z',
+          creadaEn: '2026-11-11T12:00:00.000Z',
+          creadaPor: 'Ana',
+        },
+      ])
+    abrir('/plantillas/p1/mas/configuracion')
+    const lista = await screen.findByRole('list', { name: 'Miembros' })
+    const [ana, carlos] = within(lista).getAllByRole('listitem')
+    expect(ana).toHaveTextContent('Administrador del club')
+    expect(within(ana as HTMLElement).queryByRole('button')).not.toBeInTheDocument()
+    expect(carlos).toHaveTextContent('Jugador · Ficha: Carlos Vila · carlos@rexional.test')
+    const pendientes = await screen.findByRole('list', { name: 'Invitaciones pendientes' })
+    expect(pendientes).toHaveTextContent('Delegado · Caduca el 18/11')
+  })
+
+  it('cambia el rol y retira el acceso', async () => {
+    conClub([senior26])
+    manejadores['GET /api/plantillas/p1/miembros'] = () => json(MIEMBROS)
+    manejadores['PATCH /api/plantillas/p1/miembros/u5'] = async (peticion) =>
+      json(await peticion.json())
+    manejadores['DELETE /api/plantillas/p1/miembros/u5'] = () => new Response(null, { status: 204 })
+    abrir('/plantillas/p1/mas/configuracion')
+    await userEvent.click(await screen.findByRole('button', { name: 'Cambiar el rol de Carlos' }))
+    let hoja = screen.getByRole('dialog', { name: 'Carlos' })
+    await userEvent.click(within(hoja).getByRole('radio', { name: 'Delegado' }))
+    expect(await screen.findByText('Carlos ahora es delegado')).toBeInTheDocument()
+    expect(enviado('PATCH /api/plantillas/p1/miembros/u5')).toEqual([{ rol: 'delegado' }])
+
+    await userEvent.click(screen.getByRole('button', { name: 'Cambiar el rol de Carlos' }))
+    hoja = screen.getByRole('dialog', { name: 'Carlos' })
+    await userEvent.click(within(hoja).getByRole('button', { name: 'Retirar acceso' }))
+    const confirmacion = screen.getByRole('alertdialog', { name: '¿Retirar el acceso a Carlos?' })
+    await userEvent.click(within(confirmacion).getByRole('button', { name: 'Retirar acceso' }))
+    expect(await screen.findByText('Carlos ya no tiene acceso')).toBeInTheDocument()
+  })
+
+  it('invita con un rol y, si es jugador, con su ficha', async () => {
+    conClub([senior26])
+    manejadores['GET /api/plantillas/p1/miembros'] = () => json(MIEMBROS)
+    manejadores['POST /api/plantillas/p1/invitaciones'] = () =>
+      json({ invitacion: { id: 'i2' }, enlace: 'https://vestuario.test/invitacion#xyz' }, 201)
+    abrir('/plantillas/p1/mas/configuracion')
+    await userEvent.click(await screen.findByRole('button', { name: 'Invitar' }))
+    const hoja = screen.getByRole('dialog', { name: 'Invitar' })
+    await userEvent.type(within(hoja).getByLabelText(/Email/), 'brais@rexional.test')
+    await userEvent.selectOptions(within(hoja).getByLabelText('Su ficha de jugador'), 'j2')
+    await userEvent.click(within(hoja).getByRole('button', { name: 'Invitar' }))
+    expect(await within(hoja).findByTestId('mensaje')).toHaveTextContent(
+      'Te invito a Vestuario como jugador en Senior',
+    )
+    expect(enviado('POST /api/plantillas/p1/invitaciones')).toEqual([
+      { email: 'brais@rexional.test', rol: 'jugador', jugadorId: 'j2' },
+    ])
   })
 })

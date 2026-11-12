@@ -8,7 +8,7 @@ raiz=$(dirname "$(readlink -f "$0")")/..
 dir=$(mktemp -d)
 trap 'rm -rf "$dir"' EXIT
 
-echo 'u1|Ana|ana@club.test' >"$dir/usuarios"
+printf 'u1|Ana|ana@club.test\nu2|Berta|berta@club.test\n' >"$dir/usuarios"
 cat >"$dir/logs" <<'FIN'
 {"level":30,"time":"2026-11-10T08:00:00Z","msg":"Petición","metodo":"GET","estado":200}
 {"level":30,"time":"2026-11-10T08:01:00Z","seguridad":true,"evento":"login_ok","usuarioId":"u1","ip":"10.0.0.1"}
@@ -19,6 +19,13 @@ cat >"$dir/logs" <<'FIN'
 {"level":40,"time":"2026-11-10T08:04:00Z","seguridad":true,"evento":"login_desde_nuevo_origen","usuarioId":"u1","ip":"198.51.100.4","navegador":"Firefox","ipNueva":true,"navegadorNuevo":false}
 {"level":40,"time":"2026-11-10T08:05:00Z","seguridad":true,"evento":"limite_superado","limite":"general","usuarioId":"u1","ip":"10.0.0.1","metodo":"GET","ruta":"/api/clubes"}
 {"level":30,"time":"2026-11-10T08:06:00Z","seguridad":true,"evento":"sesion_cerrada","usuarioId":"u1","ip":"10.0.0.1"}
+{"level":30,"time":"2026-11-10T08:06:10Z","seguridad":true,"evento":"invitacion_creada","usuarioId":"u1","invitacionId":"i1","plantillaId":"p1","rol":"jugador","emailResumen":"def456","ip":"10.0.0.1"}
+{"level":30,"time":"2026-11-10T08:06:20Z","seguridad":true,"evento":"invitacion_revocada","usuarioId":"u1","invitacionId":"i1","plantillaId":"p1","emailResumen":"def456","ip":"10.0.0.1"}
+{"level":30,"time":"2026-11-10T08:06:25Z","seguridad":true,"evento":"cuenta_creada","usuarioId":"u1","invitacionId":"i2","ip":"198.51.100.7"}
+{"level":30,"time":"2026-11-10T08:06:26Z","seguridad":true,"evento":"invitacion_aceptada","usuarioId":"u1","invitacionId":"i2","plantillaId":"p1","rol":"entrenador"}
+{"level":30,"time":"2026-11-10T08:06:27Z","seguridad":true,"evento":"rol_cambiado","usuarioId":"u1","plantillaId":"p1","miembroId":"u2","rol":"delegado"}
+{"level":30,"time":"2026-11-10T08:06:28Z","seguridad":true,"evento":"acceso_retirado","usuarioId":"u1","plantillaId":"p1","miembroId":"u2"}
+{"level":30,"time":"2026-11-10T08:06:29Z","seguridad":true,"evento":"admin_club_retirado","usuarioId":"u1","clubId":"c1","retiradoId":"u2"}
 {"level":40,"time":"2026-11-10T08:06:30Z","seguridad":true,"evento":"csp_violada","directiva":"script-src-elem","bloqueado":"https://malo.test/x.js","pagina":"https://vestuario.test/","ip":"10.0.0.2"}
 no es json {
 2026/11/10 08:07:00 [warn] 22#22: *9 limiting requests, excess: 5.120 by zone "login", client: 203.0.113.9, server: _, request: "POST /api/auth/sign-in/email HTTP/1.1"
@@ -52,6 +59,19 @@ espera "     2  203.0.113.9 (login)"
 espera "Violaciones de la CSP: 1"
 espera "script-src-elem: https://malo.test/x.js en https://vestuario.test/ desde 10.0.0.2"
 espera "Sesiones cerradas: 1"
+espera "Invitaciones creadas: 1"
+espera "Ana <ana@club.test> invita como jugador a def456"
+espera "Invitaciones revocadas: 1"
+espera "Ana <ana@club.test> revoca la de def456"
+espera "Invitaciones aceptadas: 1"
+espera "Ana <ana@club.test> entra como entrenador"
+espera "Cuentas creadas: 1"
+espera "Ana <ana@club.test> desde 198.51.100.7"
+espera "Roles cambiados: 1"
+espera "Ana <ana@club.test> pone a Berta <berta@club.test> como delegado"
+espera "Accesos retirados: 1"
+espera "Ana <ana@club.test> retira a Berta <berta@club.test>"
+espera "Administradores del club retirados: 1"
 
 if [[ $fallos -gt 0 ]]; then
   echo "$informe"

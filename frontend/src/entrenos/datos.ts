@@ -68,6 +68,8 @@ export function textoFecha(fecha: string) {
 }
 
 export type ResumenEntreno = components['schemas']['ResumenEntreno']
+// En el listado, también el estado del jugador vinculado al usuario (GH-52)
+export type EntrenoListado = components['schemas']['EntrenoListado']
 export type AsistenciaJugador = components['schemas']['AsistenciaJugador']
 
 // Entrenos hasta hoy (los próximos se muestran con el calendario, GH-82)

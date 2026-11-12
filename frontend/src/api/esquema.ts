@@ -507,83 +507,7 @@ export interface paths {
             };
         };
         put?: never;
-        /**
-         * Añadir un administrador
-         * @description El usuario debe existir. Las invitaciones por email llegan en el ciclo 10.
-         */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    cid: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": {
-                        email: string;
-                    };
-                };
-            };
-            responses: {
-                /** @description Administrador añadido */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AdministradorClub"];
-                    };
-                };
-                /** @description Datos no válidos */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Sin sesión */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Sin permiso */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description No existe */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Ya es administrador */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -602,7 +526,7 @@ export interface paths {
         post?: never;
         /**
          * Retirar un administrador
-         * @description Un club nunca se queda sin administradores.
+         * @description Un club nunca se queda sin administradores. Para añadir uno, se le invita (`POST /clubes/{cid}/invitaciones`).
          */
         delete: {
             parameters: {
@@ -740,6 +664,14 @@ export interface paths {
                         temporada: string;
                         /** Format: uuid */
                         plantillaAnteriorId?: string | null;
+                        /** @description Jugadores con ficha propia desde el principio (de la ficha de la federación, GH-197): del club o nuevos. Si alguno ya tiene ficha propia esa temporada, no se crea nada. */
+                        jugadores?: ({
+                            /** Format: uuid */
+                            jugadorId: string;
+                        } | {
+                            nombre: string;
+                            apellidos?: string | null;
+                        })[];
                     };
                 };
             };
@@ -1525,6 +1457,1010 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/clubes/{cid}/ficha-federacion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Leer la ficha del equipo de la federación
+         * @description Delegado o superior en alguna plantilla del club. La ficha del equipo en PDF de la Federación Gallega (como mucho 2 MB), en el campo `archivo`. Devuelve el equipo, la categoría, los jugadores emparejados con los del club y el cuerpo técnico, sin crear nada; el PDF no se guarda. Para crear la plantilla con sus jugadores, `POST /plantillas` con `jugadores`; para añadirlos a una que ya existe, `POST /plantillas/{id}/jugadores/lote`.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    cid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "multipart/form-data": {
+                        /** Format: binary */
+                        archivo?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Ficha leída */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["FichaEquipoLeida"];
+                    };
+                };
+                /** @description No es un PDF o no es la ficha de un equipo */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Pasa de 2 MB */
+                413: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plantillas/{id}/jugadores/lote": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Añadir varios jugadores a la plantilla
+         * @description Delegado o superior. Con ficha propia y sin dorsal ni posición, como al importar la ficha de la federación (GH-197): jugadores del club (`jugadorId`) o nuevos (`nombre` y `apellidos`). Todos o ninguno: si alguno ya está en la plantilla o tiene ficha propia en otra esa temporada, no se añade nadie.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        jugadores: ({
+                            /** Format: uuid */
+                            jugadorId: string;
+                        } | {
+                            nombre: string;
+                            apellidos?: string | null;
+                        })[];
+                    };
+                };
+            };
+            responses: {
+                /** @description Los jugadores añadidos */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["JugadorPlantilla"][];
+                    };
+                };
+                /** @description Datos no válidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Alguno ya tiene ficha en la temporada */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plantillas/{id}/invitaciones": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Invitaciones pendientes de la plantilla
+         * @description Admin. Las que no se han usado ni revocado, la más reciente primero; las caducadas, con estado `caducada`. El enlace no se vuelve a mostrar.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Invitaciones */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Invitacion"][];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Invitar a la plantilla
+         * @description Admin. Invita a un email con un rol; con rol jugador se puede indicar el jugador del club (con ficha en la plantilla y sin usuario) al que se vinculará su cuenta. Devuelve el enlace, de un solo uso y válido 7 días; solo ahora. Invitar otra vez al mismo email revoca la invitación anterior.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @example brais@example.com */
+                        email: string;
+                        /** @enum {string} */
+                        rol: "admin" | "entrenador" | "delegado" | "jugador";
+                        /**
+                         * Format: uuid
+                         * @description Solo con rol jugador: jugador con ficha en la plantilla, sin usuario vinculado
+                         */
+                        jugadorId?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Invitación creada */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["InvitacionCreada"];
+                    };
+                };
+                /** @description Datos no válidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Ya es miembro de la plantilla o el jugador ya tiene usuario */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plantillas/{id}/invitaciones/{iid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Revocar una invitación
+         * @description Admin. El enlace deja de valer. Solo las que no se han usado.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    iid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Invitación revocada */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/clubes/{cid}/invitaciones": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Invitaciones pendientes como administrador del club
+         * @description Solo administradores del club. Igual que las de la plantilla.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    cid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Invitaciones */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Invitacion"][];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Invitar como administrador del club
+         * @description Solo administradores del club. Devuelve el enlace, de un solo uso y válido 7 días; solo ahora. Invitar otra vez al mismo email revoca la invitación anterior.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    cid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @example brais@example.com */
+                        email: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Invitación creada */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["InvitacionCreada"];
+                    };
+                };
+                /** @description Datos no válidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Ya es administrador del club */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/clubes/{cid}/invitaciones/{iid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Revocar una invitación como administrador del club
+         * @description Solo administradores del club. Solo las que no se han usado.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    cid: string;
+                    iid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Invitación revocada */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/invitaciones/consultar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ver una invitación
+         * @description Pública, con el token del enlace en el cuerpo. No cambia nada: dice a qué invita y si ya hay una cuenta con ese email.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        token: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Invitación */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["InvitacionAbierta"];
+                    };
+                };
+                /** @description Datos no válidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description El enlace no es válido */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Usada, anulada o caducada */
+                410: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/invitaciones/aceptar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Aceptar una invitación
+         * @description Pública, con el token del enlace en el cuerpo. La invitación es para un email: si ya hay una cuenta con él, hay que haber iniciado sesión con ella; si no, se crea con `nombre` y `contrasena` (mínimo 10 caracteres) y se inicia la sesión. Crea la membresía con el rol de la invitación (o hace administrador del club) y vincula el jugador, si lo hay. De un solo uso.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        token: string;
+                        /** @description Solo al crear la cuenta */
+                        nombre?: string;
+                        /** @description Solo al crear la cuenta; mínimo 10 caracteres */
+                        contrasena?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Aceptada; si se ha creado la cuenta, con la cookie de sesión */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["InvitacionAceptada"];
+                    };
+                };
+                /** @description Datos no válidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Ya hay una cuenta con ese email: inicia sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Has entrado con otro email */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description El enlace no es válido */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description El jugador ya tiene otra cuenta */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Usada, anulada o caducada */
+                410: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plantillas/{id}/miembros": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Miembros de la plantilla
+         * @description Admin. Los miembros con su rol y el jugador vinculado, y los administradores del club como heredados. También los jugadores sin cuenta, para invitarlos.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Miembros */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MiembrosPlantilla"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plantillas/{id}/miembros/{uid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Retirar el acceso a la plantilla
+         * @description Admin. Borra la membresía; el jugador sigue vinculado a su cuenta (es del club). Los administradores del club se retiran desde el club.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    uid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Acceso retirado */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /**
+         * Cambiar el rol de un miembro
+         * @description Admin. Solo los miembros de la plantilla; los administradores del club, no. El jugador vinculado no cambia.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    uid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        rol: "admin" | "entrenador" | "delegado" | "jugador";
+                    };
+                };
+            };
+            responses: {
+                /** @description Rol cambiado */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {string} */
+                            rol: "admin" | "entrenador" | "delegado" | "jugador";
+                        };
+                    };
+                };
+                /** @description Datos no válidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
     "/api/plantillas/{id}/horario": {
         parameters: {
             query?: never;
@@ -1753,7 +2689,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ResumenEntreno"][];
+                        "application/json": components["schemas"]["EntrenoListado"][];
                     };
                 };
                 /** @description Fechas no válidas */
@@ -7513,6 +8449,11 @@ export interface components {
              */
             rol: "admin" | "entrenador" | "delegado" | "jugador";
             esAdminClub: boolean;
+            /**
+             * Format: uuid
+             * @description Jugador vinculado al usuario si tiene ficha (activa o de baja) en esta plantilla; si no, null
+             */
+            jugadorId: string | null;
         };
         JugadorPlantilla: {
             /** Format: uuid */
@@ -7588,6 +8529,151 @@ export interface components {
                 procedencia: string | null;
             }[];
         };
+        FichaEquipoLeida: {
+            /** @example Sofan S.D. "B" */
+            equipo: string | null;
+            /** @example 2ª Futgal */
+            categoria: string | null;
+            jugadores: {
+                /**
+                 * @description Como sale en la ficha, con las tildes arregladas
+                 * @example FERNÁNDEZ CASTRO, IVÁN
+                 */
+                ficha: string;
+                /** @example Iván */
+                nombre: string;
+                /** @example Fernández Castro */
+                apellidos: string | null;
+                /**
+                 * @description Tipo de licencia del jugador o función en el cuerpo técnico
+                 * @example Aficionado
+                 */
+                funcion: string | null;
+                /**
+                 * Format: uuid
+                 * @description El jugador del club que parece ser; null si no hay uno claro
+                 */
+                jugadorId: string | null;
+            }[];
+            /** @description Técnicos, delegados y auxiliares; solo informativo */
+            cuerpoTecnico: {
+                /**
+                 * @description Como sale en la ficha, con las tildes arregladas
+                 * @example FERNÁNDEZ CASTRO, IVÁN
+                 */
+                ficha: string;
+                /** @example Iván */
+                nombre: string;
+                /** @example Fernández Castro */
+                apellidos: string | null;
+                /**
+                 * @description Tipo de licencia del jugador o función en el cuerpo técnico
+                 * @example Aficionado
+                 */
+                funcion: string | null;
+            }[];
+            /** @description Los jugadores del club con sus fichas, para saber en la vista previa si ya están en la plantilla o tienen ficha propia en otra la temporada elegida, y para emparejar a mano */
+            club: {
+                /** Format: uuid */
+                id: string;
+                nombre: string;
+                apellidos: string | null;
+                fichas: {
+                    /** Format: uuid */
+                    plantillaId: string;
+                    plantilla: string;
+                    temporada: string;
+                    /**
+                     * @description `propia`: es de la plantilla; `invitado`: juega con ella sin dejar la suya
+                     * @enum {string}
+                     */
+                    tipo: "propia" | "invitado";
+                }[];
+            }[];
+        };
+        Invitacion: {
+            /** Format: uuid */
+            id: string;
+            email: string;
+            /**
+             * @description null en las de administrador del club
+             * @enum {string|null}
+             */
+            rol: "admin" | "entrenador" | "delegado" | "jugador" | null;
+            /** Format: uuid */
+            jugadorId: string | null;
+            /**
+             * @description Nombre del jugador del club que se vinculará
+             * @example Brais
+             */
+            jugador: string | null;
+            /** @enum {string} */
+            estado: "pendiente" | "caducada";
+            /** @example 2026-11-18T12:00:00.000Z */
+            expira: string;
+            creadaEn: string;
+            /** @description Nombre de quien invitó */
+            creadaPor: string | null;
+        };
+        InvitacionCreada: {
+            invitacion: components["schemas"]["Invitacion"];
+            /**
+             * @description Enlace para aceptarla. Solo se devuelve ahora: para volver a enviarlo hay que invitar de nuevo (la anterior queda revocada)
+             * @example https://vestuario.example/invitacion#…
+             */
+            enlace: string;
+        };
+        InvitacionAbierta: {
+            email: string;
+            /** @example CD Rexional */
+            club: string;
+            /** Format: uuid */
+            clubId: string;
+            /** @description null en las de administrador del club */
+            plantilla: {
+                /** Format: uuid */
+                id: string;
+                nombre: string;
+                temporada: string;
+            } | null;
+            /** @enum {string|null} */
+            rol: "admin" | "entrenador" | "delegado" | "jugador" | null;
+            /** @description Jugador del club que se vinculará */
+            jugador: string | null;
+            /** @description Si ya hay una cuenta con ese email: entonces hay que iniciar sesión */
+            cuentaExiste: boolean;
+        };
+        InvitacionAceptada: {
+            /** Format: uuid */
+            clubId: string;
+            /** Format: uuid */
+            plantillaId: string | null;
+        };
+        MiembrosPlantilla: {
+            /** @description Primero los administradores del club; después, por nombre */
+            miembros: components["schemas"]["MiembroPlantilla"][];
+            /** @description Jugadores con ficha propia activa y sin cuenta: a los que se puede invitar */
+            jugadoresSinCuenta: {
+                /** Format: uuid */
+                jugadorId: string;
+                nombre: string;
+            }[];
+        };
+        MiembroPlantilla: {
+            /** Format: uuid */
+            usuarioId: string;
+            nombre: string;
+            email: string;
+            /** @enum {string} */
+            rol: "admin" | "entrenador" | "delegado" | "jugador";
+            /** @description Administrador del club: es admin de todas sus plantillas sin membresía */
+            heredado: boolean;
+            /**
+             * @description Jugador del club vinculado a su cuenta
+             * @example Brais Pazos
+             */
+            jugador: string | null;
+        };
         Horario: {
             /** @example 2026-10-13 */
             desde: string;
@@ -7601,6 +8687,13 @@ export interface components {
             hora: string;
             /** @example 20:00 */
             horaFin?: string | null;
+        };
+        EntrenoListado: components["schemas"]["ResumenEntreno"] & {
+            /**
+             * @description Estado del jugador vinculado al usuario en este entreno; null si no tiene o no está registrado
+             * @enum {string|null}
+             */
+            miEstado: "asiste" | "justificada" | "falta" | null;
         };
         ResumenEntreno: components["schemas"]["RecuentosAsistencia"] & {
             /** Format: uuid */
@@ -7735,6 +8828,8 @@ export interface components {
             /** @example 1 */
             golesContra: number | null;
             convocados: number;
+            /** @description true si el jugador vinculado al usuario está convocado (GH-52) */
+            meConvocan: boolean;
         };
         Partido: {
             /** Format: uuid */

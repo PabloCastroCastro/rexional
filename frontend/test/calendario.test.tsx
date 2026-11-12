@@ -187,18 +187,6 @@ describe('entrenos del día', () => {
     expect(screen.queryByRole('button', { name: 'Asiste' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Cancelar entreno' })).toBeInTheDocument()
   })
-
-  it('sin permiso no se crean ni cancelan entrenos', async () => {
-    conCalendario(
-      [resumen('e1', HOY, '20:00')],
-      plantilla('p1', 'Senior', '2026-27', { rol: 'jugador', esAdminClub: false }),
-    )
-    abrir('/plantillas/p1/entrenos')
-    expect(await screen.findByText('Pasar lista es cosa del cuerpo técnico.')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Añadir sesión' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Cancelar entreno' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Cambiar hora' })).not.toBeInTheDocument()
-  })
 })
 
 describe('horario', () => {
