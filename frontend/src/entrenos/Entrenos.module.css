@@ -591,11 +591,12 @@ li > .cierre {
   font-size: var(--texto-sm);
 }
 
+/* En su propia línea, bajo el nombre (GH-215) */
 .pista {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 2px;
-  margin-left: var(--espacio-2);
+  white-space: normal;
   color: var(--color-estado, var(--color-texto-suave));
   font-size: var(--texto-xs);
   font-weight: var(--peso-normal);
@@ -640,4 +641,13 @@ li > .cierre {
   border-radius: var(--radio-m);
   background: var(--color-superficie);
   font-size: max(16px, var(--texto-base));
+}
+
+/* Resumen para WhatsApp del entreno de hoy, plegado encima de la lista (GH-215) */
+.resumenHoy summary {
+  min-height: var(--altura-tactil);
+  padding: var(--espacio-2) 0;
+  color: var(--color-acento);
+  font-weight: var(--peso-medio);
+  cursor: pointer;
 }
