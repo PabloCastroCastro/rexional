@@ -1,5 +1,5 @@
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
-import { and, asc, eq, exists, or } from 'drizzle-orm'
+import { and, asc, eq, exists, or, sql } from 'drizzle-orm'
 import { db } from '../db/cliente.js'
 import { adminsClub, clubes, membresias, plantillas, user } from '../db/schema/index.js'
 import { ErrorApi, EsquemaError, validacionFallida } from '../errores.js'
@@ -34,6 +34,17 @@ const errores = {
   403: json(EsquemaError, 'Sin permiso'),
   404: json(EsquemaError, 'No existe'),
 }
+
+// Color en hexadecimal (#rrggbb), guardado en minúsculas; null vuelve al color por defecto (GH-27)
+const EsquemaColor = (campo: string) =>
+  z
+    .string()
+    .trim()
+    .regex(/^#[0-9a-fA-F]{6}$/, `${campo} debe ser un color en hexadecimal, como #14553d`)
+    .transform((c) => c.toLowerCase())
+    .nullable()
+    .optional()
+    .openapi({ example: '#14553d', description: `${campo}; null vuelve al de por defecto` })
 
 const ParamClub = z.object({ cid: EsquemaUuid.openapi({ param: { name: 'cid', in: 'path' } }) })
 
@@ -156,16 +167,25 @@ export const rutasClubes = () =>
         method: 'patch',
         path: '/clubes/{cid}',
         tags: ['Clubes'],
-        summary: 'Cambiar el nombre del club',
+        summary: 'Cambiar el nombre o los colores del club',
         description:
-          'Solo los administradores del club. El escudo y los colores llegan en el ciclo 5.',
+          'Solo los administradores del club. Los colores, en hexadecimal (#rrggbb), son comunes a todas las plantillas del club; con null vuelven a los de por defecto. El escudo tiene su propia ruta.',
         middleware: [requireAdminClub()] as const,
         request: {
           params: ParamClub,
           body: {
             content: {
               'application/json': {
-                schema: z.object({ nombre: EsquemaTexto('El nombre') }).strict(),
+                schema: z
+                  .object({
+                    nombre: EsquemaTexto('El nombre').optional(),
+                    colorPrincipal: EsquemaColor('El color principal'),
+                    colorSecundario: EsquemaColor('El color secundario'),
+                  })
+                  .strict()
+                  .refine((d) => Object.values(d).some((v) => v !== undefined), {
+                    message: 'Indica el nombre o algún color',
+                  }),
               },
             },
           },
@@ -177,10 +197,16 @@ export const rutasClubes = () =>
         },
       }),
       async (c) => {
-        const { nombre } = c.req.valid('json')
+        const { nombre, colorPrincipal, colorSecundario } = c.req.valid('json')
+        // null restablece el valor por defecto de la columna
+        const color = (valor: string | null | undefined) => (valor === null ? sql`default` : valor)
         const [club] = await db
           .update(clubes)
-          .set({ nombre })
+          .set({
+            nombre,
+            colorPrincipal: color(colorPrincipal),
+            colorSecundario: color(colorSecundario),
+          })
           .where(eq(clubes.id, c.var.club.id))
           .returning(columnasClub)
         if (!club) throw new ErrorApi(404, 'no_encontrado', 'No existe el club')

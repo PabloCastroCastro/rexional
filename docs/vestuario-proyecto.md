@@ -678,7 +678,7 @@ Prefijo `/api`. JSON. Todas las rutas de la plantilla cuelgan de `/plantillas`, 
 | Clubes | `GET /clubes` (los míos: los que administro, aunque no tengan plantillas, y aquellos en los que tengo un rol) | Autenticado |
 | | `POST /clubes` (el creador pasa a ser administrador) | Autenticado |
 | | `GET /clubes/:cid` (datos e identidad visual) | Miembro de alguna plantilla del club |
-| | `PATCH /clubes/:cid` (nombre, colores) · `PUT /clubes/:cid/escudo` (multipart) | Administrador del club |
+| | `PATCH /clubes/:cid` (nombre y colores en hexadecimal; null vuelve al color por defecto) · `PUT /clubes/:cid/escudo` (multipart) | Administrador del club |
 | | `GET /clubes/:cid/jugadores?q=` (jugadores del club, para añadirlos a una plantilla) | Delegado en alguna plantilla del club |
 | | `GET /clubes/:cid/jugadores/:jid` (ficha y trayectoria por temporadas) | Delegado en alguna plantilla del club (jugador: solo la suya) |
 | | `POST /clubes/:cid/ficha-federacion` (lee la ficha del equipo en PDF y empareja sus jugadores con los del club, sin guardar nada; GH-197) | Delegado en alguna plantilla del club |
