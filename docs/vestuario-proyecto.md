@@ -678,7 +678,7 @@ Prefijo `/api`. JSON. Todas las rutas de la plantilla cuelgan de `/plantillas`, 
 | Clubes | `GET /clubes` (los míos: los que administro, aunque no tengan plantillas, y aquellos en los que tengo un rol) | Autenticado |
 | | `POST /clubes` (el creador pasa a ser administrador) | Autenticado |
 | | `GET /clubes/:cid` (datos e identidad visual) | Miembro de alguna plantilla del club |
-| | `PATCH /clubes/:cid` (nombre, colores) · `PUT /clubes/:cid/escudo` (multipart) | Administrador del club |
+| | `PATCH /clubes/:cid` (nombre y colores en hexadecimal; null vuelve al color por defecto) · `PUT /clubes/:cid/escudo` (multipart) | Administrador del club |
 | | `GET /clubes/:cid/jugadores?q=` (jugadores del club, para añadirlos a una plantilla) | Delegado en alguna plantilla del club |
 | | `GET /clubes/:cid/jugadores/:jid` (ficha y trayectoria por temporadas) | Delegado en alguna plantilla del club (jugador: solo la suya) |
 | | `POST /clubes/:cid/ficha-federacion` (lee la ficha del equipo en PDF y empareja sus jugadores con los del club, sin guardar nada; GH-197) | Delegado en alguna plantilla del club |
@@ -798,7 +798,7 @@ Una issue está terminada cuando: cumple sus criterios de aceptación en el ento
 | 2 · Entrenos | Pasar lista, historial y porcentaje de asistencia | v1.0.0 |
 | 3 · Convocatorias | Partidos, convocados y mensaje de WhatsApp | v1.0.0 |
 | 4 · Multas | Catálogo, registro, cobro, deudas y caja. Paridad con el MVP y primer despliegue en el servidor | v1.0.0 |
-| 5 · Personalización y temporadas | Escudo y colores por club, y cambio de temporada | en parte en v1.1.0, con GH-101 y GH-102; el resto, pendiente |
+| 5 · Personalización | Escudo y colores por club | en parte en v1.1.0, con GH-101 y GH-102; el resto, pendiente |
 | 6 · Estadísticas | Resultado, participaciones, eventos, estadísticas de temporada y trayectoria de cada jugador | v1.1.0; después se añadieron GH-134, GH-147, GH-149, GH-151, GH-153 y GH-155, en v1.3.0, GH-164, en v1.4.0, GH-168, en v1.5.0, y GH-154, pendiente |
 | 7 · Planificación de entrenos | Biblioteca de ejercicios con fotos y vídeos, y sesiones planificadas | v1.2.0 |
 | 8 · Operación | Backups automáticos, restauración, logs y actualizaciones | en parte en v1.2.0, con GH-45 y GH-46; el resto, pendiente |
@@ -807,6 +807,7 @@ Una issue está terminada cuando: cumple sus criterios de aceptación en el ento
 | 11 · Exposición pública | Bastionado, aislamiento, cabeceras, límites y publicación con Tailscale Funnel | en parte en v1.6.0, con GH-54, GH-55, GH-57, GH-58, GH-177 y GH-56 (Funnel activo desde el 2026-11-11); v2.0.0, prevista |
 | 12 · Asistente de ejercicios | Claves de API, diagrama táctico del ejercicio y generación de imágenes, animación y PDF en el servidor | v2.1.0, prevista |
 | 13 · Jugadores invitados | Convocar y, si el entrenador quiere, meter en la dinámica del equipo a jugadores de otra plantilla, de un club asociado o a prueba | v1.7.0, con GH-187, GH-188 y GH-189 |
+| 14 · Cambio de temporada | Crear las plantillas de la temporada nueva a partir de las de la anterior | antes de la temporada 2027-28, prevista |
 
 Versión publicada en los ciclos ya cerrados y prevista en el resto. Los ciclos 1 a 3 no tuvieron release propia: se publicaron juntos en la v1.0.0. Lo que queda abierto de un ciclo ya publicado sale en la release siguiente a terminarlo.
 
@@ -836,7 +837,7 @@ Versión publicada en los ciclos ya cerrados y prevista en el resto. Los ciclos 
 | Ciclo 2 · Entrenos | Pasar lista, historial y porcentaje de asistencia (v1.0.0) |
 | Ciclo 3 · Convocatorias | Partidos, convocados y mensaje de WhatsApp (v1.0.0) |
 | Ciclo 4 · Multas | Catálogo, registro, cobro, deudas y caja. Paridad con el MVP y primer despliegue en el servidor (v1.0.0) |
-| Ciclo 5 · Personalización y temporadas | Escudo y colores por club, y cambio de temporada (en parte en v1.1.0, con GH-101 y GH-102; el resto, pendiente) |
+| Ciclo 5 · Personalización | Escudo y colores por club (en parte en v1.1.0, con GH-101 y GH-102; el resto, pendiente) |
 | Ciclo 6 · Estadísticas | Resultado, participaciones, eventos, estadísticas de temporada y trayectoria de cada jugador (v1.1.0; después se añadieron GH-134, GH-147, GH-149, GH-151, GH-153 y GH-155, en v1.3.0, GH-164, en v1.4.0, GH-168, en v1.5.0, y GH-154, pendiente) |
 | Ciclo 7 · Planificación de entrenos | Biblioteca de ejercicios con fotos y vídeos, y sesiones planificadas (v1.2.0) |
 | Ciclo 8 · Operación | Backups automáticos, restauración, logs y actualizaciones (en parte en v1.2.0, con GH-45 y GH-46; el resto, pendiente) |
@@ -845,6 +846,7 @@ Versión publicada en los ciclos ya cerrados y prevista en el resto. Los ciclos 
 | Ciclo 11 · Exposición pública | Publicación con Tailscale Funnel en la Raspberry compartida: bastionado, aislamiento de Vestuario, cabeceras, límites de peticiones por usuario e IP y paso a producción pública (en parte en v1.6.0, con GH-54, GH-55, GH-57, GH-58, GH-177 y GH-56, con Funnel activo desde el 2026-11-11; v2.0.0, prevista) |
 | Ciclo 12 · Asistente de ejercicios | Claves de API, diagrama táctico del ejercicio y generación de imágenes, animación y PDF en el servidor (v2.1.0, prevista) |
 | Ciclo 13 · Jugadores invitados | Convocar y, si el entrenador quiere, meter en la dinámica del equipo a jugadores de otra plantilla del club (juveniles, equipo B), de un club asociado o a prueba (v1.7.0, con GH-187, GH-188 y GH-189) |
+| Ciclo 14 · Cambio de temporada | Crear las plantillas de la temporada nueva a partir de las de la anterior, copiando jugadores y cuerpo técnico (antes de la temporada 2027-28) |
 
 ### 11.3 Issues
 
@@ -1306,7 +1308,7 @@ Comprobar que la aplicación cubre todo lo que hacía el MVP inicial antes de pu
 
 ---
 
-### Milestone: Ciclo 5 · Personalización y temporadas
+### Milestone: Ciclo 5 · Personalización
 
 #### GH-27
 **Título:** API de configuración visual del club
@@ -1355,22 +1357,6 @@ Completa la configuración de GH-70 con el escudo y los colores. Depende de GH-2
 **Criterios de aceptación**
 - [ ] Identidad del club (solo administradores del club): subir y cambiar el escudo con vista previa, selectores de color con vista previa en vivo antes de guardar y restablecer los colores por defecto
 - [ ] Aviso de que el escudo y los colores se aplican a todas las plantillas del club
-
-#### GH-63
-**Título:** Cambio de temporada
-**Etiquetas:** feature, backend, frontend
-
-Crear las plantillas de una temporada nueva a partir de las de la anterior (sección 2.1). Cada plantilla se crea con `POST /api/plantillas`; no hay una operación propia de cambio de temporada. Depende de GH-7, GH-8 y GH-22.
-
-**Criterios de aceptación**
-- [ ] `POST /api/plantillas` admite `copiar: { jugadores, cuerpoTecnico }` junto con `plantillaAnteriorId`: copia las fichas activas (dorsal y posición) y las membresías de la plantilla anterior en la misma transacción. Los jugadores que ya tengan ficha en otra plantilla de la temporada se omiten y se indican en la respuesta
-- [ ] Cada plantilla nueva puede cambiar de nombre y categoría respecto a la anterior (p. ej. Alevín → Infantil)
-- [ ] Los jugadores que cambian de categoría se añaden a su nueva plantilla desde los jugadores del club (GH-8)
-- [ ] El catálogo de multas se copia siempre de la plantilla anterior; las multas no (la caja empieza de cero cada temporada)
-- [ ] Las multas pendientes de la temporada anterior siguen en su plantilla y se pueden consultar y cobrar
-- [ ] Asistente en el frontend (solo administradores del club): elegir qué plantillas de la temporada anterior continúan, con qué nombre y categoría, y qué copiar, con un resumen antes de confirmar
-- [ ] La temporada anterior sigue consultable; el selector muestra primero la nueva
-- [ ] Tests
 
 #### GH-101
 **Título:** Multas opcionales por plantilla
@@ -2182,6 +2168,28 @@ Depende de GH-187.
 - [ ] Al importar el acta, los nombres sin emparejar se buscan también entre los jugadores de las otras plantillas del club en la temporada; al confirmar se crea su ficha de invitado (con `en_dinamica` apagado)
 - [ ] Las estadísticas y las exportaciones de la plantilla incluyen a los invitados que han jugado, marcados con su procedencia
 - [ ] La trayectoria del jugador muestra también lo jugado como invitado y con qué plantilla
+- [ ] Tests
+
+---
+
+### Milestone: Ciclo 14 · Cambio de temporada
+
+Sacado del ciclo 5 el 2026-11-12: no tiene que ver con la identidad visual y solo hace falta antes de cada temporada.
+
+#### GH-63
+**Título:** Cambio de temporada
+**Etiquetas:** feature, backend, frontend
+
+Crear las plantillas de una temporada nueva a partir de las de la anterior (sección 2.1). Cada plantilla se crea con `POST /api/plantillas`; no hay una operación propia de cambio de temporada. Depende de GH-7, GH-8 y GH-22.
+
+**Criterios de aceptación**
+- [ ] `POST /api/plantillas` admite `copiar: { jugadores, cuerpoTecnico }` junto con `plantillaAnteriorId`: copia las fichas activas (dorsal y posición) y las membresías de la plantilla anterior en la misma transacción. Los jugadores que ya tengan ficha en otra plantilla de la temporada se omiten y se indican en la respuesta
+- [ ] Cada plantilla nueva puede cambiar de nombre y categoría respecto a la anterior (p. ej. Alevín → Infantil)
+- [ ] Los jugadores que cambian de categoría se añaden a su nueva plantilla desde los jugadores del club (GH-8)
+- [ ] El catálogo de multas se copia siempre de la plantilla anterior; las multas no (la caja empieza de cero cada temporada)
+- [ ] Las multas pendientes de la temporada anterior siguen en su plantilla y se pueden consultar y cobrar
+- [ ] Asistente en el frontend (solo administradores del club): elegir qué plantillas de la temporada anterior continúan, con qué nombre y categoría, y qué copiar, con un resumen antes de confirmar
+- [ ] La temporada anterior sigue consultable; el selector muestra primero la nueva
 - [ ] Tests
 
 ---

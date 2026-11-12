@@ -101,11 +101,45 @@ describe('clubes', () => {
     expect((await res.json()).nombre).toBe('CD Prueba Renombrado')
     expect((await pedir('PATCH', `/clubes/${ids.club}`, 'ajeno', { nombre: 'X' })).status).toBe(403)
     expect((await pedir('PATCH', `/clubes/${ids.club}`, 'admin', { nombre: '' })).status).toBe(400)
-    // Solo el nombre: los colores llegan con su propia validación en el ciclo 5
-    expect(
-      (await pedir('PATCH', `/clubes/${ids.club}`, 'admin', { colorPrincipal: '#000000' })).status,
-    ).toBe(400)
+    expect((await pedir('PATCH', `/clubes/${ids.club}`, 'admin', {})).status).toBe(400)
     await pedir('PATCH', `/clubes/${ids.club}`, 'admin', { nombre: 'CD Prueba' })
+  })
+
+  it('cambia los colores del club, en hexadecimal, y los restablece con null (GH-27)', async () => {
+    const ruta = `/clubes/${ids.club}`
+    let res = await pedir('PATCH', ruta, 'admin', {
+      colorPrincipal: ' #1D3A8A ',
+      colorSecundario: '#ffffff',
+    })
+    expect(res.status).toBe(200)
+    expect(await res.json()).toMatchObject({
+      nombre: 'CD Prueba',
+      colorPrincipal: '#1d3a8a',
+      colorSecundario: '#ffffff',
+    })
+    // Llegan con el club (y con sus plantillas)
+    const club = await (await pedir('GET', ruta, 'admin')).json()
+    expect(club).toMatchObject({ colorPrincipal: '#1d3a8a', colorSecundario: '#ffffff' })
+
+    for (const color of ['1d3a8a', '#1d3a8', '#1d3a8g', 'azul', '#1d3a8a00']) {
+      res = await pedir('PATCH', ruta, 'admin', { colorPrincipal: color })
+      expect(res.status, color).toBe(400)
+    }
+    // Solo los administradores del club
+    expect((await pedir('PATCH', ruta, 'entrenador', { colorPrincipal: '#000000' })).status).toBe(
+      403,
+    )
+
+    res = await pedir('PATCH', ruta, 'admin', { colorPrincipal: null })
+    expect(await res.json()).toMatchObject({
+      colorPrincipal: '#14553d',
+      colorSecundario: '#ffffff',
+    })
+    res = await pedir('PATCH', ruta, 'admin', { colorSecundario: null })
+    expect(await res.json()).toMatchObject({
+      colorPrincipal: '#14553d',
+      colorSecundario: '#f2c230',
+    })
   })
 
   it('el detalle del club es para quien tiene acceso', async () => {

@@ -380,8 +380,8 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Cambiar el nombre del club
-         * @description Solo los administradores del club. El escudo y los colores llegan en el ciclo 5.
+         * Cambiar el nombre o los colores del club
+         * @description Solo los administradores del club. Los colores, en hexadecimal (#rrggbb), son comunes a todas las plantillas del club; con null vuelven a los de por defecto. El escudo tiene su propia ruta.
          */
         patch: {
             parameters: {
@@ -395,7 +395,17 @@ export interface paths {
             requestBody?: {
                 content: {
                     "application/json": {
-                        nombre: string;
+                        nombre?: string;
+                        /**
+                         * @description El color principal; null vuelve al de por defecto
+                         * @example #14553d
+                         */
+                        colorPrincipal?: string | null;
+                        /**
+                         * @description El color secundario; null vuelve al de por defecto
+                         * @example #14553d
+                         */
+                        colorSecundario?: string | null;
                     };
                 };
             };
