@@ -93,11 +93,14 @@ export const plantillas = pgTable(
     ),
     // Las multas no aplican en todas las plantillas (p. ej. en alevines): se pueden desactivar
     multasActivas: boolean('multas_activas').notNull().default(true),
+    // Horas antes del inicio de un entreno hasta las que los jugadores pueden responder si van (GH-204)
+    horasLimiteRespuesta: smallint('horas_limite_respuesta').notNull().default(0),
     creadoPor: creadoPor(),
     createdAt: creadoEn(),
   },
   (t) => [
     unique('plantillas_nombre_unico').on(t.clubId, t.nombre, t.temporada),
+    check('plantillas_horas_limite_valida', sql`${t.horasLimiteRespuesta} BETWEEN 0 AND 72`),
     // Destino de la clave foránea compuesta de fichas (mismo club y misma temporada)
     unique('plantillas_id_club_temporada').on(t.id, t.clubId, t.temporada),
     check('plantillas_nombre_no_vacio', noVacio(t.nombre)),

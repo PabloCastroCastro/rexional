@@ -19,6 +19,7 @@ import {
 } from './datos'
 import estilos from './Entrenos.module.css'
 import { Porcentaje } from './Porcentaje'
+import { MiRespuesta, RecuentoRespuestas } from './Respuestas'
 
 const ESTADOS: Record<Estado, { texto: string; icono: typeof Check; clase?: string }> = {
   asiste: { texto: 'Asististe', icono: Check, clase: estilos.asiste },
@@ -26,8 +27,9 @@ const ESTADOS: Record<Estado, { texto: string; icono: typeof Check; clase?: stri
   falta: { texto: 'Faltaste', icono: X, clase: estilos.falta },
 }
 
-// Pestaña Entrenos del rol jugador (GH-52): su porcentaje y recuento, los próximos entrenos y, por
-// mes, su estado en cada entreno pasado. Solo consulta: pasar lista es cosa del cuerpo técnico.
+// Pestaña Entrenos del rol jugador (GH-52): su porcentaje y recuento, los próximos entrenos con su
+// respuesta a si va (GH-204) y, por mes, su estado en cada entreno pasado. Pasar lista es cosa del
+// cuerpo técnico.
 export function PaginaMiAsistencia() {
   const plantilla = usePlantillaActiva()
   const resumen = useResumenAsistencia(plantilla.id)
@@ -71,7 +73,9 @@ export function PaginaMiAsistencia() {
               <li key={e.id}>
                 <Fila entreno={e} enlace={rutaPlan(plantilla.id, e.id)}>
                   <span className={estilos.planResumen}>{resumenPlan(e) ?? 'Sin plan'}</span>
+                  <RecuentoRespuestas respuestas={e.respuestas} />
                 </Fila>
+                <MiRespuesta entreno={e} />
               </li>
             ))}
           </ul>

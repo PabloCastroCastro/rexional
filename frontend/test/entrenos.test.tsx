@@ -31,6 +31,8 @@ const jugador = (
   procedencia: null,
   estado: null,
   motivo: null,
+  respuesta: null,
+  motivoRespuesta: null,
   ...extra,
 })
 

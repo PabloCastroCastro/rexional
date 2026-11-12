@@ -258,6 +258,10 @@
             "type": "boolean",
             "description": "false si la plantilla no usa multas (no se ven ni se pueden poner)"
           },
+          "horasLimiteRespuesta": {
+            "type": "integer",
+            "description": "Horas antes del inicio de cada entreno hasta las que los jugadores pueden responder si van (GH-204)"
+          },
           "rol": {
             "type": "string",
             "enum": [
@@ -288,6 +292,7 @@
           "temporada",
           "plantillaAnteriorId",
           "multasActivas",
+          "horasLimiteRespuesta",
           "rol",
           "esAdminClub",
           "jugadorId"
@@ -1040,10 +1045,59 @@
                   null
                 ],
                 "description": "Estado del jugador vinculado al usuario en este entreno; null si no tiene o no está registrado"
+              },
+              "respuestas": {
+                "type": "object",
+                "properties": {
+                  "voy": {
+                    "type": "integer"
+                  },
+                  "duda": {
+                    "type": "integer"
+                  },
+                  "noVoy": {
+                    "type": "integer"
+                  },
+                  "sinResponder": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "voy",
+                  "duda",
+                  "noVoy",
+                  "sinResponder"
+                ],
+                "description": "Respuestas a si van (GH-204) de los jugadores activos en la dinámica: no identifican a nadie"
+              },
+              "miRespuesta": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "voy",
+                  "duda",
+                  "no_voy",
+                  null
+                ],
+                "description": "Respuesta del jugador vinculado al usuario; null si no ha respondido"
+              },
+              "cierreRespuestas": {
+                "type": "string",
+                "description": "Hasta cuándo puede responder el jugador: el inicio del entreno (o el final del día si no tiene hora) menos la hora límite de la plantilla",
+                "example": "2026-11-17T20:00:00+01:00"
+              },
+              "respuestasAbiertas": {
+                "type": "boolean"
               }
             },
             "required": [
-              "miEstado"
+              "miEstado",
+              "respuestas",
+              "miRespuesta",
+              "cierreRespuestas",
+              "respuestasAbiertas"
             ]
           }
         ]
@@ -1248,6 +1302,25 @@
                     "string",
                     "null"
                   ]
+                },
+                "respuesta": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "enum": [
+                    "voy",
+                    "duda",
+                    "no_voy",
+                    null
+                  ],
+                  "description": "Si dijo que iba (GH-204); no rellena el estado"
+                },
+                "motivoRespuesta": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 }
               },
               "required": [
@@ -1260,7 +1333,9 @@
                 "tipo",
                 "procedencia",
                 "estado",
-                "motivo"
+                "motivo",
+                "respuesta",
+                "motivoRespuesta"
               ]
             }
           }
@@ -1327,6 +1402,50 @@
               "porcentaje"
             ]
           }
+        ]
+      },
+      "RespuestaEntreno": {
+        "type": "object",
+        "properties": {
+          "jugadorId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "respuesta": {
+            "type": "string",
+            "enum": [
+              "voy",
+              "duda",
+              "no_voy"
+            ]
+          },
+          "motivo": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "jugadorId",
+          "respuesta",
+          "motivo"
+        ]
+      },
+      "MensajeRespuestas": {
+        "type": "object",
+        "properties": {
+          "texto": {
+            "type": "string"
+          },
+          "whatsapp": {
+            "type": "string",
+            "example": "https://wa.me/?text=…"
+          }
+        },
+        "required": [
+          "texto",
+          "whatsapp"
         ]
       },
       "CalendarioLeido": {
@@ -4070,7 +4189,7 @@
         "tags": [
           "Plantillas"
         ],
-        "summary": "Cambiar el nombre, la categoría o si usa multas",
+        "summary": "Cambiar el nombre, la categoría, si usa multas o la hora límite de respuesta",
         "description": "Entrenador o superior. La temporada no se modifica. Desactivar las multas las oculta y bloquea sin borrar nada: al reactivarlas vuelven como estaban.",
         "parameters": [
           {
@@ -4101,6 +4220,11 @@
                   },
                   "multasActivas": {
                     "type": "boolean"
+                  },
+                  "horasLimiteRespuesta": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 72
                   }
                 },
                 "additionalProperties": false
@@ -7020,6 +7144,461 @@
                   "items": {
                     "$ref": "#/components/schemas/AsistenciaJugador"
                   }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/entrenos/{eid}/respuesta": {
+      "put": {
+        "tags": [
+          "Entrenos"
+        ],
+        "summary": "Responder si voy a un entreno",
+        "description": "El jugador vinculado al usuario, con ficha activa en la dinámica de la plantilla, hasta la hora límite. Motivo opcional con «duda» o «no_voy».",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "eid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "respuesta": {
+                    "type": "string",
+                    "enum": [
+                      "voy",
+                      "duda",
+                      "no_voy"
+                    ]
+                  },
+                  "motivo": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 200
+                  }
+                },
+                "required": [
+                  "respuesta"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Respuesta guardada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaEntreno"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Respuestas cerradas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Entrenos"
+        ],
+        "summary": "Quitar mi respuesta a un entreno",
+        "description": "Como responder: el propio jugador, hasta la hora límite.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "eid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Respuesta quitada"
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Respuestas cerradas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/entrenos/{eid}/respuestas/{jid}": {
+      "put": {
+        "tags": [
+          "Entrenos"
+        ],
+        "summary": "Apuntar la respuesta de un jugador",
+        "description": "Delegado o superior, para cualquier jugador con ficha activa en la dinámica y también pasada la hora límite (por ejemplo, si avisa por teléfono).",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "eid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "jid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "respuesta": {
+                    "type": "string",
+                    "enum": [
+                      "voy",
+                      "duda",
+                      "no_voy"
+                    ]
+                  },
+                  "motivo": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 200
+                  }
+                },
+                "required": [
+                  "respuesta"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Respuesta guardada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaEntreno"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Entrenos"
+        ],
+        "summary": "Quitar la respuesta de un jugador",
+        "description": "Delegado o superior, también pasada la hora límite.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "eid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "jid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Respuesta quitada"
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/entrenos/{eid}/respuestas/mensaje": {
+      "get": {
+        "tags": [
+          "Entrenos"
+        ],
+        "summary": "Resumen de respuestas para WhatsApp",
+        "description": "Delegado o superior. Quién va, quién está en duda, quién no y quién no ha respondido (de los jugadores activos en la dinámica), con el enlace para responder en la app, y el enlace wa.me para compartirlo.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "eid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Mensaje",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MensajeRespuestas"
                 }
               }
             }

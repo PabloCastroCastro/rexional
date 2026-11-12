@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { ResumenEjercicio } from '../src/ejercicios/datos'
-import type { ResumenEntreno } from '../src/entrenos/datos'
+import type { EntrenoListado } from '../src/entrenos/datos'
 import type { Plan } from '../src/planificacion/datos'
 import {
   abrir,
@@ -12,6 +12,7 @@ import {
   peticiones,
   plantilla,
   ruta,
+  SIN_RESPUESTAS,
   senior26,
 } from './simulacion'
 
@@ -215,8 +216,8 @@ describe('lectura y resúmenes', () => {
     expect(screen.queryByLabelText('Objetivo')).not.toBeInTheDocument()
   })
 
-  it('los próximos del historial llevan su resumen y abren el plan', async () => {
-    const proximo = (id: string, extra: Partial<ResumenEntreno>): ResumenEntreno => ({
+  it('los próximos del historial llevan su resumen y abren su día, con el plan y quién va (GH-204)', async () => {
+    const proximo = (id: string, extra: Partial<EntrenoListado>): EntrenoListado => ({
       id,
       fecha: '2099-10-20',
       hora: '20:00',
@@ -228,6 +229,7 @@ describe('lectura y resúmenes', () => {
       asiste: 0,
       justificada: 0,
       falta: 0,
+      ...SIN_RESPUESTAS,
       ...extra,
     })
     conDatos({ plantillas: [senior26] })
@@ -244,7 +246,10 @@ describe('lectura y resúmenes', () => {
     const proximos = await screen.findByRole('region', { name: 'Próximos' })
     const enlaces = within(proximos).getAllByRole('link')
     expect(enlaces[0]).toHaveTextContent("Presión · 4 ejercicios · 75'")
-    expect(enlaces[0]).toHaveAttribute('href', '/plantillas/p1/entrenos/plan/e1')
+    expect(enlaces[0]).toHaveAttribute(
+      'href',
+      '/plantillas/p1/entrenos?fecha=2099-10-20&entreno=e1',
+    )
     expect(enlaces[1]).toHaveTextContent('Sin plan')
   })
 })

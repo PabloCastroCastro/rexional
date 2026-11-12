@@ -3,7 +3,7 @@ import { Link, Navigate } from 'react-router'
 import { Cargando } from '../componentes/Cargando'
 import { EstadoVacio } from '../componentes/EstadoVacio'
 import { puedeGestionarJugadores } from '../jugadores/datos'
-import { resumenPlan, rutaPlan } from '../planificacion/datos'
+import { resumenPlan } from '../planificacion/datos'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
 import {
   type ResumenEntreno,
@@ -14,6 +14,7 @@ import {
   useProximos,
 } from './datos'
 import estilos from './Entrenos.module.css'
+import { RecuentoRespuestas } from './Respuestas'
 
 // Próximos entrenos y, debajo, los pasados por mes, el más reciente primero (la API ya los ordena).
 // Cada uno abre ese día y esa sesión en pasar lista, para pasarla o corregirla.
@@ -62,11 +63,12 @@ export function PaginaHistorial() {
           <ul className={estilos.lista}>
             {proximos.data.map((e) => (
               <li key={e.id}>
-                {/* Un entreno futuro se abre por su plan: aún no se pasa lista */}
-                <Link to={rutaPlan(plantilla.id, e.id)} className={estilos.entreno}>
+                {/* Un entreno futuro se abre en su día: el plan y quién va (GH-204) */}
+                <Link to={enlace(e)} className={estilos.entreno}>
                   <span className={estilos.nombre}>
                     {cuando(e)}
                     <span className={estilos.planResumen}>{resumenPlan(e) ?? 'Sin plan'}</span>
+                    <RecuentoRespuestas respuestas={e.respuestas} />
                   </span>
                   <ChevronRight aria-hidden size={20} className={estilos.secundario} />
                 </Link>

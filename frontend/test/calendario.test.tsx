@@ -1,8 +1,17 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { Entreno, Horario, ResumenEntreno } from '../src/entrenos/datos'
-import { abrir, conDatos, json, manejadores, peticiones, plantilla, senior26 } from './simulacion'
+import type { Entreno, EntrenoListado, Horario } from '../src/entrenos/datos'
+import {
+  abrir,
+  conDatos,
+  json,
+  manejadores,
+  peticiones,
+  plantilla,
+  SIN_RESPUESTAS,
+  senior26,
+} from './simulacion'
 
 // Hoy es miércoles 14 de octubre de 2026 en Madrid (solo se simula la fecha)
 beforeEach(() => {
@@ -18,8 +27,8 @@ const resumen = (
   id: string,
   fecha: string,
   hora: string | null,
-  extra: Partial<ResumenEntreno> = {},
-): ResumenEntreno => ({
+  extra: Partial<EntrenoListado> = {},
+): EntrenoListado => ({
   id,
   fecha,
   hora,
@@ -31,10 +40,11 @@ const resumen = (
   asiste: 0,
   justificada: 0,
   falta: 0,
+  ...SIN_RESPUESTAS,
   ...extra,
 })
 
-const detalle = (r: ResumenEntreno): Entreno => ({
+const detalle = (r: EntrenoListado): Entreno => ({
   id: r.id,
   fecha: r.fecha,
   hora: r.hora,
@@ -56,6 +66,8 @@ const detalle = (r: ResumenEntreno): Entreno => ({
       procedencia: null,
       estado: null,
       motivo: null,
+      respuesta: null,
+      motivoRespuesta: null,
     },
   ],
 })
@@ -63,7 +75,7 @@ const detalle = (r: ResumenEntreno): Entreno => ({
 const enviado = (clave: string) => peticiones.filter((p) => p.clave === clave).map((p) => p.cuerpo)
 
 // La API simulada del calendario: crea, cancela y consulta por día
-function conCalendario(inicial: ResumenEntreno[], p = senior26) {
+function conCalendario(inicial: EntrenoListado[], p = senior26) {
   conDatos({ plantillas: [p] })
   let entrenos = [...inicial]
   let siguiente = 1
