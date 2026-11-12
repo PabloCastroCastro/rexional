@@ -92,7 +92,7 @@ describe('datos de la plantilla', () => {
       await screen.findByRole('button', { name: /Plantilla Senior A, temporada 2026-27/ }),
     ).toBeInTheDocument()
     expect(enviado('PATCH /api/plantillas/p1')).toEqual([
-      { nombre: 'Senior A', categoria: 'sénior', multasActivas: true },
+      { nombre: 'Senior A', categoria: 'sénior', multasActivas: true, horasLimiteRespuesta: 0 },
     ])
     expect(await screen.findByRole('status')).toHaveTextContent('Plantilla guardada')
   })
@@ -163,7 +163,7 @@ describe('plantillas del club', () => {
     await userEvent.click(within(hoja).getByRole('button', { name: 'Guardar' }))
     expect(await screen.findByText('Plantilla guardada')).toBeInTheDocument()
     expect(enviado('PATCH /api/plantillas/p2')).toEqual([
-      { nombre: 'Juvenil', categoria: 'juvenil A', multasActivas: true },
+      { nombre: 'Juvenil', categoria: 'juvenil A', multasActivas: true, horasLimiteRespuesta: 0 },
     ])
     expect(hoja).not.toHaveAttribute('open')
   })

@@ -2,7 +2,7 @@ import { screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { EntrenoListado } from '../src/entrenos/datos'
 import type { ResumenPartido } from '../src/partidos/datos'
-import { abrir, conDatos, json, manejadores, plantilla, ruta } from './simulacion'
+import { abrir, conDatos, json, manejadores, plantilla, ruta, SIN_RESPUESTAS } from './simulacion'
 
 // Experiencia del rol jugador (GH-52): sus datos y ningún control de edición
 
@@ -36,6 +36,7 @@ const entreno = (
   asiste,
   justificada: 0,
   falta: 0,
+  ...SIN_RESPUESTAS,
   miEstado,
 })
 

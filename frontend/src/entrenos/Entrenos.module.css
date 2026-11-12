@@ -509,3 +509,125 @@
   background: var(--color-superficie);
   box-shadow: var(--sombra-1);
 }
+
+/* Respuestas a si van a los próximos entrenos (GH-204) */
+.respuestas {
+  display: flex;
+  flex: none;
+  gap: var(--espacio-1);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.respuestas button {
+  --color-estado: var(--color-texto-suave);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-1);
+  min-height: var(--altura-tactil);
+  padding: 0 var(--espacio-3);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-completo);
+  background: var(--color-superficie);
+  color: var(--color-estado);
+  font: inherit;
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
+  cursor: pointer;
+  transition:
+    background-color var(--duracion) var(--curva),
+    color var(--duracion) var(--curva);
+}
+
+.respuestas .asiste {
+  --color-estado: var(--color-exito);
+}
+
+.respuestas .justificada {
+  --color-estado: var(--color-aviso);
+}
+
+.respuestas .falta {
+  --color-estado: var(--color-peligro);
+}
+
+.respuestas button[aria-pressed="true"] {
+  border-color: var(--color-estado);
+  background: var(--color-estado);
+  color: var(--color-superficie);
+}
+
+.respuestas:disabled button {
+  cursor: progress;
+}
+
+/* En la lista del cuerpo técnico, los botones solo con su icono, como al pasar lista */
+.respuestas.compacto button {
+  justify-content: center;
+  width: var(--altura-tactil);
+  padding: 0;
+  border-radius: var(--radio-m);
+}
+
+.miRespuesta {
+  display: grid;
+  gap: var(--espacio-1);
+  padding: 0 var(--espacio-4) var(--espacio-3);
+}
+
+.cierre {
+  margin: 0;
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
+}
+
+li > .cierre {
+  padding: 0 var(--espacio-4) var(--espacio-3);
+}
+
+.recuentoRespuestas {
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
+}
+
+.pista {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: var(--espacio-2);
+  color: var(--color-estado, var(--color-texto-suave));
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-normal);
+}
+
+.pista.asiste {
+  --color-estado: var(--color-exito);
+}
+
+.pista.justificada {
+  --color-estado: var(--color-aviso);
+}
+
+.pista.falta {
+  --color-estado: var(--color-peligro);
+}
+
+.seccionRespuestas {
+  display: grid;
+  gap: var(--espacio-2);
+}
+
+.seccionRespuestas > p {
+  margin: 0;
+}
+
+/* El motivo de la respuesta, debajo del nombre */
+.motivoRespuesta {
+  display: block;
+  overflow: hidden;
+  color: var(--color-texto-suave);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-normal);
+  text-overflow: ellipsis;
+}

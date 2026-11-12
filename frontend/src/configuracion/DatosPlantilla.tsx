@@ -8,9 +8,15 @@ import { Campo } from '../componentes/Campo'
 import { CATEGORIAS, CLAVE_PLANTILLAS } from '../plantillas/datos'
 import estilos from './Configuracion.module.css'
 
-type PlantillaEditable = { id: string; nombre: string; categoria: string; multasActivas: boolean }
+type PlantillaEditable = {
+  id: string
+  nombre: string
+  categoria: string
+  multasActivas: boolean
+  horasLimiteRespuesta: number
+}
 
-// Nombre y categoría de una plantilla. Se usa para la plantilla activa y para editar cualquier
+// Nombre, categoría, multas y hora límite para responder a los entrenos (GH-204) de una plantilla. Se usa para la plantilla activa y para editar cualquier
 // plantilla del club desde la lista.
 export function DatosPlantilla({
   plantilla,
@@ -26,6 +32,7 @@ export function DatosPlantilla({
   const [nombre, setNombre] = useState(plantilla.nombre)
   const [categoria, setCategoria] = useState(plantilla.categoria)
   const [multasActivas, setMultasActivas] = useState(plantilla.multasActivas)
+  const [horas, setHoras] = useState(String(plantilla.horasLimiteRespuesta))
   const [errores, setErrores] = useState<Record<string, string>>({})
   const idCategorias = useId()
 
@@ -34,15 +41,26 @@ export function DatosPlantilla({
     setNombre(plantilla.nombre)
     setCategoria(plantilla.categoria)
     setMultasActivas(plantilla.multasActivas)
+    setHoras(String(plantilla.horasLimiteRespuesta))
     setErrores({})
-  }, [plantilla.nombre, plantilla.categoria, plantilla.multasActivas])
+  }, [
+    plantilla.nombre,
+    plantilla.categoria,
+    plantilla.multasActivas,
+    plantilla.horasLimiteRespuesta,
+  ])
 
   const guardar = useMutation({
     mutationFn: () =>
       datos(
         api.PATCH('/api/plantillas/{id}', {
           params: { path: { id: plantilla.id } },
-          body: { nombre: nombre.trim(), categoria: categoria.trim(), multasActivas },
+          body: {
+            nombre: nombre.trim(),
+            categoria: categoria.trim(),
+            multasActivas,
+            horasLimiteRespuesta: Number(horas),
+          },
         }),
       ),
     onSuccess: async () => {
@@ -64,13 +82,18 @@ export function DatosPlantilla({
   const hayCambios =
     nombre.trim() !== plantilla.nombre ||
     categoria.trim() !== plantilla.categoria ||
-    multasActivas !== plantilla.multasActivas
+    multasActivas !== plantilla.multasActivas ||
+    Number(horas) !== plantilla.horasLimiteRespuesta
 
   function enviar(e: FormEvent) {
     e.preventDefault()
     const faltan: Record<string, string> = {}
     if (!nombre.trim()) faltan.nombre = 'El nombre es obligatorio'
     if (!categoria.trim()) faltan.categoria = 'La categoría es obligatoria'
+    const n = Number(horas)
+    if (horas.trim() === '' || !Number.isInteger(n) || n < 0 || n > 72) {
+      faltan.horasLimiteRespuesta = 'La hora límite va de 0 a 72 horas'
+    }
     setErrores(faltan)
     if (Object.keys(faltan).length === 0) guardar.mutate()
   }
@@ -115,6 +138,18 @@ export function DatosPlantilla({
           </span>
         </span>
       </label>
+      <Campo
+        etiqueta="Hora límite para responder a los entrenos"
+        type="number"
+        inputMode="numeric"
+        min={0}
+        max={72}
+        step={1}
+        value={horas}
+        onChange={(e) => setHoras(e.target.value)}
+        error={errores.horasLimiteRespuesta}
+        ayuda="Horas antes del inicio hasta las que los jugadores pueden decir si van. Con 0, hasta la hora del entreno."
+      />
       <div className={estilos.acciones}>
         {alCancelar && (
           <Boton variante="secundario" onClick={alCancelar}>

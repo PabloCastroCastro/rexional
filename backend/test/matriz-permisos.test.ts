@@ -46,6 +46,10 @@ const FILAS = {
   },
   multas: { texto: 'Registrar y cobrar multas, editar catálogo', minimo: 'delegado' },
   estadisticas: { texto: 'Registrar estadísticas de partido', minimo: 'delegado' },
+  responder: {
+    texto: 'Responder si va a un entreno (el jugador, solo la suya; GH-204)',
+    minimo: 'jugador',
+  },
   verEjercicios: { texto: 'Ver ejercicios y sesiones planificadas', minimo: 'jugador' },
   biblioteca: {
     texto: 'Gestionar biblioteca de ejercicios, medios y planificación',
@@ -98,6 +102,11 @@ const MATRIZ: Ruta[] = [
   ['gestionar', 'DELETE', '/plantillas/{id}/entrenos/{otro}'],
   ['gestionar', 'PUT', '/plantillas/{id}/entrenos/{otro}/asistencias'],
   ['verDatos', 'GET', '/plantillas/{id}/asistencia/resumen'],
+  ['responder', 'PUT', '/plantillas/{id}/entrenos/{otro}/respuesta'],
+  ['responder', 'DELETE', '/plantillas/{id}/entrenos/{otro}/respuesta'],
+  ['gestionar', 'PUT', '/plantillas/{id}/entrenos/{otro}/respuestas/{jid}'],
+  ['gestionar', 'DELETE', '/plantillas/{id}/entrenos/{otro}/respuestas/{jid}'],
+  ['gestionar', 'GET', '/plantillas/{id}/entrenos/{otro}/respuestas/mensaje'],
 
   // Partidos y convocatorias
   ['ver', 'GET', '/plantillas/{id}/partidos'],

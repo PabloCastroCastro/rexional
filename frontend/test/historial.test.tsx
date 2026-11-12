@@ -1,9 +1,17 @@
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { AsistenciaJugador, ResumenEntreno } from '../src/entrenos/datos'
+import type { AsistenciaJugador, EntrenoListado } from '../src/entrenos/datos'
 import type { JugadorPlantilla } from '../src/jugadores/datos'
-import { abrir, conDatos, json, manejadores, plantilla, senior26 } from './simulacion'
+import {
+  abrir,
+  conDatos,
+  json,
+  manejadores,
+  plantilla,
+  SIN_RESPUESTAS,
+  senior26,
+} from './simulacion'
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] })
@@ -11,7 +19,7 @@ beforeEach(() => {
 })
 afterEach(() => vi.useRealTimers())
 
-const HISTORIAL: ResumenEntreno[] = [
+const HISTORIAL: EntrenoListado[] = [
   {
     id: 'e1',
     fecha: '2026-10-13',
@@ -24,6 +32,7 @@ const HISTORIAL: ResumenEntreno[] = [
     asiste: 12,
     justificada: 1,
     falta: 2,
+    ...SIN_RESPUESTAS,
   },
   {
     id: 'e2',
@@ -37,6 +46,7 @@ const HISTORIAL: ResumenEntreno[] = [
     asiste: 10,
     justificada: 0,
     falta: 3,
+    ...SIN_RESPUESTAS,
   },
   {
     id: 'e3',
@@ -50,11 +60,12 @@ const HISTORIAL: ResumenEntreno[] = [
     asiste: 14,
     justificada: 1,
     falta: 0,
+    ...SIN_RESPUESTAS,
   },
 ]
 
 // El historial pide hasta hoy y los próximos desde mañana: la API simulada filtra igual
-const historialSimulado = (peticion: Request, proximos: ResumenEntreno[] = []) => {
+const historialSimulado = (peticion: Request, proximos: EntrenoListado[] = []) => {
   const consulta = new URL(peticion.url).searchParams
   const desde = consulta.get('desde')
   if (desde && desde === consulta.get('hasta'))

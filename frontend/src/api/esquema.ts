@@ -866,7 +866,7 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Cambiar el nombre, la categoría o si usa multas
+         * Cambiar el nombre, la categoría, si usa multas o la hora límite de respuesta
          * @description Entrenador o superior. La temporada no se modifica. Desactivar las multas las oculta y bloquea sin borrar nada: al reactivarlas vuelven como estaban.
          */
         patch: {
@@ -884,6 +884,7 @@ export interface paths {
                         nombre?: string;
                         categoria?: string;
                         multasActivas?: boolean;
+                        horasLimiteRespuesta?: number;
                     };
                 };
             };
@@ -3140,6 +3141,369 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["AsistenciaJugador"][];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plantillas/{id}/entrenos/{eid}/respuesta": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Responder si voy a un entreno
+         * @description El jugador vinculado al usuario, con ficha activa en la dinámica de la plantilla, hasta la hora límite. Motivo opcional con «duda» o «no_voy».
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    eid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        respuesta: "voy" | "duda" | "no_voy";
+                        motivo?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Respuesta guardada */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RespuestaEntreno"];
+                    };
+                };
+                /** @description Datos no válidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Respuestas cerradas */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /**
+         * Quitar mi respuesta a un entreno
+         * @description Como responder: el propio jugador, hasta la hora límite.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    eid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Respuesta quitada */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Respuestas cerradas */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plantillas/{id}/entrenos/{eid}/respuestas/{jid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Apuntar la respuesta de un jugador
+         * @description Delegado o superior, para cualquier jugador con ficha activa en la dinámica y también pasada la hora límite (por ejemplo, si avisa por teléfono).
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    eid: string;
+                    jid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        respuesta: "voy" | "duda" | "no_voy";
+                        motivo?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Respuesta guardada */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RespuestaEntreno"];
+                    };
+                };
+                /** @description Datos no válidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /**
+         * Quitar la respuesta de un jugador
+         * @description Delegado o superior, también pasada la hora límite.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    eid: string;
+                    jid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Respuesta quitada */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plantillas/{id}/entrenos/{eid}/respuestas/mensaje": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Resumen de respuestas para WhatsApp
+         * @description Delegado o superior. Quién va, quién está en duda, quién no y quién no ha respondido (de los jugadores activos en la dinámica), con el enlace para responder en la app, y el enlace wa.me para compartirlo.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    eid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Mensaje */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MensajeRespuestas"];
                     };
                 };
                 /** @description Sin sesión */
@@ -8443,6 +8807,8 @@ export interface components {
             plantillaAnteriorId: string | null;
             /** @description false si la plantilla no usa multas (no se ven ni se pueden poner) */
             multasActivas: boolean;
+            /** @description Horas antes del inicio de cada entreno hasta las que los jugadores pueden responder si van (GH-204) */
+            horasLimiteRespuesta: number;
             /**
              * @description Rol efectivo del usuario en la plantilla
              * @enum {string}
@@ -8694,6 +9060,24 @@ export interface components {
              * @enum {string|null}
              */
             miEstado: "asiste" | "justificada" | "falta" | null;
+            /** @description Respuestas a si van (GH-204) de los jugadores activos en la dinámica: no identifican a nadie */
+            respuestas: {
+                voy: number;
+                duda: number;
+                noVoy: number;
+                sinResponder: number;
+            };
+            /**
+             * @description Respuesta del jugador vinculado al usuario; null si no ha respondido
+             * @enum {string|null}
+             */
+            miRespuesta: "voy" | "duda" | "no_voy" | null;
+            /**
+             * @description Hasta cuándo puede responder el jugador: el inicio del entreno (o el final del día si no tiene hora) menos la hora límite de la plantilla
+             * @example 2026-11-17T20:00:00+01:00
+             */
+            cierreRespuestas: string;
+            respuestasAbiertas: boolean;
         };
         ResumenEntreno: components["schemas"]["RecuentosAsistencia"] & {
             /** Format: uuid */
@@ -8754,6 +9138,12 @@ export interface components {
                 /** @enum {string|null} */
                 estado: "asiste" | "justificada" | "falta" | null;
                 motivo: string | null;
+                /**
+                 * @description Si dijo que iba (GH-204); no rellena el estado
+                 * @enum {string|null}
+                 */
+                respuesta: "voy" | "duda" | "no_voy" | null;
+                motivoRespuesta: string | null;
             }[];
         };
         AsistenciaJugador: components["schemas"]["RecuentosAsistencia"] & {
@@ -8769,6 +9159,18 @@ export interface components {
             tipo: "propia" | "invitado";
             /** @description Asistencias / entrenos con estado registrado, de 0 a 100 */
             porcentaje: number | null;
+        };
+        RespuestaEntreno: {
+            /** Format: uuid */
+            jugadorId: string;
+            /** @enum {string} */
+            respuesta: "voy" | "duda" | "no_voy";
+            motivo: string | null;
+        };
+        MensajeRespuestas: {
+            texto: string;
+            /** @example https://wa.me/?text=… */
+            whatsapp: string;
         };
         CalendarioLeido: {
             /** @example TERCERA FUTGAL, A CORUÑA | GRUPO 1 */

@@ -105,6 +105,7 @@ Este documento recoge todas las decisiones funcionales, técnicas y de organizac
 - Marcar de nuevo el estado seleccionado lo deja sin registrar.
 - Historial de entrenos con el recuento de cada estado y los próximos entrenos; los pasados sin lista se marcan; desde el historial se puede abrir y corregir un entreno pasado.
 - Porcentaje de asistencia por jugador: asistencias / entrenos en los que tiene estado registrado.
+- **Respuestas a si van** (GH-204), en lugar de la encuesta de WhatsApp: cada jugador con ficha activa en la dinámica responde **voy**, **duda** o **no voy** (con motivo opcional en las dos últimas) a cada próximo entreno, hasta la **hora límite** de la plantilla (horas antes del inicio, de 0 a 72; 0 por defecto, hasta la hora de inicio; sin hora, hasta el final del día). La fija el entrenador o superior. El cuerpo técnico ve quién va en el día de cada próximo entreno, apunta o corrige respuestas (también pasada la hora límite) y comparte un resumen para WhatsApp con el enlace a la app. Es la intención de ir: se guarda aparte de la asistencia, que se sigue pasando en la lista, donde la respuesta se ve solo como pista. Al cambiar el horario, los entrenos futuros con respuestas no se rehacen.
 
 ### 2.4 Partidos y convocatorias
 
@@ -201,6 +202,7 @@ Además, a nivel de club existe el **administrador del club**. Quien crea un clu
 | Ver plantilla, partidos, convocatorias, catálogo de multas | Sí | Sí | Sí | Sí |
 | Gestionar jugadores de la plantilla, entrenos, partidos y convocatorias | Sí | Sí | Sí | No |
 | Ver asistencias, multas y estadísticas | Todas | Todas | Todas | Solo las suyas |
+| Responder si va a un entreno | De cualquiera, también pasada la hora límite | Ídem | Ídem | Solo la suya, hasta la hora límite |
 | Registrar y cobrar multas, editar catálogo | Sí | Sí | Sí | No |
 | Registrar estadísticas de partido | Sí | Sí | Sí | No |
 | Ver ejercicios y sesiones planificadas | Sí | Sí | Sí | Sí |
@@ -216,7 +218,7 @@ Los permisos se aplican **siempre en el backend**. El frontend solo oculta lo qu
 **Visibilidad para el rol jugador**
 
 - **Plantilla:** ve nombre, dorsal y posición de todos, pero el porcentaje de asistencia y la deuda de multas solo los suyos. El backend no envía esos campos de otros jugadores.
-- **Entrenos:** ve fechas y recuentos agregados de cada entreno (no identifican a nadie), pero el detalle por jugador solo en su fila.
+- **Entrenos:** ve fechas y recuentos agregados de cada entreno, también los de las respuestas a si van (no identifican a nadie), pero el detalle por jugador solo en su fila.
 - **Partidos:** el resultado y los eventos de cada partido (goles, tarjetas, cambios) son información pública del partido, igual que el acta, y los ve todo miembro. Las estadísticas **acumuladas** de temporada solo las suyas.
 - **Multas:** solo las suyas; ni el resumen de caja ni las deudas de otros.
 
@@ -372,6 +374,7 @@ Una categoría del club en una temporada. Es la unidad de trabajo.
 | plantilla_anterior_id | uuid → plantillas | nullable, set null. La misma plantilla en la temporada anterior; del mismo club y de una temporada anterior (validado en el servicio) |
 | creado_por | uuid → user | |
 | multas_activas | boolean | por defecto true; false si la plantilla no usa multas |
+| horas_limite_respuesta | smallint | de 0 a 72, por defecto 0: horas antes del inicio de un entreno hasta las que los jugadores pueden responder si van (GH-204) |
 | created_at | timestamptz | |
 
 ### membresias
@@ -447,6 +450,19 @@ Horario semanal de entrenos de una plantilla (uno por plantilla).
 | plantilla_id | uuid | Garantiza que el jugador tiene ficha en la plantilla del entreno, con las FK compuestas `(entreno_id, plantilla_id) → entrenos` y `(plantilla_id, jugador_id) → fichas`, ambas cascade |
 | estado | enum `asiste, justificada, falta` | |
 | motivo | text | opcional, solo con `justificada` y nunca vacío |
+
+### respuestas_entreno
+Si un jugador piensa ir a un entreno (GH-204). Es la intención, no la asistencia: pasar lista no la cambia.
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| entreno_id | uuid → entrenos | PK compuesta, cascade |
+| jugador_id | uuid | PK compuesta |
+| plantilla_id | uuid | Garantiza que el jugador tiene ficha en la plantilla del entreno, como en `asistencias` |
+| respuesta | enum `voy, duda, no_voy` | |
+| motivo | text | opcional, solo con `duda` o `no_voy` y nunca vacío |
+| respondido_por | uuid → user | set null. El jugador o quien la apuntó del cuerpo técnico |
+| respondido_en | timestamptz | |
 
 ### partidos
 | Campo | Tipo | Notas |
@@ -681,6 +697,8 @@ Prefijo `/api`. JSON. Todas las rutas de la plantilla cuelgan de `/plantillas`, 
 | | `GET /plantillas/:id/entrenos/:eid` | Miembro (jugador: solo su fila) |
 | | `PUT /plantillas/:id/entrenos/:eid/asistencias` (lista completa; no en entrenos futuros) | Delegado |
 | | `GET /plantillas/:id/asistencia/resumen` | Miembro (jugador: solo suyo) |
+| | `PUT` · `DELETE /plantillas/:id/entrenos/:eid/respuesta` (voy, duda o no voy, hasta la hora límite; el listado de entrenos lleva los recuentos, la respuesta propia y el cierre) | Jugador con ficha activa en la dinámica: solo la suya |
+| | `PUT` · `DELETE /plantillas/:id/entrenos/:eid/respuestas/:jid` (también pasada la hora límite) · `GET .../respuestas/mensaje` (resumen para WhatsApp) | Delegado |
 | Ejercicios | `GET /clubes/:cid/ejercicios?categoria=&etiqueta=&q=&archivados=no|si|todos` (búsqueda sin tildes) · `GET .../ejercicios/etiquetas` · `GET /clubes/:cid/ejercicios/:eid` (con sus medios y cuántos planes o modelos lo usan) | Miembro de alguna plantilla del club |
 | | `POST /clubes/:cid/ejercicios` · `PATCH/DELETE /clubes/:cid/ejercicios/:eid` (`archivado`; borrar solo si no se ha usado: 409) · `POST .../:eid/duplicar` (con copia de los archivos) | Delegado o superior en alguna plantilla del club |
 | | `POST /clubes/:cid/ejercicios/:eid/medios` (foto o vídeo, multipart en streaming) · `POST .../medios/enlace` · `PATCH/DELETE .../medios/:mid` (pie; borrar quita los archivos) · `PUT .../medios/orden` | Delegado o superior en alguna plantilla del club |
@@ -1849,6 +1867,28 @@ Un informe con todo lo de un jugador en la temporada, no solo los partidos: asis
 - [ ] Tests
 
 Por decidir al empezar: qué apartados entran y si también se hace el informe de toda la plantilla.
+
+#### GH-204
+**Título:** Marcar si voy a los próximos entrenos
+**Etiquetas:** feature, db, backend, frontend
+
+Depende de GH-52. Implementa la opción «enlace a la app» de GH-133: en lugar de la encuesta de WhatsApp, cada jugador marca en la app si va a cada entreno, y el cuerpo técnico tiene el resumen.
+
+La respuesta es la **intención** de ir, distinta de la **asistencia real** que se registra al pasar lista: se guardan por separado y una no pisa a la otra.
+
+**Criterios de aceptación**
+- [ ] Tabla nueva `respuestas_entreno` (entreno, jugador, plantilla, respuesta `voy` / `duda` / `no_voy`, motivo opcional para `duda` y `no_voy`, fecha de la respuesta), con las mismas garantías de ficha que `asistencias` y borrado en cascada con el entreno
+- [ ] Hora límite configurable por plantilla: horas antes del inicio del entreno hasta las que se puede responder (por defecto 0, hasta la hora de inicio; si el entreno no tiene hora, se cuenta desde el final del día). La cambia el entrenador o superior en la configuración de la plantilla
+- [ ] El jugador responde solo por sí mismo y solo en entrenos futuros, hasta la hora límite; pasada, no admite cambios (409) y la app lo indica («Respuestas cerradas»)
+- [ ] Responden los jugadores con ficha propia o invitados en la dinámica; los invitados solo para partidos, no
+- [ ] En «Mi asistencia» (GH-52), cada próximo entreno tiene «Voy» / «Duda» / «No voy» y muestra su respuesta y hasta cuándo puede cambiarla; marcar de nuevo la elegida la quita
+- [ ] El delegado o superior puede apuntar o corregir la respuesta de un jugador (por ejemplo, si avisa por teléfono), también pasada la hora límite
+- [ ] Al pasar lista, la respuesta de cada jugador se ve como pista junto a su nombre; no rellena el estado
+- [ ] En el historial del cuerpo técnico, cada próximo entreno muestra el recuento: van, en duda, no van, sin responder
+- [ ] Resumen para WhatsApp de un entreno, como el mensaje de convocatoria: quién va, quién está en duda, quién no y quién no ha respondido, con copiar y compartir
+- [ ] Visibilidad según la sección 3: el jugador ve su respuesta y el recuento agregado, no las respuestas de los demás
+- [ ] Al cambiar el horario, los entrenos futuros con respuestas se tratan como los que tienen asistencia: no se rehacen
+- [ ] Documento actualizado (2.3, modelo de datos, API y sección 3) y tests
 
 #### GH-170
 **Título:** Exportar los datos de la temporada a Excel
