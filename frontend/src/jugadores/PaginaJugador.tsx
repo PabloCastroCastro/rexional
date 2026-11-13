@@ -30,6 +30,13 @@ import {
   useLesiones,
 } from './Lesiones'
 import { Dorsal } from './PaginaPlantilla'
+import {
+  FranjaSancion,
+  HojaCorregirSancion,
+  type Sancion,
+  sancionesDe,
+  useSanciones,
+} from './Sanciones'
 
 // Un jugador de la plantilla: su ficha en ella, con editar y dar de baja o reactivar, y su
 // trayectoria en el club por temporadas
@@ -54,6 +61,10 @@ export function PaginaJugador() {
   const veLesiones = puedeGestionarJugadores(plantilla) || plantilla.jugadorId === jugadorId
   const lesiones = useLesiones(plantilla.id, jugadorId, veLesiones)
   const lesionActual = lesiones.data?.actual ?? null
+  // Sanciones (GH-231): las ve cualquier miembro
+  const sanciones = useSanciones(plantilla.id)
+  const misSanciones = sancionesDe(sanciones.data, jugadorId)
+  const [sancionACorregir, setSancionACorregir] = useState<Sancion | null>(null)
   const lista = `/plantillas/${plantilla.id}/jugadores`
   const { darDeBaja, reactivar, pendiente } = useBajaYReactivacion({
     alDarDeBaja: () => navegar(lista),
@@ -161,6 +172,13 @@ export function PaginaJugador() {
 
       {lesionActual && (
         <FranjaLesion lesion={lesionActual} gestiona={gestiona} alEditar={setEdicionLesion} />
+      )}
+      {misSanciones && (
+        <FranjaSancion
+          sanciones={misSanciones}
+          gestiona={gestiona}
+          alCorregir={setSancionACorregir}
+        />
       )}
 
       {estadisticasPartidos}
@@ -279,6 +297,11 @@ export function PaginaJugador() {
       )}
 
       <FormularioJugador modo={formulario} alCerrar={() => setFormulario(null)} />
+      <HojaCorregirSancion
+        jugadorId={jugadorId}
+        sancion={sancionACorregir}
+        alCerrar={() => setSancionACorregir(null)}
+      />
       <HojaLesion
         jugadorId={jugadorId}
         nombre={nombreCompleto(jugador)}

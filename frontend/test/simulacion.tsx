@@ -74,6 +74,9 @@ export const plantilla = (
   plantillaAnteriorId: null,
   multasActivas: true,
   horasLimiteRespuesta: 0,
+  amarillasCiclo: 5,
+  partidosRoja: 1,
+  partidosDobleAmarilla: 1,
   rol: 'admin',
   esAdminClub: true,
   jugadorId: null,
@@ -121,3 +124,6 @@ export function abrir(ruta: string) {
 }
 
 export const ruta = (router: ReturnType<typeof abrir>) => router.state.location.pathname
+
+// Las reglas de las sanciones con las que nace una plantilla (GH-231)
+export const REGLAS_POR_DEFECTO = { amarillasCiclo: 5, partidosRoja: 1, partidosDobleAmarilla: 1 }

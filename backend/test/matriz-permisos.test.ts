@@ -93,6 +93,9 @@ const MATRIZ: Ruta[] = [
   ['gestionar', 'POST', '/plantillas/{id}/jugadores/{jid}/lesiones', { desde: 'ayer' }],
   ['gestionar', 'PATCH', '/plantillas/{id}/jugadores/{jid}/lesiones/{otro}', { nota: 'Reposo' }],
   ['gestionar', 'DELETE', '/plantillas/{id}/jugadores/{jid}/lesiones/{otro}'],
+  // Sanciones (GH-231): las ve cualquier miembro
+  ['ver', 'GET', '/plantillas/{id}/sanciones'],
+  ['gestionar', 'PUT', '/plantillas/{id}/sanciones/ajuste', { partidos: 'muchos' }],
   ['gestionar', 'POST', '/plantillas/{id}/jugadores/lote'],
   ['gestionar', 'PATCH', '/plantillas/{id}/jugadores/{otro}'],
   ['gestionar', 'GET', '/clubes/{cid}/jugadores'],

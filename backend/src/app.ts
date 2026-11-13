@@ -32,6 +32,7 @@ import { rutasPlanificacion } from './rutas/planificacion.js'
 import { rutasPlantillas } from './rutas/plantillas.js'
 import { rutasRespuestas } from './rutas/respuestas.js'
 import { rutasSalud } from './rutas/salud.js'
+import { rutasSanciones } from './rutas/sanciones.js'
 import { rutasVideos } from './rutas/videos.js'
 
 export const infoOpenApi = {
@@ -80,6 +81,7 @@ export function crearApp(dependencias: Partial<Dependencias> = {}) {
   app.route('/', rutasJugadoresPlantilla())
   app.route('/', rutasJugadoresClub())
   app.route('/', rutasLesiones())
+  app.route('/', rutasSanciones())
   app.route('/', rutasFichaEquipoClub())
   app.route('/', rutasFichaEquipoPlantilla())
   app.route('/', rutasInvitacionesPlantilla())

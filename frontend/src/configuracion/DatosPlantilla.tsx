@@ -14,6 +14,29 @@ type PlantillaEditable = {
   categoria: string
   multasActivas: boolean
   horasLimiteRespuesta: number
+  amarillasCiclo: number
+  partidosRoja: number
+  partidosDobleAmarilla: number
+}
+
+// Reglas de las sanciones (GH-231): números enteros de 0 a 20
+const REGLAS = [
+  { campo: 'amarillasCiclo', etiqueta: 'Amarillas por ciclo' },
+  { campo: 'partidosRoja', etiqueta: 'Partidos por roja directa' },
+  { campo: 'partidosDobleAmarilla', etiqueta: 'Partidos por doble amarilla' },
+] as const
+
+type Regla = (typeof REGLAS)[number]['campo']
+
+const reglasDe = (p: PlantillaEditable): Record<Regla, string> => ({
+  amarillasCiclo: String(p.amarillasCiclo),
+  partidosRoja: String(p.partidosRoja),
+  partidosDobleAmarilla: String(p.partidosDobleAmarilla),
+})
+
+const reglaValida = (texto: string) => {
+  const n = Number(texto)
+  return texto.trim() !== '' && Number.isInteger(n) && n >= 0 && n <= 20
 }
 
 // Nombre, categoría, multas y hora límite para responder a los entrenos (GH-204) de una plantilla. Se usa para la plantilla activa y para editar cualquier
@@ -33,6 +56,7 @@ export function DatosPlantilla({
   const [categoria, setCategoria] = useState(plantilla.categoria)
   const [multasActivas, setMultasActivas] = useState(plantilla.multasActivas)
   const [horas, setHoras] = useState(String(plantilla.horasLimiteRespuesta))
+  const [reglas, setReglas] = useState(() => reglasDe(plantilla))
   const [errores, setErrores] = useState<Record<string, string>>({})
   const idCategorias = useId()
 
@@ -42,12 +66,20 @@ export function DatosPlantilla({
     setCategoria(plantilla.categoria)
     setMultasActivas(plantilla.multasActivas)
     setHoras(String(plantilla.horasLimiteRespuesta))
+    setReglas({
+      amarillasCiclo: String(plantilla.amarillasCiclo),
+      partidosRoja: String(plantilla.partidosRoja),
+      partidosDobleAmarilla: String(plantilla.partidosDobleAmarilla),
+    })
     setErrores({})
   }, [
     plantilla.nombre,
     plantilla.categoria,
     plantilla.multasActivas,
     plantilla.horasLimiteRespuesta,
+    plantilla.amarillasCiclo,
+    plantilla.partidosRoja,
+    plantilla.partidosDobleAmarilla,
   ])
 
   const guardar = useMutation({
@@ -60,6 +92,9 @@ export function DatosPlantilla({
             categoria: categoria.trim(),
             multasActivas,
             horasLimiteRespuesta: Number(horas),
+            amarillasCiclo: Number(reglas.amarillasCiclo),
+            partidosRoja: Number(reglas.partidosRoja),
+            partidosDobleAmarilla: Number(reglas.partidosDobleAmarilla),
           },
         }),
       ),
@@ -83,7 +118,8 @@ export function DatosPlantilla({
     nombre.trim() !== plantilla.nombre ||
     categoria.trim() !== plantilla.categoria ||
     multasActivas !== plantilla.multasActivas ||
-    Number(horas) !== plantilla.horasLimiteRespuesta
+    Number(horas) !== plantilla.horasLimiteRespuesta ||
+    REGLAS.some(({ campo }) => Number(reglas[campo]) !== plantilla[campo])
 
   function enviar(e: FormEvent) {
     e.preventDefault()
@@ -93,6 +129,9 @@ export function DatosPlantilla({
     const n = Number(horas)
     if (horas.trim() === '' || !Number.isInteger(n) || n < 0 || n > 72) {
       faltan.horasLimiteRespuesta = 'La hora límite va de 0 a 72 horas'
+    }
+    for (const { campo } of REGLAS) {
+      if (!reglaValida(reglas[campo])) faltan[campo] = 'Un número entero de 0 a 20'
     }
     setErrores(faltan)
     if (Object.keys(faltan).length === 0) guardar.mutate()
@@ -150,6 +189,29 @@ export function DatosPlantilla({
         error={errores.horasLimiteRespuesta}
         ayuda="Horas antes del inicio hasta las que los jugadores pueden decir si van. Con 0, hasta la hora del entreno."
       />
+      <fieldset className={estilos.reglas}>
+        <legend>Sanciones</legend>
+        <p className={estilos.descripcion}>
+          Se calculan con las tarjetas de los partidos. La sanción por ciclo es de un partido; con 0
+          amarillas, no hay ciclo.
+        </p>
+        <div className={estilos.reglasCampos}>
+          {REGLAS.map(({ campo, etiqueta }) => (
+            <Campo
+              key={campo}
+              etiqueta={etiqueta}
+              type="number"
+              inputMode="numeric"
+              min={0}
+              max={20}
+              step={1}
+              value={reglas[campo]}
+              onChange={(e) => setReglas({ ...reglas, [campo]: e.target.value })}
+              error={errores[campo]}
+            />
+          ))}
+        </div>
+      </fieldset>
       <div className={estilos.acciones}>
         {alCancelar && (
           <Boton variante="secundario" onClick={alCancelar}>

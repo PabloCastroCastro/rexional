@@ -22,6 +22,7 @@ import {
 import { FormularioJugador, type ModoFormulario } from './FormularioJugador'
 import estilos from './Jugadores.module.css'
 import { MarcaLesion } from './Lesiones'
+import { MarcaSancion, type SancionesJugador, sancionesDe, useSanciones } from './Sanciones'
 
 // Jugadores de la plantilla activa, por dorsal y nombre (la API ya los devuelve ordenados). Activos o
 // bajas según ?ver=bajas, para que volver desde un jugador deje la misma vista. Entre los activos,
@@ -39,6 +40,8 @@ export function PaginaPlantilla() {
   // Partidos jugados con la plantilla, para los invitados
   const estadisticas = useEstadisticas(plantilla.id)
   const partidos = new Map(estadisticas.data?.jugadores.map((j) => [j.jugadorId, j.partidos]))
+  // Sancionados y apercibidos (GH-231)
+  const sanciones = useSanciones(plantilla.id)
   const gestiona = puedeGestionarJugadores(plantilla)
   const [abiertos, setAbiertos] = useState(false)
   const [formulario, setFormulario] = useState<ModoFormulario | null>(null)
@@ -155,6 +158,7 @@ export function PaginaPlantilla() {
               porcentaje={porcentajes.get(j.jugadorId)}
               deuda={deudas.get(j.jugadorId)}
               partidos={partidos.get(j.jugadorId)}
+              sanciones={sancionesDe(sanciones.data, j.jugadorId)}
             />
             <ChevronRight aria-hidden size={20} className={estilos.flecha} />
           </Link>
@@ -165,6 +169,7 @@ export function PaginaPlantilla() {
               porcentaje={porcentajes.get(j.jugadorId)}
               deuda={deudas.get(j.jugadorId)}
               partidos={partidos.get(j.jugadorId)}
+              sanciones={sancionesDe(sanciones.data, j.jugadorId)}
             />
           </div>
         )}
@@ -199,12 +204,14 @@ function Datos({
   porcentaje,
   deuda,
   partidos,
+  sanciones,
 }: {
   jugador: JugadorPlantilla
   propio?: boolean
   porcentaje: number | null | undefined
   deuda: number | undefined
   partidos: number | undefined
+  sanciones?: SancionesJugador
 }) {
   const invitado = jugador.tipo === 'invitado'
   return (
@@ -233,6 +240,12 @@ function Datos({
             <>
               {' · '}
               <MarcaLesion />
+            </>
+          )}
+          {sanciones && (sanciones.pendientes.length > 0 || sanciones.apercibido.length > 0) && (
+            <>
+              {' · '}
+              <MarcaSancion sanciones={sanciones} />
             </>
           )}
         </span>
