@@ -163,12 +163,35 @@ a.fila:hover {
   gap: var(--espacio-2);
 }
 
-/* En la ficha, «Dar de baja» lejos de «Editar» (GH-226) */
-.accionesFicha {
+/* Editar, solo con el icono, junto al nombre (GH-234) */
+.botonIcono {
+  flex: none;
+  width: var(--altura-tactil);
+  padding: 0;
+}
+
+/* Dar de baja (o reactivar), al final de la ficha y sin relleno */
+.accionFinal {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: var(--espacio-2);
+  justify-content: center;
+}
+
+.accionFinal .textoPeligro {
+  color: var(--color-peligro);
+}
+
+/* La temporada en curso, en la trayectoria */
+.marcaActual {
+  display: inline-flex;
+  align-items: center;
+  margin-left: var(--espacio-2);
+  padding: 0 var(--espacio-2);
+  border-radius: var(--radio-completo);
+  background: var(--color-superficie-alterna);
+  color: var(--color-texto-suave);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-medio);
+  vertical-align: middle;
 }
 
 /* Partidos en la ficha: dos filas de casillas con la misma separación que entre casillas */
@@ -177,19 +200,103 @@ a.fila:hover {
   gap: var(--espacio-2);
 }
 
-/* El porcentaje de asistencia en su casilla, con el color de su nivel */
-.porcentajeCifra[data-nivel="alto"] {
-  color: var(--color-exito);
+/* Entrenos: el porcentaje como dato protagonista, con el color de su nivel (GH-234) */
+.protagonista {
+  --nivel: var(--color-texto-suave);
+  display: grid;
+  gap: var(--espacio-3);
+  padding: var(--espacio-4);
+  border-radius: var(--radio-l);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra-1);
 }
 
-.porcentajeCifra[data-nivel="medio"] {
-  color: var(--color-aviso);
+.protagonista[data-nivel="alto"] {
+  --nivel: var(--color-exito);
 }
 
-.porcentajeCifra[data-nivel="bajo"] {
-  color: var(--color-peligro);
+.protagonista[data-nivel="medio"] {
+  --nivel: var(--color-aviso);
 }
 
+.protagonista[data-nivel="bajo"] {
+  --nivel: var(--color-peligro);
+}
+
+.porcentajeGrande {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--espacio-1) var(--espacio-2);
+  margin: 0;
+}
+
+.porcentajeGrande strong {
+  color: var(--nivel);
+  font-size: 2.25rem;
+  font-weight: 750;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.porcentajeGrande span {
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
+}
+
+.barra {
+  position: relative;
+  height: 8px;
+  border-radius: var(--radio-completo);
+  background: var(--color-superficie-alterna);
+}
+
+.relleno {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: var(--radio-completo);
+  background: var(--nivel);
+}
+
+.umbral {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  background: var(--color-texto-suave);
+  opacity: 0.45;
+}
+
+.umbrales {
+  position: relative;
+  height: 1rem;
+  color: var(--color-texto-suave);
+  font-size: var(--texto-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.umbrales span {
+  position: absolute;
+  top: 2px;
+  transform: translateX(-50%);
+}
+
+.desglose {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-1) var(--espacio-4);
+  margin: 0;
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.desglose strong {
+  color: var(--color-texto);
+  font-weight: var(--peso-fuerte);
+}
+
+/* Multas y temporadas, como filas sobre el fondo: las tarjetas quedan para las cifras */
 .lineaMultas {
   display: flex;
   flex-wrap: wrap;
@@ -197,10 +304,21 @@ a.fila:hover {
   justify-content: space-between;
   gap: var(--espacio-2) var(--espacio-3);
   margin: 0;
-  padding: var(--espacio-3) var(--espacio-4);
-  border-radius: var(--radio-l);
-  background: var(--color-superficie);
-  box-shadow: var(--sombra-1);
+  padding: var(--espacio-2) var(--espacio-1);
+  border-top: 1px solid var(--color-borde);
+  border-bottom: 1px solid var(--color-borde);
+}
+
+.lista.plana {
+  border-top: 1px solid var(--color-borde);
+  border-bottom: 1px solid var(--color-borde);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.lista.plana .fila {
+  padding-inline: var(--espacio-1);
 }
 
 .importe {

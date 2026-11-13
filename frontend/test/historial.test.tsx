@@ -230,16 +230,15 @@ describe('asistencia en la plantilla', () => {
     manejadores['GET /api/plantillas/p1/asistencia/resumen'] = () =>
       json([resumen('j2', 'Brais', 6, 1, 3)])
     abrir('/plantillas/p1/jugadores/j2')
-    const bloque = await screen.findByRole('region', { name: 'Asistencia en esta plantilla' })
-    const casilla = (texto: string) => within(bloque).getByText(texto).nextElementSibling
-    expect(casilla('Asistencia')).toHaveTextContent('60 %')
-    expect(within(bloque).getByText('60 %')).toHaveAttribute('data-nivel', 'medio')
-    expect(casilla('Asiste')).toHaveTextContent('6')
-    expect(casilla('Justificadas')).toHaveTextContent('1')
-    expect(casilla('Faltas')).toHaveTextContent('3')
+    const bloque = await screen.findByRole('region', { name: 'Entrenos' })
+    // El porcentaje, protagonista y con el color de su nivel; debajo, el desglose
+    expect(within(bloque).getByText('60 %')).toBeInTheDocument()
+    expect(bloque.querySelector('[data-nivel]')).toHaveAttribute('data-nivel', 'medio')
+    expect(bloque).toHaveTextContent('60 %de asistencia a los entrenos')
+    expect(bloque).toHaveTextContent('6 fue1 justificada3 faltas')
   })
 
-  it('sin entrenos registrados, un guion y las demás casillas a cero', async () => {
+  it('sin entrenos registrados, un guion y el desglose a cero', async () => {
     conDatos({ plantillas: [senior26] })
     manejadores['GET /api/clubes/c1/jugadores/j2'] = () =>
       json({
@@ -260,9 +259,9 @@ describe('asistencia en la plantilla', () => {
     manejadores['GET /api/plantillas/p1/asistencia/resumen'] = () =>
       json([resumen('j2', 'Brais', 0, 0, 0)])
     abrir('/plantillas/p1/jugadores/j2')
-    const bloque = await screen.findByRole('region', { name: 'Asistencia en esta plantilla' })
-    const casilla = (texto: string) => within(bloque).getByText(texto).nextElementSibling
-    expect(casilla('Asistencia')).toHaveTextContent('—Sin entrenos registrados')
-    expect(casilla('Faltas')).toHaveTextContent('0')
+    const bloque = await screen.findByRole('region', { name: 'Entrenos' })
+    expect(bloque).toHaveTextContent('—Sin entrenos registrados')
+    expect(bloque.querySelector('[data-nivel]')).not.toBeInTheDocument()
+    expect(bloque).toHaveTextContent('0 fue0 justificadas0 faltas')
   })
 })

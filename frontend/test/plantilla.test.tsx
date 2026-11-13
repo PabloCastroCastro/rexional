@@ -247,9 +247,9 @@ describe('ficha del jugador', () => {
     manejadores['GET /api/clubes/c1/jugadores/j1'] = () => json(trayectoria)
     abrir('/plantillas/p1/jugadores/j1')
     expect(await screen.findByRole('heading', { name: 'Brais' })).toBeInTheDocument()
-    const seccion = screen.getByRole('region', { name: 'Temporadas en el club' })
+    const seccion = screen.getByRole('region', { name: 'Temporadas' })
     expect(filas(within(seccion).getByRole('list'))).toEqual([
-      expect.stringMatching(/2026-27.*Senior \(esta plantilla\).*Dorsal 7 · Delantero/),
+      expect.stringMatching(/2026-27.*SeniorActual.*Dorsal 7 · Delantero/),
       expect.stringMatching(/2025-26.*Juvenil.*Sin dorsal/),
     ])
   })

@@ -86,6 +86,32 @@ export function PaginaJugador() {
     procedencia: ficha.procedencia,
   }
   const gestiona = puedeGestionarJugadores(plantilla)
+  // Sin fila (no ha jugado, o es un invitado sin minutos), todo a cero
+  const suyas = estadisticas.data?.jugadores.find((j) => j.jugadorId === jugadorId)
+  // Arriba lo jugado; abajo lo que ha hecho en el campo
+  const estadisticasPartidos = estadisticas.data && (
+    <section className={estilos.seccion} aria-labelledby="partidos">
+      <h2 id="partidos">Partidos</h2>
+      <div className={estilos.dosFilas}>
+        <Cifras
+          columnas={3}
+          cifras={[
+            cifra('Partidos', suyas?.partidos ?? 0),
+            cifra('De titular', suyas?.titularidades ?? 0),
+            cifra('Minutos', suyas?.minutos ?? 0),
+          ]}
+        />
+        <Cifras
+          cifras={[
+            cifra('Goles', suyas?.goles ?? 0),
+            cifra('Asistencias', suyas?.asistencias ?? 0),
+            cifra('Amarillas', suyas?.amarillas ?? 0),
+            cifra('Rojas', suyas?.rojas ?? 0),
+          ]}
+        />
+      </div>
+    </section>
+  )
 
   return (
     <div className={estilos.pagina}>
@@ -107,72 +133,31 @@ export function PaginaJugador() {
               .join(' · ')}
           </span>
         </div>
-      </div>
-
-      {gestiona && (
-        <div className={estilos.accionesFicha}>
+        {/* Editar, discreto junto al nombre; dar de baja, al final (GH-234) */}
+        {gestiona && (
           <Boton
             variante="secundario"
+            className={estilos.botonIcono}
             icono={<Pencil aria-hidden size={18} />}
+            aria-label="Editar"
+            title="Editar"
             onClick={() => setFormulario({ tipo: 'editar', jugador })}
-          >
-            Editar
-          </Boton>
-          {jugador.activo ? (
-            <Boton
-              variante="peligro"
-              icono={<UserMinus aria-hidden size={18} />}
-              cargando={pendiente}
-              onClick={() => darDeBaja(jugador)}
-            >
-              Dar de baja
-            </Boton>
-          ) : (
-            <Boton
-              icono={<RotateCcw aria-hidden size={18} />}
-              cargando={pendiente}
-              onClick={() => reactivar(jugador)}
-            >
-              Reactivar
-            </Boton>
-          )}
-        </div>
-      )}
+          />
+        )}
+      </div>
+
+      {estadisticasPartidos}
 
       {asistencia && (
-        <section className={estilos.seccion} aria-labelledby="asistencia">
-          <h2 id="asistencia">Asistencia en esta plantilla</h2>
-          <Cifras
-            cifras={[
-              {
-                texto: 'Asistencia',
-                vacia: asistencia.porcentaje === null,
-                valor:
-                  asistencia.porcentaje === null ? (
-                    <>
-                      <span aria-hidden="true">—</span>
-                      <span className="solo-lectores">Sin entrenos registrados</span>
-                    </>
-                  ) : (
-                    <span
-                      className={estilos.porcentajeCifra}
-                      data-nivel={nivelAsistencia(asistencia.porcentaje)}
-                    >
-                      {asistencia.porcentaje} %
-                    </span>
-                  ),
-              },
-              cifra('Asiste', asistencia.asiste),
-              cifra('Justificadas', asistencia.justificada),
-              cifra('Faltas', asistencia.falta),
-            ]}
-          />
+        <section className={estilos.seccion} aria-labelledby="entrenos">
+          <h2 id="entrenos">Entrenos</h2>
+          <AsistenciaEntrenos {...asistencia} />
         </section>
       )}
 
       {plantilla.multasActivas && multasPendientes.data && (
         <section className={estilos.seccion} aria-labelledby="multas">
-          <h2 id="multas">Multas en esta plantilla</h2>
+          <h2 id="multas">Multas</h2>
           <p className={estilos.lineaMultas}>
             {multasPendientes.data.length === 0 ? (
               <span className={estilos.secundario}>Nada pendiente</span>
@@ -201,40 +186,9 @@ export function PaginaJugador() {
         </section>
       )}
 
-      {estadisticas.data && (
-        <section className={estilos.seccion} aria-labelledby="partidos">
-          <h2 id="partidos">Partidos en esta plantilla</h2>
-          {(() => {
-            // Sin fila (no ha jugado, o es un invitado sin minutos), todo a cero
-            const suyas = estadisticas.data.jugadores.find((j) => j.jugadorId === jugadorId)
-            // Arriba lo jugado; abajo lo que ha hecho en el campo
-            return (
-              <div className={estilos.dosFilas}>
-                <Cifras
-                  columnas={3}
-                  cifras={[
-                    cifra('Partidos', suyas?.partidos ?? 0),
-                    cifra('De titular', suyas?.titularidades ?? 0),
-                    cifra('Minutos', suyas?.minutos ?? 0),
-                  ]}
-                />
-                <Cifras
-                  cifras={[
-                    cifra('Goles', suyas?.goles ?? 0),
-                    cifra('Asistencias', suyas?.asistencias ?? 0),
-                    cifra('Amarillas', suyas?.amarillas ?? 0),
-                    cifra('Rojas', suyas?.rojas ?? 0),
-                  ]}
-                />
-              </div>
-            )
-          })()}
-        </section>
-      )}
-
       <section className={estilos.seccion} aria-labelledby="trayectoria">
-        <h2 id="trayectoria">Temporadas en el club</h2>
-        <ul className={estilos.lista}>
+        <h2 id="trayectoria">Temporadas</h2>
+        <ul className={`${estilos.lista} ${estilos.plana}`}>
           {trayectoria.data.fichas.map((f) => (
             <li key={f.plantillaId}>
               <div className={estilos.fila}>
@@ -242,7 +196,9 @@ export function PaginaJugador() {
                 <span className={estilos.texto}>
                   <strong>
                     {f.plantilla}
-                    {f.plantillaId === plantilla.id && ' (esta plantilla)'}
+                    {f.plantillaId === plantilla.id && (
+                      <span className={estilos.marcaActual}>Actual</span>
+                    )}
                     {f.tipo === 'invitado' && <MarcaInvitado />}
                   </strong>
                   <span className={estilos.secundario}>
@@ -254,16 +210,45 @@ export function PaginaJugador() {
                       .filter(Boolean)
                       .join(' · ')}
                   </span>
-                  {(() => {
-                    const t = numeros.data?.temporadas.find((x) => x.plantillaId === f.plantillaId)
-                    return t && t.partidos + t.goles > 0 ? <ResumenTemporada {...t} /> : null
-                  })()}
+                  {/* La actual no repite las cifras: ya están arriba */}
+                  {f.plantillaId !== plantilla.id &&
+                    (() => {
+                      const t = numeros.data?.temporadas.find(
+                        (x) => x.plantillaId === f.plantillaId,
+                      )
+                      return t && t.partidos + t.goles > 0 ? <ResumenTemporada {...t} /> : null
+                    })()}
                 </span>
               </div>
             </li>
           ))}
         </ul>
       </section>
+
+      {gestiona && (
+        <div className={estilos.accionFinal}>
+          {jugador.activo ? (
+            <Boton
+              variante="texto"
+              className={estilos.textoPeligro}
+              icono={<UserMinus aria-hidden size={18} />}
+              cargando={pendiente}
+              onClick={() => darDeBaja(jugador)}
+            >
+              Dar de baja
+            </Boton>
+          ) : (
+            <Boton
+              variante="secundario"
+              icono={<RotateCcw aria-hidden size={18} />}
+              cargando={pendiente}
+              onClick={() => reactivar(jugador)}
+            >
+              Reactivar
+            </Boton>
+          )}
+        </div>
+      )}
 
       <FormularioJugador modo={formulario} alCerrar={() => setFormulario(null)} />
     </div>
@@ -288,5 +273,62 @@ function ResumenTemporada(t: { partidos: number; goles: number; asistencias: num
         ].join(', ')}
       </span>
     </span>
+  )
+}
+
+// Los umbrales del color del porcentaje (Porcentaje.tsx), marcados en la barra
+const UMBRALES = [60, 80]
+
+// El porcentaje de entrenos como dato protagonista: grande, con una barra del color de su nivel y,
+// debajo, lo que fue, las justificadas y las faltas (GH-234)
+function AsistenciaEntrenos(a: {
+  porcentaje: number | null
+  asiste: number
+  justificada: number
+  falta: number
+}) {
+  const nivel = a.porcentaje === null ? undefined : nivelAsistencia(a.porcentaje)
+  return (
+    <div className={estilos.protagonista} data-nivel={nivel}>
+      <p className={estilos.porcentajeGrande}>
+        {a.porcentaje === null ? (
+          <>
+            <strong aria-hidden="true">—</strong>
+            <span>Sin entrenos registrados</span>
+          </>
+        ) : (
+          <>
+            <strong>{a.porcentaje} %</strong>
+            <span>de asistencia a los entrenos</span>
+          </>
+        )}
+      </p>
+      <div aria-hidden="true">
+        <div className={estilos.barra}>
+          <span className={estilos.relleno} style={{ width: `${a.porcentaje ?? 0}%` }} />
+          {UMBRALES.map((u) => (
+            <span key={u} className={estilos.umbral} style={{ left: `${u}%` }} />
+          ))}
+        </div>
+        <div className={estilos.umbrales}>
+          {UMBRALES.map((u) => (
+            <span key={u} style={{ left: `${u}%` }}>
+              {u}
+            </span>
+          ))}
+        </div>
+      </div>
+      <p className={estilos.desglose}>
+        <span>
+          <strong>{a.asiste}</strong> fue
+        </span>
+        <span>
+          <strong>{a.justificada}</strong> {a.justificada === 1 ? 'justificada' : 'justificadas'}
+        </span>
+        <span>
+          <strong>{a.falta}</strong> {a.falta === 1 ? 'falta' : 'faltas'}
+        </span>
+      </p>
+    </div>
   )
 }
