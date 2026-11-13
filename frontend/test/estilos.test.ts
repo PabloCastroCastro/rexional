@@ -102,3 +102,14 @@ describe('colores del resultado', () => {
     }
   }
 })
+
+// GH-245: el lápiz de la tarjeta del partido, posicionado en la esquina, tiene que quedar por encima
+// de la línea de arriba (con opacidad, se pinta en su misma capa y le quitaba el toque)
+describe('tarjeta del partido', () => {
+  it('el botón de editar va por encima del resto de la tarjeta', () => {
+    const css = readFileSync(join(SRC, 'partidos/TarjetaPartido.module.css'), 'utf8')
+    const regla = css.match(/\n\.editar \{([^}]+)\}/)?.[1] ?? ''
+    expect(regla).toContain('position: absolute')
+    expect(regla).toMatch(/z-index: [1-9]/)
+  })
+})

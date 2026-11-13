@@ -10,8 +10,11 @@
   color: var(--color-sobre-primario);
 }
 
+/* Por encima del resto: la línea de arriba, con opacidad, se pintaría encima y se quedaría con el
+   toque (GH-245) */
 .editar {
   position: absolute;
+  z-index: 1;
   top: var(--espacio-2);
   right: var(--espacio-2);
   display: grid;
