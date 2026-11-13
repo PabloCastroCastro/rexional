@@ -28,6 +28,13 @@
   --color-aviso: #9a5b00;
   --color-informacion: #1d5fb8;
   --color-foco: #1d6fd1;
+  /* Resultado de un partido (GH-228): propios, para ajustarlos sin tocar los estados ni el peligro */
+  --color-victoria: #1a7a4f;
+  --color-sobre-victoria: #ffffff;
+  --color-empate: #b45309;
+  --color-sobre-empate: #ffffff;
+  --color-derrota: #b42323;
+  --color-sobre-derrota: #ffffff;
   /* Texto de enlaces y acentos sobre la superficie: el primario del club, oscurecido si hace falta
      para leerse (en oscuro, aclarado) */
   --color-acento: var(--acento-claro, var(--color-primario));
@@ -96,6 +103,12 @@
     --color-aviso: #f0b04a;
     --color-informacion: #7fb2f5;
     --color-foco: #7fb2f5;
+    --color-victoria: #5fcf98;
+    --color-sobre-victoria: #0f1311;
+    --color-empate: #f0b04a;
+    --color-sobre-empate: #0f1311;
+    --color-derrota: #f07167;
+    --color-sobre-derrota: #0f1311;
     --color-acento: var(--acento-oscuro, #7fd1aa);
     --sombra-2: 0 8px 24px rgb(0 0 0 / 50%);
   }

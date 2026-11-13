@@ -22,8 +22,9 @@ import { Selector } from '../componentes/Selector'
 import { hoy } from '../entrenos/datos'
 import { nombreCompleto, puedeGestionarJugadores } from '../jugadores/datos'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
-import { CLAVE_PARTIDOS, type Partido, textoResultado } from './datos'
+import { CLAVE_PARTIDOS, type Partido, textoResultado, tipoResultado } from './datos'
 import estilos from './Partidos.module.css'
+import { Resultado } from './Resultado'
 
 // El partido jugado: marcador, titulares y suplentes, y la línea de tiempo con el registro rápido
 // de goles, cambios y tarjetas. Lo importado del acta se corrige igual que lo registrado a mano.
@@ -72,12 +73,18 @@ export function SeccionPartido({ partido }: { partido: Partido }) {
         Partido
       </h2>
       <div className={estilos.marcadorPartido}>
-        <span className={estilos.resultadoGrande} data-estado={partido.estado}>
-          {partido.estado === 'jugado'
-            ? textoResultado(partido)
-            : partido.estado === 'aplazado'
-              ? 'Aplazado'
-              : 'Sin resultado'}
+        <span
+          className={estilos.resultadoGrande}
+          data-estado={partido.estado}
+          data-resultado={(partido.estado === 'jugado' && tipoResultado(partido)) || undefined}
+        >
+          {partido.estado === 'jugado' ? (
+            <Resultado partido={partido} />
+          ) : partido.estado === 'aplazado' ? (
+            'Aplazado'
+          ) : (
+            'Sin resultado'
+          )}
         </span>
         {gestiona && (
           <Boton variante="secundario" onClick={() => setResultado(true)}>

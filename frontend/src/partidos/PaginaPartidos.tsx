@@ -7,10 +7,11 @@ import { EstadoVacio } from '../componentes/EstadoVacio'
 import { textoFecha } from '../entrenos/datos'
 import { puedeGestionarJugadores } from '../jugadores/datos'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
-import { type ResumenPartido, textoLocal, textoResultado, usePartidos } from './datos'
+import { type ResumenPartido, textoLocal, tipoResultado, usePartidos } from './datos'
 import { Estadisticas } from './Estadisticas'
 import { FormularioPartido } from './FormularioPartido'
 import estilos from './Partidos.module.css'
+import { Resultado } from './Resultado'
 
 // Partidos de la plantilla: próximos (por defecto) o pasados (?ver=pasados)
 export function PaginaPartidos() {
@@ -155,8 +156,12 @@ function TarjetaPartido({
           {p.rival}
         </strong>
         {p.estado !== 'programado' && (
-          <span className={estilos.resultadoLista} data-estado={p.estado}>
-            {p.estado === 'jugado' ? textoResultado(p) : 'Aplazado'}
+          <span
+            className={estilos.resultadoLista}
+            data-estado={p.estado}
+            data-resultado={(p.estado === 'jugado' && tipoResultado(p)) || undefined}
+          >
+            {p.estado === 'jugado' ? <Resultado partido={p} /> : 'Aplazado'}
           </span>
         )}
         <span className={estilos.detalles}>

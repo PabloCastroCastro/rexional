@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { components } from '../src/api/esquema'
-import type { Partido, ResumenPartido } from '../src/partidos/datos'
+import { type Partido, type ResumenPartido, tipoResultado } from '../src/partidos/datos'
 import { minutoPropuesto } from '../src/partidos/Notas'
 import { type ArchivoPartido, MAXIMO_ARCHIVOS } from '../src/partidos/Planificacion'
 import {
@@ -116,6 +116,32 @@ describe('lista de partidos', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Pasados' }))
     const pasados = await screen.findByRole('list', { name: 'Partidos pasados' })
     expect(within(pasados).getByRole('link')).toHaveTextContent(/vs Arosa SC.*11 convocados/)
+  })
+
+  it('el resultado de los pasados, con el color de victoria, empate o derrota (GH-228)', async () => {
+    conPartidos(senior26, PROXIMOS, [
+      resumen('g', '2026-10-11', 'Arosa SC', { estado: 'jugado', golesFavor: 2, golesContra: 1 }),
+      resumen('e', '2026-10-04', 'CD Lalín', { estado: 'jugado', golesFavor: 1, golesContra: 1 }),
+      resumen('d', '2026-09-27', 'SD Compostela', {
+        estado: 'jugado',
+        golesFavor: 0,
+        golesContra: 3,
+      }),
+      resumen('a', '2026-09-20', 'Silva SD', { estado: 'aplazado' }),
+    ])
+    abrir('/plantillas/p1/partidos?ver=pasados')
+    const pasados = await screen.findByRole('list', { name: 'Partidos pasados' })
+    const [ganado, empatado, perdido, aplazado] = within(pasados).getAllByRole('link')
+    const resultado = (enlace?: HTMLElement) => enlace?.querySelector('[data-estado]')
+    expect(resultado(ganado)).toHaveAttribute('data-resultado', 'victoria')
+    expect(resultado(ganado)).toHaveTextContent('Victoria, 2–1')
+    expect(resultado(empatado)).toHaveAttribute('data-resultado', 'empate')
+    expect(resultado(empatado)).toHaveTextContent('Empate, 1–1')
+    expect(resultado(perdido)).toHaveAttribute('data-resultado', 'derrota')
+    expect(resultado(perdido)).toHaveTextContent('Derrota, 0–3')
+    // El aplazado, como antes: sin color de resultado
+    expect(resultado(aplazado)).not.toHaveAttribute('data-resultado')
+    expect(resultado(aplazado)).toHaveTextContent('Aplazado')
   })
 
   it('sin partidos invita a crear el próximo solo a quien puede', async () => {
@@ -640,5 +666,14 @@ describe('planificación del partido', () => {
     abrir('/plantillas/p1/partidos/p1')
     expect(await screen.findByText(/quita alguno para subir otro/)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Subir archivo' })).not.toBeInTheDocument()
+  })
+})
+describe('tipo de resultado (GH-228)', () => {
+  it('victoria, empate o derrota desde el punto de vista del equipo; nada sin resultado', () => {
+    expect(tipoResultado({ golesFavor: 3, golesContra: 0 })).toBe('victoria')
+    expect(tipoResultado({ golesFavor: 2, golesContra: 2 })).toBe('empate')
+    expect(tipoResultado({ golesFavor: 0, golesContra: 1 })).toBe('derrota')
+    expect(tipoResultado({ golesFavor: null, golesContra: null })).toBeNull()
+    expect(tipoResultado({ golesFavor: 1, golesContra: null })).toBeNull()
   })
 })
