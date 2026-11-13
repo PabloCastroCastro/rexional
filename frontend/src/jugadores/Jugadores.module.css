@@ -171,6 +171,12 @@ a.fila:hover {
   gap: var(--espacio-2);
 }
 
+/* Partidos en la ficha: dos filas de casillas con la misma separación que entre casillas */
+.dosFilas {
+  display: grid;
+  gap: var(--espacio-2);
+}
+
 /* El porcentaje de asistencia en su casilla, con el color de su nivel */
 .porcentajeCifra[data-nivel="alto"] {
   color: var(--color-exito);

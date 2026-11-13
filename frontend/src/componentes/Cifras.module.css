@@ -1,7 +1,7 @@
-/* Cifras en casillas (GH-226): cuatro por fila en cualquier ancho */
+/* Cifras en casillas (GH-226): cuatro (o tres) por fila en cualquier ancho */
 .cifras {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--columnas, 4), minmax(0, 1fr));
   gap: var(--espacio-2);
   margin: 0;
 }
