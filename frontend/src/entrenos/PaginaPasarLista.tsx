@@ -25,7 +25,8 @@ import { EstadoVacio } from '../componentes/EstadoVacio'
 import { HojaInferior } from '../componentes/HojaInferior'
 import { MarcaInvitado } from '../jugadores/BuscadorInvitables'
 import { nombreCompleto, puedeGestionarJugadores } from '../jugadores/datos'
-import { MarcaLesion } from '../jugadores/Lesiones'
+import { estadoJugador } from '../jugadores/estado'
+import { textoVuelta } from '../jugadores/Lesiones'
 import { Dorsal } from '../jugadores/PaginaPlantilla'
 import { resumenPlan } from '../planificacion/datos'
 import { TarjetaPlan } from '../planificacion/TarjetaPlan'
@@ -435,6 +436,8 @@ type Marca = { estado: Estado | null; motivo: string }
 
 const MOTIVO_LESION = 'Lesión'
 
+const mayuscula = (texto: string) => texto.charAt(0).toUpperCase() + texto.slice(1)
+
 function Lista({ entreno }: { entreno: Entreno }) {
   const plantilla = usePlantillaActiva()
   const guardado = useGuardadoAutomatico(plantilla.id, entreno.id)
@@ -500,14 +503,15 @@ function Lista({ entreno }: { entreno: Entreno }) {
           return (
             <li key={j.jugadorId}>
               <div className={estilos.fila}>
-                <Dorsal dorsal={j.dorsal} />
+                <Dorsal dorsal={j.dorsal} estado={estadoJugador({ lesion: j.lesion })} />
                 <span className={estilos.nombre}>
                   {nombreCompleto(j)}
                   {j.tipo === 'invitado' && <MarcaInvitado />}
                   {!j.activo && <span className={estilos.baja}> baja</span>}
+                  {/* La lesión va sobre el dorsal; debajo, solo cuándo vuelve (GH-251) */}
                   {j.lesion && (
                     <span className={estilos.lesion}>
-                      <MarcaLesion lesion={j.lesion} />
+                      {mayuscula(textoVuelta(j.lesion.vueltaPrevista))}
                     </span>
                   )}
                   <PistaRespuesta jugador={j} />

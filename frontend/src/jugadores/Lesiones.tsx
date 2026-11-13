@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Bandage, Pencil } from 'lucide-react'
+import { Pencil } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
 import { api, datos, erroresPorCampo } from '../api/cliente'
 import type { components } from '../api/esquema'
@@ -8,6 +8,7 @@ import { Boton } from '../componentes/Boton'
 import { Campo } from '../componentes/Campo'
 import { useConfirmacion } from '../componentes/Confirmacion'
 import { HojaInferior } from '../componentes/HojaInferior'
+import { IconoEstado } from '../componentes/IconoEstado'
 import { CLAVE_ENTRENOS, hoy, sumarDias } from '../entrenos/datos'
 import { CLAVE_PARTIDOS } from '../partidos/datos'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
@@ -70,7 +71,7 @@ export const textoLesion = (lesion: NonNullable<LesionActual>, hoyEs = hoy()) =>
 export function MarcaLesion({ lesion }: { lesion?: NonNullable<LesionActual> }) {
   return (
     <span className={estilos.marca}>
-      <Bandage aria-hidden size={14} />
+      <IconoEstado estado="lesion" size={14} />
       {lesion ? textoLesion(lesion) : 'Lesionado'}
     </span>
   )
@@ -112,7 +113,7 @@ export function FranjaLesion({
   const vencida = lesion.vueltaPrevista !== null && lesion.vueltaPrevista < hoy()
   return (
     <section className={estilos.franja} aria-label="Lesión" data-vencida={vencida || undefined}>
-      <Bandage aria-hidden size={20} className={estilos.icono} />
+      <IconoEstado estado="lesion" size={20} className={estilos.icono} />
       <div className={estilos.texto}>
         <strong>Lesionado desde el {diaCorto(lesion.desde)}</strong>
         <span>{mayuscula(textoVuelta(lesion.vueltaPrevista))}</span>

@@ -76,8 +76,10 @@ describe('lista de la plantilla', () => {
     const lista = await screen.findByRole('list', { name: 'Jugadores' })
     expect(filas(lista)).toEqual([
       expect.stringMatching(/Dorsal 7.*Brais.*Delantero/),
-      expect.stringMatching(/Sin dorsal.*Zoe.*Sin posición/),
+      expect.stringMatching(/Sin dorsal.*Zoe/),
     ])
+    // Sin posición, la fila queda en una sola línea (GH-251)
+    expect(filas(lista)[1]).not.toMatch(/Sin posición/)
     expect(within(lista).getByRole('link', { name: /Brais/ })).toHaveAttribute(
       'href',
       '/plantillas/p1/jugadores/j1',

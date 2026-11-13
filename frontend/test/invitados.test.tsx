@@ -63,7 +63,7 @@ async function abrirAlta() {
 }
 
 describe('invitados en Jugadores', () => {
-  it('van aparte, en un apartado plegado, con su procedencia, su dinámica y sus partidos', async () => {
+  it('van aparte, en un apartado plegado, con su procedencia y sus partidos', async () => {
     conJugadores([BRAIS, MATEO, HUGO])
     manejadores['GET /api/plantillas/p1/estadisticas'] = () =>
       json({ jugadores: [{ jugadorId: 'j2', partidos: 3 }] })
@@ -77,12 +77,14 @@ describe('invitados en Jugadores', () => {
     const invitados = screen.getByRole('list', { name: 'Invitados' })
     await waitFor(() =>
       expect(within(invitados).getAllByRole('listitem')[0]).toHaveTextContent(
-        /Mateo.*Invitado.*Juvenil A · Solo partidos · 3 partidos/,
+        /Mateo.*Invitado.*Juvenil A · 3 partidos/,
       ),
     )
+    // La dinámica se ve en su ficha, no en la lista (GH-251)
     expect(within(invitados).getAllByRole('listitem')[1]).toHaveTextContent(
-      /Hugo.*A prueba · En la dinámica · 0 partidos/,
+      /Hugo.*A prueba · 0 partidos/,
     )
+    expect(invitados).not.toHaveTextContent(/En la dinámica|Solo partidos/)
   })
 })
 
