@@ -814,7 +814,7 @@ Una issue está terminada cuando: cumple sus criterios de aceptación en el ento
 
 Versión publicada en los ciclos ya cerrados y prevista en el resto. Los ciclos 1 a 3 no tuvieron release propia: se publicaron juntos en la v1.0.0. Lo que queda abierto de un ciclo ya publicado sale en la release siguiente a terminarlo.
 
-Fuera de los ciclos, el rediseño de la interfaz salió en la v1.10.0: la ficha del jugador en casillas y con su jerarquía (GH-226 y GH-234), Saira Condensed en los títulos y los números (GH-227), el resultado de los partidos en verde, ámbar o rojo (GH-228) y la tarjeta del partido (GH-229).
+Fuera de los ciclos, el rediseño de la interfaz salió en la v1.10.0: la ficha del jugador en casillas y con su jerarquía (GH-226 y GH-234), Saira Condensed en los títulos y los números (GH-227), el resultado de los partidos en verde, ámbar o rojo (GH-228) y la tarjeta del partido (GH-229). En la v1.11.0, también sin ciclo, los jugadores lesionados (GH-230) y los sancionados calculados a partir de las tarjetas de las actas (GH-231).
 
 ---
 
