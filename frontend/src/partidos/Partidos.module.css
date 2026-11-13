@@ -477,6 +477,29 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Con el color del resultado, sobre un fondo suave del mismo color (GH-228) */
+.resultadoGrande[data-resultado] {
+  padding: 0 var(--espacio-3);
+  border-radius: var(--radio-m);
+  background: color-mix(in srgb, var(--resultado) 14%, transparent);
+  color: var(--resultado);
+}
+
+[data-resultado="victoria"] {
+  --resultado: var(--color-victoria);
+  --sobre-resultado: var(--color-sobre-victoria);
+}
+
+[data-resultado="empate"] {
+  --resultado: var(--color-empate);
+  --sobre-resultado: var(--color-sobre-empate);
+}
+
+[data-resultado="derrota"] {
+  --resultado: var(--color-derrota);
+  --sobre-resultado: var(--color-sobre-derrota);
+}
+
 .resultadoGrande[data-estado="programado"],
 .resultadoGrande[data-estado="aplazado"] {
   color: var(--color-texto-suave);
@@ -689,6 +712,11 @@
   font-size: 1rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+}
+
+.resultadoLista[data-resultado] {
+  background: var(--resultado);
+  color: var(--sobre-resultado);
 }
 
 .resultadoLista[data-estado="aplazado"] {
