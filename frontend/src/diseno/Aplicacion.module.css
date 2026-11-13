@@ -40,6 +40,9 @@
 }
 
 .club {
+  letter-spacing: 0.01em;
+  font-weight: 600;
+  font-family: var(--fuente-titulos);
   max-width: 100%;
   overflow: hidden;
   font-size: var(--texto-xs);
@@ -49,11 +52,12 @@
 }
 
 .nombre {
+  font-family: var(--fuente-titulos);
   display: inline-flex;
   align-items: center;
   gap: var(--espacio-1);
-  font-size: var(--texto-base);
-  font-weight: var(--peso-fuerte);
+  font-size: 1.15rem;
+  font-weight: 700;
 }
 
 .contenido {

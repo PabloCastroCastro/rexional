@@ -149,6 +149,8 @@
 }
 
 .importe {
+  font-size: 1.1rem;
+  font-family: var(--fuente-titulos);
   flex: none;
   font-weight: var(--peso-fuerte);
   font-variant-numeric: tabular-nums;
@@ -290,8 +292,9 @@
 }
 
 .total strong {
-  font-size: var(--texto-2xl);
-  font-weight: var(--peso-fuerte);
+  font-family: var(--fuente-titulos);
+  font-size: 2rem;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
