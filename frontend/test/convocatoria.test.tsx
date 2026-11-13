@@ -266,6 +266,9 @@ describe('sancionados en la convocatoria (GH-231)', () => {
     abrir('/plantillas/p1/partidos/p1/convocatoria')
     expect(await screen.findByText(/convocados de 2/)).toBeInTheDocument()
     expect(casilla('Brais').closest('li')).toHaveTextContent('Sancionado · 1 partido')
+    // El nombre del sancionado, tachado (GH-248); el de quien puede jugar, no
+    expect(screen.getByText('Brais').className).toMatch(/tachado/)
+    expect(screen.getByText('Íker').className).not.toMatch(/tachado/)
 
     await userEvent.click(screen.getByRole('button', { name: 'Todos' }))
     expect(casilla('Brais').checked).toBe(false)
