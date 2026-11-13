@@ -338,6 +338,14 @@
   opacity: 0.6;
 }
 
+/* Sancionado para el partido (GH-248): el nombre tachado; «Sancionado · N partidos» va debajo */
+.tachado {
+  color: var(--color-texto-suave);
+  text-decoration: line-through;
+  text-decoration-color: var(--color-peligro);
+  text-decoration-thickness: 2px;
+}
+
 .seleccion input:focus-visible + .casilla {
   outline: 3px solid var(--color-foco);
   outline-offset: 2px;

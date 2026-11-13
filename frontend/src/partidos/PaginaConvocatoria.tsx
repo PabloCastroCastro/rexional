@@ -181,7 +181,10 @@ function Seleccion({ partido }: { partido: Partido }) {
                   <Dorsal dorsal={j.dorsal} />
                   <span className={estilos.texto}>
                     <span className={estilos.nombre}>
-                      {nombreCompleto(j)}
+                      {/* El sancionado para este partido, tachado (GH-248); lo dice el texto de debajo */}
+                      <span className={j.sancion ? estilos.tachado : undefined}>
+                        {nombreCompleto(j)}
+                      </span>
                       {j.tipo === 'invitado' && <MarcaInvitado />}
                     </span>
                     <span className={estilos.secundario}>
