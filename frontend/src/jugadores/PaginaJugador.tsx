@@ -151,31 +151,7 @@ export function PaginaJugador() {
       {asistencia && (
         <section className={estilos.seccion} aria-labelledby="entrenos">
           <h2 id="entrenos">Entrenos</h2>
-          <Cifras
-            cifras={[
-              {
-                texto: 'Asistencia',
-                vacia: asistencia.porcentaje === null,
-                valor:
-                  asistencia.porcentaje === null ? (
-                    <>
-                      <span aria-hidden="true">—</span>
-                      <span className="solo-lectores">Sin entrenos registrados</span>
-                    </>
-                  ) : (
-                    <span
-                      className={estilos.porcentajeCifra}
-                      data-nivel={nivelAsistencia(asistencia.porcentaje)}
-                    >
-                      {asistencia.porcentaje} %
-                    </span>
-                  ),
-              },
-              cifra('Fue', asistencia.asiste),
-              cifra('Justificadas', asistencia.justificada),
-              cifra('Faltas', asistencia.falta),
-            ]}
-          />
+          <AsistenciaEntrenos {...asistencia} />
         </section>
       )}
 
@@ -212,7 +188,7 @@ export function PaginaJugador() {
 
       <section className={estilos.seccion} aria-labelledby="trayectoria">
         <h2 id="trayectoria">Temporadas</h2>
-        <ul className={estilos.lista}>
+        <ul className={`${estilos.lista} ${estilos.plana}`}>
           {trayectoria.data.fichas.map((f) => (
             <li key={f.plantillaId}>
               <div className={estilos.fila}>
@@ -297,5 +273,62 @@ function ResumenTemporada(t: { partidos: number; goles: number; asistencias: num
         ].join(', ')}
       </span>
     </span>
+  )
+}
+
+// Los umbrales del color del porcentaje (Porcentaje.tsx), marcados en la barra
+const UMBRALES = [60, 80]
+
+// El porcentaje de entrenos como dato protagonista: grande, con una barra del color de su nivel y,
+// debajo, lo que fue, las justificadas y las faltas (GH-234)
+function AsistenciaEntrenos(a: {
+  porcentaje: number | null
+  asiste: number
+  justificada: number
+  falta: number
+}) {
+  const nivel = a.porcentaje === null ? undefined : nivelAsistencia(a.porcentaje)
+  return (
+    <div className={estilos.protagonista} data-nivel={nivel}>
+      <p className={estilos.porcentajeGrande}>
+        {a.porcentaje === null ? (
+          <>
+            <strong aria-hidden="true">—</strong>
+            <span>Sin entrenos registrados</span>
+          </>
+        ) : (
+          <>
+            <strong>{a.porcentaje} %</strong>
+            <span>de asistencia a los entrenos</span>
+          </>
+        )}
+      </p>
+      <div aria-hidden="true">
+        <div className={estilos.barra}>
+          <span className={estilos.relleno} style={{ width: `${a.porcentaje ?? 0}%` }} />
+          {UMBRALES.map((u) => (
+            <span key={u} className={estilos.umbral} style={{ left: `${u}%` }} />
+          ))}
+        </div>
+        <div className={estilos.umbrales}>
+          {UMBRALES.map((u) => (
+            <span key={u} style={{ left: `${u}%` }}>
+              {u}
+            </span>
+          ))}
+        </div>
+      </div>
+      <p className={estilos.desglose}>
+        <span>
+          <strong>{a.asiste}</strong> fue
+        </span>
+        <span>
+          <strong>{a.justificada}</strong> {a.justificada === 1 ? 'justificada' : 'justificadas'}
+        </span>
+        <span>
+          <strong>{a.falta}</strong> {a.falta === 1 ? 'falta' : 'faltas'}
+        </span>
+      </p>
+    </div>
   )
 }
