@@ -197,6 +197,7 @@ describe('convocar a jugadores de otras plantillas', () => {
     procedencia: null,
     lesion: null,
     convocado: true,
+    sancion: null,
     titular: null,
     minutos: null,
     ...extra,

@@ -1096,6 +1096,9 @@ export interface paths {
                         categoria?: string;
                         multasActivas?: boolean;
                         horasLimiteRespuesta?: number;
+                        amarillasCiclo?: number;
+                        partidosRoja?: number;
+                        partidosDobleAmarilla?: number;
                     };
                 };
             };
@@ -1971,6 +1974,163 @@ export interface paths {
                 };
             };
         };
+        trace?: never;
+    };
+    "/api/plantillas/{id}/sanciones": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Sanciones de los jugadores
+         * @description Calculadas con las tarjetas de los partidos jugados y las reglas de la plantilla: lo que le queda a cada uno por cumplir, si está apercibido y sus sanciones. Cualquier miembro.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Sanciones */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SancionesPlantilla"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plantillas/{id}/sanciones/ajuste": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Corregir una sanción
+         * @description Delegado o superior. Cambia los partidos de una sanción (0 la anula), como decida el comité de competición; con `partidos: null` vuelve a los de las reglas.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        partidoId: string;
+                        /** Format: uuid */
+                        jugadorId: string;
+                        tipo: components["schemas"]["TipoSancion"];
+                        partidos: number | null;
+                        nota?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Sanción corregida; devuelve todas */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SancionesPlantilla"];
+                    };
+                };
+                /** @description Datos no válidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/clubes/{cid}/ficha-federacion": {
@@ -9328,6 +9488,12 @@ export interface components {
             multasActivas: boolean;
             /** @description Horas antes del inicio de cada entreno hasta las que los jugadores pueden responder si van (GH-204) */
             horasLimiteRespuesta: number;
+            /** @description Amarillas de cada ciclo, que se cumple con 1 partido; 0, sin ciclo (GH-231) */
+            amarillasCiclo: number;
+            /** @description Partidos de sanción por una roja directa */
+            partidosRoja: number;
+            /** @description Partidos de sanción por una doble amarilla */
+            partidosDobleAmarilla: number;
             /**
              * @description Rol efectivo del usuario en la plantilla
              * @enum {string}
@@ -9450,6 +9616,47 @@ export interface components {
             /** @description Solo para el cuerpo técnico */
             nota: string | null;
         };
+        SancionesPlantilla: {
+            /** @description Solo los que tienen alguna sanción o están apercibidos */
+            jugadores: components["schemas"]["SancionesJugador"][];
+        };
+        SancionesJugador: {
+            /** Format: uuid */
+            jugadorId: string;
+            /** @description Partidos que le quedan por cumplir, por competición */
+            pendientes: {
+                competicion: string;
+                partidos: number;
+            }[];
+            /** @description Competiciones en las que está a una amarilla de cerrar el ciclo */
+            apercibido: {
+                competicion: string;
+                amarillas: number;
+            }[];
+            /** @description La más reciente primero */
+            sanciones: components["schemas"]["Sancion"][];
+        };
+        Sancion: {
+            /**
+             * Format: uuid
+             * @description Partido de la tarjeta que la causa
+             */
+            partidoId: string;
+            rival: string;
+            fecha: string;
+            competicion: string;
+            tipo: components["schemas"]["TipoSancion"];
+            /** @description Partidos según las reglas de la plantilla */
+            calculados: number;
+            /** @description Partidos que cuentan, con el ajuste si lo hay */
+            partidos: number;
+            cumplidos: number;
+            /** @description true si el cuerpo técnico la ha corregido */
+            ajustada: boolean;
+            nota: string | null;
+        };
+        /** @enum {string} */
+        TipoSancion: "roja" | "doble_amarilla" | "ciclo";
         FichaEquipoLeida: {
             /** @example Sofan S.D. "B" */
             equipo: string | null;
@@ -9853,6 +10060,11 @@ export interface components {
             /** @description Minutos jugados, calculados */
             minutos: number | null;
             lesion: components["schemas"]["LesionActual"];
+            /** @description Si está sancionado para este partido (GH-231), en su competición; null si puede jugar */
+            sancion: {
+                /** @description Los que le quedan por cumplir */
+                partidos: number;
+            } | null;
         };
         EventoPartido: {
             /** Format: uuid */

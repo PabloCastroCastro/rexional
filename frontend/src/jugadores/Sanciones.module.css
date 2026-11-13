@@ -1,0 +1,94 @@
+/* Sanciones (GH-231) */
+
+.marca {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-weight: var(--peso-medio);
+  white-space: nowrap;
+}
+
+.marca[data-tipo="sancion"] {
+  color: var(--color-peligro);
+}
+
+.marca[data-tipo="apercibido"] {
+  color: var(--color-aviso);
+}
+
+/* En la ficha, bajo el nombre (y bajo la lesión, si la hay) */
+.franja {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espacio-3);
+  padding: var(--espacio-3) var(--espacio-4);
+  border: 1px solid color-mix(in srgb, var(--color-peligro) 35%, transparent);
+  border-radius: var(--radio-l);
+  background: color-mix(in srgb, var(--color-peligro) 8%, var(--color-superficie));
+}
+
+.franja[data-tipo="apercibido"] {
+  border-color: color-mix(in srgb, var(--color-aviso) 35%, transparent);
+  background: color-mix(in srgb, var(--color-aviso) 10%, var(--color-superficie));
+}
+
+.icono {
+  flex: none;
+  margin-top: 2px;
+  color: var(--color-peligro);
+}
+
+.franja[data-tipo="apercibido"] .icono {
+  color: var(--color-aviso);
+}
+
+.texto {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+  font-size: var(--texto-sm);
+}
+
+.texto strong {
+  font-size: var(--texto-base);
+  font-weight: var(--peso-fuerte);
+}
+
+.detalle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-2);
+  color: var(--color-texto-suave);
+}
+
+.corregir {
+  flex: none;
+}
+
+.formulario {
+  display: grid;
+  gap: var(--espacio-4);
+}
+
+.contexto {
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
+}
+
+.pie {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--espacio-2);
+}
+
+.pie .reglas {
+  margin-right: auto;
+}
+
+.error {
+  color: var(--color-peligro);
+  font-size: var(--texto-sm);
+}

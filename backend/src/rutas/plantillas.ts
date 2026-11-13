@@ -37,6 +37,13 @@ export const EsquemaPlantilla = z
       description:
         'Horas antes del inicio de cada entreno hasta las que los jugadores pueden responder si van (GH-204)',
     }),
+    amarillasCiclo: z.int().openapi({
+      description: 'Amarillas de cada ciclo, que se cumple con 1 partido; 0, sin ciclo (GH-231)',
+    }),
+    partidosRoja: z.int().openapi({ description: 'Partidos de sanción por una roja directa' }),
+    partidosDobleAmarilla: z
+      .int()
+      .openapi({ description: 'Partidos de sanción por una doble amarilla' }),
     rol: z.enum(ROLES).openapi({ description: 'Rol efectivo del usuario en la plantilla' }),
     esAdminClub: z.boolean(),
     jugadorId: z.uuid().nullable().openapi({
@@ -69,6 +76,14 @@ const errores = {
 
 const ParamPlantilla = z.object({ id: EsquemaUuid.openapi({ param: { name: 'id', in: 'path' } }) })
 
+// Reglas de las sanciones (GH-231): números enteros de 0 a 20
+const reglaSancion = (campo: string) =>
+  z
+    .int(`${campo} son un número entero`)
+    .min(0, `${campo} van de 0 a 20`)
+    .max(20, `${campo} van de 0 a 20`)
+    .optional()
+
 const columnasPlantilla = {
   id: plantillas.id,
   clubId: plantillas.clubId,
@@ -78,6 +93,9 @@ const columnasPlantilla = {
   plantillaAnteriorId: plantillas.plantillaAnteriorId,
   multasActivas: plantillas.multasActivas,
   horasLimiteRespuesta: plantillas.horasLimiteRespuesta,
+  amarillasCiclo: plantillas.amarillasCiclo,
+  partidosRoja: plantillas.partidosRoja,
+  partidosDobleAmarilla: plantillas.partidosDobleAmarilla,
 }
 
 // Jugador del usuario (el vinculado en el club) si tiene ficha en la plantilla; si no, null
@@ -339,6 +357,9 @@ export const rutasPlantillas = () =>
                       .min(0, 'La hora límite va de 0 a 72 horas')
                       .max(72, 'La hora límite va de 0 a 72 horas')
                       .optional(),
+                    amarillasCiclo: reglaSancion('Las amarillas del ciclo'),
+                    partidosRoja: reglaSancion('Los partidos por roja'),
+                    partidosDobleAmarilla: reglaSancion('Los partidos por doble amarilla'),
                   })
                   .strict()
                   .refine((d) => Object.values(d).some((v) => v !== undefined), {

@@ -26,6 +26,7 @@ const jugador = (jugadorId: string, nombre: string, dorsal: number, titular: boo
   procedencia: null,
   lesion: null,
   convocado: true,
+  sancion: null,
   titular,
   minutos: titular === null ? null : titular ? 90 : 0,
 })

@@ -361,3 +361,26 @@
   border-radius: var(--radio-completo);
   background: var(--color-secundario);
 }
+
+/* Reglas de las sanciones (GH-231) */
+.reglas {
+  display: grid;
+  gap: var(--espacio-3);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.reglas legend {
+  padding: 0;
+  margin-bottom: var(--espacio-1);
+  font-weight: var(--peso-fuerte);
+}
+
+.reglasCampos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  align-items: end;
+  gap: var(--espacio-3);
+}

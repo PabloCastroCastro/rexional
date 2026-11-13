@@ -264,6 +264,18 @@
             "type": "integer",
             "description": "Horas antes del inicio de cada entreno hasta las que los jugadores pueden responder si van (GH-204)"
           },
+          "amarillasCiclo": {
+            "type": "integer",
+            "description": "Amarillas de cada ciclo, que se cumple con 1 partido; 0, sin ciclo (GH-231)"
+          },
+          "partidosRoja": {
+            "type": "integer",
+            "description": "Partidos de sanción por una roja directa"
+          },
+          "partidosDobleAmarilla": {
+            "type": "integer",
+            "description": "Partidos de sanción por una doble amarilla"
+          },
           "rol": {
             "type": "string",
             "enum": [
@@ -295,6 +307,9 @@
           "plantillaAnteriorId",
           "multasActivas",
           "horasLimiteRespuesta",
+          "amarillasCiclo",
+          "partidosRoja",
+          "partidosDobleAmarilla",
           "rol",
           "esAdminClub",
           "jugadorId"
@@ -663,6 +678,144 @@
           "vueltaPrevista",
           "alta",
           "nota"
+        ]
+      },
+      "SancionesPlantilla": {
+        "type": "object",
+        "properties": {
+          "jugadores": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SancionesJugador"
+            },
+            "description": "Solo los que tienen alguna sanción o están apercibidos"
+          }
+        },
+        "required": [
+          "jugadores"
+        ]
+      },
+      "SancionesJugador": {
+        "type": "object",
+        "properties": {
+          "jugadorId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "pendientes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "competicion": {
+                  "type": "string"
+                },
+                "partidos": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "competicion",
+                "partidos"
+              ]
+            },
+            "description": "Partidos que le quedan por cumplir, por competición"
+          },
+          "apercibido": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "competicion": {
+                  "type": "string"
+                },
+                "amarillas": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "competicion",
+                "amarillas"
+              ]
+            },
+            "description": "Competiciones en las que está a una amarilla de cerrar el ciclo"
+          },
+          "sanciones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Sancion"
+            },
+            "description": "La más reciente primero"
+          }
+        },
+        "required": [
+          "jugadorId",
+          "pendientes",
+          "apercibido",
+          "sanciones"
+        ]
+      },
+      "Sancion": {
+        "type": "object",
+        "properties": {
+          "partidoId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Partido de la tarjeta que la causa"
+          },
+          "rival": {
+            "type": "string"
+          },
+          "fecha": {
+            "type": "string"
+          },
+          "competicion": {
+            "type": "string"
+          },
+          "tipo": {
+            "$ref": "#/components/schemas/TipoSancion"
+          },
+          "calculados": {
+            "type": "integer",
+            "description": "Partidos según las reglas de la plantilla"
+          },
+          "partidos": {
+            "type": "integer",
+            "description": "Partidos que cuentan, con el ajuste si lo hay"
+          },
+          "cumplidos": {
+            "type": "integer"
+          },
+          "ajustada": {
+            "type": "boolean",
+            "description": "true si el cuerpo técnico la ha corregido"
+          },
+          "nota": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "partidoId",
+          "rival",
+          "fecha",
+          "competicion",
+          "tipo",
+          "calculados",
+          "partidos",
+          "cumplidos",
+          "ajustada",
+          "nota"
+        ]
+      },
+      "TipoSancion": {
+        "type": "string",
+        "enum": [
+          "roja",
+          "doble_amarilla",
+          "ciclo"
         ]
       },
       "FichaEquipoLeida": {
@@ -2029,6 +2182,22 @@
           },
           "lesion": {
             "$ref": "#/components/schemas/LesionActual"
+          },
+          "sancion": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "partidos": {
+                "type": "integer",
+                "description": "Los que le quedan por cumplir"
+              }
+            },
+            "required": [
+              "partidos"
+            ],
+            "description": "Si está sancionado para este partido (GH-231), en su competición; null si puede jugar"
           }
         },
         "required": [
@@ -2043,7 +2212,8 @@
           "convocado",
           "titular",
           "minutos",
-          "lesion"
+          "lesion",
+          "sancion"
         ]
       },
       "EventoPartido": {
@@ -4613,6 +4783,21 @@
                     "type": "integer",
                     "minimum": 0,
                     "maximum": 72
+                  },
+                  "amarillasCiclo": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 20
+                  },
+                  "partidosRoja": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 20
+                  },
+                  "partidosDobleAmarilla": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 20
                   }
                 },
                 "additionalProperties": false
@@ -5891,6 +6076,185 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/LesionesJugador"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/sanciones": {
+      "get": {
+        "tags": [
+          "Partidos"
+        ],
+        "summary": "Sanciones de los jugadores",
+        "description": "Calculadas con las tarjetas de los partidos jugados y las reglas de la plantilla: lo que le queda a cada uno por cumplir, si está apercibido y sus sanciones. Cualquier miembro.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sanciones",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SancionesPlantilla"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/sanciones/ajuste": {
+      "put": {
+        "tags": [
+          "Partidos"
+        ],
+        "summary": "Corregir una sanción",
+        "description": "Delegado o superior. Cambia los partidos de una sanción (0 la anula), como decida el comité de competición; con `partidos: null` vuelve a los de las reglas.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "partidoId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "jugadorId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "tipo": {
+                    "$ref": "#/components/schemas/TipoSancion"
+                  },
+                  "partidos": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 20
+                  },
+                  "nota": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "minLength": 1,
+                    "maxLength": 140
+                  }
+                },
+                "required": [
+                  "partidoId",
+                  "jugadorId",
+                  "tipo",
+                  "partidos"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sanción corregida; devuelve todas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SancionesPlantilla"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }
