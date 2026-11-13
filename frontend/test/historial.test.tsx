@@ -231,7 +231,38 @@ describe('asistencia en la plantilla', () => {
       json([resumen('j2', 'Brais', 6, 1, 3)])
     abrir('/plantillas/p1/jugadores/j2')
     const bloque = await screen.findByRole('region', { name: 'Asistencia en esta plantilla' })
-    expect(bloque).toHaveTextContent('60 % de asistencia')
-    expect(bloque).toHaveTextContent('6 asistencias · 1 justificada · 3 faltas')
+    const casilla = (texto: string) => within(bloque).getByText(texto).nextElementSibling
+    expect(casilla('Asistencia')).toHaveTextContent('60 %')
+    expect(within(bloque).getByText('60 %')).toHaveAttribute('data-nivel', 'medio')
+    expect(casilla('Asiste')).toHaveTextContent('6')
+    expect(casilla('Justificadas')).toHaveTextContent('1')
+    expect(casilla('Faltas')).toHaveTextContent('3')
+  })
+
+  it('sin entrenos registrados, un guion y las demás casillas a cero', async () => {
+    conDatos({ plantillas: [senior26] })
+    manejadores['GET /api/clubes/c1/jugadores/j2'] = () =>
+      json({
+        id: 'j2',
+        nombre: 'Brais',
+        fichas: [
+          {
+            plantillaId: 'p1',
+            plantilla: 'Senior',
+            categoria: 'sénior',
+            temporada: '2026-27',
+            dorsal: 7,
+            posicion: null,
+            activo: true,
+          },
+        ],
+      })
+    manejadores['GET /api/plantillas/p1/asistencia/resumen'] = () =>
+      json([resumen('j2', 'Brais', 0, 0, 0)])
+    abrir('/plantillas/p1/jugadores/j2')
+    const bloque = await screen.findByRole('region', { name: 'Asistencia en esta plantilla' })
+    const casilla = (texto: string) => within(bloque).getByText(texto).nextElementSibling
+    expect(casilla('Asistencia')).toHaveTextContent('—Sin entrenos registrados')
+    expect(casilla('Faltas')).toHaveTextContent('0')
   })
 })

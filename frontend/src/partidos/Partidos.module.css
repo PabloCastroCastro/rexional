@@ -694,36 +694,6 @@
   color: var(--color-peligro);
 }
 
-/* Estadísticas de la temporada */
-.cifras {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--espacio-2);
-  margin: 0;
-}
-
-.cifras div {
-  display: grid;
-  gap: 2px;
-  padding: var(--espacio-3) var(--espacio-2);
-  border-radius: var(--radio-l);
-  background: var(--color-superficie);
-  box-shadow: var(--sombra-1);
-  text-align: center;
-}
-
-.cifras dt {
-  color: var(--color-texto-suave);
-  font-size: var(--texto-xs);
-}
-
-.cifras dd {
-  margin: 0;
-  font-size: var(--texto-xl);
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
 /* Tabla de estadísticas de jugadores (GH-164) */
 .envolturaTabla {
   overflow-x: auto;
