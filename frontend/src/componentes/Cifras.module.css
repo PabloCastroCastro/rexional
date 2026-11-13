@@ -1,0 +1,43 @@
+/* Cifras en casillas (GH-226): cuatro por fila en cualquier ancho */
+.cifras {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--espacio-2);
+  margin: 0;
+}
+
+.cifras > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  padding: var(--espacio-3) var(--espacio-1);
+  border-radius: var(--radio-l);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra-1);
+  text-align: center;
+}
+
+/* El número arriba y la etiqueta debajo, sin cambiar el orden del marcado (dt, dd) */
+.cifras dd {
+  order: -1;
+  margin: 0;
+  font-size: var(--texto-xl);
+  font-weight: 700;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+
+.cifras dt {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  color: var(--color-texto-suave);
+  font-size: var(--texto-xs);
+  line-height: 1.2;
+}
+
+.cifras > [data-vacia] dd {
+  color: var(--color-texto-suave);
+  font-weight: var(--peso-medio);
+}

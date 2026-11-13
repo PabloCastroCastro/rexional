@@ -11,10 +11,13 @@ export function Porcentaje({ valor }: { valor: number | null | undefined }) {
       </span>
     )
   }
-  const nivel = valor >= 80 ? 'alto' : valor >= 60 ? 'medio' : 'bajo'
+  const nivel = nivelAsistencia(valor)
   return (
     <span className={estilos.porcentaje} data-nivel={nivel}>
       {valor} %<span className="solo-lectores"> de asistencia</span>
     </span>
   )
 }
+
+export const nivelAsistencia = (valor: number) =>
+  valor >= 80 ? 'alto' : valor >= 60 ? 'medio' : 'bajo'

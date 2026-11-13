@@ -2,6 +2,7 @@ import { ArrowDown, ArrowUp, ArrowUpDown, BarChart3 } from 'lucide-react'
 import { type ReactNode, useState } from 'react'
 import { Link } from 'react-router'
 import { Cargando } from '../componentes/Cargando'
+import { Cifras } from '../componentes/Cifras'
 import { BotonesPdf } from '../componentes/CompartirPdf'
 import { EstadoVacio } from '../componentes/EstadoVacio'
 import { Selector } from '../componentes/Selector'
@@ -261,19 +262,14 @@ function ResultadosEquipo({ equipo }: { equipo: Equipo }) {
   return (
     <section className={estilos.seccion} aria-labelledby="equipo">
       <h2 id="equipo">Resultados</h2>
-      <dl className={estilos.cifras}>
-        {[
-          ['Jugados', equipo.jugados],
-          ['Ganados', equipo.ganados],
-          ['Empatados', equipo.empatados],
-          ['Perdidos', equipo.perdidos],
-        ].map(([texto, n]) => (
-          <div key={texto}>
-            <dt>{texto}</dt>
-            <dd>{n}</dd>
-          </div>
-        ))}
-      </dl>
+      <Cifras
+        cifras={[
+          { texto: 'Jugados', valor: equipo.jugados },
+          { texto: 'Ganados', valor: equipo.ganados },
+          { texto: 'Empatados', valor: equipo.empatados },
+          { texto: 'Perdidos', valor: equipo.perdidos },
+        ]}
+      />
       <p className={estilos.secundario}>
         Goles: {equipo.golesFavor} a favor y {equipo.golesContra} en contra (
         {diferencia > 0 ? `+${diferencia}` : diferencia})
