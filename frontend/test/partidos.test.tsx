@@ -5,6 +5,7 @@ import type { components } from '../src/api/esquema'
 import { type Partido, type ResumenPartido, tipoResultado } from '../src/partidos/datos'
 import { minutoPropuesto } from '../src/partidos/Notas'
 import { type ArchivoPartido, MAXIMO_ARCHIVOS } from '../src/partidos/Planificacion'
+import { cuandoSeJuega } from '../src/partidos/TarjetaPartido'
 import {
   abrir,
   conDatos,
@@ -85,6 +86,10 @@ const detalle = (r: ResumenPartido, convocados: string[] = []): Partido => {
     videos: [],
   }
 }
+
+// La tarjeta de arriba del detalle del partido: la cabecera que contiene el h1 (el rival)
+const tarjetaPartido = () =>
+  screen.getByRole('heading', { level: 1 }).closest('header') as HTMLElement
 
 const enviado = (clave: string) => peticiones.filter((p) => p.clave === clave).map((p) => p.cuerpo)
 
@@ -251,9 +256,13 @@ describe('ficha del partido', () => {
   it('muestra los datos y la convocatoria', async () => {
     conPartidos()
     abrir('/plantillas/p1/partidos/p1')
-    expect(await screen.findByRole('heading', { name: 'en SD Compostela' })).toBeInTheDocument()
-    expect(screen.getByText('Preferente')).toBeInTheDocument()
-    expect(screen.getByText('Partido 17:00')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'SD Compostela' })).toBeInTheDocument()
+    // La tarjeta del partido (GH-229): competición, cuándo, citación y campo, con «Fuera» una vez
+    const tarjeta = tarjetaPartido()
+    expect(tarjeta).toHaveTextContent('Preferente')
+    expect(tarjeta).toHaveTextContent(/· 17:00/)
+    expect(tarjeta).toHaveTextContent(/^(?!.*Fuera.*Fuera).*Fuera/)
+    expect(within(tarjeta).getByRole('button', { name: 'Editar' })).toBeInTheDocument()
     const convocatoria = screen.getByRole('region', { name: /Convocatoria/ })
     expect(
       within(convocatoria)
@@ -272,7 +281,7 @@ describe('ficha del partido', () => {
     conPartidos()
     manejadores['DELETE /api/plantillas/p1/partidos/p1'] = () => new Response(null, { status: 204 })
     const router = abrir('/plantillas/p1/partidos/p1')
-    await userEvent.click(await screen.findByRole('button', { name: 'Borrar' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Borrar partido' }))
     const confirmacion = screen.getByRole('alertdialog', {
       name: '¿Borrar el partido contra SD Compostela?',
     })
@@ -285,9 +294,9 @@ describe('ficha del partido', () => {
   it('el rol jugador ve la ficha sin editar ni borrar', async () => {
     conPartidos(plantilla('p1', 'Senior', '2026-27', { rol: 'jugador', esAdminClub: false }))
     abrir('/plantillas/p1/partidos/p1')
-    expect(await screen.findByRole('heading', { name: 'en SD Compostela' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'SD Compostela' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Editar' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Borrar' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Borrar partido' })).not.toBeInTheDocument()
   })
 })
 
@@ -324,7 +333,7 @@ describe('vídeos del partido', () => {
   it('sin vídeos, el jugador no ve la sección', async () => {
     conVideos(plantilla('p1', 'Senior', '2026-27', { rol: 'jugador', esAdminClub: false }), [])
     abrir('/plantillas/p1/partidos/p1')
-    expect(await screen.findByRole('heading', { name: 'en SD Compostela' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'SD Compostela' })).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Vídeos' })).not.toBeInTheDocument()
   })
 
@@ -414,7 +423,7 @@ describe('notas del partido', () => {
   it('el jugador no ve la sección ni pide las notas', async () => {
     conNotas(plantilla('p1', 'Senior', '2026-27', { rol: 'jugador', esAdminClub: false }))
     abrir('/plantillas/p1/partidos/p1')
-    expect(await screen.findByRole('heading', { name: 'en SD Compostela' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'SD Compostela' })).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Notas' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Anotar' })).not.toBeInTheDocument()
     expect(peticiones.some((p) => p.clave.endsWith('/notas'))).toBe(false)
@@ -554,7 +563,7 @@ describe('planificación del partido', () => {
   it('el jugador no ve la sección ni pide los archivos', async () => {
     conArchivos(plantilla('p1', 'Senior', '2026-27', { rol: 'jugador', esAdminClub: false }))
     abrir('/plantillas/p1/partidos/p1')
-    expect(await screen.findByRole('heading', { name: 'en SD Compostela' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'SD Compostela' })).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Planificación' })).not.toBeInTheDocument()
     expect(peticiones.some((p) => p.clave.endsWith('/archivos'))).toBe(false)
   })
@@ -675,5 +684,67 @@ describe('tipo de resultado (GH-228)', () => {
     expect(tipoResultado({ golesFavor: 0, golesContra: 1 })).toBe('derrota')
     expect(tipoResultado({ golesFavor: null, golesContra: null })).toBeNull()
     expect(tipoResultado({ golesFavor: 1, golesContra: null })).toBeNull()
+  })
+})
+
+describe('tarjeta del partido (GH-229)', () => {
+  it('cuándo se juega, en lenguaje de persona', () => {
+    // Viernes 13 de noviembre de 2026
+    const hoyEs = '2026-11-13'
+    expect(cuandoSeJuega('2026-11-13', '17:00', hoyEs)).toBe('Hoy · 17:00')
+    expect(cuandoSeJuega('2026-11-14', '11:30', hoyEs)).toBe('Mañana · 11:30')
+    expect(cuandoSeJuega('2026-11-17', null, hoyEs)).toBe('Martes')
+    expect(cuandoSeJuega('2026-11-28', '11:30', hoyEs)).toBe('Sáb 28 nov · 11:30')
+    expect(cuandoSeJuega('2026-11-08', '17:00', hoyEs)).toBe('Dom 8 nov · 17:00')
+  })
+
+  it('aplazado, sin hora ni citación', async () => {
+    conPartidos(senior26, [
+      resumen('p1', '2026-12-06', 'UD Ourense', {
+        estado: 'aplazado',
+        hora: '17:00',
+        horaCitacion: '16:00',
+        local: true,
+        lugar: 'Campo municipal',
+      }),
+    ])
+    abrir('/plantillas/p1/partidos/p1')
+    await screen.findByRole('heading', { name: 'UD Ourense' })
+    const tarjeta = tarjetaPartido()
+    expect(tarjeta).toHaveTextContent('Aplazado')
+    expect(tarjeta).not.toHaveTextContent('Citación')
+    expect(tarjeta).not.toHaveTextContent('17:00')
+    expect(tarjeta).toHaveTextContent('Casa · Campo municipal')
+  })
+
+  it('sin competición, hora, citación ni campo, no deja huecos', async () => {
+    conPartidos(senior26, [resumen('p1', '2026-12-06', 'Arosa SC')])
+    abrir('/plantillas/p1/partidos/p1')
+    await screen.findByRole('heading', { name: 'Arosa SC' })
+    const tarjeta = tarjetaPartido()
+    expect(within(tarjeta).queryByRole('list')).not.toBeInTheDocument()
+    expect(tarjeta).toHaveTextContent(/vsArosa SC/)
+    expect(tarjeta).toHaveTextContent('Dom 6 dic')
+  })
+
+  it('jugado: el resultado desde nuestro lado y su pastilla, sin la hora', async () => {
+    conPartidos(senior26, PROXIMOS, [
+      resumen('p9', '2026-10-04', 'CD Barco', {
+        estado: 'jugado',
+        golesFavor: 0,
+        golesContra: 1,
+        local: false,
+        hora: '17:00',
+        competicion: 'Preferente',
+      }),
+    ])
+    abrir('/plantillas/p1/partidos/p9')
+    await screen.findByRole('heading', { name: 'CD Barco' })
+    const tarjeta = tarjetaPartido()
+    expect(tarjeta).toHaveTextContent('Preferente · Dom 4 oct')
+    expect(within(tarjeta).getByText('0–1')).toBeInTheDocument()
+    expect(within(tarjeta).getByText('Derrota')).toHaveAttribute('data-resultado', 'derrota')
+    expect(tarjeta).not.toHaveTextContent('17:00')
+    expect(tarjeta).toHaveTextContent('Fuera')
   })
 })

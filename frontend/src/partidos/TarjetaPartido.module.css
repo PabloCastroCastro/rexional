@@ -1,0 +1,152 @@
+/* La tarjeta del partido (GH-229), en el color del club */
+.tarjeta {
+  position: relative;
+  display: grid;
+  gap: var(--espacio-3);
+  padding: var(--espacio-4);
+  border-radius: var(--radio-l);
+  background: var(--color-primario);
+  box-shadow: var(--sombra-1);
+  color: var(--color-sobre-primario);
+}
+
+.editar {
+  position: absolute;
+  top: var(--espacio-2);
+  right: var(--espacio-2);
+  display: grid;
+  place-items: center;
+  width: var(--altura-tactil);
+  height: var(--altura-tactil);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radio-m);
+  background: color-mix(in srgb, currentColor 14%, transparent);
+  color: inherit;
+  cursor: pointer;
+}
+
+.editar:hover {
+  background: color-mix(in srgb, currentColor 22%, transparent);
+}
+
+.arriba {
+  padding-right: calc(var(--altura-tactil) + var(--espacio-2));
+  font-family: var(--fuente-titulos);
+  font-size: var(--texto-sm);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  opacity: 0.85;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Nuestro escudo, el centro (vs o el resultado) y el rival, que se lleva el resto del ancho */
+.equipos {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--espacio-3);
+}
+
+.centro {
+  display: grid;
+  justify-items: center;
+  gap: var(--espacio-1);
+  min-width: 2.5rem;
+}
+
+.vs {
+  font-family: var(--fuente-titulos);
+  font-size: var(--texto-base);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  opacity: 0.75;
+  text-transform: uppercase;
+}
+
+.marcador {
+  font-family: var(--fuente-titulos);
+  font-size: 2.4rem;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Sobre la superficie y con el color del resultado: se lee con cualquier color de club (GH-228) */
+.pastilla {
+  padding: 0 var(--espacio-2);
+  border-radius: var(--radio-completo);
+  background: var(--color-superficie);
+  font-family: var(--fuente-titulos);
+  font-size: var(--texto-xs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.pastilla[data-resultado="victoria"] {
+  color: var(--color-victoria);
+}
+
+.pastilla[data-resultado="empate"] {
+  color: var(--color-empate);
+}
+
+.pastilla[data-resultado="derrota"] {
+  color: var(--color-derrota);
+}
+
+.aplazado {
+  padding: 0 var(--espacio-2);
+  border: 1px solid currentColor;
+  border-radius: var(--radio-completo);
+  font-family: var(--fuente-titulos);
+  font-size: var(--texto-sm);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  opacity: 0.85;
+  text-transform: uppercase;
+}
+
+.rival {
+  font-size: 1.5rem;
+  line-height: 1.05;
+  overflow-wrap: anywhere;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+
+.cuando {
+  font-family: var(--fuente-titulos);
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.datos {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  font-size: var(--texto-sm);
+  list-style: none;
+}
+
+.datos li {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  opacity: 0.92;
+}
+
+.datos svg {
+  flex: none;
+}
+
+.datos strong {
+  font-weight: var(--peso-fuerte);
+  font-variant-numeric: tabular-nums;
+}
