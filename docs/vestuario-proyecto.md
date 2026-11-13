@@ -811,6 +811,7 @@ Una issue está terminada cuando: cumple sus criterios de aceptación en el ento
 | 12 · Asistente de ejercicios | Claves de API, diagrama táctico del ejercicio y generación de imágenes, animación y PDF en el servidor | v2.1.0, prevista |
 | 13 · Jugadores invitados | Convocar y, si el entrenador quiere, meter en la dinámica del equipo a jugadores de otra plantilla, de un club asociado o a prueba | v1.7.0, con GH-187, GH-188 y GH-189 |
 | 14 · Cambio de temporada | Crear las plantillas de la temporada nueva a partir de las de la anterior | antes de la temporada 2027-28, prevista |
+| 15 · Diseño | Pulido visual de todas las pestañas: Plantilla, Entrenos, Partidos, Multas y Más | pendiente |
 
 Versión publicada en los ciclos ya cerrados y prevista en el resto. Los ciclos 1 a 3 no tuvieron release propia: se publicaron juntos en la v1.0.0. Lo que queda abierto de un ciclo ya publicado sale en la release siguiente a terminarlo.
 
@@ -852,6 +853,7 @@ Fuera de los ciclos, el rediseño de la interfaz salió en la v1.10.0: la ficha 
 | Ciclo 12 · Asistente de ejercicios | Claves de API, diagrama táctico del ejercicio y generación de imágenes, animación y PDF en el servidor (v2.1.0, prevista) |
 | Ciclo 13 · Jugadores invitados | Convocar y, si el entrenador quiere, meter en la dinámica del equipo a jugadores de otra plantilla del club (juveniles, equipo B), de un club asociado o a prueba (v1.7.0, con GH-187, GH-188 y GH-189) |
 | Ciclo 14 · Cambio de temporada | Crear las plantillas de la temporada nueva a partir de las de la anterior, copiando jugadores y cuerpo técnico (antes de la temporada 2027-28) |
+| Ciclo 15 · Diseño | Pulido visual de las pantallas, empezando por Plantilla, Entrenos y Partidos: estados sobre el dorsal, nombres que no se cortan, color solo en lo marcado, barra fija con el progreso, guardado fiable, asistencia por entreno y por mes, horario como resumen, biblioteca de ejercicios por categorías, partidos con marcador y racha, ficha del partido en Previa y Partido, y convocatoria por líneas |
 
 ### 11.3 Issues
 
@@ -2196,6 +2198,656 @@ Crear las plantillas de una temporada nueva a partir de las de la anterior (secc
 - [ ] Asistente en el frontend (solo administradores del club): elegir qué plantillas de la temporada anterior continúan, con qué nombre y categoría, y qué copiar, con un resumen antes de confirmar
 - [ ] La temporada anterior sigue consultable; el selector muestra primero la nueva
 - [ ] Tests
+
+---
+
+### Milestone: Ciclo 15 · Diseño
+
+Creado el 2026-11-13 tras revisar como diseñador las pantallas de Plantilla (de las opciones estudiadas para la línea bajo el nombre se eligió la señal sobre el dorsal) de Entrenos (Pasar lista, Historial, Horario y Ejercicios) y de Partidos (lista, ficha del partido, convocatoria y alineación). La revisión del acta se queda como está; solo se acelera su carga. Multas, que ya estaba bien resuelta, solo cambia la lista y una casilla del catálogo. En Más, la página principal se queda igual; cambian las sesiones de Cuenta y Configuración se parte en dos pestañas. Con esto se han revisado todas las pestañas de la app.
+
+#### GH-250
+**Título:** En Bajas, el botón «Reactivar» se sale de la fila en el móvil
+**Etiquetas:** bug, frontend
+
+En la vista «Bajas» de Plantilla, a 390 px el botón «Reactivar» se sale por el borde derecho de la tarjeta y el nombre se queda en «Sergio…».
+
+**Criterios de aceptación**
+- [ ] A 360 px la fila de una baja cabe entera, sin salirse de la tarjeta
+- [ ] «Reactivar» pasa a ser un botón solo con el icono ↺, de 44 × 44 px, con `aria-label="Reactivar a <nombre>"`
+- [ ] El nombre se lee completo si cabe y, si no, se corta con «…» sin empujar nada
+- [ ] Test
+
+#### GH-251
+**Título:** Lesión y sanción, como señal sobre el dorsal en la lista de Plantilla
+**Etiquetas:** feature, frontend
+
+Debajo del nombre, en la lista de Plantilla, se mezclan la posición y los estados («Defensa · Lesionado»). Cuando el estado no cabe baja de línea, deja el punto colgando y la fila crece. El estado pasa a ser una señal sobre el dorsal y la segunda línea queda solo para la posición. Sigue a GH-230 y GH-231.
+
+**Criterios de aceptación**
+- [ ] Debajo del nombre, solo la posición; en los invitados, «Procedencia · N partidos»
+- [ ] Sin posición no se escribe «Sin posición»: la fila queda en una sola línea
+- [ ] Lesionado, sancionado o apercibido se ven como un icono de 20 px en la esquina inferior derecha del dorsal, sobre un círculo del color de la superficie con borde
+- [ ] Si coinciden varios, se muestra uno solo, por este orden: sanción, lesión, apercibido
+- [ ] Iconos nuevos en toda la app (Plantilla, convocatoria, pasar lista, Mi asistencia y ficha): cruz para la lesión, tarjeta roja para la sanción y tarjeta amarilla para el apercibido. Fuera de Plantilla se mantiene el texto («Sancionado · N partidos»)
+- [ ] El lector de pantalla lee el texto completo («Lesionado · vuelve en 2 sem.», «Sancionado · 1 partido»)
+- [ ] Todas las filas de dos líneas tienen la misma altura
+- [ ] En Pasar lista, la lesión también sale como señal sobre el dorsal, y debajo del nombre solo cuándo vuelve («Vuelve en 2 semanas»)
+- [ ] En la convocatoria, lesión y sanción también salen como señal sobre el dorsal (cruz y tarjeta roja), con su texto en la segunda línea
+- [ ] Test
+
+#### GH-252
+**Título:** El nombre del jugador no se corta por la multa
+**Etiquetas:** feature, frontend
+
+En el móvil, la multa, el porcentaje y la flecha ocupan unos 150 px a la derecha de la fila y los nombres se cortan («Xoán Rodrí…», «Pablo Fern…»). Además, la multa en ámbar se confunde con los avisos. Depende de GH-251, que deja la segunda línea solo para la posición.
+
+**Criterios de aceptación**
+- [ ] La multa pendiente pasa a la segunda línea, detrás de la posición, en gris y con el icono de monedas: «Defensa · 🪙 4,00 €»
+- [ ] A la derecha quedan solo el porcentaje y la flecha
+- [ ] A 360 px se leen enteros los nombres de hasta unos 22 caracteres
+- [ ] El ámbar queda solo para la asistencia media y el apercibido
+- [ ] Test
+
+#### GH-253
+**Título:** Qué mide el porcentaje de asistencia, sin saltos al cargar
+**Etiquetas:** feature, frontend
+
+En la lista de Plantilla, el «85 %» no dice qué mide. Además llega después que la lista y, al aparecer, recorta los nombres delante del usuario.
+
+**Criterios de aceptación**
+- [ ] La lista tiene una cabecera pequeña con «Asistencia», alineada sobre la columna del porcentaje
+- [ ] Sin datos, «—» en texto suave, sin pastilla
+- [ ] Mientras carga, el hueco del porcentaje está reservado (skeleton) y la fila no cambia de tamaño
+- [ ] Test
+
+#### GH-254
+**Título:** Recuento de activos y bajas en Plantilla
+**Etiquetas:** feature, frontend
+
+Con 36 jugadores no se sabe cuántos hay sin contarlos.
+
+**Criterios de aceptación**
+- [ ] Los segmentos muestran el recuento: «Activos · 35» y «Bajas · 1»
+- [ ] El rol jugador, que no ve los segmentos, ve el recuento junto al título: «Plantilla · 35»
+- [ ] Test
+
+#### GH-255
+**Título:** Pasar lista dice «Guardado» sin haber guardado nada
+**Etiquetas:** bug, frontend
+
+En Pasar lista, los lesionados salen marcados como justificados por «Lesión» (GH-230), pero esa marca solo se guarda junto con el resto de la lista. Aun así, el recuento ya los cuenta («2 justificadas») y el indicador pone «Guardado» sin haber enviado nada: si el entrenador se va confiando en lo que lee, el historial dice otra cosa.
+
+**Criterios de aceptación**
+- [ ] Al abrir una lista sin pasar, el indicador dice «Sin guardar», no «Guardado»
+- [ ] Los lesionados siguen saliendo justificados con «Lesión», pero no se guardan hasta el primer toque en la lista; desde ese momento se guardan con el resto
+- [ ] El indicador solo dice «Guardado» después de una respuesta correcta del servidor
+- [ ] Una lista ya pasada abre con «Guardado»
+- [ ] Test
+
+#### GH-256
+**Título:** En Pasar lista, solo el estado marcado lleva color
+**Etiquetas:** feature, frontend
+
+En Pasar lista cada fila muestra los tres estados en color (check verde, justificada ámbar y cruz roja), estén marcados o no: 108 iconos de color para 36 decisiones, y no se ve de un vistazo a quién se ha marcado ya.
+
+**Criterios de aceptación**
+- [ ] Sin marcar, los tres botones van en gris neutro (borde y icono suaves)
+- [ ] El estado marcado se rellena con su color y el icono en blanco (en oscuro, en el color del fondo)
+- [ ] La justificada cambia el icono de documento por una mano levantada («avisó»)
+- [ ] El contraste del icono gris sobre el botón cumple 3:1
+- [ ] Test
+
+#### GH-257
+**Título:** Nombres que no se cortan en Pasar lista
+**Etiquetas:** feature, frontend
+
+En Pasar lista los tres botones ocupan unos 150 px y los nombres se cortan («Breogán Couto …», «Uxío Lago Mos…», «Ignacio Saavedr…»), cuando el nombre es justo lo que se busca.
+
+**Criterios de aceptación**
+- [ ] La lista muestra nombre y primer apellido («Breogán Couto»)
+- [ ] Si dos jugadores de la lista coinciden en nombre y primer apellido, a esos dos se les añade el segundo apellido
+- [ ] A 360 px se leen enteros los nombres de la plantilla del seed
+- [ ] El lector de pantalla sigue leyendo el nombre completo en la leyenda de cada fila
+- [ ] Test
+
+#### GH-258
+**Título:** Pasar lista: la lista más arriba y un solo recuento
+**Etiquetas:** feature, frontend
+
+Antes de la lista de Pasar lista hay pestañas, fecha, sesión, la tarjeta «Planificar el entreno», «¿Quién va?», «Resumen para WhatsApp», el recuento y «Guardado». En el móvil solo se ven 3 jugadores sin hacer scroll, y los dos recuentos seguidos («0 van · 0 dudan…» y «0 asisten · 2 justificadas…») se leen igual y significan cosas distintas.
+
+**Criterios de aceptación**
+- [ ] Sin plan, «Planificar» es un enlace en la fila de la sesión; con plan se mantiene la tarjeta del plan
+- [ ] El día del entreno, «¿Quién va?» es una línea plegable con el resumen («1 no va · 31 sin responder»); al abrirla, el recuento completo y «Resumen para WhatsApp»
+- [ ] El recuento de la lista sale de la cabecera y pasa a la barra fija (GH-259)
+- [ ] A 390 × 844 se ven al menos 6 jugadores sin hacer scroll
+- [ ] Test
+
+#### GH-259
+**Título:** Barra fija en Pasar lista con el progreso y «El resto asiste»
+**Etiquetas:** feature, frontend
+
+En Pasar lista, el recuento y el indicador de guardado se pierden al bajar, y «Marcar el resto como asiste» queda al final, detrás de los 36 jugadores. Va junto con GH-258.
+
+**Criterios de aceptación**
+- [ ] Barra fija sobre la navegación inferior, con: barra de progreso con los colores de asiste, justificada y falta; «N de M marcados»; el estado del guardado (GH-255); y «El resto asiste (N)» como acción principal
+- [ ] Con todos marcados, el botón se sustituye por «Lista completa» con un check
+- [ ] El lector de pantalla lee el desglose («10 de 32 marcados: 4 asisten, 3 justificadas, 3 faltan»)
+- [ ] La barra no tapa la última fila y respeta la zona segura del móvil
+- [ ] Test
+
+#### GH-260
+**Título:** «¿Quién va?» claramente distinto de pasar lista
+**Etiquetas:** feature, frontend
+
+En un entreno futuro, las respuestas se marcan con la misma fila de tres botones que pasar lista, pero significan «va / duda / no va», y el botón del medio es una «?» ámbar que el día del entreno pasa a ser «justificada». El título «¿Quién va?» es una etiqueta pequeña y es fácil confundir las dos cosas.
+
+**Criterios de aceptación**
+- [ ] En un entreno futuro, «¿Quién va?» es una sección con título, el plazo para responder («Pueden responder hasta el martes a las 20:00») y el recuento en pastillas
+- [ ] Las respuestas se muestran y se cambian con un control de texto en pastillas («Va / Duda / No va»), no con los botones de icono de pasar lista
+- [ ] «Resumen para WhatsApp» va dentro de la sección
+- [ ] Test
+
+#### GH-261
+**Título:** Cambiar hora y cancelar el entreno desde un menú de la sesión
+**Etiquetas:** feature, frontend
+
+«Cambiar hora» y «Cancelar entreno» están al final de Pasar lista, debajo de todos los jugadores.
+
+**Criterios de aceptación**
+- [ ] La pastilla de la sesión elegida tiene un botón «⋯» (44 px de área táctil, `aria-label="Opciones del entreno"`)
+- [ ] Abre una hoja inferior con el día y la hora del entreno, y las opciones: Cambiar la hora, Planificar el entreno, Resumen para WhatsApp y Cancelar entreno (al final, en rojo y con la confirmación de ahora)
+- [ ] Desaparecen los botones del final de la lista
+- [ ] Test
+
+#### GH-262
+**Título:** Motivos rápidos para la falta justificada
+**Etiquetas:** feature, frontend
+
+Al marcar una falta justificada aparece un campo de texto con el placeholder como única etiqueta, y en el móvil hay que escribir el motivo cada vez.
+
+**Criterios de aceptación**
+- [ ] Al marcar «justificada», debajo de la fila salen chips con motivos frecuentes: Lesión, Trabajo, Estudios, Enfermo y Otro
+- [ ] Tocar un chip guarda ese motivo; tocarlo otra vez lo quita
+- [ ] «Otro» abre un campo de texto con etiqueta, que recibe el foco
+- [ ] Un motivo guardado que no es de la lista sale en el campo de «Otro»
+- [ ] Los lesionados salen con «Lesión» elegido
+- [ ] Test
+
+#### GH-263
+**Título:** Ir al próximo entreno desde un día sin entreno
+**Etiquetas:** feature, frontend
+
+En un día sin entreno, Pasar lista solo ofrece «Crear entreno»: para llegar al siguiente hay que ir día a día con la flecha.
+
+**Criterios de aceptación**
+- [ ] El estado vacío muestra una tarjeta «Próximo entreno» con el día y la hora, que lleva a ese día
+- [ ] «Crear un entreno hoy» pasa a ser la acción secundaria
+- [ ] Si no hay ningún entreno futuro, se mantiene el estado vacío de ahora
+- [ ] Test
+
+#### GH-264
+**Título:** Historial empieza por el pasado: el próximo entreno en una línea y el resto plegado
+**Etiquetas:** feature, frontend
+
+En Historial, toda la primera pantalla del móvil son los 5 próximos entrenos, de 4 líneas cada uno, con «Sin plan» y «0 van · 0 dudan · 0 no van · 32 sin responder» repetidos. Para ver el primer entreno pasado hay que bajar casi 800 px.
+
+**Criterios de aceptación**
+- [ ] Arriba, una tarjeta «Próximo» con el siguiente entreno en una línea: día y hora y, debajo, las respuestas («10 van · 2 dudan · 3 no van») o «Sin respuestas» si no hay ninguna
+- [ ] El resto de próximos, plegados tras «N próximos más»; al abrirlos, una línea por entreno con el mismo formato
+- [ ] «Sin plan» desaparece; si el entreno tiene plan, se indica con un icono
+- [ ] Los de hoy sin lista pasada siguen contando como próximos (GH-215)
+- [ ] A 390 × 844 se ve al menos un mes del historial sin hacer scroll
+- [ ] Test
+
+#### GH-265
+**Título:** Asistencia de cada entreno en porcentaje y barra en el historial
+**Etiquetas:** feature, frontend
+
+En Historial, cada entreno muestra «✓ 17 · 📄 2 · ✕ 6»: números sueltos que no se pueden comparar entre entrenos sin calcular el total, con los ceros en color («✕ 0» en rojo) y el icono de documento para la justificada.
+
+**Criterios de aceptación**
+- [ ] Cada entreno con lista pasada muestra su porcentaje de asistencia: asisten entre marcados (asisten + justificadas + faltan), redondeado
+- [ ] El porcentaje con los colores de Plantilla: verde desde 80 %, ámbar desde 60 % y rojo por debajo
+- [ ] Debajo del porcentaje, una barra fina con la proporción de asisten, justificadas y faltan
+- [ ] Los recuentos pasan a la segunda línea, junto a la hora; los ceros en gris y la justificada con el icono de la mano (GH-256)
+- [ ] El lector de pantalla lee el entreno completo («Jueves, 15 oct, 20:00–21:30: 68 % de asistencia, 17 asisten, 2 justificadas, 6 faltan»)
+- [ ] «Sin pasar lista» se mantiene como ahora
+- [ ] Test
+
+#### GH-266
+**Título:** Resumen de cada mes en el historial, cabecera fija y meses antiguos plegados
+**Etiquetas:** feature, frontend
+
+En Historial, los meses son una etiqueta gris pequeña sin información, y la lista crece sin límite (unos 80 entrenos a final de temporada).
+
+**Criterios de aceptación**
+- [ ] La cabecera de cada mes muestra su resumen: número de entrenos, asistencia media del mes (asisten entre marcados, solo de los entrenos con lista) y cuántos quedan sin pasar lista («Octubre · 10 entrenos · 72 % asistencia · 6 sin lista»)
+- [ ] Si ningún entreno del mes tiene lista: «4 entrenos · ninguna lista pasada»
+- [ ] La cabecera del mes se queda fija arriba mientras se baja por ese mes
+- [ ] El mes en curso y el anterior salen abiertos; los más antiguos, plegados con su resumen, y se abren y cierran tocando la cabecera (`aria-expanded`)
+- [ ] Test
+
+#### GH-267
+**Título:** Dobles sesiones agrupadas bajo su día en el historial
+**Etiquetas:** feature, frontend
+
+En Historial, un día con dos sesiones aparece como dos filas seguidas con la misma fecha («Martes, 20 oct»), y parece un duplicado.
+
+**Criterios de aceptación**
+- [ ] Las sesiones del mismo día se agrupan bajo una fila con el día y «2 sesiones»
+- [ ] Cada sesión, debajo y con sangría, muestra su hora, su porcentaje o «Sin pasar lista», y abre esa sesión en Pasar lista
+- [ ] Test
+
+#### GH-268
+**Título:** El horario guardado como resumen, con «Editar horario»
+**Etiquetas:** feature, frontend
+
+En Horario, el horario guardado siempre se muestra como un formulario abierto: cada visita parece una edición y un toque sin querer en un día lo cambia. El rol jugador solo ve un párrafo gris.
+
+**Criterios de aceptación**
+- [ ] Con horario guardado, la pestaña muestra un resumen de solo lectura: la semana L–D con los días de entreno marcados, las horas agrupadas («Martes y jueves · 20:00–21:30») y la temporada («Del 1 sept al 15 jun»)
+- [ ] Para el cuerpo técnico, dos cifras: entrenos del horario ya hechos y por venir, y el botón «Editar horario», que abre el formulario
+- [ ] «Cancelar» en el formulario vuelve al resumen sin guardar; al guardar, también vuelve al resumen
+- [ ] Sin horario guardado, se abre directamente el formulario, como ahora
+- [ ] El rol jugador ve el mismo resumen, sin las cifras ni el botón, con el próximo entreno
+- [ ] Test
+
+#### GH-269
+**Título:** El aviso del horario dice solo lo que cambia respecto a lo guardado
+**Etiquetas:** feature, backend, frontend
+
+Al abrir el horario guardado, sin tocar nada, el aviso dice «Se crearán 61 entrenos… Los entrenos futuros del horario que aún no tienen asistencia se rehacen» y «Guardar horario» está activo. Además pone «del 13 de noviembre» aunque el campo diga 1 de septiembre. Asusta y no dice qué cambia de verdad.
+
+**Criterios de aceptación**
+- [ ] El servidor puede calcular lo que haría un cambio de horario sin guardarlo (por ejemplo, una simulación del `PUT /api/plantillas/{id}/horario`): entrenos que se añaden, que se quitan y que cambian de hora, por día de la semana, sin contar los que tienen lista pasada ni los sueltos
+- [ ] Sin cambios respecto a lo guardado, el aviso dice «Sin cambios respecto al horario guardado» y «Guardar» está desactivado
+- [ ] Con cambios, el aviso lista solo lo que cambia: «+ Se añaden 30 entrenos los miércoles», «− Se quitan 30 entrenos de los jueves», «↻ Cambia la hora de 30 entrenos de los jueves: de 20:00–21:30 a 19:30–21:00»
+- [ ] Debajo de la lista: «Los entrenos sueltos y los que ya tienen la lista pasada no se tocan». La explicación de arriba del formulario desaparece
+- [ ] El aviso se actualiza al cambiar días, horas o fechas (con un pequeño retardo para no llamar al servidor en cada tecla)
+- [ ] Un horario nuevo dice «Se crean N entrenos: …», como ahora
+- [ ] Tests
+
+#### GH-270
+**Título:** Horario: una fila por día y las fechas como temporada
+**Etiquetas:** feature, frontend
+
+En el formulario de Horario, cada día ocupa dos campos con etiqueta («Inicio del martes», «Fin del martes») y un «Opcional» debajo: seis textos para decir «20:00–21:30» dos veces. Las fechas son dos campos sueltos con una ayuda («25 de mayo, 15 de junio…») que parece una lista de fechas reales.
+
+**Criterios de aceptación**
+- [ ] Una fila por día marcado: el nombre del día y los campos de inicio y fin en la misma línea, `Martes [20:00] – [21:30]`
+- [ ] Cada campo mantiene su etiqueta para el lector de pantalla («Inicio del martes», «Fin del martes (opcional)»)
+- [ ] Las fechas, bajo «Temporada de entrenos», como `[01/09/2026] al [15/06/2027]`
+- [ ] Los errores de hora siguen saliendo debajo de su fila
+- [ ] Cabe a 360 px sin scroll horizontal
+- [ ] Test
+
+#### GH-271
+**Título:** «Quitar horario» separado, al final y en rojo
+**Etiquetas:** feature, frontend
+
+«Quitar horario» va pegado a «Guardar horario» y en el mismo verde, aunque borra entrenos.
+
+**Criterios de aceptación**
+- [ ] «Quitar horario» va al final del formulario, separado por una línea y en rojo, con lo que hace debajo: «Borra los entrenos futuros del horario que no tienen lista pasada»
+- [ ] Se mantiene la confirmación de ahora
+- [ ] Junto a «Guardar» solo queda «Cancelar»
+- [ ] Test
+
+#### GH-272
+**Título:** Biblioteca de ejercicios: buscador con «＋», chips de categoría y el resto en «Filtros»
+**Etiquetas:** feature, frontend
+
+En la biblioteca de ejercicios hay cinco controles antes del primer ejercicio: el buscador, dos desplegables que usan su primera opción como etiqueta («Categorías», «Etiquetas»), una casilla «Archivados» muy por debajo de 44 px y el botón «Nuevo ejercicio». La lista empieza a mitad de pantalla.
+
+**Criterios de aceptación**
+- [ ] El buscador ocupa la fila con un botón «＋» al lado (`aria-label="Nuevo ejercicio"`, 44 px), solo para quien gestiona
+- [ ] Debajo, una fila de chips que se desliza en horizontal: «Filtros» y una por categoría con su color (GH-273); tocar una la elige y tocarla otra vez la quita
+- [ ] «Filtros» abre una hoja inferior con las etiquetas en chips y el interruptor «Mostrar archivados», y los botones «Quitar filtros» y «Ver N ejercicios»
+- [ ] Con filtros puestos, el chip «Filtros» muestra cuántos hay
+- [ ] Los filtros siguen guardándose en la dirección, como ahora
+- [ ] La búsqueda no distingue tildes ni mayúsculas
+- [ ] Test
+
+#### GH-273
+**Título:** Ejercicios: color e icono por categoría en la miniatura y nombres en dos líneas
+**Etiquetas:** feature, frontend
+
+Casi ningún ejercicio tiene foto, así que la biblioteca es una columna de iconos de «imagen» grises e idénticos. Además, los nombres largos se cortan («Movilidad articular y carrera co…»).
+
+**Criterios de aceptación**
+- [ ] Cada categoría tiene un color y un icono propios, con tokens en claro y en oscuro: calentamiento (llama), técnica (balón), táctica (esquema), finalización (diana), físico (rayo), partido (jugadores), vuelta a la calma (viento) y sin categoría (neutro)
+- [ ] Sin foto ni vídeo, la miniatura es el icono de la categoría sobre su color suave; con foto, la foto, como ahora
+- [ ] El nombre del ejercicio ocupa hasta dos líneas antes de cortarse
+- [ ] Los colores de categoría cumplen 3:1 sobre la superficie en los dos temas
+- [ ] Test
+
+#### GH-274
+**Título:** Biblioteca de ejercicios agrupada por categoría, en el orden de una sesión
+**Etiquetas:** feature, frontend
+
+La biblioteca está en orden alfabético, pero un entrenador piensa la sesión en orden: calentamiento, técnica o táctica, finalización, partido y vuelta a la calma.
+
+**Criterios de aceptación**
+- [ ] La lista se agrupa por categoría en este orden: Calentamiento, Técnica, Táctica, Finalización, Físico, Partido, Vuelta a la calma y Sin categoría; dentro de cada grupo, por nombre
+- [ ] Cada grupo tiene un encabezado con el color de la categoría (GH-273), su nombre y cuántos ejercicios tiene
+- [ ] Con una categoría elegida se ve solo ese grupo; con una búsqueda, los grupos que tienen resultados
+- [ ] Test
+
+#### GH-275
+**Título:** Ficha del ejercicio: lápiz y «⋯» junto al título, y datos en casillas
+**Etiquetas:** feature, frontend
+
+En la ficha de un ejercicio, Editar, Duplicar y Archivar ocupan dos filas de botones entre el título y la explicación, y la duración, los jugadores y el material son texto corrido.
+
+**Criterios de aceptación**
+- [ ] Junto al título, un botón de lápiz para editar y un «⋯» con Duplicar y Archivar (o Desarchivar), como en la ficha del jugador (GH-234); solo para quien gestiona
+- [ ] Debajo del título, la categoría como chip con su color e icono (GH-273) y las etiquetas
+- [ ] Duración y jugadores en casillas, y el material en una casilla a lo ancho, con el componente `Cifras`
+- [ ] Una casilla sin dato no se muestra
+- [ ] Test
+
+#### GH-276
+**Título:** Ficha del ejercicio: primero ver, gestionar cada foto o enlace desde «⋯»
+**Etiquetas:** feature, frontend
+
+En la ficha de un ejercicio, lo más visible es «Añadir foto o vídeo» (el único botón relleno), antes de las fotos, aunque en el campo la ficha se usa para ver. Debajo de cada foto o vídeo hay una fila de ↑ ↓ ✎ 🗑, y la tarjeta de un enlace dice «Ver vídeo o enlace · youtube.com» con su título suelto debajo.
+
+**Criterios de aceptación**
+- [ ] Las fotos, vídeos y enlaces se muestran primero, sin controles alrededor
+- [ ] Cada uno tiene un «⋯» que abre una hoja con: Mover arriba, Mover abajo (desactivados en los extremos y ocultos si solo hay uno), Cambiar el título y Quitar (en rojo, con confirmación)
+- [ ] La tarjeta de un enlace lleva su título dentro y la web debajo («Vídeos de ejemplo del rondo · youtube.com»); sin título, la web
+- [ ] Al final de la sección, un único botón «Añadir foto, vídeo o enlace» (solo para quien gestiona) que deja elegir entre subir un archivo o pegar un enlace
+- [ ] Test
+
+#### GH-277
+**Título:** Ficha del ejercicio: en cuántos entrenos se ha usado y cuándo fue el último
+**Etiquetas:** feature, backend, frontend
+
+En la ficha de un ejercicio no se sabe si se usa a menudo ni cuándo fue la última vez, lo que ayuda a ver qué ejercicios funcionan o se repiten demasiado.
+
+**Criterios de aceptación**
+- [ ] La API de un ejercicio devuelve en cuántos planes de entreno de la plantilla aparece y la fecha del último
+- [ ] La ficha muestra «Usado en N entrenos · el último, jueves 15 oct», entre la explicación y las fotos
+- [ ] Si nunca se ha usado: «Todavía no se ha usado en ningún entreno»
+- [ ] Solo cuentan los entrenos de la plantilla activa
+- [ ] Tests
+
+#### GH-278
+**Título:** Tarjeta del partido: marcador a la derecha, casa o fuera una sola vez y la competición solo si cambia
+**Etiquetas:** feature, frontend
+
+En la lista de partidos, el resultado va en su propia línea entre el rival y «Casa / Fuera», así que las tarjetas tienen alturas distintas y la racha se lee en zigzag. Casa o fuera se dice dos veces («**en** SD Compostela» + «**Fuera**»), y «Preferente» sale en todas las tarjetas aunque casi todos los partidos son de esa competición. El nombre de la federación va en mayúsculas («TERCEIRA PROBA (GRUPO 1)»).
+
+**Criterios de aceptación**
+- [ ] El marcador va a la derecha de la tarjeta, grande y en su color (GH-228), antes de la flecha
+- [ ] El rival sin «vs / en»; casa o fuera, una sola vez, con icono (casa o autobús) y texto
+- [ ] La competición solo se escribe si no es la habitual de la plantilla (la de la mayoría de sus partidos)
+- [ ] Los nombres de competición en mayúsculas pasan a minúsculas con la primera en mayúscula, y «Jornada N» a «JN»
+- [ ] Las tarjetas son filas de una lista con la misma altura, tengan o no resultado
+- [ ] El lector de pantalla lee el partido completo («Domingo, 11 oct, 17:00, Silva SD, en casa, 3 a 2, victoria»)
+- [ ] Test
+
+#### GH-279
+**Título:** Partidos pasados: «Falta el resultado» y la racha de los últimos cinco
+**Etiquetas:** feature, frontend
+
+En Pasados, los partidos sin resultado no lo dicen (simplemente no hay marcador), y lo que sale en ámbar es «Sin convocatoria», que en un partido ya jugado no importa. Tampoco hay una forma rápida de ver cómo va el equipo sin abrir Estadísticas.
+
+**Criterios de aceptación**
+- [ ] Un partido pasado sin resultado muestra «Falta el resultado» en ámbar, con icono, y un marcador vacío discontinuo; no muestra el estado de la convocatoria
+- [ ] Los partidos pasados sin resultado van primero; después, el resto del más reciente al más antiguo
+- [ ] Arriba, una tarjeta «Últimos 5» con los cinco últimos resultados como bolas de color con su letra (V, E, D), del más antiguo al último, y debajo el resumen («3 victorias, 1 empate y 1 derrota · 4 partidos sin resultado»)
+- [ ] Con menos de cinco partidos jugados, las que haya; sin ninguno, no se muestra
+- [ ] El lector de pantalla lee la racha completa
+- [ ] Test
+
+#### GH-280
+**Título:** Próximos partidos: el siguiente, destacado con su convocatoria
+**Etiquetas:** feature, frontend
+
+En Próximos, el siguiente partido se ve igual que los demás aunque es el que hay que preparar: convocatoria, alineación y mensaje.
+
+**Criterios de aceptación**
+- [ ] El siguiente partido va en una tarjeta destacada: fecha y hora, cuánto falta («hoy», «mañana», «en 2 días»), el rival con su escudo o sus iniciales, casa o fuera y la competición con la jornada
+- [ ] Debajo, el estado de la convocatoria («Todavía sin convocatoria» o «16 convocados») y una acción: «Hacer la convocatoria» si no la hay y «Ver la convocatoria» si la hay; para el rol jugador, si está convocado
+- [ ] El resto de próximos, bajo «Después», con la fila compacta de GH-278
+- [ ] Test
+
+#### GH-281
+**Título:** «Importar calendario» como opción de «Nuevo partido»
+**Etiquetas:** feature, frontend
+
+En el móvil, «Importar calendario» es un botón con solo un icono (una flecha sobre un documento) junto a «Nuevo partido», y no se entiende. Además se usa una vez por temporada.
+
+**Criterios de aceptación**
+- [ ] La cabecera de Partidos solo tiene «Nuevo partido»
+- [ ] «Nuevo partido» abre una hoja con dos opciones: «Crear un partido» (rival, fecha, hora y si es en casa) e «Importar el calendario» (el PDF de la federación con toda la temporada), cada una con su explicación
+- [ ] En el estado vacío de Próximos se mantienen las dos acciones
+- [ ] Test
+
+#### GH-282
+**Título:** Estadísticas: goles en casillas y goles por minuto en barras
+**Etiquetas:** feature, frontend
+
+En Estadísticas, los goles a favor y en contra son una frase pequeña («Goles: 16 a favor y 7 en contra (+9)») y los goles por minuto, una tabla de ocho filas que cuesta comparar.
+
+**Criterios de aceptación**
+- [ ] Goles a favor, en contra y diferencia en casillas, debajo de las de resultados
+- [ ] Goles por minuto como barras horizontales por tramo de 15 minutos: a favor a la derecha y en contra a la izquierda del tramo, con su número junto a cada barra y una leyenda
+- [ ] Separación entre la primera y la segunda parte, y debajo el resumen por partes y cuántos goles no tienen minuto
+- [ ] Al pasar por encima o enfocar un tramo, su valor completo; con «Ver como tabla», la tabla de ahora
+- [ ] Los colores del gráfico se distinguen en claro y en oscuro, y la posición y los números distinguen las series sin depender del color
+- [ ] Se mantiene «Desde el minuto»
+- [ ] Test
+
+#### GH-283
+**Título:** Ficha del partido en dos pestañas, Previa y Partido, que abre según la fecha
+**Etiquetas:** feature, frontend
+
+La ficha del partido apila nueve secciones con el mismo peso (Partido, Planificación, Notas, Convocatoria, Acta, Vídeos, Mensaje y Borrar): un partido jugado mide más de 4.000 px en el móvil, y el orden no cambia con el momento, así que antes del partido la convocatoria y el mensaje quedan a mitad de página.
+
+**Criterios de aceptación**
+- [ ] Debajo de la cabecera del partido (GH-229), dos pestañas: «Previa» y «Partido»
+- [ ] Previa: convocatoria, mensaje para WhatsApp y planificación (bajo «Solo para el cuerpo técnico»)
+- [ ] Partido: resultado y sucesos, alineación con minutos, acta, vídeos, notas y, al final, «Borrar partido»
+- [ ] La ficha abre en Previa hasta el día del partido y en Partido desde ese día; la pestaña elegida va en la dirección para volver a ella
+- [ ] La pestaña que no está abierta lleva un punto ámbar si le falta algo: la convocatoria antes del partido, el resultado después
+- [ ] Pestañas accesibles (`role="tab"`, flechas del teclado)
+- [ ] El rol jugador ve las mismas pestañas con lo que ya puede ver ahora
+- [ ] Test
+
+#### GH-284
+**Título:** Convocatoria en dos columnas, con dorsal y nombre, en la ficha del partido
+**Etiquetas:** feature, frontend
+
+En la ficha del partido, la convocatoria es una lista de 10 a 16 filas, cuando ya tiene su propia pantalla.
+
+**Criterios de aceptación**
+- [ ] En la pestaña Previa (GH-283), los convocados en dos columnas, cada uno con su dorsal y su nombre y primer apellido (como en GH-257)
+- [ ] El título con el número de convocados y «Editar», que abre la pantalla de la convocatoria; debajo, «N no convocados»
+- [ ] Sin convocatoria: el aviso «Todavía sin convocatoria» y el botón «Hacer la convocatoria»
+- [ ] Los minutos y titular/suplente pasan a la alineación de la pestaña Partido
+- [ ] Test
+
+#### GH-285
+**Título:** Ficha del partido: planificación, acta, vídeos y notas vacíos en filas de una línea
+**Etiquetas:** feature, frontend
+
+En la ficha del partido, Planificación, Notas, Acta y Vídeos sin contenido son cada una un párrafo de instrucciones con un botón.
+
+**Criterios de aceptación**
+- [ ] Cada una, mientras está vacía, es una fila de una línea: icono, nombre, una frase corta («Charla, plan táctico o análisis del rival», «El PDF de la federación», «YouTube, Drive… uno por parte», «Solo para el cuerpo técnico») y la acción a la derecha («Añadir», «Subir», «Anotar»)
+- [ ] Las filas de una misma pestaña van juntas en una tarjeta
+- [ ] Con contenido, cada sección se muestra como ahora
+- [ ] Test
+
+#### GH-286
+**Título:** La línea del partido: goles con asistencia, cambios juntos y edición aparte
+**Etiquetas:** feature, frontend
+
+En la ficha de un partido jugado, los sucesos son una lista de filas con papelera: un gol y su asistencia van en filas separadas, como la entrada y la salida de un cambio, y encima hay tres botones («Cambiar resultado», «Titulares y suplentes», «Añadir»).
+
+**Criterios de aceptación**
+- [ ] «El partido» muestra una línea de tiempo: minuto en una pastilla, icono del suceso y texto
+- [ ] Un gol lleva su asistencia debajo, en la misma fila; un cambio junta quién entra y quién sale; el descanso separa las dos partes
+- [ ] Los goles del rival sin minuto se resumen al final («Silva SD marcó 2 goles sin minuto»)
+- [ ] Sin papeleras en la vista: «Editar» abre la edición de sucesos y del resultado; «Añadir gol, tarjeta o cambio» queda debajo de la línea
+- [ ] La alineación, aparte, en dos columnas (titulares y suplentes) con los minutos de cada uno y su propio «Editar»
+- [ ] Test
+
+#### GH-287
+**Título:** Partido sin resultado: «Subir el acta» como acción principal
+**Etiquetas:** feature, frontend
+
+En un partido pasado sin resultado, lo más rápido es subir el acta (rellena resultado, titulares, cambios, goles y tarjetas), pero queda abajo, detrás de «Poner resultado».
+
+**Criterios de aceptación**
+- [ ] En la pestaña Partido (GH-283) de un partido pasado sin resultado: el aviso «Falta el resultado» (como en GH-279), una frase que explica qué se lee del acta, «Subir el acta» como acción principal y «Poner el resultado a mano» como secundaria
+- [ ] Al guardar el acta o el resultado, la pestaña muestra la línea del partido (GH-286)
+- [ ] Test
+
+#### GH-288
+**Título:** Convocatoria: cómo ha entrenado cada jugador desde el partido anterior
+**Etiquetas:** feature, backend, frontend
+
+Para convocar, el entrenador quiere saber cómo ha entrenado cada jugador desde el último partido, y la pantalla de la convocatoria no lo muestra.
+
+**Criterios de aceptación**
+- [ ] La convocatoria recibe, para cada jugador, su asistencia a los entrenos entre el partido anterior y este (el primer partido de la temporada: los de la semana anterior)
+- [ ] Hasta 5 entrenos, puntos a la derecha de la fila, uno por sesión y en orden: verde si fue, rojo si faltó (justificada o no) y gris si aún no se ha pasado lista
+- [ ] Con 6 o más, la fracción («5/6») en verde, ámbar o rojo con los umbrales del porcentaje de asistencia (80 % y 60 %)
+- [ ] Sin texto en pantalla; el lector de pantalla y el `title` dicen «Entrenó 1 de 2 desde el partido anterior. Faltó el jueves · Trabajo»
+- [ ] Sin entrenos en ese periodo, no se muestra nada
+- [ ] Tests
+
+#### GH-289
+**Título:** Convocatoria: solo el convocado destacado y filas de una línea
+**Etiquetas:** feature, frontend
+
+En la convocatoria, las filas sin marcar tienen el dorsal desvaído y el texto en gris, así que al entrar las 32 filas parecen desactivadas, y cada una repite «No convocado».
+
+**Criterios de aceptación**
+- [ ] Las filas sin marcar se leen con el color normal; el convocado se distingue por la casilla marcada y un fondo suave del color de acento
+- [ ] Desaparece «No convocado» y la posición de cada fila (va en el grupo, GH-290)
+- [ ] Las filas son de una línea; solo lesionados y sancionados llevan segunda línea («Lesionado · vuelve en 13 días», «Sancionado · 1 partido»)
+- [ ] Toda la fila es pulsable y accesible como casilla
+- [ ] Test
+
+#### GH-290
+**Título:** Convocatoria agrupada por línea, con el recuento de cada una
+**Etiquetas:** feature, frontend
+
+Una convocatoria se piensa por líneas («dos porteros, cinco defensas…»), pero la lista va por dorsal.
+
+**Criterios de aceptación**
+- [ ] La lista se agrupa en Porteros, Defensas, Centrocampistas, Delanteros y Sin posición; dentro, por dorsal
+- [ ] Cada grupo lleva su encabezado con el recuento de convocados («4 de 8»), que cambia al marcar
+- [ ] «Todos» pasa a «Todos los disponibles» (sigue sin marcar lesionados ni sancionados) y «Ninguno» se mantiene
+- [ ] Test
+
+#### GH-291
+**Título:** Convocatoria: barra fija con el recuento y el reparto por líneas
+**Etiquetas:** feature, frontend
+
+En la convocatoria, el contador («0 convocados de 32») está arriba y se pierde al bajar; la barra fija de abajo solo tiene Cancelar y Guardar.
+
+**Criterios de aceptación**
+- [ ] La barra fija muestra el número de convocados y, debajo, el reparto por líneas («1 POR · 4 DEF · 4 MED · 3 DEL»)
+- [ ] Sin nadie marcado: «Marca a los que van» y Guardar desactivado
+- [ ] Con convocados y sin ningún portero, aviso en ámbar: «Sin portero»
+- [ ] «Cancelar» sale de la barra: volver atrás sigue pidiendo confirmación si hay cambios sin guardar
+- [ ] Se mantiene el aviso al guardar con un sancionado convocado
+- [ ] Test
+
+#### GH-292
+**Título:** Convocatoria: «De otras plantillas» plegado tras un botón
+**Etiquetas:** feature, frontend
+
+Al final de la convocatoria, «De otras plantillas» aparece abierto con sugerencias (Lucas Barreiro, Leo Bouzas…), y parece que forman parte de la plantilla.
+
+**Criterios de aceptación**
+- [ ] «De otras plantillas» queda plegado tras un botón: «＋ Convocar a alguien de otra plantilla»
+- [ ] Al pulsarlo se abre el buscador, con el foco en él, y las sugerencias con su plantilla, la marca «Invitado» y «Convocar»
+- [ ] Los ya añadidos de otras plantillas se ven siempre, con «Quitar»
+- [ ] Test
+
+#### GH-293
+**Título:** Titulares y suplentes en dos grupos, con un botón para pasar de uno a otro
+**Etiquetas:** feature, frontend
+
+En la pantalla de titulares y suplentes, todos los convocados están en una sola lista con casillas: marcada es titular y vacía, suplente. Los suplentes salen en gris claro, como si estuvieran desactivados.
+
+**Criterios de aceptación**
+- [ ] Dos grupos, uno debajo del otro: «Titulares» con su recuento («8 de 11») y «Suplentes» con el suyo
+- [ ] Cada jugador tiene un botón para pasarlo al otro grupo («↓ Suplente» / «↑ Titular»), con `aria-label` que dice a quién y adónde
+- [ ] Ningún jugador sale en gris
+- [ ] Barra fija abajo con el recuento («8 titulares · 2 suplentes») y Guardar; con más de 11 titulares, aviso y Guardar desactivado
+- [ ] Sin convocados, el estado vacío de ahora
+- [ ] Test
+
+#### GH-294
+**Título:** La revisión del acta se muestra sin esperar a los jugadores de otras plantillas
+**Etiquetas:** feature, frontend
+
+La revisión del acta tarda más de 5 segundos en mostrarse porque espera a cargar también los jugadores de otras plantillas del club antes de pintar nada. La pantalla no cambia: solo tiene que salir antes.
+
+**Criterios de aceptación**
+- [ ] La revisión se muestra en cuanto llegan el partido, la lectura del acta y los jugadores de la plantilla
+- [ ] Los jugadores de otras plantillas se añaden a los desplegables cuando llegan, sin bloquear la pantalla
+- [ ] Si un nombre del acta ya estaba emparejado con un jugador de otra plantilla, se muestra bien aunque esa lista llegue después
+- [ ] Test
+
+#### GH-295
+**Título:** Lista de multas: «Cobrar» con texto, Borrar en «⋯» y el motivo entero
+**Etiquetas:** feature, frontend
+
+En la lista de multas, cada fila tiene un check sin texto (es «cobrar») y una papelera roja, y los dos botones le quitan sitio al motivo, que se corta («Pinchar el balón del mí…», «Tarjeta amarilla por prote…»).
+
+**Criterios de aceptación**
+- [ ] Cada multa en tres líneas: nombre e importe; el motivo entero; la fecha con las acciones
+- [ ] «Cobrar» es un botón con icono y texto; al cobrar, la fila muestra «✓ Cobrada» y «Deshacer» (lo que hace ahora el botón de deshacer)
+- [ ] Borrar pasa a un «⋯» que abre una hoja con «Borrar la multa», con la misma confirmación de ahora
+- [ ] El resto de la pantalla (Pendientes / Cobradas / Todas, el filtro por jugador y «Poner multa») no cambia
+- [ ] El rol jugador sigue viendo sus multas sin acciones
+- [ ] Test
+
+#### GH-296
+**Título:** Catálogo de multas: «Ver los desactivados» como interruptor
+**Etiquetas:** feature, frontend
+
+En el catálogo de multas, «Ver desactivados» es una casilla pequeña, por debajo del tamaño táctil recomendado.
+
+**Criterios de aceptación**
+- [ ] «Ver los desactivados» es un interruptor en una fila de al menos 48 px de alto, accesible como `role="switch"`
+- [ ] El resto del catálogo no cambia
+- [ ] Test
+
+#### GH-297
+**Título:** Cuenta: las sesiones más recientes y «Cerrar las demás» siempre a la vista
+**Etiquetas:** feature, frontend
+
+En Cuenta, «Sesiones abiertas» lista todas las sesiones una debajo de otra, y con el tiempo se acumulan decenas. El botón «Cerrar las demás sesiones», que ya existe, queda al final de la lista y no se ve.
+
+**Criterios de aceptación**
+- [ ] Se muestran la sesión actual y las 4 más recientes; el resto, tras «Ver las N restantes»
+- [ ] «Cerrar las demás sesiones» va justo debajo de esas cinco, siempre visible sin bajar, con la confirmación de ahora
+- [ ] Cada sesión sigue mostrando su navegador y sistema («Chrome en Android») y el último uso
+- [ ] Con 5 sesiones o menos, la lista se ve entera, como ahora
+- [ ] Test
+
+#### GH-298
+**Título:** Configuración en dos pestañas: «Esta plantilla» y «Club»
+**Etiquetas:** feature, frontend
+
+Configuración es una sola página de más de 3.000 px con siete secciones: Esta plantilla, Miembros, Club, Identidad del club, Plantillas del club, Administradores e Invitaciones. Se entiende, pero hay que bajar mucho, y mezcla lo de la plantilla con lo de todo el club.
+
+**Criterios de aceptación**
+- [ ] Dos pestañas arriba: «Esta plantilla» (datos, multas, sanciones, miembros e invitaciones) y «Club» (nombre, escudo y colores, plantillas del club y administradores)
+- [ ] La pestaña «Club» solo la ven los administradores del club; para el resto, la página es la de «Esta plantilla», sin pestañas
+- [ ] La pestaña elegida va en la dirección, para volver a ella
+- [ ] Las secciones no cambian por dentro
+- [ ] Test
 
 ---
 
