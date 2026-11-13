@@ -64,6 +64,7 @@ const detalle = (r: EntrenoListado): Entreno => ({
       activo: true,
       tipo: 'propia',
       procedencia: null,
+      lesion: null,
       estado: null,
       motivo: null,
       respuesta: null,

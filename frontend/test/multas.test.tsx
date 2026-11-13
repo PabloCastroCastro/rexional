@@ -34,6 +34,7 @@ const JUGADORES: JugadorPlantilla[] = [
     tipo: 'propia',
     enDinamica: true,
     procedencia: null,
+    lesion: null,
   },
   {
     jugadorId: 'j2',
@@ -45,6 +46,7 @@ const JUGADORES: JugadorPlantilla[] = [
     tipo: 'propia',
     enDinamica: true,
     procedencia: null,
+    lesion: null,
   },
 ]
 

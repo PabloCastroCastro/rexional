@@ -77,6 +77,7 @@ const detalle = (r: ResumenPartido, convocados: string[] = []): Partido => {
       activo: true,
       tipo: 'propia' as const,
       procedencia: null,
+      lesion: null,
       convocado: convocados.includes(jugadorId as string),
       titular: null,
       minutos: null,

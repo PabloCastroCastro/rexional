@@ -23,6 +23,7 @@ const ficha = (
   tipo: 'propia',
   enDinamica: true,
   procedencia: null,
+  lesion: null,
   ...extra,
 })
 
@@ -194,6 +195,7 @@ describe('convocar a jugadores de otras plantillas', () => {
     activo: true,
     tipo: 'propia' as const,
     procedencia: null,
+    lesion: null,
     convocado: true,
     titular: null,
     minutos: null,

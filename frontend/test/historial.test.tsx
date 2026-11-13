@@ -104,6 +104,7 @@ const ficha = (jugadorId: string, nombre: string, dorsal: number): JugadorPlanti
   tipo: 'propia',
   enDinamica: true,
   procedencia: null,
+  lesion: null,
 })
 
 describe('historial de entrenos', () => {

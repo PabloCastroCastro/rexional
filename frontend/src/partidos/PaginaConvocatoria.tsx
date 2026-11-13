@@ -17,6 +17,7 @@ import {
   POSICIONES,
   textoInvitado,
 } from '../jugadores/datos'
+import { MarcaLesion } from '../jugadores/Lesiones'
 import { Dorsal } from '../jugadores/PaginaPlantilla'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
 import { CLAVE_PARTIDOS, type Partido, usePartido } from './datos'
@@ -144,7 +145,8 @@ function Seleccion({ partido }: { partido: Partido }) {
           onClick={() =>
             setElegidos(
               new Set([
-                ...partido.jugadores.filter((j) => j.activo).map((j) => j.jugadorId),
+                // Los lesionados, no: se convocan uno a uno (GH-230)
+                ...partido.jugadores.filter((j) => j.activo && !j.lesion).map((j) => j.jugadorId),
                 ...[...elegidos],
               ]),
             )
@@ -188,6 +190,12 @@ function Seleccion({ partido }: { partido: Partido }) {
                       ]
                         .filter(Boolean)
                         .join(' · ')}
+                      {j.lesion && (
+                        <>
+                          {' · '}
+                          <MarcaLesion lesion={j.lesion} />
+                        </>
+                      )}
                     </span>
                   </span>
                 </label>

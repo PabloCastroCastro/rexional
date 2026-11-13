@@ -21,6 +21,7 @@ import {
 } from './datos'
 import { FormularioJugador, type ModoFormulario } from './FormularioJugador'
 import estilos from './Jugadores.module.css'
+import { MarcaLesion } from './Lesiones'
 
 // Jugadores de la plantilla activa, por dorsal y nombre (la API ya los devuelve ordenados). Activos o
 // bajas según ?ver=bajas, para que volver desde un jugador deje la misma vista. Entre los activos,
@@ -227,6 +228,13 @@ function Datos({
             : jugador.posicion
               ? POSICIONES[jugador.posicion]
               : 'Sin posición'}
+          {/* GH-230: al rol jugador solo le llega la suya */}
+          {jugador.lesion && (
+            <>
+              {' · '}
+              <MarcaLesion />
+            </>
+          )}
         </span>
       </span>
       {deuda ? (

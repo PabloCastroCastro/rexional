@@ -24,6 +24,7 @@ const jugador = (jugadorId: string, nombre: string, dorsal: number, titular: boo
   activo: true,
   tipo: 'propia' as const,
   procedencia: null,
+  lesion: null,
   convocado: true,
   titular,
   minutos: titular === null ? null : titular ? 90 : 0,

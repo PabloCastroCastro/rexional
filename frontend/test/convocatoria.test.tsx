@@ -34,6 +34,7 @@ const jugador = (
   activo,
   tipo: 'propia' as const,
   procedencia: null,
+  lesion: null,
   convocado,
   titular: null,
   minutos: null,
@@ -224,5 +225,30 @@ describe('convocatoria y mensaje en la ficha', () => {
       expect(screen.queryByRole('button', { name: nombre })).not.toBeInTheDocument()
     }
     expect(screen.queryByRole('link', { name: 'Editar convocatoria' })).not.toBeInTheDocument()
+  })
+})
+
+describe('lesionados en la convocatoria (GH-230)', () => {
+  it('salen con su lesión, Todos no los marca y se pueden convocar a mano', async () => {
+    conPartido(senior26, {
+      ...PARTIDO,
+      jugadores: [
+        jugador('j1', 'Íker', 1, false),
+        {
+          ...jugador('j2', 'Brais', 7, false),
+          lesion: { desde: '2026-10-10', vueltaPrevista: null },
+        },
+      ],
+    })
+    abrir('/plantillas/p1/partidos/p1/convocatoria')
+    expect(await screen.findByText(/convocados de 2/)).toBeInTheDocument()
+    expect(casilla('Brais').closest('li')).toHaveTextContent('Lesionado · sin fecha de vuelta')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Todos' }))
+    expect(casilla('Íker').checked).toBe(true)
+    expect(casilla('Brais').checked).toBe(false)
+
+    await userEvent.click(screen.getByText('Brais'))
+    expect(casilla('Brais').checked).toBe(true)
   })
 })
