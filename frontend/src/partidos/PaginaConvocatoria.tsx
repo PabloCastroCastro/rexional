@@ -17,7 +17,9 @@ import {
   POSICIONES,
   textoInvitado,
 } from '../jugadores/datos'
+import { MarcaLesion } from '../jugadores/Lesiones'
 import { Dorsal } from '../jugadores/PaginaPlantilla'
+import { MarcaSancion } from '../jugadores/Sanciones'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
 import { CLAVE_PARTIDOS, type Partido, usePartido } from './datos'
 import estilos from './Partidos.module.css'
@@ -144,7 +146,10 @@ function Seleccion({ partido }: { partido: Partido }) {
           onClick={() =>
             setElegidos(
               new Set([
-                ...partido.jugadores.filter((j) => j.activo).map((j) => j.jugadorId),
+                // Los lesionados y los sancionados, no: se convocan uno a uno (GH-230, GH-231)
+                ...partido.jugadores
+                  .filter((j) => j.activo && !j.lesion && !j.sancion)
+                  .map((j) => j.jugadorId),
                 ...[...elegidos],
               ]),
             )
@@ -188,6 +193,18 @@ function Seleccion({ partido }: { partido: Partido }) {
                       ]
                         .filter(Boolean)
                         .join(' · ')}
+                      {j.lesion && (
+                        <>
+                          {' · '}
+                          <MarcaLesion lesion={j.lesion} />
+                        </>
+                      )}
+                      {j.sancion && (
+                        <>
+                          {' · '}
+                          <MarcaSancion partidos={j.sancion.partidos} />
+                        </>
+                      )}
                     </span>
                   </span>
                 </label>
@@ -238,7 +255,25 @@ function Seleccion({ partido }: { partido: Partido }) {
         <Boton
           cargando={guardar.isPending}
           icono={<Save aria-hidden size={18} />}
-          onClick={() => guardar.mutate()}
+          onClick={async () => {
+            // Un sancionado para este partido se puede convocar, pero se avisa antes (GH-231)
+            const sancionados = partido.jugadores.filter(
+              (j) => j.sancion && elegidos.has(j.jugadorId),
+            )
+            if (sancionados.length > 0) {
+              const nombres = sancionados.map((j) => nombreCompleto(j)).join(', ')
+              const varios = sancionados.length > 1
+              const confirmado = await confirmar({
+                titulo: varios
+                  ? `${nombres} están sancionados para este partido`
+                  : `${nombres} está sancionado para este partido`,
+                mensaje: 'Según las tarjetas de los partidos anteriores de esta competición.',
+                textoConfirmar: varios ? 'Convocarlos igualmente' : 'Convocarlo igualmente',
+              })
+              if (!confirmado) return
+            }
+            guardar.mutate()
+          }}
         >
           Guardar convocatoria
         </Boton>

@@ -38,6 +38,7 @@ const jugador = (
   activo: true,
   tipo: 'propia',
   procedencia: null,
+  lesion: null,
   estado: null,
   motivo: null,
   respuesta: null,
@@ -237,5 +238,33 @@ describe('pasar lista', () => {
       [{ jugadorId: 'j1', estado: 'asiste' }],
       [{ jugadorId: 'j1', estado: 'asiste' }],
     ])
+  })
+})
+
+describe('lesionados en pasar lista (GH-230)', () => {
+  it('el lesionado sale como justificada por lesión y se guarda con el resto de la lista', async () => {
+    const lesionado = jugador('j2', 'Brais', 7, {
+      lesion: { desde: '2026-10-10', vueltaPrevista: '2026-10-28' },
+    })
+    conEntrenos({ [HOY]: [IKER, lesionado] })
+    abrir('/plantillas/p1/entrenos')
+    expect(await screen.findByText('Brais')).toBeInTheDocument()
+    expect(fila('Brais')).toHaveTextContent('Lesionado · vuelve en 2 semanas')
+    expect(within(fila('Brais')).getByRole('button', { name: 'Justificada' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    expect(within(fila('Brais')).getByLabelText('Motivo de Brais')).toHaveValue('Lesión')
+    // Hasta que se pasa lista no se guarda nada
+    expect(enviados()).toEqual([])
+
+    await pulsar('Íker', 'Asiste')
+    await esperarGuardado()
+    expect(enviados().at(-1)).toEqual(
+      expect.arrayContaining([
+        { jugadorId: 'j1', estado: 'asiste' },
+        { jugadorId: 'j2', estado: 'justificada', motivo: 'Lesión' },
+      ]),
+    )
   })
 })

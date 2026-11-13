@@ -1,0 +1,122 @@
+/* Lesiones (GH-230) */
+
+/* Marca pequeña en las listas: «Lesionado» con su icono */
+.marca {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--color-aviso);
+  font-weight: var(--peso-medio);
+  white-space: nowrap;
+}
+
+/* La lesión en curso, bajo el nombre en la ficha */
+.franja {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-2) var(--espacio-3);
+  padding: var(--espacio-3) var(--espacio-4);
+  border-radius: var(--radio-l);
+  background: color-mix(in srgb, var(--color-aviso) 12%, var(--color-superficie));
+  border: 1px solid color-mix(in srgb, var(--color-aviso) 35%, transparent);
+}
+
+.franja[data-vencida] {
+  background: color-mix(in srgb, var(--color-peligro) 10%, var(--color-superficie));
+  border-color: color-mix(in srgb, var(--color-peligro) 35%, transparent);
+}
+
+.icono {
+  flex: none;
+  color: var(--color-aviso);
+}
+
+.franja[data-vencida] .icono {
+  color: var(--color-peligro);
+}
+
+.texto {
+  display: grid;
+  flex: 1;
+  min-width: 10rem;
+  font-size: var(--texto-sm);
+}
+
+.texto strong {
+  font-size: var(--texto-base);
+  font-weight: var(--peso-fuerte);
+}
+
+.nota {
+  color: var(--color-texto-suave);
+}
+
+.acciones {
+  display: flex;
+  gap: var(--espacio-2);
+}
+
+.botonIcono {
+  width: var(--altura-tactil);
+  padding: 0;
+}
+
+/* Las anteriores, como filas sobre el fondo */
+.historial {
+  display: grid;
+  gap: var(--espacio-3);
+}
+
+.historial ul {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--color-borde);
+  border-bottom: 1px solid var(--color-borde);
+  list-style: none;
+}
+
+.historial li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--espacio-1) var(--espacio-3);
+  padding: var(--espacio-2) var(--espacio-1);
+  font-size: var(--texto-sm);
+}
+
+.historial li + li {
+  border-top: 1px solid var(--color-borde);
+}
+
+.fechas {
+  font-weight: var(--peso-medio);
+  font-variant-numeric: tabular-nums;
+}
+
+.duracion {
+  color: var(--color-texto-suave);
+}
+
+.formulario {
+  display: grid;
+  gap: var(--espacio-4);
+}
+
+.pie {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--espacio-2);
+}
+
+.pie .textoPeligro {
+  margin-right: auto;
+  color: var(--color-peligro);
+}
+
+.error {
+  color: var(--color-peligro);
+  font-size: var(--texto-sm);
+}

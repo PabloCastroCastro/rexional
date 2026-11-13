@@ -3,6 +3,7 @@ import { type AnyColumn, and, asc, desc, eq, ilike, ne, or, sql } from 'drizzle-
 import { db } from '../db/cliente.js'
 import { fichas, jugadores, plantillas, posicion, tipoFicha } from '../db/schema/index.js'
 import { ErrorApi, EsquemaError, validacionFallida } from '../errores.js'
+import { EsquemaLesionActual, hoySql, lesionEn, lesionesVisibles } from '../lesiones.js'
 import {
   type EnvClub,
   type EnvPlantilla,
@@ -51,6 +52,7 @@ export const EsquemaJugadorPlantilla = z
         'De los invitados: la plantilla del club en la que tiene ficha propia esa temporada o, si no tiene, el texto de su alta',
       example: 'Juvenil A',
     }),
+    lesion: EsquemaLesionActual,
   })
   .openapi('JugadorPlantilla')
 
@@ -147,6 +149,8 @@ export const columnasJugadorPlantilla = {
   tipo: fichas.tipo,
   enDinamica: fichas.enDinamica,
   procedencia: procedenciaFicha,
+  // La de hoy (GH-230)
+  lesion: lesionEn(hoySql),
 }
 
 const jugadorNoEncontrado = () =>
@@ -352,7 +356,7 @@ export const rutasJugadoresPlantilla = () =>
             ...porNombre,
             asc(jugadores.id),
           )
-        return c.json(filas, 200)
+        return c.json(lesionesVisibles(filas, c.var), 200)
       },
     )
     .openapi(

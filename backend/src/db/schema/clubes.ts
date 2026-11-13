@@ -95,12 +95,21 @@ export const plantillas = pgTable(
     multasActivas: boolean('multas_activas').notNull().default(true),
     // Horas antes del inicio de un entreno hasta las que los jugadores pueden responder si van (GH-204)
     horasLimiteRespuesta: smallint('horas_limite_respuesta').notNull().default(0),
+    // Reglas de las sanciones (GH-231): amarillas de cada ciclo (0, sin ciclo) y partidos por una roja
+    // directa y por una doble amarilla
+    amarillasCiclo: smallint('amarillas_ciclo').notNull().default(5),
+    partidosRoja: smallint('partidos_roja').notNull().default(1),
+    partidosDobleAmarilla: smallint('partidos_doble_amarilla').notNull().default(1),
     creadoPor: creadoPor(),
     createdAt: creadoEn(),
   },
   (t) => [
     unique('plantillas_nombre_unico').on(t.clubId, t.nombre, t.temporada),
     check('plantillas_horas_limite_valida', sql`${t.horasLimiteRespuesta} BETWEEN 0 AND 72`),
+    check(
+      'plantillas_reglas_sancion_validas',
+      sql`${t.amarillasCiclo} BETWEEN 0 AND 20 AND ${t.partidosRoja} BETWEEN 0 AND 20 AND ${t.partidosDobleAmarilla} BETWEEN 0 AND 20`,
+    ),
     // Destino de la clave foránea compuesta de fichas (mismo club y misma temporada)
     unique('plantillas_id_club_temporada').on(t.id, t.clubId, t.temporada),
     check('plantillas_nombre_no_vacio', noVacio(t.nombre)),

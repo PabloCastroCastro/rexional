@@ -10,6 +10,7 @@ import {
   manejadores,
   peticiones,
   plantilla,
+  REGLAS_POR_DEFECTO,
   ruta,
   senior26,
 } from './simulacion'
@@ -34,6 +35,7 @@ const JUGADORES: JugadorPlantilla[] = [
     tipo: 'propia',
     enDinamica: true,
     procedencia: null,
+    lesion: null,
   },
   {
     jugadorId: 'j2',
@@ -45,6 +47,7 @@ const JUGADORES: JugadorPlantilla[] = [
     tipo: 'propia',
     enDinamica: true,
     procedencia: null,
+    lesion: null,
   },
 ]
 
@@ -391,7 +394,13 @@ describe('multas desactivadas en la plantilla', () => {
     await userEvent.click(within(bloque).getByRole('button', { name: 'Guardar' }))
     expect(await screen.findByText('Plantilla guardada')).toBeInTheDocument()
     expect(enviado('PATCH /api/plantillas/p1')).toEqual([
-      { nombre: 'Senior', categoria: 'sénior', multasActivas: false, horasLimiteRespuesta: 0 },
+      {
+        nombre: 'Senior',
+        categoria: 'sénior',
+        multasActivas: false,
+        horasLimiteRespuesta: 0,
+        ...REGLAS_POR_DEFECTO,
+      },
     ])
   })
 })

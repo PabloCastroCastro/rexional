@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "API de Vestuario",
-    "version": "1.10.0",
+    "version": "1.11.0",
     "description": "API REST de Vestuario. Todas las rutas cuelgan de /api. Errores con el formato { error: { codigo, mensaje, detalles? } }."
   },
   "components": {
@@ -264,6 +264,18 @@
             "type": "integer",
             "description": "Horas antes del inicio de cada entreno hasta las que los jugadores pueden responder si van (GH-204)"
           },
+          "amarillasCiclo": {
+            "type": "integer",
+            "description": "Amarillas de cada ciclo, que se cumple con 1 partido; 0, sin ciclo (GH-231)"
+          },
+          "partidosRoja": {
+            "type": "integer",
+            "description": "Partidos de sanción por una roja directa"
+          },
+          "partidosDobleAmarilla": {
+            "type": "integer",
+            "description": "Partidos de sanción por una doble amarilla"
+          },
           "rol": {
             "type": "string",
             "enum": [
@@ -295,6 +307,9 @@
           "plantillaAnteriorId",
           "multasActivas",
           "horasLimiteRespuesta",
+          "amarillasCiclo",
+          "partidosRoja",
+          "partidosDobleAmarilla",
           "rol",
           "esAdminClub",
           "jugadorId"
@@ -361,6 +376,9 @@
             ],
             "description": "De los invitados: la plantilla del club en la que tiene ficha propia esa temporada o, si no tiene, el texto de su alta",
             "example": "Juvenil A"
+          },
+          "lesion": {
+            "$ref": "#/components/schemas/LesionActual"
           }
         },
         "required": [
@@ -372,8 +390,33 @@
           "activo",
           "tipo",
           "enDinamica",
-          "procedencia"
+          "procedencia",
+          "lesion"
         ]
+      },
+      "LesionActual": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "properties": {
+          "desde": {
+            "type": "string",
+            "example": "2026-11-03"
+          },
+          "vueltaPrevista": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "2026-11-17"
+          }
+        },
+        "required": [
+          "desde",
+          "vueltaPrevista"
+        ],
+        "description": "La lesión que tiene ese día, o null. Al rol jugador solo le llega la suya: la de los demás, siempre null"
       },
       "JugadorInvitable": {
         "type": "object",
@@ -534,6 +577,245 @@
           "nombre",
           "apellidos",
           "fichas"
+        ]
+      },
+      "LesionesJugador": {
+        "type": "object",
+        "properties": {
+          "actual": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "desde": {
+                "type": "string",
+                "example": "2026-11-03"
+              },
+              "vueltaPrevista": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "example": "2026-11-17"
+              },
+              "alta": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "null mientras dura"
+              },
+              "nota": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Solo para el cuerpo técnico"
+              }
+            },
+            "required": [
+              "id",
+              "desde",
+              "vueltaPrevista",
+              "alta",
+              "nota"
+            ]
+          },
+          "historial": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Lesion"
+            },
+            "description": "Las que ya tienen alta, la más reciente primero. Vacío para el rol jugador"
+          }
+        },
+        "required": [
+          "actual",
+          "historial"
+        ]
+      },
+      "Lesion": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "desde": {
+            "type": "string",
+            "example": "2026-11-03"
+          },
+          "vueltaPrevista": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "2026-11-17"
+          },
+          "alta": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "null mientras dura"
+          },
+          "nota": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Solo para el cuerpo técnico"
+          }
+        },
+        "required": [
+          "id",
+          "desde",
+          "vueltaPrevista",
+          "alta",
+          "nota"
+        ]
+      },
+      "SancionesPlantilla": {
+        "type": "object",
+        "properties": {
+          "jugadores": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SancionesJugador"
+            },
+            "description": "Solo los que tienen alguna sanción o están apercibidos"
+          }
+        },
+        "required": [
+          "jugadores"
+        ]
+      },
+      "SancionesJugador": {
+        "type": "object",
+        "properties": {
+          "jugadorId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "pendientes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "competicion": {
+                  "type": "string"
+                },
+                "partidos": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "competicion",
+                "partidos"
+              ]
+            },
+            "description": "Partidos que le quedan por cumplir, por competición"
+          },
+          "apercibido": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "competicion": {
+                  "type": "string"
+                },
+                "amarillas": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "competicion",
+                "amarillas"
+              ]
+            },
+            "description": "Competiciones en las que está a una amarilla de cerrar el ciclo"
+          },
+          "sanciones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Sancion"
+            },
+            "description": "La más reciente primero"
+          }
+        },
+        "required": [
+          "jugadorId",
+          "pendientes",
+          "apercibido",
+          "sanciones"
+        ]
+      },
+      "Sancion": {
+        "type": "object",
+        "properties": {
+          "partidoId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Partido de la tarjeta que la causa"
+          },
+          "rival": {
+            "type": "string"
+          },
+          "fecha": {
+            "type": "string"
+          },
+          "competicion": {
+            "type": "string"
+          },
+          "tipo": {
+            "$ref": "#/components/schemas/TipoSancion"
+          },
+          "calculados": {
+            "type": "integer",
+            "description": "Partidos según las reglas de la plantilla"
+          },
+          "partidos": {
+            "type": "integer",
+            "description": "Partidos que cuentan, con el ajuste si lo hay"
+          },
+          "cumplidos": {
+            "type": "integer"
+          },
+          "ajustada": {
+            "type": "boolean",
+            "description": "true si el cuerpo técnico la ha corregido"
+          },
+          "nota": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "partidoId",
+          "rival",
+          "fecha",
+          "competicion",
+          "tipo",
+          "calculados",
+          "partidos",
+          "cumplidos",
+          "ajustada",
+          "nota"
+        ]
+      },
+      "TipoSancion": {
+        "type": "string",
+        "enum": [
+          "roja",
+          "doble_amarilla",
+          "ciclo"
         ]
       },
       "FichaEquipoLeida": {
@@ -1331,6 +1613,9 @@
                     "string",
                     "null"
                   ]
+                },
+                "lesion": {
+                  "$ref": "#/components/schemas/LesionActual"
                 }
               },
               "required": [
@@ -1345,7 +1630,8 @@
                 "estado",
                 "motivo",
                 "respuesta",
-                "motivoRespuesta"
+                "motivoRespuesta",
+                "lesion"
               ]
             }
           }
@@ -1893,6 +2179,25 @@
               "null"
             ],
             "description": "Minutos jugados, calculados"
+          },
+          "lesion": {
+            "$ref": "#/components/schemas/LesionActual"
+          },
+          "sancion": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "partidos": {
+                "type": "integer",
+                "description": "Los que le quedan por cumplir"
+              }
+            },
+            "required": [
+              "partidos"
+            ],
+            "description": "Si está sancionado para este partido (GH-231), en su competición; null si puede jugar"
           }
         },
         "required": [
@@ -1906,7 +2211,9 @@
           "procedencia",
           "convocado",
           "titular",
-          "minutos"
+          "minutos",
+          "lesion",
+          "sancion"
         ]
       },
       "EventoPartido": {
@@ -4476,6 +4783,21 @@
                     "type": "integer",
                     "minimum": 0,
                     "maximum": 72
+                  },
+                  "amarillasCiclo": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 20
+                  },
+                  "partidosRoja": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 20
+                  },
+                  "partidosDobleAmarilla": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 20
                   }
                 },
                 "additionalProperties": false
@@ -5342,6 +5664,597 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/TrayectoriaJugador"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/jugadores/{jid}/lesiones": {
+      "get": {
+        "tags": [
+          "Jugadores"
+        ],
+        "summary": "Lesiones del jugador",
+        "description": "La que dura y el historial. El cuerpo técnico (delegado o superior) ve las de cualquier jugador de la plantilla, con la nota; el rol jugador, solo la suya en curso, sin nota ni historial.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "jid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lesiones",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LesionesJugador"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Jugadores"
+        ],
+        "summary": "Marcar una lesión",
+        "description": "Delegado o superior. Desde hoy si no se indica; ni el inicio ni el alta pueden ser después de hoy. Solo una lesión sin alta a la vez.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "jid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "desde": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "example": "2026-10-13"
+                  },
+                  "vueltaPrevista": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "example": "2026-10-13"
+                  },
+                  "nota": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "minLength": 1,
+                    "maxLength": 140
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Lesión registrada; devuelve todas las del jugador",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LesionesJugador"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Ya tiene una lesión sin alta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/jugadores/{jid}/lesiones/{lid}": {
+      "patch": {
+        "tags": [
+          "Jugadores"
+        ],
+        "summary": "Corregir una lesión o darle el alta",
+        "description": "Delegado o superior. Con `alta` se da el alta (el jugador está recuperado ese día); `alta: null` la vuelve a abrir. `vueltaPrevista` y `nota` se quitan con null.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "jid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "lid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "desde": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "example": "2026-10-13"
+                  },
+                  "vueltaPrevista": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "example": "2026-10-13"
+                  },
+                  "alta": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "example": "2026-10-13"
+                  },
+                  "nota": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "minLength": 1,
+                    "maxLength": 140
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Lesión cambiada; devuelve todas las del jugador",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LesionesJugador"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Ya tiene otra lesión sin alta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Jugadores"
+        ],
+        "summary": "Borrar una lesión",
+        "description": "Delegado o superior. Para las registradas por error: las que terminan con un alta se quedan en el historial.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "jid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "lid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lesión borrada; devuelve las que quedan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LesionesJugador"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/sanciones": {
+      "get": {
+        "tags": [
+          "Partidos"
+        ],
+        "summary": "Sanciones de los jugadores",
+        "description": "Calculadas con las tarjetas de los partidos jugados y las reglas de la plantilla: lo que le queda a cada uno por cumplir, si está apercibido y sus sanciones. Cualquier miembro.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sanciones",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SancionesPlantilla"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/sanciones/ajuste": {
+      "put": {
+        "tags": [
+          "Partidos"
+        ],
+        "summary": "Corregir una sanción",
+        "description": "Delegado o superior. Cambia los partidos de una sanción (0 la anula), como decida el comité de competición; con `partidos: null` vuelve a los de las reglas.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "partidoId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "jugadorId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "tipo": {
+                    "$ref": "#/components/schemas/TipoSancion"
+                  },
+                  "partidos": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 20
+                  },
+                  "nota": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "minLength": 1,
+                    "maxLength": 140
+                  }
+                },
+                "required": [
+                  "partidoId",
+                  "jugadorId",
+                  "tipo",
+                  "partidos"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sanción corregida; devuelve todas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SancionesPlantilla"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }

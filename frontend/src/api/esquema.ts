@@ -1096,6 +1096,9 @@ export interface paths {
                         categoria?: string;
                         multasActivas?: boolean;
                         horasLimiteRespuesta?: number;
+                        amarillasCiclo?: number;
+                        partidosRoja?: number;
+                        partidosDobleAmarilla?: number;
                     };
                 };
             };
@@ -1662,6 +1665,467 @@ export interface paths {
             };
         };
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plantillas/{id}/jugadores/{jid}/lesiones": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lesiones del jugador
+         * @description La que dura y el historial. El cuerpo técnico (delegado o superior) ve las de cualquier jugador de la plantilla, con la nota; el rol jugador, solo la suya en curso, sin nota ni historial.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    jid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Lesiones */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["LesionesJugador"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Marcar una lesión
+         * @description Delegado o superior. Desde hoy si no se indica; ni el inicio ni el alta pueden ser después de hoy. Solo una lesión sin alta a la vez.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    jid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @example 2026-10-13 */
+                        desde?: string;
+                        /** @example 2026-10-13 */
+                        vueltaPrevista?: string | null;
+                        nota?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Lesión registrada; devuelve todas las del jugador */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["LesionesJugador"];
+                    };
+                };
+                /** @description Datos no válidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Ya tiene una lesión sin alta */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plantillas/{id}/jugadores/{jid}/lesiones/{lid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Borrar una lesión
+         * @description Delegado o superior. Para las registradas por error: las que terminan con un alta se quedan en el historial.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    jid: string;
+                    lid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Lesión borrada; devuelve las que quedan */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["LesionesJugador"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /**
+         * Corregir una lesión o darle el alta
+         * @description Delegado o superior. Con `alta` se da el alta (el jugador está recuperado ese día); `alta: null` la vuelve a abrir. `vueltaPrevista` y `nota` se quitan con null.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    jid: string;
+                    lid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @example 2026-10-13 */
+                        desde?: string;
+                        /** @example 2026-10-13 */
+                        vueltaPrevista?: string | null;
+                        /** @example 2026-10-13 */
+                        alta?: string | null;
+                        nota?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Lesión cambiada; devuelve todas las del jugador */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["LesionesJugador"];
+                    };
+                };
+                /** @description Datos no válidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Ya tiene otra lesión sin alta */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/api/plantillas/{id}/sanciones": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Sanciones de los jugadores
+         * @description Calculadas con las tarjetas de los partidos jugados y las reglas de la plantilla: lo que le queda a cada uno por cumplir, si está apercibido y sus sanciones. Cualquier miembro.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Sanciones */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SancionesPlantilla"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plantillas/{id}/sanciones/ajuste": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Corregir una sanción
+         * @description Delegado o superior. Cambia los partidos de una sanción (0 la anula), como decida el comité de competición; con `partidos: null` vuelve a los de las reglas.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        partidoId: string;
+                        /** Format: uuid */
+                        jugadorId: string;
+                        tipo: components["schemas"]["TipoSancion"];
+                        partidos: number | null;
+                        nota?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Sanción corregida; devuelve todas */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SancionesPlantilla"];
+                    };
+                };
+                /** @description Datos no válidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
         post?: never;
         delete?: never;
         options?: never;
@@ -9024,6 +9488,12 @@ export interface components {
             multasActivas: boolean;
             /** @description Horas antes del inicio de cada entreno hasta las que los jugadores pueden responder si van (GH-204) */
             horasLimiteRespuesta: number;
+            /** @description Amarillas de cada ciclo, que se cumple con 1 partido; 0, sin ciclo (GH-231) */
+            amarillasCiclo: number;
+            /** @description Partidos de sanción por una roja directa */
+            partidosRoja: number;
+            /** @description Partidos de sanción por una doble amarilla */
+            partidosDobleAmarilla: number;
             /**
              * @description Rol efectivo del usuario en la plantilla
              * @enum {string}
@@ -9061,7 +9531,15 @@ export interface components {
              * @example Juvenil A
              */
             procedencia: string | null;
+            lesion: components["schemas"]["LesionActual"];
         };
+        /** @description La lesión que tiene ese día, o null. Al rol jugador solo le llega la suya: la de los demás, siempre null */
+        LesionActual: {
+            /** @example 2026-11-03 */
+            desde: string;
+            /** @example 2026-11-17 */
+            vueltaPrevista: string | null;
+        } | null;
         JugadorInvitable: {
             /** Format: uuid */
             jugadorId: string;
@@ -9110,6 +9588,75 @@ export interface components {
                 procedencia: string | null;
             }[];
         };
+        LesionesJugador: {
+            actual: {
+                /** Format: uuid */
+                id: string;
+                /** @example 2026-11-03 */
+                desde: string;
+                /** @example 2026-11-17 */
+                vueltaPrevista: string | null;
+                /** @description null mientras dura */
+                alta: string | null;
+                /** @description Solo para el cuerpo técnico */
+                nota: string | null;
+            } | null;
+            /** @description Las que ya tienen alta, la más reciente primero. Vacío para el rol jugador */
+            historial: components["schemas"]["Lesion"][];
+        };
+        Lesion: {
+            /** Format: uuid */
+            id: string;
+            /** @example 2026-11-03 */
+            desde: string;
+            /** @example 2026-11-17 */
+            vueltaPrevista: string | null;
+            /** @description null mientras dura */
+            alta: string | null;
+            /** @description Solo para el cuerpo técnico */
+            nota: string | null;
+        };
+        SancionesPlantilla: {
+            /** @description Solo los que tienen alguna sanción o están apercibidos */
+            jugadores: components["schemas"]["SancionesJugador"][];
+        };
+        SancionesJugador: {
+            /** Format: uuid */
+            jugadorId: string;
+            /** @description Partidos que le quedan por cumplir, por competición */
+            pendientes: {
+                competicion: string;
+                partidos: number;
+            }[];
+            /** @description Competiciones en las que está a una amarilla de cerrar el ciclo */
+            apercibido: {
+                competicion: string;
+                amarillas: number;
+            }[];
+            /** @description La más reciente primero */
+            sanciones: components["schemas"]["Sancion"][];
+        };
+        Sancion: {
+            /**
+             * Format: uuid
+             * @description Partido de la tarjeta que la causa
+             */
+            partidoId: string;
+            rival: string;
+            fecha: string;
+            competicion: string;
+            tipo: components["schemas"]["TipoSancion"];
+            /** @description Partidos según las reglas de la plantilla */
+            calculados: number;
+            /** @description Partidos que cuentan, con el ajuste si lo hay */
+            partidos: number;
+            cumplidos: number;
+            /** @description true si el cuerpo técnico la ha corregido */
+            ajustada: boolean;
+            nota: string | null;
+        };
+        /** @enum {string} */
+        TipoSancion: "roja" | "doble_amarilla" | "ciclo";
         FichaEquipoLeida: {
             /** @example Sofan S.D. "B" */
             equipo: string | null;
@@ -9361,6 +9908,7 @@ export interface components {
                  */
                 respuesta: "voy" | "duda" | "no_voy" | null;
                 motivoRespuesta: string | null;
+                lesion: components["schemas"]["LesionActual"];
             }[];
         };
         AsistenciaJugador: components["schemas"]["RecuentosAsistencia"] & {
@@ -9511,6 +10059,12 @@ export interface components {
             titular: boolean | null;
             /** @description Minutos jugados, calculados */
             minutos: number | null;
+            lesion: components["schemas"]["LesionActual"];
+            /** @description Si está sancionado para este partido (GH-231), en su competición; null si puede jugar */
+            sancion: {
+                /** @description Los que le quedan por cumplir */
+                partidos: number;
+            } | null;
         };
         EventoPartido: {
             /** Format: uuid */

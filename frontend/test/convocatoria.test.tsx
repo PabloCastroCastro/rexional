@@ -34,7 +34,9 @@ const jugador = (
   activo,
   tipo: 'propia' as const,
   procedencia: null,
+  lesion: null,
   convocado,
+  sancion: null,
   titular: null,
   minutos: null,
 })
@@ -224,5 +226,68 @@ describe('convocatoria y mensaje en la ficha', () => {
       expect(screen.queryByRole('button', { name: nombre })).not.toBeInTheDocument()
     }
     expect(screen.queryByRole('link', { name: 'Editar convocatoria' })).not.toBeInTheDocument()
+  })
+})
+
+describe('lesionados en la convocatoria (GH-230)', () => {
+  it('salen con su lesión, Todos no los marca y se pueden convocar a mano', async () => {
+    conPartido(senior26, {
+      ...PARTIDO,
+      jugadores: [
+        jugador('j1', 'Íker', 1, false),
+        {
+          ...jugador('j2', 'Brais', 7, false),
+          lesion: { desde: '2026-10-10', vueltaPrevista: null },
+        },
+      ],
+    })
+    abrir('/plantillas/p1/partidos/p1/convocatoria')
+    expect(await screen.findByText(/convocados de 2/)).toBeInTheDocument()
+    expect(casilla('Brais').closest('li')).toHaveTextContent('Lesionado · sin fecha de vuelta')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Todos' }))
+    expect(casilla('Íker').checked).toBe(true)
+    expect(casilla('Brais').checked).toBe(false)
+
+    await userEvent.click(screen.getByText('Brais'))
+    expect(casilla('Brais').checked).toBe(true)
+  })
+})
+
+describe('sancionados en la convocatoria (GH-231)', () => {
+  it('salen con su sanción, Todos no los marca y convocarlos pide confirmación', async () => {
+    conPartido(senior26, {
+      ...PARTIDO,
+      jugadores: [
+        jugador('j1', 'Íker', 1, false),
+        { ...jugador('j2', 'Brais', 7, false), sancion: { partidos: 1 } },
+      ],
+    })
+    abrir('/plantillas/p1/partidos/p1/convocatoria')
+    expect(await screen.findByText(/convocados de 2/)).toBeInTheDocument()
+    expect(casilla('Brais').closest('li')).toHaveTextContent('Sancionado · 1 partido')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Todos' }))
+    expect(casilla('Brais').checked).toBe(false)
+
+    await userEvent.click(screen.getByText('Brais'))
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar convocatoria' }))
+    const aviso = screen.getByRole('alertdialog', {
+      name: 'Brais está sancionado para este partido',
+    })
+    await userEvent.click(within(aviso).getByRole('button', { name: 'Cancelar' }))
+    expect(enviado('PUT /api/plantillas/p1/partidos/p1/convocados')).toEqual([])
+
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar convocatoria' }))
+    await userEvent.click(
+      within(screen.getByRole('alertdialog')).getByRole('button', {
+        name: 'Convocarlo igualmente',
+      }),
+    )
+    await waitFor(() =>
+      expect(enviado('PUT /api/plantillas/p1/partidos/p1/convocados')).toEqual([
+        { jugadores: ['j1', 'j2'] },
+      ]),
+    )
   })
 })

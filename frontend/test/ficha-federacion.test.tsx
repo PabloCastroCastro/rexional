@@ -145,6 +145,7 @@ describe('añadir jugadores desde la federación', () => {
     tipo: 'propia',
     enDinamica: true,
     procedencia: null,
+    lesion: null,
   }
   const IAGO: JugadorPlantilla = { ...HUGO, jugadorId: 'j5', nombre: 'Iago', apellidos: null }
 

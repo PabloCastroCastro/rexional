@@ -31,8 +31,10 @@ import {
 } from '../db/schema/index.js'
 import { ErrorApi, EsquemaError, validacionFallida } from '../errores.js'
 import { hoy, textoDia } from '../fechas.js'
+import { EsquemaLesionActual, lesionEn, lesionesVisibles } from '../lesiones.js'
 import { borrarCarpeta, carpetaDePartido } from '../medios/almacen.js'
 import { type EnvPlantilla, requireRol } from '../permisos.js'
+import { sancionesParaPartido } from '../sanciones.js'
 import {
   EsquemaFecha,
   EsquemaHora,
@@ -116,6 +118,14 @@ const EsquemaJugadorConvocatoria = z
       .nullable()
       .openapi({ description: 'true titular, false suplente; null si no se ha registrado' }),
     minutos: z.int().nullable().openapi({ description: 'Minutos jugados, calculados' }),
+    lesion: EsquemaLesionActual,
+    sancion: z
+      .object({ partidos: z.int().openapi({ description: 'Los que le quedan por cumplir' }) })
+      .nullable()
+      .openapi({
+        description:
+          'Si está sancionado para este partido (GH-231), en su competición; null si puede jugar',
+      }),
   })
   .openapi('JugadorConvocatoria')
 
@@ -236,6 +246,8 @@ export async function detallePartido(plantillaId: string, partidoId: string) {
       convocado: sql<boolean>`${convocados.jugadorId} is not null`,
       titular: participaciones.titular,
       minutos: participaciones.minutos,
+      // La del día del partido (GH-230)
+      lesion: lesionEn(partido.fecha),
     })
     .from(fichas)
     .innerJoin(jugadores, eq(jugadores.id, fichas.jugadorId))
@@ -290,9 +302,14 @@ export async function detallePartido(plantillaId: string, partidoId: string) {
     .from(videosPartido)
     .where(eq(videosPartido.partidoId, partido.id))
     .orderBy(asc(videosPartido.createdAt), asc(videosPartido.id))
+  // Sanciones para este partido (GH-231), calculadas con los anteriores de su competición
+  const sanciones = await sancionesParaPartido(plantillaId, partido.id)
   return {
     ...partido,
-    jugadores: filas,
+    jugadores: filas.map((f) => {
+      const pendientes = sanciones.get(f.jugadorId)
+      return { ...f, sancion: pendientes ? { partidos: pendientes } : null }
+    }),
     eventos,
     acta: acta ? { ...acta, subidaEn: acta.subidaEn.toISOString() } : null,
     videos,
@@ -454,7 +471,8 @@ export const rutasPartidos = () =>
       }),
       async (c) => {
         const { pid } = c.req.valid('param')
-        return c.json(await detallePartido(c.var.plantilla.id, pid), 200)
+        const partido = await detallePartido(c.var.plantilla.id, pid)
+        return c.json({ ...partido, jugadores: lesionesVisibles(partido.jugadores, c.var) }, 200)
       },
     )
     .openapi(
