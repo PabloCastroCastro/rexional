@@ -361,6 +361,9 @@
             ],
             "description": "De los invitados: la plantilla del club en la que tiene ficha propia esa temporada o, si no tiene, el texto de su alta",
             "example": "Juvenil A"
+          },
+          "lesion": {
+            "$ref": "#/components/schemas/LesionActual"
           }
         },
         "required": [
@@ -372,8 +375,33 @@
           "activo",
           "tipo",
           "enDinamica",
-          "procedencia"
+          "procedencia",
+          "lesion"
         ]
+      },
+      "LesionActual": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "properties": {
+          "desde": {
+            "type": "string",
+            "example": "2026-11-03"
+          },
+          "vueltaPrevista": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "2026-11-17"
+          }
+        },
+        "required": [
+          "desde",
+          "vueltaPrevista"
+        ],
+        "description": "La lesión que tiene ese día, o null. Al rol jugador solo le llega la suya: la de los demás, siempre null"
       },
       "JugadorInvitable": {
         "type": "object",
@@ -534,6 +562,107 @@
           "nombre",
           "apellidos",
           "fichas"
+        ]
+      },
+      "LesionesJugador": {
+        "type": "object",
+        "properties": {
+          "actual": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "desde": {
+                "type": "string",
+                "example": "2026-11-03"
+              },
+              "vueltaPrevista": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "example": "2026-11-17"
+              },
+              "alta": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "null mientras dura"
+              },
+              "nota": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Solo para el cuerpo técnico"
+              }
+            },
+            "required": [
+              "id",
+              "desde",
+              "vueltaPrevista",
+              "alta",
+              "nota"
+            ]
+          },
+          "historial": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Lesion"
+            },
+            "description": "Las que ya tienen alta, la más reciente primero. Vacío para el rol jugador"
+          }
+        },
+        "required": [
+          "actual",
+          "historial"
+        ]
+      },
+      "Lesion": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "desde": {
+            "type": "string",
+            "example": "2026-11-03"
+          },
+          "vueltaPrevista": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "2026-11-17"
+          },
+          "alta": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "null mientras dura"
+          },
+          "nota": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Solo para el cuerpo técnico"
+          }
+        },
+        "required": [
+          "id",
+          "desde",
+          "vueltaPrevista",
+          "alta",
+          "nota"
         ]
       },
       "FichaEquipoLeida": {
@@ -1331,6 +1460,9 @@
                     "string",
                     "null"
                   ]
+                },
+                "lesion": {
+                  "$ref": "#/components/schemas/LesionActual"
                 }
               },
               "required": [
@@ -1345,7 +1477,8 @@
                 "estado",
                 "motivo",
                 "respuesta",
-                "motivoRespuesta"
+                "motivoRespuesta",
+                "lesion"
               ]
             }
           }
@@ -1893,6 +2026,9 @@
               "null"
             ],
             "description": "Minutos jugados, calculados"
+          },
+          "lesion": {
+            "$ref": "#/components/schemas/LesionActual"
           }
         },
         "required": [
@@ -1906,7 +2042,8 @@
           "procedencia",
           "convocado",
           "titular",
-          "minutos"
+          "minutos",
+          "lesion"
         ]
       },
       "EventoPartido": {
@@ -5342,6 +5479,418 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/TrayectoriaJugador"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/jugadores/{jid}/lesiones": {
+      "get": {
+        "tags": [
+          "Jugadores"
+        ],
+        "summary": "Lesiones del jugador",
+        "description": "La que dura y el historial. El cuerpo técnico (delegado o superior) ve las de cualquier jugador de la plantilla, con la nota; el rol jugador, solo la suya en curso, sin nota ni historial.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "jid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lesiones",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LesionesJugador"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Jugadores"
+        ],
+        "summary": "Marcar una lesión",
+        "description": "Delegado o superior. Desde hoy si no se indica; ni el inicio ni el alta pueden ser después de hoy. Solo una lesión sin alta a la vez.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "jid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "desde": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "example": "2026-10-13"
+                  },
+                  "vueltaPrevista": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "example": "2026-10-13"
+                  },
+                  "nota": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "minLength": 1,
+                    "maxLength": 140
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Lesión registrada; devuelve todas las del jugador",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LesionesJugador"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Ya tiene una lesión sin alta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/jugadores/{jid}/lesiones/{lid}": {
+      "patch": {
+        "tags": [
+          "Jugadores"
+        ],
+        "summary": "Corregir una lesión o darle el alta",
+        "description": "Delegado o superior. Con `alta` se da el alta (el jugador está recuperado ese día); `alta: null` la vuelve a abrir. `vueltaPrevista` y `nota` se quitan con null.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "jid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "lid",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "desde": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "example": "2026-10-13"
+                  },
+                  "vueltaPrevista": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "example": "2026-10-13"
+                  },
+                  "alta": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "example": "2026-10-13"
+                  },
+                  "nota": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "minLength": 1,
+                    "maxLength": 140
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Lesión cambiada; devuelve todas las del jugador",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LesionesJugador"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Ya tiene otra lesión sin alta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Jugadores"
+        ],
+        "summary": "Borrar una lesión",
+        "description": "Delegado o superior. Para las registradas por error: las que terminan con un alta se quedan en el historial.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "jid",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "lid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lesión borrada; devuelve las que quedan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LesionesJugador"
                 }
               }
             }

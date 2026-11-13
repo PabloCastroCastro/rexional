@@ -31,6 +31,7 @@ import {
 } from '../db/schema/index.js'
 import { ErrorApi, EsquemaError, validacionFallida } from '../errores.js'
 import { hoy, textoDia } from '../fechas.js'
+import { EsquemaLesionActual, lesionEn, lesionesVisibles } from '../lesiones.js'
 import { borrarCarpeta, carpetaDePartido } from '../medios/almacen.js'
 import { type EnvPlantilla, requireRol } from '../permisos.js'
 import {
@@ -116,6 +117,7 @@ const EsquemaJugadorConvocatoria = z
       .nullable()
       .openapi({ description: 'true titular, false suplente; null si no se ha registrado' }),
     minutos: z.int().nullable().openapi({ description: 'Minutos jugados, calculados' }),
+    lesion: EsquemaLesionActual,
   })
   .openapi('JugadorConvocatoria')
 
@@ -236,6 +238,8 @@ export async function detallePartido(plantillaId: string, partidoId: string) {
       convocado: sql<boolean>`${convocados.jugadorId} is not null`,
       titular: participaciones.titular,
       minutos: participaciones.minutos,
+      // La del día del partido (GH-230)
+      lesion: lesionEn(partido.fecha),
     })
     .from(fichas)
     .innerJoin(jugadores, eq(jugadores.id, fichas.jugadorId))
@@ -454,7 +458,8 @@ export const rutasPartidos = () =>
       }),
       async (c) => {
         const { pid } = c.req.valid('param')
-        return c.json(await detallePartido(c.var.plantilla.id, pid), 200)
+        const partido = await detallePartido(c.var.plantilla.id, pid)
+        return c.json({ ...partido, jugadores: lesionesVisibles(partido.jugadores, c.var) }, 200)
       },
     )
     .openapi(

@@ -171,6 +171,18 @@
   text-transform: uppercase;
 }
 
+/* Lesionado ese día (GH-230), en su propia línea bajo el nombre */
+.lesion {
+  display: block;
+  font-size: var(--texto-xs);
+  /* El nombre va en una línea con puntos suspensivos; la lesión se lee entera */
+  white-space: normal;
+}
+
+.lesion > span {
+  white-space: normal;
+}
+
 .secundario {
   color: var(--color-texto-suave);
   font-size: var(--texto-sm);

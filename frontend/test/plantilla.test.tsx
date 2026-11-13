@@ -23,6 +23,7 @@ const BRAIS: JugadorPlantilla = {
   tipo: 'propia',
   enDinamica: true,
   procedencia: null,
+  lesion: null,
 }
 const ZOE: JugadorPlantilla = {
   jugadorId: 'j2',
@@ -34,6 +35,7 @@ const ZOE: JugadorPlantilla = {
   tipo: 'propia',
   enDinamica: true,
   procedencia: null,
+  lesion: null,
 }
 const HUGO: JugadorPlantilla = {
   jugadorId: 'j3',
@@ -45,6 +47,7 @@ const HUGO: JugadorPlantilla = {
   tipo: 'propia',
   enDinamica: true,
   procedencia: null,
+  lesion: null,
 }
 
 const enviado = (clave: string) => peticiones.filter((p) => p.clave === clave).map((p) => p.cuerpo)

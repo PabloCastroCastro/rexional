@@ -175,7 +175,9 @@ a.fila:hover {
 /* Dar de baja (o reactivar), al final de la ficha y sin relleno */
 .accionFinal {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
+  gap: var(--espacio-2) var(--espacio-4);
 }
 
 .accionFinal .textoPeligro {

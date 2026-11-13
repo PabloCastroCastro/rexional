@@ -16,6 +16,7 @@ import {
 } from '../db/schema/index.js'
 import { ErrorApi, EsquemaError, validacionFallida } from '../errores.js'
 import { hoy, sumarDias } from '../fechas.js'
+import { EsquemaLesionActual, lesionEn } from '../lesiones.js'
 import { type EnvPlantilla, requireRol, rolAlcanza } from '../permisos.js'
 import { EsquemaFecha, EsquemaHora, EsquemaUuid, restriccionViolada } from '../validacion.js'
 import { EsquemaPosicion, EsquemaTipoFicha, porNombre, procedenciaFicha } from './jugadores.js'
@@ -97,6 +98,7 @@ const EsquemaEntreno = z
           description: 'Si dijo que iba (GH-204); no rellena el estado',
         }),
         motivoRespuesta: z.string().nullable(),
+        lesion: EsquemaLesionActual,
       }),
     ),
   })
@@ -282,6 +284,8 @@ async function detalleEntreno(plantillaId: string, entrenoId: string) {
       motivo: asistencias.motivo,
       respuesta: respuestasEntreno.respuesta,
       motivoRespuesta: respuestasEntreno.motivo,
+      // La del día del entreno (GH-230)
+      lesion: lesionEn(entreno.fecha),
     })
     .from(fichas)
     .innerJoin(jugadores, eq(jugadores.id, fichas.jugadorId))

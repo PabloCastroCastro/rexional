@@ -25,6 +25,7 @@ import { EstadoVacio } from '../componentes/EstadoVacio'
 import { HojaInferior } from '../componentes/HojaInferior'
 import { MarcaInvitado } from '../jugadores/BuscadorInvitables'
 import { nombreCompleto, puedeGestionarJugadores } from '../jugadores/datos'
+import { MarcaLesion } from '../jugadores/Lesiones'
 import { Dorsal } from '../jugadores/PaginaPlantilla'
 import { resumenPlan } from '../planificacion/datos'
 import { TarjetaPlan } from '../planificacion/TarjetaPlan'
@@ -432,12 +433,21 @@ function CancelarEntreno({ entreno }: { entreno: ResumenEntreno }) {
 
 type Marca = { estado: Estado | null; motivo: string }
 
+const MOTIVO_LESION = 'Lesión'
+
 function Lista({ entreno }: { entreno: Entreno }) {
   const plantilla = usePlantillaActiva()
   const guardado = useGuardadoAutomatico(plantilla.id, entreno.id)
+  // El lesionado ese día sale ya como justificada por lesión (GH-230): se guarda con el resto de la
+  // lista y se puede cambiar. Si nadie pasa lista, no se guarda nada
   const [marcas, setMarcas] = useState<Record<string, Marca>>(() =>
     Object.fromEntries(
-      entreno.jugadores.map((j) => [j.jugadorId, { estado: j.estado, motivo: j.motivo ?? '' }]),
+      entreno.jugadores.map((j) => [
+        j.jugadorId,
+        j.estado === null && j.lesion
+          ? { estado: 'justificada' as const, motivo: MOTIVO_LESION }
+          : { estado: j.estado, motivo: j.motivo ?? '' },
+      ]),
     ),
   )
 
@@ -495,6 +505,11 @@ function Lista({ entreno }: { entreno: Entreno }) {
                   {nombreCompleto(j)}
                   {j.tipo === 'invitado' && <MarcaInvitado />}
                   {!j.activo && <span className={estilos.baja}> baja</span>}
+                  {j.lesion && (
+                    <span className={estilos.lesion}>
+                      <MarcaLesion lesion={j.lesion} />
+                    </span>
+                  )}
                   <PistaRespuesta jugador={j} />
                 </span>
                 <fieldset className={estilos.estados}>

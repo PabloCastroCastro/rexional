@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Pencil, RotateCcw, UserMinus } from 'lucide-react'
+import { Bandage, ChevronLeft, ChevronRight, Pencil, RotateCcw, UserMinus } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { Boton } from '../componentes/Boton'
@@ -22,6 +22,13 @@ import {
 } from './datos'
 import { FormularioJugador, type ModoFormulario } from './FormularioJugador'
 import estilos from './Jugadores.module.css'
+import {
+  type EdicionLesion,
+  FranjaLesion,
+  HistorialLesiones,
+  HojaLesion,
+  useLesiones,
+} from './Lesiones'
 import { Dorsal } from './PaginaPlantilla'
 
 // Un jugador de la plantilla: su ficha en ella, con editar y dar de baja o reactivar, y su
@@ -42,6 +49,11 @@ export function PaginaJugador() {
   )
   const deuda = (multasPendientes.data ?? []).reduce((total, m) => total + m.importeCentimos, 0)
   const [formulario, setFormulario] = useState<ModoFormulario | null>(null)
+  const [edicionLesion, setEdicionLesion] = useState<EdicionLesion | null>(null)
+  // Dato de salud: el cuerpo técnico ve las de todos; el jugador, solo la suya (GH-230)
+  const veLesiones = puedeGestionarJugadores(plantilla) || plantilla.jugadorId === jugadorId
+  const lesiones = useLesiones(plantilla.id, jugadorId, veLesiones)
+  const lesionActual = lesiones.data?.actual ?? null
   const lista = `/plantillas/${plantilla.id}/jugadores`
   const { darDeBaja, reactivar, pendiente } = useBajaYReactivacion({
     alDarDeBaja: () => navegar(lista),
@@ -84,6 +96,7 @@ export function PaginaJugador() {
     tipo: ficha.tipo,
     enDinamica: ficha.enDinamica,
     procedencia: ficha.procedencia,
+    lesion: lesionActual,
   }
   const gestiona = puedeGestionarJugadores(plantilla)
   // Sin fila (no ha jugado, o es un invitado sin minutos), todo a cero
@@ -145,6 +158,10 @@ export function PaginaJugador() {
           />
         )}
       </div>
+
+      {lesionActual && (
+        <FranjaLesion lesion={lesionActual} gestiona={gestiona} alEditar={setEdicionLesion} />
+      )}
 
       {estadisticasPartidos}
 
@@ -225,8 +242,19 @@ export function PaginaJugador() {
         </ul>
       </section>
 
+      {gestiona && <HistorialLesiones historial={lesiones.data?.historial ?? []} />}
+
       {gestiona && (
         <div className={estilos.accionFinal}>
+          {jugador.activo && !lesionActual && lesiones.isSuccess && (
+            <Boton
+              variante="secundario"
+              icono={<Bandage aria-hidden size={18} />}
+              onClick={() => setEdicionLesion({ tipo: 'nueva' })}
+            >
+              Marcar lesión
+            </Boton>
+          )}
           {jugador.activo ? (
             <Boton
               variante="texto"
@@ -251,6 +279,12 @@ export function PaginaJugador() {
       )}
 
       <FormularioJugador modo={formulario} alCerrar={() => setFormulario(null)} />
+      <HojaLesion
+        jugadorId={jugadorId}
+        nombre={nombreCompleto(jugador)}
+        edicion={edicionLesion}
+        alCerrar={() => setEdicionLesion(null)}
+      />
     </div>
   )
 }
