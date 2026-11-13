@@ -21,11 +21,12 @@
 
 /* El número arriba y la etiqueta debajo, sin cambiar el orden del marcado (dt, dd) */
 .cifras dd {
+  font-family: var(--fuente-titulos);
   order: -1;
   margin: 0;
-  font-size: var(--texto-xl);
-  font-weight: 700;
-  line-height: 1.15;
+  font-size: var(--texto-cifra);
+  font-weight: 600;
+  line-height: 1.1;
   font-variant-numeric: tabular-nums;
 }
 

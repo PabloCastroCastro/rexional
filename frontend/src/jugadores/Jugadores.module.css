@@ -93,6 +93,8 @@ a.fila:hover {
 }
 
 .dorsal {
+  font-size: 1.15rem;
+  font-family: var(--fuente-titulos);
   display: grid;
   flex: none;
   place-items: center;
@@ -103,7 +105,7 @@ a.fila:hover {
   background: var(--color-secundario);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-texto) 15%, transparent);
   color: var(--color-sobre-secundario);
-  font-weight: var(--peso-fuerte);
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
@@ -149,7 +151,7 @@ a.fila:hover {
 .ficha .dorsal {
   width: 3.5rem;
   height: 3.5rem;
-  font-size: var(--texto-xl);
+  font-size: 1.6rem;
 }
 
 .seccion {
@@ -232,9 +234,10 @@ a.fila:hover {
 }
 
 .porcentajeGrande strong {
+  font-family: var(--fuente-titulos);
   color: var(--nivel);
-  font-size: 2.25rem;
-  font-weight: 750;
+  font-size: 2.6rem;
+  font-weight: 700;
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
@@ -322,7 +325,8 @@ a.fila:hover {
 }
 
 .importe {
-  font-size: var(--texto-lg);
+  font-family: var(--fuente-titulos);
+  font-size: 1.3rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }

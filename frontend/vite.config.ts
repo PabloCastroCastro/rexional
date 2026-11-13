@@ -43,7 +43,7 @@ export default defineConfig({
       },
       workbox: {
         // Se guarda la aplicación para abrirla al instante; la API nunca se cachea
-        globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest,woff2}'],
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api\//],
         cleanupOutdatedCaches: true,

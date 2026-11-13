@@ -53,3 +53,29 @@ describe('módulos de estilos', () => {
     expect(repetidas).toEqual([])
   })
 })
+
+// GH-227: Saira Condensed para los títulos y los números, incluida en la app y guardada para usarla
+// sin conexión
+describe('fuente de los títulos', () => {
+  const leer = (ruta: string) => readFileSync(join(process.cwd(), ruta), 'utf8')
+
+  it('el token empieza por Saira Condensed y tiene alternativas estrechas', () => {
+    const token = leer('src/estilos/tokens.css').match(/--fuente-titulos:\s*([^;]+);/)?.[1]
+    expect(token?.trim()).toMatch(/^"Saira Condensed", "Arial Narrow"/)
+  })
+
+  it('los h1 y los h2 la usan', () => {
+    const base = leer('src/estilos/base.css')
+    for (const h of ['h1', 'h2']) {
+      const regla = base.match(new RegExp(`\n${h} {([^}]+)}`))?.[1]
+      expect(regla).toContain('font-family: var(--fuente-titulos)')
+    }
+  })
+
+  it('se carga desde la app, solo en latín, y la PWA guarda los woff2', () => {
+    const main = leer('src/main.tsx')
+    expect(main).toContain("import '@fontsource/saira-condensed/latin-600.css'")
+    expect(main).toContain("import '@fontsource/saira-condensed/latin-700.css'")
+    expect(leer('vite.config.ts')).toMatch(/globPatterns: \[[^\]]*woff2/)
+  })
+})

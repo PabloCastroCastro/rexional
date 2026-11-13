@@ -4,6 +4,9 @@ import { RouterProvider } from 'react-router'
 import { aplicarTemaGuardado } from './diseno/tema'
 import { crearClienteConsultas, Proveedores } from './proveedores'
 import { crearRouter } from './rutas'
+// Saira Condensed para los títulos y los números (GH-227): solo los caracteres latinos y dos pesos
+import '@fontsource/saira-condensed/latin-600.css'
+import '@fontsource/saira-condensed/latin-700.css'
 import './estilos/tokens.css'
 import './estilos/base.css'
 

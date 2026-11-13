@@ -92,9 +92,12 @@
 }
 
 .cuando {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+  font-family: var(--fuente-titulos);
   color: var(--color-texto-suave);
-  font-size: var(--texto-sm);
-  font-weight: var(--peso-medio);
+  font-size: 0.95rem;
+  font-weight: 600;
 }
 
 .cuando::first-letter {
@@ -379,7 +382,9 @@
 }
 
 .marcador strong {
-  font-size: var(--texto-xl);
+  font-weight: 700;
+  font-family: var(--fuente-titulos);
+  font-size: 1.6rem;
   font-variant-numeric: tabular-nums;
 }
 
@@ -466,7 +471,8 @@
 }
 
 .resultadoGrande {
-  font-size: var(--texto-xl);
+  font-family: var(--fuente-titulos);
+  font-size: 1.9rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -674,12 +680,13 @@
 }
 
 .resultadoLista {
+  font-family: var(--fuente-titulos);
   justify-self: start;
   padding: 0 var(--espacio-2);
   border-radius: var(--radio-m);
   background: var(--color-primario);
   color: var(--color-sobre-primario);
-  font-size: var(--texto-sm);
+  font-size: 1rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
