@@ -174,7 +174,9 @@
 /* Lesionado ese día (GH-230), en su propia línea bajo el nombre */
 .lesion {
   display: block;
+  color: var(--color-aviso);
   font-size: var(--texto-xs);
+  font-weight: var(--peso-medio);
   /* El nombre va en una línea con puntos suspensivos; la lesión se lee entera */
   white-space: normal;
 }

@@ -17,6 +17,7 @@ import {
   POSICIONES,
   textoInvitado,
 } from '../jugadores/datos'
+import { estadoJugador } from '../jugadores/estado'
 import { MarcaLesion } from '../jugadores/Lesiones'
 import { Dorsal } from '../jugadores/PaginaPlantilla'
 import { MarcaSancion } from '../jugadores/Sanciones'
@@ -178,7 +179,10 @@ function Seleccion({ partido }: { partido: Partido }) {
                   <span className={estilos.casilla} aria-hidden="true">
                     {elegido && <Check size={20} />}
                   </span>
-                  <Dorsal dorsal={j.dorsal} />
+                  <Dorsal
+                    dorsal={j.dorsal}
+                    estado={estadoJugador({ lesion: j.lesion, sancion: j.sancion })}
+                  />
                   <span className={estilos.texto}>
                     <span className={estilos.nombre}>
                       {/* El sancionado para este partido, tachado (GH-248); lo dice el texto de debajo */}

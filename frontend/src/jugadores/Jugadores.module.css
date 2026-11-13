@@ -93,6 +93,7 @@ a.fila:hover {
 }
 
 .dorsal {
+  position: relative;
   font-size: 1.15rem;
   font-family: var(--fuente-titulos);
   display: grid;
@@ -107,6 +108,29 @@ a.fila:hover {
   color: var(--color-sobre-secundario);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+}
+
+/* El estado del jugador, en la esquina del dorsal (GH-251): un círculo de la superficie con el icono */
+.senal {
+  position: absolute;
+  right: -5px;
+  bottom: -4px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radio-completo);
+  background: var(--color-superficie);
+  box-shadow: 0 0 0 1.5px currentColor;
+  color: var(--color-aviso);
+}
+
+.senal[data-estado="sancion"] {
+  color: var(--color-peligro);
+}
+
+.senal[data-estado="apercibido"] {
+  color: var(--color-borde-tarjeta-amarilla);
 }
 
 .texto {

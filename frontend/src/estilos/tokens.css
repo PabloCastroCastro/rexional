@@ -35,6 +35,9 @@
   --color-sobre-empate: #ffffff;
   --color-derrota: #b42323;
   --color-sobre-derrota: #ffffff;
+  /* Tarjetas de fútbol (GH-251): la amarilla es la misma en los dos temas; la roja usa el peligro */
+  --color-tarjeta-amarilla: #f2c230;
+  --color-borde-tarjeta-amarilla: #b8860b;
   /* Texto de enlaces y acentos sobre la superficie: el primario del club, oscurecido si hace falta
      para leerse (en oscuro, aclarado) */
   --color-acento: var(--acento-claro, var(--color-primario));

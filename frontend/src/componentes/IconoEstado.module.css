@@ -1,0 +1,19 @@
+/* Iconos de estado del jugador (GH-251): cruz de lesión y tarjetas */
+.icono {
+  flex: none;
+}
+
+.icono[data-estado="lesion"] {
+  color: var(--color-aviso);
+  fill: currentColor;
+}
+
+.icono[data-estado="sancion"] {
+  color: var(--color-peligro);
+  fill: currentColor;
+}
+
+.icono[data-estado="apercibido"] {
+  color: var(--color-borde-tarjeta-amarilla);
+  fill: var(--color-tarjeta-amarilla);
+}

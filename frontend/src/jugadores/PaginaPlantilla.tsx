@@ -4,6 +4,7 @@ import { Link, useSearchParams } from 'react-router'
 import { Boton } from '../componentes/Boton'
 import { Cargando } from '../componentes/Cargando'
 import { EstadoVacio } from '../componentes/EstadoVacio'
+import { IconoEstado } from '../componentes/IconoEstado'
 import { useResumenAsistencia } from '../entrenos/datos'
 import { Porcentaje } from '../entrenos/Porcentaje'
 import { euros, useDeudas } from '../multas/datos'
@@ -19,10 +20,10 @@ import {
   puedeGestionarJugadores,
   useJugadores,
 } from './datos'
+import { type Estado, estadoJugador } from './estado'
 import { FormularioJugador, type ModoFormulario } from './FormularioJugador'
 import estilos from './Jugadores.module.css'
-import { MarcaLesion } from './Lesiones'
-import { MarcaSancion, type SancionesJugador, sancionesDe, useSanciones } from './Sanciones'
+import { type SancionesJugador, sancionesDe, useSanciones } from './Sanciones'
 
 // Jugadores de la plantilla activa, por dorsal y nombre (la API ya los devuelve ordenados). Activos o
 // bajas según ?ver=bajas, para que volver desde un jugador deje la misma vista. Entre los activos,
@@ -189,11 +190,21 @@ export function PaginaPlantilla() {
   }
 }
 
-export function Dorsal({ dorsal }: { dorsal: number | null }) {
+// Dorsal con el color secundario del club y, si lo tiene, el estado del jugador como una señal en su
+// esquina: cruz de lesión, tarjeta roja de sanción o amarilla de apercibido (GH-251)
+export function Dorsal({ dorsal, estado }: { dorsal: number | null; estado?: Estado | null }) {
   return (
     <span className={estilos.dorsal}>
       <span aria-hidden="true">{dorsal ?? '–'}</span>
-      <span className="solo-lectores">{dorsal === null ? 'Sin dorsal' : `Dorsal ${dorsal}`}</span>
+      <span className="solo-lectores">
+        {dorsal === null ? 'Sin dorsal' : `Dorsal ${dorsal}`}
+        {estado && `. ${estado.texto}`}
+      </span>
+      {estado && (
+        <span className={estilos.senal} data-estado={estado.tipo}>
+          <IconoEstado estado={estado.tipo} size={12} />
+        </span>
+      )}
     </span>
   )
 }
@@ -214,41 +225,32 @@ function Datos({
   sanciones?: SancionesJugador
 }) {
   const invitado = jugador.tipo === 'invitado'
+  // Debajo del nombre, solo la posición (o, en un invitado, de dónde viene y cuántos partidos lleva);
+  // la lesión y la sanción van sobre el dorsal (GH-251)
+  const detalle = invitado
+    ? [jugador.procedencia, `${partidos ?? 0} ${partidos === 1 ? 'partido' : 'partidos'}`]
+        .filter(Boolean)
+        .join(' · ')
+    : jugador.posicion
+      ? POSICIONES[jugador.posicion]
+      : null
   return (
     <>
-      <Dorsal dorsal={jugador.dorsal} />
+      <Dorsal
+        dorsal={jugador.dorsal}
+        estado={estadoJugador({ lesion: jugador.lesion, sanciones })}
+      />
       <span className={estilos.texto}>
         <strong>
           {nombreCompleto(jugador)}
           {invitado && <MarcaInvitado />}
         </strong>
-        <span className={propio ? `${estilos.secundario} ${estilos.unaLinea}` : estilos.secundario}>
-          {propio && <span className={estilos.marcaPropia}>Tú</span>}
-          {invitado
-            ? [
-                jugador.procedencia,
-                jugador.enDinamica ? 'En la dinámica' : 'Solo partidos',
-                `${partidos ?? 0} ${partidos === 1 ? 'partido' : 'partidos'}`,
-              ]
-                .filter(Boolean)
-                .join(' · ')
-            : jugador.posicion
-              ? POSICIONES[jugador.posicion]
-              : 'Sin posición'}
-          {/* GH-230: al rol jugador solo le llega la suya */}
-          {jugador.lesion && (
-            <>
-              {' · '}
-              <MarcaLesion />
-            </>
-          )}
-          {sanciones && (sanciones.pendientes.length > 0 || sanciones.apercibido.length > 0) && (
-            <>
-              {' · '}
-              <MarcaSancion sanciones={sanciones} />
-            </>
-          )}
-        </span>
+        {(propio || detalle) && (
+          <span className={`${estilos.secundario} ${estilos.unaLinea}`}>
+            {propio && <span className={estilos.marcaPropia}>Tú</span>}
+            {detalle}
+          </span>
+        )}
       </span>
       {deuda ? (
         <span className={estilosMultas.deuda}>
