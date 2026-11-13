@@ -435,6 +435,15 @@ describe('ficha del jugador', () => {
       Amarillas: '0',
       Rojas: '1',
     })
+    // Dos filas: arriba lo jugado, abajo lo que ha hecho en el campo
+    expect(
+      [...partidos.querySelectorAll('dl')].map((dl) =>
+        [...dl.querySelectorAll('dt')].map((dt) => dt.textContent),
+      ),
+    ).toEqual([
+      ['Partidos', 'De titular', 'Minutos'],
+      ['Goles', 'Asistencias', 'Amarillas', 'Rojas'],
+    ])
     // A cero, en el color suave pero en su sitio
     expect(within(partidos).getByText('Amarillas').parentElement).toHaveAttribute('data-vacia')
     expect(within(partidos).getByText('Goles').parentElement).not.toHaveAttribute('data-vacia')

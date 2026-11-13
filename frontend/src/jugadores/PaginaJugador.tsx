@@ -207,18 +207,26 @@ export function PaginaJugador() {
           {(() => {
             // Sin fila (no ha jugado, o es un invitado sin minutos), todo a cero
             const suyas = estadisticas.data.jugadores.find((j) => j.jugadorId === jugadorId)
+            // Arriba lo jugado; abajo lo que ha hecho en el campo
             return (
-              <Cifras
-                cifras={[
-                  cifra('Partidos', suyas?.partidos ?? 0),
-                  cifra('De titular', suyas?.titularidades ?? 0),
-                  cifra('Minutos', suyas?.minutos ?? 0),
-                  cifra('Goles', suyas?.goles ?? 0),
-                  cifra('Asistencias', suyas?.asistencias ?? 0),
-                  cifra('Amarillas', suyas?.amarillas ?? 0),
-                  cifra('Rojas', suyas?.rojas ?? 0),
-                ]}
-              />
+              <div className={estilos.dosFilas}>
+                <Cifras
+                  columnas={3}
+                  cifras={[
+                    cifra('Partidos', suyas?.partidos ?? 0),
+                    cifra('De titular', suyas?.titularidades ?? 0),
+                    cifra('Minutos', suyas?.minutos ?? 0),
+                  ]}
+                />
+                <Cifras
+                  cifras={[
+                    cifra('Goles', suyas?.goles ?? 0),
+                    cifra('Asistencias', suyas?.asistencias ?? 0),
+                    cifra('Amarillas', suyas?.amarillas ?? 0),
+                    cifra('Rojas', suyas?.rojas ?? 0),
+                  ]}
+                />
+              </div>
             )
           })()}
         </section>
