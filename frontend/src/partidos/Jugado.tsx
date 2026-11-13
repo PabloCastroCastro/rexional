@@ -71,20 +71,16 @@ export function SeccionPartido({ partido }: { partido: Partido }) {
         <Goal aria-hidden size={20} />
         Partido
       </h2>
-      <div className={estilos.marcadorPartido}>
-        <span className={estilos.resultadoGrande} data-estado={partido.estado}>
-          {partido.estado === 'jugado'
-            ? textoResultado(partido)
-            : partido.estado === 'aplazado'
-              ? 'Aplazado'
-              : 'Sin resultado'}
-        </span>
-        {gestiona && (
-          <Boton variante="secundario" onClick={() => setResultado(true)}>
-            {partido.estado === 'jugado' ? 'Cambiar resultado' : 'Poner resultado'}
-          </Boton>
-        )}
-      </div>
+      {/* El resultado va en la tarjeta del partido (GH-229); aquí, solo ponerlo o cambiarlo */}
+      {gestiona && (
+        <Boton
+          variante="secundario"
+          className={estilos.botonResultado}
+          onClick={() => setResultado(true)}
+        >
+          {partido.estado === 'jugado' ? 'Cambiar resultado' : 'Poner resultado'}
+        </Boton>
+      )}
       {gestiona && convocados.length > 0 && (
         <div className={estilos.acciones}>
           <Link to="alineacion" className={estilos.enlaceSecundario}>

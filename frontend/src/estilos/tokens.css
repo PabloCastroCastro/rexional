@@ -28,18 +28,34 @@
   --color-aviso: #9a5b00;
   --color-informacion: #1d5fb8;
   --color-foco: #1d6fd1;
+  /* Resultado de un partido (GH-228): propios, para ajustarlos sin tocar los estados ni el peligro */
+  --color-victoria: #1a7a4f;
+  --color-sobre-victoria: #ffffff;
+  --color-empate: #b45309;
+  --color-sobre-empate: #ffffff;
+  --color-derrota: #b42323;
+  --color-sobre-derrota: #ffffff;
   /* Texto de enlaces y acentos sobre la superficie: el primario del club, oscurecido si hace falta
      para leerse (en oscuro, aclarado) */
   --color-acento: var(--acento-claro, var(--color-primario));
 
   /* Tipografía: la del sistema, sin descargas */
   --fuente: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  /* Títulos y números destacados (GH-227): Saira Condensed, incluida en la app; mientras carga, una
+     estrecha del sistema para que no salte el diseño */
+  --fuente-titulos:
+    "Saira Condensed", "Arial Narrow", "Roboto Condensed", sans-serif-condensed, system-ui,
+    sans-serif;
   --texto-xs: 0.75rem;
   --texto-sm: 0.875rem;
   --texto-base: 1rem;
   --texto-lg: 1.125rem;
   --texto-xl: 1.375rem;
   --texto-2xl: 1.75rem;
+  /* Con la fuente estrecha, los títulos y las cifras un 15 % más grandes */
+  --texto-titulo: 1.6rem;
+  --texto-seccion: 1.3rem;
+  --texto-cifra: 1.6rem;
   --peso-normal: 400;
   --peso-medio: 500;
   --peso-fuerte: 650;
@@ -87,6 +103,12 @@
     --color-aviso: #f0b04a;
     --color-informacion: #7fb2f5;
     --color-foco: #7fb2f5;
+    --color-victoria: #5fcf98;
+    --color-sobre-victoria: #0f1311;
+    --color-empate: #f0b04a;
+    --color-sobre-empate: #0f1311;
+    --color-derrota: #f07167;
+    --color-sobre-derrota: #0f1311;
     --color-acento: var(--acento-oscuro, #7fd1aa);
     --sombra-2: 0 8px 24px rgb(0 0 0 / 50%);
   }

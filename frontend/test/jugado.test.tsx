@@ -106,6 +106,9 @@ describe('partido jugado', () => {
     conPartido()
     abrir('/plantillas/p1/partidos/p1')
     expect(await screen.findByText('2–1')).toBeInTheDocument()
+    // En la tarjeta (GH-229), con su pastilla de victoria, y una sola vez en la página
+    expect(screen.getAllByText('2–1')).toHaveLength(1)
+    expect(screen.getByText('Victoria')).toHaveAttribute('data-resultado', 'victoria')
     const linea = screen.getByRole('list', { name: 'Línea de tiempo' })
     expect(
       within(linea)

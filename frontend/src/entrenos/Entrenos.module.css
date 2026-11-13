@@ -339,14 +339,15 @@
 
 /* Porcentaje de asistencia */
 .porcentaje {
+  font-family: var(--fuente-titulos);
   flex: none;
   min-width: 3.25rem;
   padding: 2px var(--espacio-2);
   border-radius: var(--radio-completo);
   background: var(--color-superficie-alterna);
   color: var(--color-texto-suave);
-  font-size: var(--texto-sm);
-  font-weight: var(--peso-medio);
+  font-size: 1rem;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
   text-align: center;
 }

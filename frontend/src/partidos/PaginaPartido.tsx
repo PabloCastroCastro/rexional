@@ -1,15 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import {
-  ChevronLeft,
-  Clock,
-  MapPin,
-  MessageCircle,
-  Pencil,
-  Trash2,
-  Trophy,
-  UserCheck,
-  Users,
-} from 'lucide-react'
+import { ChevronLeft, MessageCircle, Trash2, UserCheck, Users } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { api, enviar } from '../api/cliente'
@@ -18,18 +8,19 @@ import { Boton } from '../componentes/Boton'
 import { Cargando } from '../componentes/Cargando'
 import { useConfirmacion } from '../componentes/Confirmacion'
 import { EstadoVacio } from '../componentes/EstadoVacio'
-import { hoy, textoFecha } from '../entrenos/datos'
+import { hoy } from '../entrenos/datos'
 import { nombreCompleto, puedeGestionarJugadores } from '../jugadores/datos'
 import { Dorsal } from '../jugadores/PaginaPlantilla'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
 import { SeccionActa } from './Acta'
-import { CLAVE_PARTIDOS, type Partido, textoLocal, usePartido } from './datos'
+import { CLAVE_PARTIDOS, type Partido, usePartido } from './datos'
 import { FormularioPartido } from './FormularioPartido'
 import { SeccionPartido } from './Jugado'
 import { Mensaje } from './Mensaje'
 import { SeccionNotas } from './Notas'
 import estilos from './Partidos.module.css'
 import { SeccionPlanificacion } from './Planificacion'
+import { TarjetaPartido } from './TarjetaPartido'
 import { SeccionVideos } from './Videos'
 
 // Ficha de un partido: sus datos, editar y borrar, y la convocatoria
@@ -62,59 +53,12 @@ export function PaginaPartido() {
   const gestiona = puedeGestionarJugadores(plantilla)
   const convocados = p.jugadores.filter((j) => j.convocado)
   const noConvocados = p.jugadores.filter((j) => !j.convocado)
-  const lugar = textoLocal(p.local)
 
   return (
     <div className={estilos.pagina}>
       {volver}
 
-      <header className={estilos.ficha}>
-        <span className={estilos.cuando}>
-          {textoFecha(p.fecha)}
-          {p.estado === 'aplazado' && ' · Aplazado'}
-        </span>
-        <h1>
-          {p.local === false ? 'en ' : 'vs '}
-          {p.rival}
-        </h1>
-        <ul className={estilos.datos}>
-          {p.competicion && (
-            <li>
-              <Trophy aria-hidden size={18} />
-              {p.competicion}
-            </li>
-          )}
-          {(p.hora || p.horaCitacion) && (
-            <li>
-              <Clock aria-hidden size={18} />
-              {[p.horaCitacion && `Citación ${p.horaCitacion}`, p.hora && `Partido ${p.hora}`]
-                .filter(Boolean)
-                .join(' · ')}
-            </li>
-          )}
-          {(p.lugar || lugar) && (
-            <li>
-              <MapPin aria-hidden size={18} />
-              {[p.lugar, lugar && (p.lugar ? `(${lugar.toLowerCase()})` : lugar)]
-                .filter(Boolean)
-                .join(' ')}
-            </li>
-          )}
-        </ul>
-      </header>
-
-      {gestiona && (
-        <div className={estilos.acciones}>
-          <Boton
-            variante="secundario"
-            icono={<Pencil aria-hidden size={18} />}
-            onClick={() => setEditando(true)}
-          >
-            Editar
-          </Boton>
-          <BorrarPartido partido={p} alBorrar={volverA} />
-        </div>
-      )}
+      <TarjetaPartido partido={p} alEditar={gestiona ? () => setEditando(true) : undefined} />
 
       <SeccionPartido partido={p} />
 
@@ -183,6 +127,13 @@ export function PaginaPartido() {
         <Mensaje plantillaId={plantilla.id} partidoId={p.id} conAcciones={gestiona} />
       </section>
 
+      {/* Borrar, al final y sin relleno, como «Dar de baja» en la ficha del jugador (GH-229) */}
+      {gestiona && (
+        <div className={estilos.accionFinal}>
+          <BorrarPartido partido={p} alBorrar={volverA} />
+        </div>
+      )}
+
       <FormularioPartido abierta={editando} partido={p} alCerrar={() => setEditando(false)} />
     </div>
   )
@@ -217,7 +168,8 @@ function BorrarPartido({ partido, alBorrar }: { partido: Partido; alBorrar: stri
 
   return (
     <Boton
-      variante="peligro"
+      variante="texto"
+      className={estilos.textoPeligro}
       icono={<Trash2 aria-hidden size={18} />}
       cargando={borrar.isPending}
       onClick={async () => {
@@ -232,7 +184,7 @@ function BorrarPartido({ partido, alBorrar }: { partido: Partido; alBorrar: stri
         if (confirmado) borrar.mutate()
       }}
     >
-      Borrar
+      Borrar partido
     </Boton>
   )
 }

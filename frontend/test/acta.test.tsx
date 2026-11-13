@@ -161,10 +161,13 @@ describe('acta del partido', () => {
         tarjetas: [{ indice: 0, tipo: 'amarilla' }],
       },
     ])
-    // Ya en la ficha: el marcador de la revisión ha desaparecido y el del partido muestra el resultado
+    // Ya en la ficha: el marcador de la revisión ha desaparecido y la tarjeta muestra el resultado
     await waitFor(() => expect(ruta(router)).toBe('/plantillas/p1/partidos/p1'))
-    const partido = await screen.findByRole('region', { name: 'Partido' })
-    expect(await within(partido).findByText('2–1')).toBeInTheDocument()
+    // La tarjeta se busca en cada intento: al refrescar el partido tras registrar el acta, la página
+    // se vuelve a pintar y la de antes deja de estar en el documento
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { level: 1 }).closest('header')).toHaveTextContent('2–1'),
+    )
     // El recorrido entero (subir, revisar y registrar) pasa de los 5 s por defecto con la máquina cargada
   }, 15_000)
 

@@ -96,6 +96,26 @@ export const urlActa = (plantillaId: string, partidoId: string) =>
 export const textoResultado = (p: { golesFavor: number | null; golesContra: number | null }) =>
   p.golesFavor === null || p.golesContra === null ? null : `${p.golesFavor}–${p.golesContra}`
 
+// Victoria, empate o derrota, desde el punto de vista del equipo; null sin resultado (GH-228)
+export type TipoResultado = 'victoria' | 'empate' | 'derrota'
+export function tipoResultado(p: {
+  golesFavor: number | null
+  golesContra: number | null
+}): TipoResultado | null {
+  if (p.golesFavor === null || p.golesContra === null) return null
+  return p.golesFavor > p.golesContra
+    ? 'victoria'
+    : p.golesFavor === p.golesContra
+      ? 'empate'
+      : 'derrota'
+}
+
+export const TEXTO_RESULTADO: Record<TipoResultado, string> = {
+  victoria: 'Victoria',
+  empate: 'Empate',
+  derrota: 'Derrota',
+}
+
 export type EstadisticasPlantilla = components['schemas']['EstadisticasPlantilla']
 export type EstadisticasJugador = components['schemas']['EstadisticasJugador']
 export type TrayectoriaEstadisticas = components['schemas']['TrayectoriaEstadisticas']

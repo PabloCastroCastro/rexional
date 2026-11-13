@@ -29,14 +29,17 @@ p {
 }
 
 h1 {
-  font-size: var(--texto-xl);
-  font-weight: var(--peso-fuerte);
-  line-height: 1.25;
+  font-family: var(--fuente-titulos);
+  font-size: var(--texto-titulo);
+  font-weight: 700;
+  line-height: 1.15;
 }
 
 h2 {
-  font-size: var(--texto-lg);
-  font-weight: var(--peso-fuerte);
+  font-family: var(--fuente-titulos);
+  font-size: var(--texto-seccion);
+  font-weight: 700;
+  line-height: 1.2;
 }
 
 a {
