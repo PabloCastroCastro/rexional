@@ -22,9 +22,8 @@ import { Selector } from '../componentes/Selector'
 import { hoy } from '../entrenos/datos'
 import { nombreCompleto, puedeGestionarJugadores } from '../jugadores/datos'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
-import { CLAVE_PARTIDOS, type Partido, textoResultado, tipoResultado } from './datos'
+import { CLAVE_PARTIDOS, type Partido, textoResultado } from './datos'
 import estilos from './Partidos.module.css'
-import { Resultado } from './Resultado'
 
 // El partido jugado: marcador, titulares y suplentes, y la línea de tiempo con el registro rápido
 // de goles, cambios y tarjetas. Lo importado del acta se corrige igual que lo registrado a mano.
@@ -72,26 +71,16 @@ export function SeccionPartido({ partido }: { partido: Partido }) {
         <Goal aria-hidden size={20} />
         Partido
       </h2>
-      <div className={estilos.marcadorPartido}>
-        <span
-          className={estilos.resultadoGrande}
-          data-estado={partido.estado}
-          data-resultado={(partido.estado === 'jugado' && tipoResultado(partido)) || undefined}
+      {/* El resultado va en la tarjeta del partido (GH-229); aquí, solo ponerlo o cambiarlo */}
+      {gestiona && (
+        <Boton
+          variante="secundario"
+          className={estilos.botonResultado}
+          onClick={() => setResultado(true)}
         >
-          {partido.estado === 'jugado' ? (
-            <Resultado partido={partido} />
-          ) : partido.estado === 'aplazado' ? (
-            'Aplazado'
-          ) : (
-            'Sin resultado'
-          )}
-        </span>
-        {gestiona && (
-          <Boton variante="secundario" onClick={() => setResultado(true)}>
-            {partido.estado === 'jugado' ? 'Cambiar resultado' : 'Poner resultado'}
-          </Boton>
-        )}
-      </div>
+          {partido.estado === 'jugado' ? 'Cambiar resultado' : 'Poner resultado'}
+        </Boton>
+      )}
       {gestiona && convocados.length > 0 && (
         <div className={estilos.acciones}>
           <Link to="alineacion" className={estilos.enlaceSecundario}>
