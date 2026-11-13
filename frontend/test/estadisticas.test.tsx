@@ -387,6 +387,15 @@ describe('ficha del jugador', () => {
             posicion: null,
             activo: true,
           },
+          {
+            plantillaId: 'p4',
+            plantilla: 'Juvenil',
+            categoria: 'juvenil',
+            temporada: '2024-25',
+            dorsal: 9,
+            posicion: null,
+            activo: true,
+          },
         ],
       })
     const totales = {
@@ -415,7 +424,16 @@ describe('ficha del jugador', () => {
             goles: 5,
             asistencias: 1,
           },
-          { plantillaId: 'p3', plantilla: 'Senior', temporada: '2025-26', dorsal: 9, ...totales },
+          {
+            plantillaId: 'p3',
+            plantilla: 'Senior',
+            temporada: '2025-26',
+            dorsal: 9,
+            ...totales,
+            partidos: 10,
+            goles: 2,
+          },
+          { plantillaId: 'p4', plantilla: 'Juvenil', temporada: '2024-25', dorsal: 9, ...totales },
         ],
         totales: { ...totales, partidos: 6, goles: 5, asistencias: 1 },
       })
@@ -425,7 +443,7 @@ describe('ficha del jugador', () => {
     conEstadisticas()
     conZoe()
     abrir('/plantillas/p1/jugadores/j3')
-    const partidos = await screen.findByRole('region', { name: 'Partidos en esta plantilla' })
+    const partidos = await screen.findByRole('region', { name: 'Partidos' })
     expect(cifras(partidos)).toEqual({
       Partidos: '6',
       'De titular': '6',
@@ -448,18 +466,22 @@ describe('ficha del jugador', () => {
     expect(within(partidos).getByText('Amarillas').parentElement).toHaveAttribute('data-vacia')
     expect(within(partidos).getByText('Goles').parentElement).not.toHaveAttribute('data-vacia')
 
-    const temporadas = screen.getByRole('region', { name: 'Temporadas en el club' })
-    expect(await within(temporadas).findByText('6 PJ · 5 G · 1 A')).toBeInTheDocument()
-    expect(temporadas).toHaveTextContent('6 partidos, 5 goles, 1 asistencia')
+    const temporadas = screen.getByRole('region', { name: 'Temporadas' })
+    // Las anteriores, con sus cifras; la actual, marcada y sin repetir las de arriba
+    expect(await within(temporadas).findByText('10 PJ · 2 G · 0 A')).toBeInTheDocument()
+    expect(temporadas).toHaveTextContent('10 partidos, 2 goles, 0 asistencias')
+    const [actual] = within(temporadas).getAllByRole('listitem')
+    expect(actual).toHaveTextContent('Actual')
+    expect(actual).not.toHaveTextContent('PJ')
     // La temporada sin partidos no lleva la línea de cifras
-    expect(temporadas).not.toHaveTextContent('0 PJ')
+    expect(within(temporadas).getAllByRole('listitem')[2]).not.toHaveTextContent('PJ')
   })
 
   it('sin partidos jugados, las mismas casillas a cero', async () => {
     conEstadisticas(senior26, { ...ESTADISTICAS, jugadores: [] })
     conZoe()
     abrir('/plantillas/p1/jugadores/j3')
-    const partidos = await screen.findByRole('region', { name: 'Partidos en esta plantilla' })
+    const partidos = await screen.findByRole('region', { name: 'Partidos' })
     expect(Object.keys(cifras(partidos))).toEqual([
       'Partidos',
       'De titular',

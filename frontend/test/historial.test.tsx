@@ -230,11 +230,11 @@ describe('asistencia en la plantilla', () => {
     manejadores['GET /api/plantillas/p1/asistencia/resumen'] = () =>
       json([resumen('j2', 'Brais', 6, 1, 3)])
     abrir('/plantillas/p1/jugadores/j2')
-    const bloque = await screen.findByRole('region', { name: 'Asistencia en esta plantilla' })
+    const bloque = await screen.findByRole('region', { name: 'Entrenos' })
     const casilla = (texto: string) => within(bloque).getByText(texto).nextElementSibling
     expect(casilla('Asistencia')).toHaveTextContent('60 %')
     expect(within(bloque).getByText('60 %')).toHaveAttribute('data-nivel', 'medio')
-    expect(casilla('Asiste')).toHaveTextContent('6')
+    expect(casilla('Fue')).toHaveTextContent('6')
     expect(casilla('Justificadas')).toHaveTextContent('1')
     expect(casilla('Faltas')).toHaveTextContent('3')
   })
@@ -260,7 +260,7 @@ describe('asistencia en la plantilla', () => {
     manejadores['GET /api/plantillas/p1/asistencia/resumen'] = () =>
       json([resumen('j2', 'Brais', 0, 0, 0)])
     abrir('/plantillas/p1/jugadores/j2')
-    const bloque = await screen.findByRole('region', { name: 'Asistencia en esta plantilla' })
+    const bloque = await screen.findByRole('region', { name: 'Entrenos' })
     const casilla = (texto: string) => within(bloque).getByText(texto).nextElementSibling
     expect(casilla('Asistencia')).toHaveTextContent('—Sin entrenos registrados')
     expect(casilla('Faltas')).toHaveTextContent('0')

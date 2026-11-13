@@ -163,12 +163,37 @@ a.fila:hover {
   gap: var(--espacio-2);
 }
 
-/* En la ficha, «Dar de baja» lejos de «Editar» (GH-226) */
-.accionesFicha {
+/* Editar, solo con el icono, junto al nombre (GH-234) */
+.botonIcono {
+  flex: none;
+  width: var(--altura-tactil);
+  padding: 0;
+}
+
+/* Dar de baja (o reactivar), al final de la ficha y sin relleno */
+.accionFinal {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: var(--espacio-2);
+  justify-content: center;
+  padding-top: var(--espacio-3);
+  border-top: 1px solid var(--color-borde);
+}
+
+.accionFinal .textoPeligro {
+  color: var(--color-peligro);
+}
+
+/* La temporada en curso, en la trayectoria */
+.marcaActual {
+  display: inline-flex;
+  align-items: center;
+  margin-left: var(--espacio-2);
+  padding: 0 var(--espacio-2);
+  border-radius: var(--radio-completo);
+  background: var(--color-superficie-alterna);
+  color: var(--color-texto-suave);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-medio);
+  vertical-align: middle;
 }
 
 /* Partidos en la ficha: dos filas de casillas con la misma separación que entre casillas */
