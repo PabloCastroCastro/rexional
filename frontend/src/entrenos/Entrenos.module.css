@@ -11,7 +11,8 @@
   grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: var(--espacio-2);
-  padding: var(--espacio-1);
+  /* Sin relleno: las flechas ya dan los 44 px de alto (GH-258) */
+  padding: 0;
   border-radius: var(--radio-l);
   background: var(--color-superficie);
   box-shadow: var(--sombra-1);
@@ -73,17 +74,33 @@
   position: sticky;
   bottom: calc(var(--altura-navegacion) + env(safe-area-inset-bottom, 0px));
   display: grid;
-  gap: var(--espacio-2);
-  padding: var(--espacio-3) 0;
+  gap: var(--espacio-1);
+  /* El progreso, en el borde de arriba, hace de separación con la lista */
+  padding: 0 0 var(--espacio-2);
   background: var(--color-fondo);
 }
 
+/* El progreso y el guardado a la izquierda, la acción a la derecha, en una fila */
 .pieFila {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: var(--espacio-2);
+  gap: var(--espacio-3);
+}
+
+.pieTexto {
+  display: grid;
+  min-width: 0;
+}
+
+.pieTexto .recuentos {
+  margin: 0;
+  color: var(--color-texto);
+}
+
+/* Pasar lista, más junta que el resto para que quepan más jugadores (GH-258) */
+.pagina.compacta {
+  gap: var(--espacio-3);
 }
 
 .progreso {

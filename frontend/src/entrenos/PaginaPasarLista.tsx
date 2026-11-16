@@ -79,7 +79,7 @@ export function PaginaPasarLista() {
     setParametros(fecha === actual ? { entreno: id } : { fecha, entreno: id })
 
   return (
-    <div className={estilos.pagina}>
+    <div className={`${estilos.pagina} ${estilos.compacta}`}>
       <nav className={estilos.fecha} aria-label="Fecha del entreno">
         <button
           type="button"
@@ -603,27 +603,30 @@ function PieLista({
         <span className={estilos.justificada} style={{ width: ancho(recuentos.justificada) }} />
         <span className={estilos.falta} style={{ width: ancho(recuentos.falta) }} />
       </div>
+      {/* En una sola fila, para que quepan más jugadores encima (GH-258) */}
       <div className={estilos.pieFila}>
-        <p className={estilos.recuentos}>
-          <strong>
-            {marcados} de {total} marcados
-          </strong>
-          {marcados > 0 && (
-            <span className="solo-lectores">: {partesRecuento(recuentos).join(', ')}</span>
-          )}
-        </p>
-        <IndicadorGuardado estado={guardado.estado} alReintentar={guardado.reintentar} />
+        <div className={estilos.pieTexto}>
+          <p className={estilos.recuentos}>
+            <strong>
+              {marcados} de {total} marcados
+            </strong>
+            {marcados > 0 && (
+              <span className="solo-lectores">: {partesRecuento(recuentos).join(', ')}</span>
+            )}
+          </p>
+          <IndicadorGuardado estado={guardado.estado} alReintentar={guardado.reintentar} />
+        </div>
+        {sinMarcar > 0 ? (
+          <Boton icono={<Check aria-hidden size={18} />} onClick={alMarcarResto}>
+            El resto asiste ({sinMarcar})
+          </Boton>
+        ) : (
+          <p className={estilos.listaCompleta}>
+            <Check aria-hidden size={18} />
+            Lista completa
+          </p>
+        )}
       </div>
-      {sinMarcar > 0 ? (
-        <Boton anchoCompleto icono={<Check aria-hidden size={18} />} onClick={alMarcarResto}>
-          El resto asiste ({sinMarcar})
-        </Boton>
-      ) : (
-        <p className={estilos.listaCompleta}>
-          <Check aria-hidden size={18} />
-          Lista completa
-        </p>
-      )}
     </div>
   )
 }
