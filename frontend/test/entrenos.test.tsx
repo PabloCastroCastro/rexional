@@ -177,6 +177,12 @@ describe('pasar lista', () => {
     abrir('/plantillas/p1/entrenos')
     await screen.findByText('Íker')
     expect(screen.queryByLabelText('Motivo de Íker')).not.toBeInTheDocument()
+    // La justificada es una mano levantada: avisó (GH-256)
+    expect(
+      within(fila('Íker'))
+        .getByRole('button', { name: 'Justificada' })
+        .querySelector('.lucide-hand'),
+    ).not.toBeNull()
     await pulsar('Íker', 'Justificada')
     await userEvent.type(screen.getByLabelText('Motivo de Íker'), 'Trabajo')
     await esperarGuardado()

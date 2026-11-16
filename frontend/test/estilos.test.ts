@@ -81,17 +81,19 @@ describe('fuente de los títulos', () => {
   })
 })
 
+// Los tokens de color de cada tema, para comprobar contrastes
+const tokens = readFileSync(join(SRC, 'estilos/tokens.css'), 'utf8')
+const [claro = '', oscuro = ''] = tokens.split('@media (prefers-color-scheme: dark)')
+const TEMAS = [
+  ['claro', claro],
+  ['oscuro', oscuro],
+] as const
+const valor = (bloque: string, nombre: string) =>
+  bloque.match(new RegExp(`--${nombre}:\\s*(#[0-9a-f]{6});`))?.[1] ?? ''
+
 // GH-228: los colores del resultado se leen con su texto, en claro y en oscuro
 describe('colores del resultado', () => {
-  const tokens = readFileSync(join(SRC, 'estilos/tokens.css'), 'utf8')
-  const [claro = '', oscuro = ''] = tokens.split('@media (prefers-color-scheme: dark)')
-  const valor = (bloque: string, nombre: string) =>
-    bloque.match(new RegExp(`--${nombre}:\\s*(#[0-9a-f]{6});`))?.[1] ?? ''
-
-  for (const [modo, bloque] of [
-    ['claro', claro],
-    ['oscuro', oscuro],
-  ] as const) {
+  for (const [modo, bloque] of TEMAS) {
     for (const tipo of ['victoria', 'empate', 'derrota']) {
       it(`${tipo} en modo ${modo} cumple AA con su texto`, () => {
         const fondo = valor(bloque, `color-${tipo}`)
@@ -112,4 +114,35 @@ describe('tarjeta del partido', () => {
     expect(regla).toContain('position: absolute')
     expect(regla).toMatch(/z-index: [1-9]/)
   })
+})
+
+// GH-256: en pasar lista, sin marcar los tres botones van en gris y solo el marcado lleva su color,
+// relleno y con el icono encima. Iconos: 3:1 como mínimo (WCAG 1.4.11), en claro y en oscuro
+describe('estados de pasar lista', () => {
+  const css = readFileSync(join(SRC, 'entrenos/Entrenos.module.css'), 'utf8')
+
+  it('sin marcar, el icono es el texto suave; marcado, el color de su estado', () => {
+    expect(css.match(/\n\.estados button \{([^}]+)\}/)?.[1]).toContain(
+      'color: var(--color-texto-suave)',
+    )
+    const marcado = css.match(/\n\.estados button\[aria-pressed="true"\] \{([^}]+)\}/)?.[1]
+    expect(marcado).toContain('background: var(--color-estado)')
+    expect(marcado).toContain('color: var(--color-sobre-estado)')
+  })
+
+  for (const [modo, bloque] of TEMAS) {
+    it(`en modo ${modo}, el icono gris sobre el botón cumple 3:1`, () => {
+      expect(
+        contraste(valor(bloque, 'color-texto-suave'), valor(bloque, 'color-superficie')),
+      ).toBeGreaterThanOrEqual(3)
+    })
+
+    for (const estado of ['exito', 'aviso', 'peligro']) {
+      it(`en modo ${modo}, el icono sobre ${estado} cumple 3:1`, () => {
+        expect(
+          contraste(valor(bloque, 'color-sobre-estado'), valor(bloque, `color-${estado}`)),
+        ).toBeGreaterThanOrEqual(3)
+      })
+    }
+  }
 })

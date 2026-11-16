@@ -27,6 +27,8 @@
   --color-exito: #1a7a4f;
   --color-aviso: #9a5b00;
   --color-informacion: #1d5fb8;
+  /* Icono sobre un estado marcado (pasar lista, GH-256): blanco; en oscuro, el color del fondo */
+  --color-sobre-estado: #ffffff;
   --color-foco: #1d6fd1;
   /* Resultado de un partido (GH-228): propios, para ajustarlos sin tocar los estados ni el peligro */
   --color-victoria: #1a7a4f;
@@ -105,6 +107,7 @@
     --color-exito: #5fcf98;
     --color-aviso: #f0b04a;
     --color-informacion: #7fb2f5;
+    --color-sobre-estado: #0f1311;
     --color-foco: #7fb2f5;
     --color-victoria: #5fcf98;
     --color-sobre-victoria: #0f1311;

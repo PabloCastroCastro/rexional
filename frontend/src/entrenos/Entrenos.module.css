@@ -200,8 +200,9 @@
   border: 0;
 }
 
+/* Sin marcar, los tres en gris neutro; solo el marcado lleva su color, relleno (GH-256). El texto suave
+   sobre la superficie supera el 3:1 en los dos temas */
 .estados button {
-  --color-estado: var(--color-texto-suave);
   display: grid;
   place-items: center;
   width: var(--altura-tactil);
@@ -209,10 +210,11 @@
   border: 1px solid var(--color-borde);
   border-radius: var(--radio-m);
   background: var(--color-superficie);
-  color: var(--color-estado);
+  color: var(--color-texto-suave);
   cursor: pointer;
   transition:
     background-color var(--duracion) var(--curva),
+    border-color var(--duracion) var(--curva),
     color var(--duracion) var(--curva);
 }
 
@@ -231,7 +233,7 @@
 .estados button[aria-pressed="true"] {
   border-color: var(--color-estado);
   background: var(--color-estado);
-  color: var(--color-superficie);
+  color: var(--color-sobre-estado);
 }
 
 .motivo {
