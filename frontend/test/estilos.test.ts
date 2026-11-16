@@ -145,4 +145,14 @@ describe('estados de pasar lista', () => {
       })
     }
   }
+
+  // GH-259: pegado encima de la navegación y de la zona segura del móvil, sin salir del flujo (así
+  // no tapa la última fila)
+  it('el pie va fijo encima de la navegación, sin tapar la última fila', () => {
+    const regla = css.match(/\n\.pieLista \{([^}]+)\}/)?.[1] ?? ''
+    expect(regla).toContain('position: sticky')
+    expect(regla).toContain(
+      'bottom: calc(var(--altura-navegacion) + env(safe-area-inset-bottom, 0px))',
+    )
+  })
 })

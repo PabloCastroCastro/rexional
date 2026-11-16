@@ -324,6 +324,19 @@
   color: var(--color-texto);
 }
 
+/* Sin plan, en la fila de la sesión de pasar lista (GH-258) */
+.enlacePlanificar {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-1);
+  min-height: var(--altura-tactil);
+  margin-left: auto;
+  padding: 0 var(--espacio-2);
+  color: var(--color-acento);
+  font-weight: var(--peso-medio);
+  text-decoration: none;
+}
+
 /* Al final: separadores de las listas (más específicos que las reglas de li) */
 .lista li + li {
   border-top: 1px solid var(--color-borde);

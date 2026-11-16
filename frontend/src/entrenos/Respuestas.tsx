@@ -187,22 +187,40 @@ export function PistaRespuesta({
   )
 }
 
-// Entreno de hoy aún sin lista (GH-215): encima de la lista, el recuento y el resumen para WhatsApp
+// Solo lo que no es cero: «1 no va · 31 sin responder»
+function resumenRespuestas(r: EntrenoListado['respuestas']) {
+  const partes = [
+    r.voy && `${r.voy} ${r.voy === 1 ? 'va' : 'van'}`,
+    r.duda && `${r.duda} ${r.duda === 1 ? 'duda' : 'dudan'}`,
+    r.noVoy && `${r.noVoy} no ${r.noVoy === 1 ? 'va' : 'van'}`,
+    r.sinResponder && `${r.sinResponder} sin responder`,
+  ].filter(Boolean)
+  return partes.length ? partes.join(' · ') : 'Sin respuestas'
+}
+
+// Entreno de hoy aún sin lista (GH-215): encima de la lista, una línea plegada con el resumen; al
+// abrirla, el recuento completo y el resumen para WhatsApp (GH-258)
 export function RespuestasDeHoy({ entreno }: { entreno: EntrenoListado }) {
   const plantilla = usePlantillaActiva()
   const mensaje = useMensajeRespuestas(plantilla.id, entreno.id)
   return (
-    <section aria-label="Respuestas" className={estilos.seccionRespuestas}>
-      <p>
-        <strong>¿Quién va? </strong>
-        <RecuentoRespuestas respuestas={entreno.respuestas} />
-      </p>
-      {mensaje.data && (
-        <details className={estilos.resumenHoy}>
-          <summary>Resumen para WhatsApp</summary>
-          <MensajeCompartible {...mensaje.data} />
-        </details>
-      )}
+    <section aria-label="Respuestas">
+      <details className={estilos.respuestasHoy}>
+        <summary>
+          <strong>¿Quién va?</strong> {resumenRespuestas(entreno.respuestas)}
+        </summary>
+        <div className={estilos.seccionRespuestas}>
+          <p>
+            <RecuentoRespuestas respuestas={entreno.respuestas} />
+          </p>
+          {mensaje.data && (
+            <details className={estilos.resumenHoy}>
+              <summary>Resumen para WhatsApp</summary>
+              <MensajeCompartible {...mensaje.data} />
+            </details>
+          )}
+        </div>
+      </details>
     </section>
   )
 }

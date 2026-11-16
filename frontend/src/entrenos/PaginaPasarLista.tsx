@@ -30,7 +30,7 @@ import { estadoJugador } from '../jugadores/estado'
 import { textoVuelta } from '../jugadores/Lesiones'
 import { Dorsal } from '../jugadores/PaginaPlantilla'
 import { resumenPlan } from '../planificacion/datos'
-import { TarjetaPlan } from '../planificacion/TarjetaPlan'
+import { EnlacePlanificar, TarjetaPlan } from '../planificacion/TarjetaPlan'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
 import {
   CLAVE_ENTRENOS,
@@ -112,31 +112,34 @@ export function PaginaPasarLista() {
       </nav>
 
       {sesiones.length > 0 && (
-        <fieldset className={estilos.sesiones}>
-          <legend className="solo-lectores">Sesiones del día</legend>
-          {sesiones.map((s) => (
-            <button
-              key={s.id}
-              type="button"
-              aria-pressed={s.id === elegida?.id}
-              onClick={() => elegir(s.id)}
-            >
-              <Clock aria-hidden size={16} />
-              {textoHoras(s) ?? 'Sin hora'}
-            </button>
-          ))}
-          {gestiona && (
-            <button
-              type="button"
-              className={estilos.anadirSesion}
-              onClick={() => setCreando(true)}
-              aria-label="Añadir sesión"
-              title="Añadir sesión"
-            >
-              <Plus aria-hidden size={18} />
-            </button>
-          )}
-        </fieldset>
+        <div className={estilos.filaSesiones}>
+          <fieldset className={estilos.sesiones}>
+            <legend className="solo-lectores">Sesiones del día</legend>
+            {sesiones.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                aria-pressed={s.id === elegida?.id}
+                onClick={() => elegir(s.id)}
+              >
+                <Clock aria-hidden size={16} />
+                {textoHoras(s) ?? 'Sin hora'}
+              </button>
+            ))}
+            {gestiona && (
+              <button
+                type="button"
+                className={estilos.anadirSesion}
+                onClick={() => setCreando(true)}
+                aria-label="Añadir sesión"
+                title="Añadir sesión"
+              >
+                <Plus aria-hidden size={18} />
+              </button>
+            )}
+          </fieldset>
+          {elegida && <EnlacePlanificar entreno={elegida} />}
+        </div>
       )}
 
       {elegida && <TarjetaPlan entreno={elegida} />}
@@ -500,11 +503,6 @@ function Lista({ entreno }: { entreno: Entreno }) {
 
   return (
     <>
-      <div className={estilos.barra}>
-        <Recuentos recuentos={recuentos} sinMarcar={sinMarcar.length} />
-        <IndicadorGuardado estado={guardado.estado} alReintentar={guardado.reintentar} />
-      </div>
-
       <ul className={estilos.lista} aria-label="Jugadores">
         {entreno.jugadores.map((j) => {
           const marca = marcas[j.jugadorId] ?? { estado: null, motivo: '' }
@@ -558,38 +556,76 @@ function Lista({ entreno }: { entreno: Entreno }) {
         })}
       </ul>
 
-      {sinMarcar.length > 0 && (
-        <Boton
-          variante="secundario"
-          anchoCompleto
-          icono={<Check aria-hidden size={18} />}
-          onClick={() => {
-            const nuevas = { ...marcas }
-            for (const j of sinMarcar) nuevas[j.jugadorId] = { estado: 'asiste', motivo: '' }
-            cambiar(nuevas)
-          }}
-        >
-          Marcar el resto como asiste ({sinMarcar.length})
-        </Boton>
-      )}
+      <PieLista
+        recuentos={recuentos}
+        sinMarcar={sinMarcar.length}
+        guardado={guardado}
+        alMarcarResto={() => {
+          const nuevas = { ...marcas }
+          for (const j of sinMarcar) nuevas[j.jugadorId] = { estado: 'asiste', motivo: '' }
+          cambiar(nuevas)
+        }}
+      />
     </>
   )
 }
 
-function Recuentos({
+const partesRecuento = (recuentos: Entreno['recuentos']) => [
+  `${recuentos.asiste} ${recuentos.asiste === 1 ? 'asiste' : 'asisten'}`,
+  `${recuentos.justificada} ${recuentos.justificada === 1 ? 'justificada' : 'justificadas'}`,
+  `${recuentos.falta} ${recuentos.falta === 1 ? 'falta' : 'faltan'}`,
+]
+
+function Recuentos({ recuentos }: { recuentos: Entreno['recuentos'] }) {
+  return <p className={estilos.recuentos}>{partesRecuento(recuentos).join(' · ')}</p>
+}
+
+// Siempre a mano encima de la navegación (GH-259): el progreso de la lista con los colores de cada
+// estado, el guardado y marcar como asiste a los que quedan
+function PieLista({
   recuentos,
   sinMarcar,
+  guardado,
+  alMarcarResto,
 }: {
   recuentos: Entreno['recuentos']
-  sinMarcar?: number
+  sinMarcar: number
+  guardado: { estado: EstadoGuardado; reintentar: () => void }
+  alMarcarResto: () => void
 }) {
-  const partes = [
-    `${recuentos.asiste} ${recuentos.asiste === 1 ? 'asiste' : 'asisten'}`,
-    `${recuentos.justificada} ${recuentos.justificada === 1 ? 'justificada' : 'justificadas'}`,
-    `${recuentos.falta} ${recuentos.falta === 1 ? 'falta' : 'faltan'}`,
-  ]
-  if (sinMarcar) partes.push(`${sinMarcar} sin marcar`)
-  return <p className={estilos.recuentos}>{partes.join(' · ')}</p>
+  const marcados = recuentos.asiste + recuentos.justificada + recuentos.falta
+  const total = marcados + sinMarcar
+  const ancho = (n: number) => `${total ? (n / total) * 100 : 0}%`
+  return (
+    <div className={estilos.pieLista}>
+      <div className={estilos.progreso} aria-hidden="true">
+        <span className={estilos.asiste} style={{ width: ancho(recuentos.asiste) }} />
+        <span className={estilos.justificada} style={{ width: ancho(recuentos.justificada) }} />
+        <span className={estilos.falta} style={{ width: ancho(recuentos.falta) }} />
+      </div>
+      <div className={estilos.pieFila}>
+        <p className={estilos.recuentos}>
+          <strong>
+            {marcados} de {total} marcados
+          </strong>
+          {marcados > 0 && (
+            <span className="solo-lectores">: {partesRecuento(recuentos).join(', ')}</span>
+          )}
+        </p>
+        <IndicadorGuardado estado={guardado.estado} alReintentar={guardado.reintentar} />
+      </div>
+      {sinMarcar > 0 ? (
+        <Boton anchoCompleto icono={<Check aria-hidden size={18} />} onClick={alMarcarResto}>
+          El resto asiste ({sinMarcar})
+        </Boton>
+      ) : (
+        <p className={estilos.listaCompleta}>
+          <Check aria-hidden size={18} />
+          Lista completa
+        </p>
+      )}
+    </div>
+  )
 }
 
 const TEXTOS_GUARDADO: Record<EstadoGuardado, string> = {
