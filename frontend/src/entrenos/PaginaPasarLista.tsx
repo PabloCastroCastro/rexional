@@ -9,7 +9,7 @@ import {
   Clock,
   Cloud,
   CloudCheck,
-  FileText,
+  Hand,
   LoaderCircle,
   Plus,
   X,
@@ -51,7 +51,8 @@ import { PistaRespuesta, RespuestasDeHoy, RespuestasEntreno } from './Respuestas
 
 const ESTADOS: { estado: Estado; texto: string; icono: typeof Check }[] = [
   { estado: 'asiste', texto: 'Asiste', icono: Check },
-  { estado: 'justificada', texto: 'Justificada', icono: FileText },
+  // La mano levantada: avisó de que no venía (GH-256)
+  { estado: 'justificada', texto: 'Justificada', icono: Hand },
   { estado: 'falta', texto: 'Falta', icono: X },
 ]
 
