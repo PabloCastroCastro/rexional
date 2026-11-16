@@ -93,11 +93,6 @@
   min-width: 0;
 }
 
-.pieTexto .recuentos {
-  margin: 0;
-  color: var(--color-texto);
-}
-
 /* Pasar lista, más junta que el resto para que quepan más jugadores (GH-258) */
 .pagina.compacta {
   gap: var(--espacio-3);
@@ -140,6 +135,12 @@
 .recuentos {
   color: var(--color-texto-suave);
   font-size: var(--texto-sm);
+}
+
+/* Después de .recuentos, que tiene menos especificidad */
+.pieTexto .recuentos {
+  margin: 0;
+  color: var(--color-texto);
 }
 
 .guardado {
