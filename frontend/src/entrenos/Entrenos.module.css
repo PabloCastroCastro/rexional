@@ -164,6 +164,12 @@
   white-space: nowrap;
 }
 
+/* En pasar lista el nombre nunca se corta: si no cabe en una línea, pasa a la siguiente (GH-257) */
+.nombre.entero {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
 .baja {
   color: var(--color-texto-suave);
   font-size: var(--texto-xs);

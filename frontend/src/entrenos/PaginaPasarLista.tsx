@@ -25,7 +25,7 @@ import { useConfirmacion } from '../componentes/Confirmacion'
 import { EstadoVacio } from '../componentes/EstadoVacio'
 import { HojaInferior } from '../componentes/HojaInferior'
 import { MarcaInvitado } from '../jugadores/BuscadorInvitables'
-import { nombreCompleto, puedeGestionarJugadores } from '../jugadores/datos'
+import { nombreCompleto, nombresCortos, puedeGestionarJugadores } from '../jugadores/datos'
 import { estadoJugador } from '../jugadores/estado'
 import { textoVuelta } from '../jugadores/Lesiones'
 import { Dorsal } from '../jugadores/PaginaPlantilla'
@@ -486,6 +486,8 @@ function Lista({ entreno }: { entreno: Entreno }) {
   const sinMarcar = entreno.jugadores.filter((j) => j.activo && !marcas[j.jugadorId]?.estado)
   const recuentos = { asiste: 0, justificada: 0, falta: 0 }
   for (const m of Object.values(marcas)) if (m.estado) recuentos[m.estado] += 1
+  // Nombre y primer apellido, para que no se corten; la leyenda de cada fila lleva el completo (GH-257)
+  const nombres = nombresCortos(entreno.jugadores)
 
   if (entreno.jugadores.length === 0) {
     return (
@@ -510,8 +512,8 @@ function Lista({ entreno }: { entreno: Entreno }) {
             <li key={j.jugadorId}>
               <div className={estilos.fila}>
                 <Dorsal dorsal={j.dorsal} estado={estadoJugador({ lesion: j.lesion })} />
-                <span className={estilos.nombre}>
-                  {nombreCompleto(j)}
+                <span className={`${estilos.nombre} ${estilos.entero}`}>
+                  {nombres.get(j.jugadorId)}
                   {j.tipo === 'invitado' && <MarcaInvitado />}
                   {!j.activo && <span className={estilos.baja}> baja</span>}
                   {/* La lesión va sobre el dorsal; debajo, solo cuándo vuelve (GH-251) */}
