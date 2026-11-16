@@ -174,16 +174,17 @@ export function PaginaPlantilla() {
             />
           </div>
         )}
+        {/* Solo el icono, para que la fila quepa en el móvil (GH-250) */}
         {gestiona && verBajas && (
           <Boton
             variante="secundario"
+            className={estilos.botonIcono}
             icono={<RotateCcw aria-hidden size={18} />}
             disabled={pendiente}
             onClick={() => reactivar(j)}
             aria-label={`Reactivar a ${nombreCompleto(j)}`}
-          >
-            Reactivar
-          </Boton>
+            title="Reactivar"
+          />
         )}
       </li>
     )
