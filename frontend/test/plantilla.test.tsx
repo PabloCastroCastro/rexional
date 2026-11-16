@@ -307,7 +307,11 @@ describe('bajas', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Bajas' }))
     const lista = await screen.findByRole('list', { name: 'Bajas' })
     expect(filas(lista)).toEqual([expect.stringMatching(/Hugo/)])
-    await userEvent.click(within(lista).getByRole('button', { name: 'Reactivar a Hugo' }))
+    // Solo el icono, para que la fila quepa en el móvil (GH-250)
+    const boton = within(lista).getByRole('button', { name: 'Reactivar a Hugo' })
+    expect(boton).toHaveTextContent(/^$/)
+    expect(boton).toHaveAttribute('title', 'Reactivar')
+    await userEvent.click(boton)
 
     expect(await screen.findByText('Hugo vuelve a la plantilla')).toBeInTheDocument()
     expect(enviado('PATCH /api/plantillas/p1/jugadores/j3')).toEqual([{ activo: true }])
