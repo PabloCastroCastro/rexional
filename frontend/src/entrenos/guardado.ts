@@ -4,7 +4,7 @@ import { api, datos } from '../api/cliente'
 import { CLAVE_ENTRENOS, claveEntreno, type Estado } from './datos'
 
 export type Asistencia = { jugadorId: string; estado: Estado; motivo?: string | null }
-export type EstadoGuardado = 'guardado' | 'pendiente' | 'guardando' | 'error'
+export type EstadoGuardado = 'sinGuardar' | 'guardado' | 'pendiente' | 'guardando' | 'error'
 
 // Espera desde el último cambio antes de guardar: agrupa varios toques seguidos en una petición
 export const ESPERA_GUARDADO = 600
@@ -12,9 +12,10 @@ export const ESPERA_GUARDADO = 600
 // Guardado automático de la lista de un día. Cada cambio programa el envío de la lista completa; nunca
 // hay dos envíos a la vez (si cambia durante uno, al terminar se envía lo último). Si falla, se
 // conserva para reintentar a mano o al recuperar la conexión, y se avisa antes de salir de la página.
-export function useGuardadoAutomatico(plantillaId: string, entrenoId: string) {
+// Una lista sin pasar empieza «sin guardar»: solo pasa a «guardado» con una respuesta del servidor.
+export function useGuardadoAutomatico(plantillaId: string, entrenoId: string, pasada: boolean) {
   const cliente = useQueryClient()
-  const [estado, setEstado] = useState<EstadoGuardado>('guardado')
+  const [estado, setEstado] = useState<EstadoGuardado>(pasada ? 'guardado' : 'sinGuardar')
   const pendiente = useRef<Asistencia[] | null>(null)
   const enCurso = useRef(false)
   const temporizador = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -76,7 +77,7 @@ export function useGuardadoAutomatico(plantillaId: string, entrenoId: string) {
   }, [enviar])
 
   useEffect(() => {
-    if (estado === 'guardado') return
+    if (estado === 'guardado' || estado === 'sinGuardar') return
     const alSalir = (e: BeforeUnloadEvent) => e.preventDefault()
     window.addEventListener('beforeunload', alSalir)
     return () => window.removeEventListener('beforeunload', alSalir)

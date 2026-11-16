@@ -268,3 +268,45 @@ describe('lesionados en pasar lista (GH-230)', () => {
     )
   })
 })
+
+describe('indicador de guardado (GH-255)', () => {
+  it('una lista sin pasar dice «Sin guardar», aunque tenga lesionados ya justificados', async () => {
+    const lesionado = jugador('j2', 'Brais', 7, {
+      lesion: { desde: '2026-10-10', vueltaPrevista: '2026-10-28' },
+    })
+    conEntrenos({ [HOY]: [IKER, lesionado] })
+    abrir('/plantillas/p1/entrenos')
+    await screen.findByText('Brais')
+    expect(screen.getByText('Sin guardar')).toBeInTheDocument()
+    expect(screen.queryByText('Guardado')).not.toBeInTheDocument()
+  })
+
+  it('una lista ya pasada abre con «Guardado»', async () => {
+    conEntrenos({ [HOY]: [{ ...IKER, estado: 'asiste' }, BRAIS] })
+    abrir('/plantillas/p1/entrenos')
+    await screen.findByText('Íker')
+    expect(screen.getByText('Guardado')).toBeInTheDocument()
+  })
+
+  it('solo dice «Guardado» cuando responde el servidor', async () => {
+    conEntrenos({ [HOY]: [IKER] })
+    const guardar = manejadores[`PUT /api/plantillas/p1/entrenos/e-${HOY}/asistencias`]
+    let responder = () => {}
+    const respondido = new Promise<void>((r) => {
+      responder = r
+    })
+    manejadores[`PUT /api/plantillas/p1/entrenos/e-${HOY}/asistencias`] = async (peticion) => {
+      await respondido
+      return guardar?.(peticion) ?? json(null)
+    }
+    abrir('/plantillas/p1/entrenos')
+    await screen.findByText('Íker')
+    await pulsar('Íker', 'Asiste')
+    await waitFor(() => expect(enviados()).toHaveLength(1), { timeout: 3000 })
+    expect(screen.getByText('Guardando…')).toBeInTheDocument()
+    expect(screen.queryByText('Guardado')).not.toBeInTheDocument()
+
+    responder()
+    await esperarGuardado()
+  })
+})
