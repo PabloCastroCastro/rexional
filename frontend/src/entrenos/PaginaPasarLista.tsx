@@ -7,6 +7,7 @@ import {
   ChevronRight,
   CircleAlert,
   Clock,
+  Cloud,
   CloudCheck,
   FileText,
   LoaderCircle,
@@ -440,9 +441,13 @@ const mayuscula = (texto: string) => texto.charAt(0).toUpperCase() + texto.slice
 
 function Lista({ entreno }: { entreno: Entreno }) {
   const plantilla = usePlantillaActiva()
-  const guardado = useGuardadoAutomatico(plantilla.id, entreno.id)
+  const guardado = useGuardadoAutomatico(
+    plantilla.id,
+    entreno.id,
+    entreno.jugadores.some((j) => j.estado !== null),
+  )
   // El lesionado ese día sale ya como justificada por lesión (GH-230): se guarda con el resto de la
-  // lista y se puede cambiar. Si nadie pasa lista, no se guarda nada
+  // lista y se puede cambiar. Si nadie pasa lista, no se guarda nada y el indicador dice «Sin guardar»
   const [marcas, setMarcas] = useState<Record<string, Marca>>(() =>
     Object.fromEntries(
       entreno.jugadores.map((j) => [
@@ -585,10 +590,19 @@ function Recuentos({
 }
 
 const TEXTOS_GUARDADO: Record<EstadoGuardado, string> = {
+  sinGuardar: 'Sin guardar',
   guardado: 'Guardado',
   pendiente: 'Guardando…',
   guardando: 'Guardando…',
   error: 'No se ha guardado',
+}
+
+const ICONOS_GUARDADO: Record<EstadoGuardado, typeof Cloud> = {
+  sinGuardar: Cloud,
+  guardado: CloudCheck,
+  pendiente: LoaderCircle,
+  guardando: LoaderCircle,
+  error: CircleAlert,
 }
 
 function IndicadorGuardado({
@@ -598,7 +612,7 @@ function IndicadorGuardado({
   estado: EstadoGuardado
   alReintentar: () => void
 }) {
-  const Icono = estado === 'error' ? CircleAlert : estado === 'guardado' ? CloudCheck : LoaderCircle
+  const Icono = ICONOS_GUARDADO[estado]
   return (
     <div className={estilos.guardado} data-estado={estado} role="status">
       <Icono aria-hidden size={16} className={estado === 'guardando' ? estilos.girando : ''} />
