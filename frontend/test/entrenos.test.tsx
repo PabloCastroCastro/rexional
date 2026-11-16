@@ -2,6 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Entreno, JugadorEntreno } from '../src/entrenos/datos'
+import { nombreCorto } from '../src/jugadores/datos'
 import {
   abrir,
   conDatos,
@@ -314,5 +315,33 @@ describe('indicador de guardado (GH-255)', () => {
 
     responder()
     await esperarGuardado()
+  })
+})
+
+describe('nombres en pasar lista (GH-257)', () => {
+  it('nombre y primer apellido, con sus partículas', () => {
+    expect(nombreCorto({ nombre: 'Breogán', apellidos: 'Couto Pérez' })).toBe('Breogán Couto')
+    expect(nombreCorto({ nombre: 'Uxío', apellidos: 'da Silva Mos' })).toBe('Uxío da Silva')
+    expect(nombreCorto({ nombre: 'Iria', apellidos: 'de la Fuente Rey' })).toBe('Iria de la Fuente')
+    expect(nombreCorto({ nombre: 'Zoe', apellidos: null })).toBe('Zoe')
+  })
+
+  it('muestra el nombre corto, salvo a los que coinciden, y la leyenda lleva el completo', async () => {
+    conEntrenos({
+      [HOY]: [
+        jugador('j1', 'Breogán', 1, { apellidos: 'Couto Pérez' }),
+        jugador('j2', 'Ignacio', 2, { apellidos: 'Saavedra Lago' }),
+        jugador('j3', 'Ignacio', 3, { apellidos: 'Saavedra Mos' }),
+      ],
+    })
+    abrir('/plantillas/p1/entrenos')
+    const lista = await screen.findByRole('list', { name: 'Jugadores' })
+    expect(within(lista).getByText('Breogán Couto')).toBeInTheDocument()
+    expect(within(lista).queryByText('Breogán Couto Pérez')).not.toBeInTheDocument()
+    expect(within(lista).getByText('Ignacio Saavedra Lago')).toBeInTheDocument()
+    expect(within(lista).getByText('Ignacio Saavedra Mos')).toBeInTheDocument()
+    expect(
+      within(lista).getByRole('group', { name: 'Asistencia de Breogán Couto Pérez' }),
+    ).toBeInTheDocument()
   })
 })
