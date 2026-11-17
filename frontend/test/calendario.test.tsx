@@ -305,6 +305,7 @@ describe('horario', () => {
   it('un horario guardado se puede quitar, con confirmación', async () => {
     conHorario({ desde: '2026-09-01', hasta: '2027-06-15', sesiones: [{ dia: 2, hora: '20:00' }] })
     abrir('/plantillas/p1/entrenos/horario')
+    await userEvent.click(await screen.findByRole('button', { name: 'Editar horario' }))
     expect(await screen.findByRole('button', { name: 'martes' })).toHaveAttribute(
       'aria-pressed',
       'true',
@@ -335,12 +336,59 @@ describe('horario', () => {
       plantilla('p1', 'Senior', '2026-27', { rol: 'jugador', esAdminClub: false }),
     )
     abrir('/plantillas/p1/entrenos/horario')
+    // El mismo resumen que el cuerpo técnico, sin las cifras ni el botón (GH-268)
+    const resumen = await screen.findByRole('region', { name: 'Horario de entrenos' })
     expect(
-      await screen.findByText(
-        /Entrenos los martes de 20:00 a 21:30 y jueves a las 18:00, del 1 de septiembre al 15 de junio/,
-      ),
-    ).toBeInTheDocument()
+      within(resumen)
+        .getAllByRole('listitem')
+        .map((li) => li.textContent),
+    ).toEqual(['Martes · 20:00–21:30', 'Jueves · 18:00'])
+    expect(resumen).toHaveTextContent('Del 1 sept al 15 jun')
+    expect(within(resumen).queryByText(/Entrenos hechos/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Editar horario' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Guardar horario' })).not.toBeInTheDocument()
+  })
+
+  it('guardado, se ve como resumen; «Editar horario» abre el formulario y «Cancelar» vuelve (GH-268)', async () => {
+    conHorario({
+      desde: '2026-09-01',
+      hasta: '2027-06-15',
+      sesiones: [
+        { dia: 2, hora: '20:00', horaFin: '21:30' },
+        { dia: 4, hora: '20:00', horaFin: '21:30' },
+      ],
+    })
+    const entreno = (id: string, fecha: string, deHorario = true) => ({
+      ...resumen(id, fecha, '20:00', { deHorario }),
+    })
+    manejadores['GET /api/plantillas/p1/entrenos'] = () =>
+      json([
+        entreno('a', '2026-10-15'),
+        entreno('b', '2026-10-13'),
+        entreno('c', '2026-10-08'),
+        entreno('s', '2026-10-10', false),
+      ])
+    abrir('/plantillas/p1/entrenos/horario')
+    const resumenHorario = await screen.findByRole('region', { name: 'Horario de entrenos' })
+    expect(within(resumenHorario).getByText('Martes y jueves')).toBeInTheDocument()
+    expect(resumenHorario).toHaveTextContent('Martes y jueves · 20:00–21:30')
+    expect(resumenHorario).toHaveTextContent('Del 1 sept al 15 jun')
+    // Del horario (sin el suelto): dos ya hechos y uno por venir
+    expect(await within(resumenHorario).findByText('Entrenos hechos')).toBeInTheDocument()
+    expect(resumenHorario).toHaveTextContent(/Entrenos hechos2Por venir1/)
+    expect(screen.queryByRole('button', { name: 'martes' })).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Editar horario' }))
+    expect(screen.getByRole('button', { name: 'martes' })).toHaveAttribute('aria-pressed', 'true')
+    await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }))
+    expect(await screen.findByRole('region', { name: 'Horario de entrenos' })).toBeInTheDocument()
+    expect(enviado('PUT /api/plantillas/p1/horario')).toEqual([])
+
+    // Al guardar también vuelve al resumen
+    await userEvent.click(screen.getByRole('button', { name: 'Editar horario' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar horario' }))
+    expect(await screen.findByRole('region', { name: 'Horario de entrenos' })).toBeInTheDocument()
+    expect(enviado('PUT /api/plantillas/p1/horario')).toHaveLength(1)
   })
 })
 

@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { CalendarClock, CalendarX, Save } from 'lucide-react'
+import { CalendarClock, CalendarX, Pencil, Save } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
 import { api, datos, erroresPorCampo } from '../api/cliente'
 import { useAvisos } from '../componentes/Avisos'
@@ -16,8 +16,13 @@ import {
   finDeTemporada,
   type Horario,
   hoy,
+  sumarDias,
   textoDiaMes,
+  textoFecha,
+  textoHoras,
+  useCifrasHorario,
   useHorario,
+  useSiguienteEntreno,
 } from './datos'
 import estilos from './Entrenos.module.css'
 
@@ -46,10 +51,13 @@ function textoSesiones(sesiones: Horario['sesiones']) {
   return unir(ordenadas.map((s) => `${nombre(s.dia)} ${franja(s)}`))
 }
 
-// Horario semanal de entrenos de la plantilla: al guardarlo se crean sus entrenos
+// Horario semanal de entrenos de la plantilla: al guardarlo se crean sus entrenos. Guardado, se ve
+// como un resumen de solo lectura; el cuerpo técnico lo cambia con «Editar horario» (GH-268)
 export function PaginaHorario() {
   const plantilla = usePlantillaActiva()
   const horario = useHorario(plantilla.id)
+  const gestiona = puedeGestionarJugadores(plantilla)
+  const [editando, setEditando] = useState(false)
 
   if (horario.isPending) return <Cargando />
   if (horario.isError) {
@@ -59,12 +67,10 @@ export function PaginaHorario() {
       </p>
     )
   }
-  if (!puedeGestionarJugadores(plantilla)) {
-    return horario.data ? (
-      <p className={estilos.aviso}>
-        Entrenos los {textoSesiones(horario.data.sesiones)}, del {textoDiaMes(horario.data.desde)}{' '}
-        al {textoDiaMes(horario.data.hasta)}.
-      </p>
+  if (!horario.data) {
+    // Sin horario, el cuerpo técnico va directo al formulario
+    return gestiona ? (
+      <FormularioHorario guardado={null} />
     ) : (
       <EstadoVacio
         icono={<CalendarClock size={32} />}
@@ -73,11 +79,134 @@ export function PaginaHorario() {
       />
     )
   }
-  // Se monta con los datos guardados: el formulario empieza con ellos
-  return <FormularioHorario guardado={horario.data} />
+  if (gestiona && editando) {
+    // Se monta con los datos guardados: el formulario empieza con ellos
+    return <FormularioHorario guardado={horario.data} alTerminar={() => setEditando(false)} />
+  }
+  return (
+    <ResumenHorario horario={horario.data} gestiona={gestiona} alEditar={() => setEditando(true)} />
+  )
 }
 
-function FormularioHorario({ guardado }: { guardado: Horario | null }) {
+const formatoTemporada = new Intl.DateTimeFormat('es-ES', {
+  day: 'numeric',
+  month: 'short',
+  timeZone: 'UTC',
+})
+
+// «1 sept»
+const diaMesCorto = (fecha: string) =>
+  formatoTemporada.format(new Date(`${fecha}T12:00:00Z`)).replace('.', '')
+
+// Los días agrupados por su franja: [«Martes y jueves», «20:00–21:30»], en el orden de la semana
+function gruposDeHoras(sesiones: Horario['sesiones']) {
+  const grupos = new Map<string, number[]>()
+  for (const s of [...sesiones].sort((a, b) => a.dia - b.dia)) {
+    const franja = s.horaFin ? `${s.hora}–${s.horaFin}` : s.hora
+    grupos.set(franja, [...(grupos.get(franja) ?? []), s.dia])
+  }
+  const nombre = (dia: number) => DIAS.find((d) => d.dia === dia)?.nombre ?? ''
+  return [...grupos].map(([franja, dias]) => {
+    const nombres = dias.map(nombre)
+    const texto =
+      nombres.length > 1 ? `${nombres.slice(0, -1).join(', ')} y ${nombres.at(-1)}` : nombres[0]
+    return { dias: mayuscula(texto ?? ''), franja }
+  })
+}
+
+const mayuscula = (texto: string) => texto.charAt(0).toUpperCase() + texto.slice(1)
+
+// Resumen de solo lectura del horario guardado: la semana con los días de entreno, las horas
+// agrupadas y la temporada. El cuerpo técnico ve además cuántos entrenos lleva y le quedan, y el botón
+// para editarlo; el jugador, su próximo entreno
+function ResumenHorario({
+  horario,
+  gestiona,
+  alEditar,
+}: {
+  horario: Horario
+  gestiona: boolean
+  alEditar: () => void
+}) {
+  const plantilla = usePlantillaActiva()
+  const dias = new Set(horario.sesiones.map((s) => s.dia))
+  return (
+    <section className={estilos.resumenHorario} aria-label="Horario de entrenos">
+      <ol className={estilos.semana} aria-hidden="true">
+        {DIAS.map((d) => (
+          <li
+            key={d.dia}
+            className={estilos.diaHorario}
+            data-entreno={dias.has(d.dia) || undefined}
+          >
+            {d.corto}
+          </li>
+        ))}
+      </ol>
+      <ul className={estilos.gruposHoras}>
+        {gruposDeHoras(horario.sesiones).map(({ dias: texto, franja }) => (
+          <li key={franja}>
+            <strong>{texto}</strong> · {franja}
+          </li>
+        ))}
+      </ul>
+      <p className={estilos.secundario}>
+        Del {diaMesCorto(horario.desde)} al {diaMesCorto(horario.hasta)}
+      </p>
+      {gestiona ? (
+        <>
+          <CifrasHorario horario={horario} />
+          <Boton variante="secundario" icono={<Pencil aria-hidden size={18} />} onClick={alEditar}>
+            Editar horario
+          </Boton>
+        </>
+      ) : (
+        <ProximoEntreno plantillaId={plantilla.id} />
+      )}
+    </section>
+  )
+}
+
+function CifrasHorario({ horario }: { horario: Horario }) {
+  const plantilla = usePlantillaActiva()
+  const cifras = useCifrasHorario(plantilla.id, horario)
+  if (!cifras.data) return null
+  const { hechos, porVenir } = cifras.data
+  return (
+    <dl className={estilos.cifrasHorario}>
+      <div>
+        <dt>{hechos === 1 ? 'Entreno hecho' : 'Entrenos hechos'}</dt>
+        <dd>{hechos}</dd>
+      </div>
+      <div>
+        <dt>Por venir</dt>
+        <dd>{porVenir}</dd>
+      </div>
+    </dl>
+  )
+}
+
+function ProximoEntreno({ plantillaId }: { plantillaId: string }) {
+  // El primero desde hoy: el de hoy también cuenta
+  const siguiente = useSiguienteEntreno(plantillaId, sumarDias(hoy(), -1))
+  if (!siguiente.data) return null
+  const horas = textoHoras(siguiente.data)
+  return (
+    <p>
+      <strong>Próximo entreno:</strong> {mayuscula(textoFecha(siguiente.data.fecha))}
+      {horas && ` · ${horas}`}
+    </p>
+  )
+}
+
+function FormularioHorario({
+  guardado,
+  alTerminar,
+}: {
+  guardado: Horario | null
+  // Con horario guardado: vuelve al resumen al cancelar o al guardar
+  alTerminar?: () => void
+}) {
   const plantilla = usePlantillaActiva()
   const cliente = useQueryClient()
   const { avisar } = useAvisos()
@@ -127,6 +256,7 @@ function FormularioHorario({ guardado }: { guardado: Horario | null }) {
           borrados ? ` y ${borrados} rehechos` : ''
         }`,
       })
+      alTerminar?.()
     },
     onError: (error) => {
       const porCampo = erroresPorCampo(error)
@@ -266,6 +396,11 @@ function FormularioHorario({ guardado }: { guardado: Horario | null }) {
         <Boton type="submit" cargando={guardar.isPending} icono={<Save aria-hidden size={18} />}>
           Guardar horario
         </Boton>
+        {alTerminar && (
+          <Boton variante="secundario" onClick={alTerminar}>
+            Cancelar
+          </Boton>
+        )}
         {guardado && (
           <Boton
             variante="texto"

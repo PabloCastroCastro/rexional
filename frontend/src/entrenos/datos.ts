@@ -169,6 +169,28 @@ export const useSiguienteEntreno = (plantillaId: string, fecha: string) =>
     },
   })
 
+// Entrenos del horario en su temporada (GH-268): los ya hechos (hasta ayer) y los que quedan
+export const useCifrasHorario = (plantillaId: string, horario: { desde: string; hasta: string }) =>
+  useQuery({
+    queryKey: [...CLAVE_ENTRENOS, plantillaId, 'cifras-horario', horario.desde, horario.hasta],
+    queryFn: async () => {
+      const entrenos = await datos(
+        api.GET('/api/plantillas/{id}/entrenos', {
+          params: {
+            path: { id: plantillaId },
+            query: { desde: horario.desde, hasta: horario.hasta },
+          },
+        }),
+      )
+      const delHorario = entrenos.filter((e) => e.deHorario)
+      const actual = hoy()
+      return {
+        hechos: delHorario.filter((e) => e.fecha < actual).length,
+        porVenir: delHorario.filter((e) => e.fecha >= actual).length,
+      }
+    },
+  })
+
 // Día de la semana ISO: 1 lunes … 7 domingo
 export const diaSemana = (fecha: string) => new Date(`${fecha}T12:00:00Z`).getUTCDay() || 7
 
