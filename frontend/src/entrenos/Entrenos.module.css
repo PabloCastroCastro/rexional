@@ -1019,3 +1019,44 @@ li > .cierre {
 .asistenciaEntreno .progreso {
   height: 4px;
 }
+
+/* Cabecera de cada mes del historial (GH-266): su resumen, fija bajo la cabecera de la app mientras
+   se baja por el mes, y un botón que lo abre y lo cierra */
+.cabeceraMes {
+  position: sticky;
+  top: calc(var(--altura-cabecera) + env(safe-area-inset-top, 0px) + 3px);
+  z-index: 1;
+  margin: 0 0 var(--espacio-2);
+  background: var(--color-fondo);
+  font-size: var(--texto-sm);
+}
+
+.botonMes {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-1);
+  width: 100%;
+  min-height: var(--altura-tactil);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-texto-suave);
+  font: inherit;
+  font-weight: var(--peso-normal);
+  text-align: left;
+  cursor: pointer;
+}
+
+.nombreMes {
+  color: var(--color-texto);
+  font-weight: var(--peso-medio);
+}
+
+.flechaMes {
+  flex: none;
+  transition: transform var(--duracion) var(--curva);
+}
+
+[aria-expanded="false"] > .flechaMes {
+  transform: rotate(-90deg);
+}

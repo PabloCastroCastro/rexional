@@ -392,3 +392,37 @@ describe('historial', () => {
     expect(justificada?.className).not.toMatch(/justificada/)
   })
 })
+
+describe('meses del historial (GH-266)', () => {
+  it('cada mes con su resumen; el en curso y el anterior abiertos, los antiguos plegados', async () => {
+    conCalendario([
+      resumen('o1', '2026-10-08', '20:00', { asiste: 9, falta: 1 }),
+      resumen('o2', '2026-10-06', '20:00', { asiste: 5, justificada: 1, falta: 4 }),
+      resumen('o3', '2026-10-01', '20:00'),
+      resumen('s1', '2026-09-29', '20:00'),
+      resumen('a1', '2026-08-25', '20:00', { asiste: 8, falta: 2 }),
+    ])
+    abrir('/plantillas/p1/entrenos/historial')
+    const octubre = await screen.findByRole('region', { name: 'octubre de 2026' })
+    // 14 asisten de 20 marcados: 70 %
+    const cabecera = within(octubre).getByRole('button', { expanded: true })
+    expect(cabecera).toHaveTextContent(
+      'Octubre de 2026 · 3 entrenos · 70 % asistencia · 1 sin lista',
+    )
+    expect(within(octubre).getAllByRole('link')).toHaveLength(3)
+
+    const septiembre = screen.getByRole('region', { name: 'septiembre de 2026' })
+    expect(within(septiembre).getByRole('button', { expanded: true })).toHaveTextContent(
+      '1 entreno · ninguna lista pasada',
+    )
+
+    const agosto = screen.getByRole('region', { name: 'agosto de 2026' })
+    const plegado = within(agosto).getByRole('button', { expanded: false })
+    expect(plegado).toHaveTextContent('Agosto de 2026 · 1 entreno · 80 % asistencia')
+    expect(within(agosto).queryByRole('link')).not.toBeInTheDocument()
+
+    await userEvent.click(plegado)
+    expect(plegado).toHaveAttribute('aria-expanded', 'true')
+    expect(within(agosto).getAllByRole('link')).toHaveLength(1)
+  })
+})
