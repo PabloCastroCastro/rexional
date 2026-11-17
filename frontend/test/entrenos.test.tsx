@@ -441,3 +441,26 @@ describe('cabecera de pasar lista (GH-258)', () => {
     ).toBeVisible()
   })
 })
+
+describe('día sin entreno (GH-263)', () => {
+  it('lleva al próximo entreno y deja crear uno como acción secundaria', async () => {
+    conEntrenos({ [AYER]: [BRAIS] })
+    const router = abrir('/plantillas/p1/entrenos?fecha=2026-10-12')
+    expect(await screen.findByText('No hay entreno este día')).toBeInTheDocument()
+    const proximo = await screen.findByRole('link', { name: /Próximo entreno/ })
+    expect(proximo).toHaveTextContent('Ayer · martes, 13 oct · 20:00')
+    expect(screen.getByRole('button', { name: 'Crear un entreno este día' })).toBeInTheDocument()
+
+    await userEvent.click(proximo)
+    expect(await screen.findByText('Brais')).toBeInTheDocument()
+    expect(router.state.location.search).toBe(`?fecha=${AYER}`)
+  })
+
+  it('sin ningún entreno por delante, el estado vacío de siempre', async () => {
+    conEntrenos({ [AYER]: [BRAIS] })
+    abrir('/plantillas/p1/entrenos')
+    expect(await screen.findByText('No hay entreno este día')).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Crear entreno' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Próximo entreno/ })).not.toBeInTheDocument()
+  })
+})

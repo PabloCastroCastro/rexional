@@ -931,3 +931,38 @@ li > .cierre {
   width: var(--altura-tactil);
   padding: 0;
 }
+
+/* Día sin entreno (GH-263): el próximo, en una tarjeta que lleva a su día, y crear uno debajo */
+.sinEntreno {
+  display: grid;
+  gap: var(--espacio-3);
+  /* El estado vacío centra su acción a lo ancho del contenido: el de la página menos su margen y el
+     del estado vacío, a cada lado */
+  width: min(100vw - 4 * var(--espacio-4), 24rem);
+  text-align: left;
+}
+
+.tarjetaProximo {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  padding: var(--espacio-3) var(--espacio-4);
+  border-radius: var(--radio-l);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra-1);
+  color: var(--color-acento);
+  text-decoration: none;
+}
+
+.textoProximo {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+  color: var(--color-texto);
+}
+
+.cuandoProximo {
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
+}

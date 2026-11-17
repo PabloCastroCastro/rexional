@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
+  CalendarClock,
   CalendarPlus,
   CalendarX,
   Check,
@@ -48,6 +49,7 @@ import {
   textoHoras,
   useEntreno,
   useEntrenosDelDia,
+  useSiguienteEntreno,
 } from './datos'
 import estilos from './Entrenos.module.css'
 import { type Asistencia, type EstadoGuardado, useGuardadoAutomatico } from './guardado'
@@ -170,25 +172,7 @@ export function PaginaPasarLista() {
           {delDia.error.message}
         </p>
       ) : !elegida ? (
-        <EstadoVacio
-          icono={<CalendarPlus size={32} />}
-          titulo="No hay entreno este día"
-          descripcion={
-            gestiona
-              ? 'Crea un entreno para pasar lista o planificarlo. Los entrenos habituales se crean con el horario.'
-              : 'Solo se pasa lista de los entrenos del calendario de la plantilla.'
-          }
-          accion={
-            gestiona && (
-              <Boton
-                icono={<CalendarPlus aria-hidden size={18} />}
-                onClick={() => setCreando(true)}
-              >
-                Crear entreno
-              </Boton>
-            )
-          }
-        />
+        <SinEntreno fecha={fecha} gestiona={gestiona} alCrear={() => setCreando(true)} />
       ) : futuro ? (
         <>
           <p className={estilos.aviso}>
@@ -284,6 +268,80 @@ function CrearEntreno({
         <FormularioCrear fecha={fecha} entreno={entreno} alCerrar={alCerrar} alCrear={alCrear} />
       )}
     </HojaInferior>
+  )
+}
+
+// Día sin entreno: el siguiente, a un toque, y crear uno ese día como acción secundaria (GH-263). Sin
+// ninguno por delante, el estado vacío de siempre
+function SinEntreno({
+  fecha,
+  gestiona,
+  alCrear,
+}: {
+  fecha: string
+  gestiona: boolean
+  alCrear: () => void
+}) {
+  const plantilla = usePlantillaActiva()
+  const siguiente = useSiguienteEntreno(plantilla.id, fecha)
+  const textoCrear = fecha === hoy() ? 'Crear un entreno hoy' : 'Crear un entreno este día'
+  const proximo = siguiente.data
+
+  if (proximo) {
+    const horas = textoHoras(proximo)
+    return (
+      <EstadoVacio
+        titulo="No hay entreno este día"
+        accion={
+          <div className={estilos.sinEntreno}>
+            <Link
+              to={{ search: proximo.fecha === hoy() ? '' : `?fecha=${proximo.fecha}` }}
+              className={estilos.tarjetaProximo}
+            >
+              <CalendarClock aria-hidden size={22} />
+              <span className={estilos.textoProximo}>
+                <strong>Próximo entreno</strong>
+                <span className={estilos.cuandoProximo}>
+                  {mayuscula(textoFecha(proximo.fecha))}
+                  {horas && ` · ${horas}`}
+                </span>
+              </span>
+              <ChevronRight aria-hidden size={20} />
+            </Link>
+            {gestiona && (
+              <Boton
+                variante="secundario"
+                icono={<CalendarPlus aria-hidden size={18} />}
+                onClick={alCrear}
+              >
+                {textoCrear}
+              </Boton>
+            )}
+          </div>
+        }
+      />
+    )
+  }
+
+  return (
+    <EstadoVacio
+      icono={<CalendarPlus size={32} />}
+      titulo="No hay entreno este día"
+      descripcion={
+        gestiona
+          ? 'Crea un entreno para pasar lista o planificarlo. Los entrenos habituales se crean con el horario.'
+          : 'Solo se pasa lista de los entrenos del calendario de la plantilla.'
+      }
+      accion={
+        // Mientras se busca el siguiente, sin acción: así no cambia de botón al llegar
+        gestiona &&
+        !siguiente.isPending && (
+          <Boton icono={<CalendarPlus aria-hidden size={18} />} onClick={alCrear}>
+            Crear entreno
+          </Boton>
+        )
+      }
+    />
   )
 }
 

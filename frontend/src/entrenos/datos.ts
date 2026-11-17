@@ -141,6 +141,34 @@ export const useProximos = (plantillaId: string, cuantos = 5) =>
     },
   })
 
+// Hasta dónde se busca el siguiente entreno de un día sin entreno: lo bastante para cubrir vacaciones
+// sin traer la temporada entera
+const DIAS_BUSCAR_SIGUIENTE = 60
+
+// El primer entreno después de un día (GH-263), o null si no hay ninguno en los próximos dos meses
+export const useSiguienteEntreno = (plantillaId: string, fecha: string) =>
+  useQuery({
+    queryKey: [...CLAVE_ENTRENOS, plantillaId, 'siguiente', fecha],
+    queryFn: async () => {
+      const despues = await datos(
+        api.GET('/api/plantillas/{id}/entrenos', {
+          params: {
+            path: { id: plantillaId },
+            query: {
+              desde: sumarDias(fecha, 1),
+              hasta: sumarDias(fecha, DIAS_BUSCAR_SIGUIENTE),
+            },
+          },
+        }),
+      )
+      // La API los da del más lejano al más cercano y, dentro de un día, por hora
+      const [primero] = [...despues].sort(
+        (a, b) => a.fecha.localeCompare(b.fecha) || (a.hora ?? '').localeCompare(b.hora ?? ''),
+      )
+      return primero ?? null
+    },
+  })
+
 // Día de la semana ISO: 1 lunes … 7 domingo
 export const diaSemana = (fecha: string) => new Date(`${fecha}T12:00:00Z`).getUTCDay() || 7
 
