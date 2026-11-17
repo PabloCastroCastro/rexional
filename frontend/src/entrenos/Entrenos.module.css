@@ -999,3 +999,23 @@ li > .cierre {
   font-weight: var(--peso-medio);
   cursor: pointer;
 }
+
+/* Historial (GH-265): en la segunda línea de cada entreno, la hora y los recuentos */
+.lineaPasado {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--espacio-2);
+}
+
+/* El porcentaje y, debajo, una barra fina con la proporción de cada estado */
+.asistenciaEntreno {
+  display: grid;
+  flex: none;
+  gap: 4px;
+  width: 3.75rem;
+}
+
+.asistenciaEntreno .progreso {
+  height: 4px;
+}
