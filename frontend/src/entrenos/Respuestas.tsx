@@ -1,9 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Check, CircleHelp, X } from 'lucide-react'
+import { Check, CircleHelp, Share2, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { api, datos, enviar } from '../api/cliente'
 import type { components } from '../api/esquema'
 import { useAvisos } from '../componentes/Avisos'
+import { Boton } from '../componentes/Boton'
+import { Cargando } from '../componentes/Cargando'
+import { HojaInferior } from '../componentes/HojaInferior'
 import { MensajeCompartible } from '../componentes/MensajeCompartible'
 import { nombreCompleto } from '../jugadores/datos'
 import { Dorsal } from '../jugadores/PaginaPlantilla'
@@ -187,24 +190,71 @@ export function PistaRespuesta({
   )
 }
 
-// Entreno de hoy aún sin lista (GH-215): encima de la lista, el recuento y el resumen para WhatsApp
+// Solo lo que no es cero: «1 no va · 31 sin responder»
+function resumenRespuestas(r: EntrenoListado['respuestas']) {
+  const partes = [
+    r.voy && `${r.voy} ${r.voy === 1 ? 'va' : 'van'}`,
+    r.duda && `${r.duda} ${r.duda === 1 ? 'duda' : 'dudan'}`,
+    r.noVoy && `${r.noVoy} no ${r.noVoy === 1 ? 'va' : 'van'}`,
+    r.sinResponder && `${r.sinResponder} sin responder`,
+  ].filter(Boolean)
+  return partes.length ? partes.join(' · ') : 'Sin respuestas'
+}
+
+// Entreno de hoy aún sin lista (GH-215): encima de la lista, una línea plegada con el resumen; al
+// abrirla, el recuento completo y el resumen para WhatsApp (GH-258)
 export function RespuestasDeHoy({ entreno }: { entreno: EntrenoListado }) {
-  const plantilla = usePlantillaActiva()
-  const mensaje = useMensajeRespuestas(plantilla.id, entreno.id)
   return (
-    <section aria-label="Respuestas" className={estilos.seccionRespuestas}>
-      <p>
-        <strong>¿Quién va? </strong>
-        <RecuentoRespuestas respuestas={entreno.respuestas} />
-      </p>
-      {mensaje.data && (
-        <details className={estilos.resumenHoy}>
-          <summary>Resumen para WhatsApp</summary>
-          <MensajeCompartible {...mensaje.data} />
-        </details>
-      )}
+    <section aria-label="Respuestas" className={estilos.filaRespuestasHoy}>
+      <details className={estilos.respuestasHoy}>
+        <summary>
+          <strong>¿Quién va?</strong> {resumenRespuestas(entreno.respuestas)}
+        </summary>
+        <p>
+          <RecuentoRespuestas respuestas={entreno.respuestas} />
+        </p>
+      </details>
+      <CompartirRespuestas entreno={entreno} />
     </section>
   )
+}
+
+// Compartir quién va con el grupo del equipo: siempre en la cabecera de «¿Quién va?», como acción, y el
+// mensaje en una hoja con copiar y compartir
+export function CompartirRespuestas({ entreno }: { entreno: EntrenoListado }) {
+  const [abierta, setAbierta] = useState(false)
+  return (
+    <>
+      <Boton
+        variante="secundario"
+        className={estilos.botonCompartir}
+        icono={<Share2 aria-hidden size={18} />}
+        aria-label="Resumen para WhatsApp"
+        title="Resumen para WhatsApp"
+        onClick={() => setAbierta(true)}
+      />
+      <HojaInferior
+        abierta={abierta}
+        alCerrar={() => setAbierta(false)}
+        titulo="Resumen para WhatsApp"
+      >
+        {abierta && <MensajeRespuestas entreno={entreno} />}
+      </HojaInferior>
+    </>
+  )
+}
+
+function MensajeRespuestas({ entreno }: { entreno: EntrenoListado }) {
+  const plantilla = usePlantillaActiva()
+  const mensaje = useMensajeRespuestas(plantilla.id, entreno.id)
+  if (mensaje.isPending) return <Cargando />
+  if (mensaje.isError)
+    return (
+      <p className={estilos.error} role="alert">
+        {mensaje.error.message}
+      </p>
+    )
+  return <MensajeCompartible {...mensaje.data} />
 }
 
 const useMensajeRespuestas = (plantillaId: string, entrenoId: string) =>

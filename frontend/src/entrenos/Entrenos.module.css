@@ -11,7 +11,8 @@
   grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: var(--espacio-2);
-  padding: var(--espacio-1);
+  /* Sin relleno: las flechas ya dan los 44 px de alto (GH-258) */
+  padding: 0;
   border-radius: var(--radio-l);
   background: var(--color-superficie);
   box-shadow: var(--sombra-1);
@@ -67,17 +68,79 @@
   border-radius: var(--radio-m);
 }
 
-.barra {
+/* Pie de pasar lista (GH-259): pegado encima de la navegación, sin tapar la última fila porque sigue
+   en el flujo de la página */
+.pieLista {
+  position: sticky;
+  bottom: calc(var(--altura-navegacion) + env(safe-area-inset-bottom, 0px));
+  display: grid;
+  gap: var(--espacio-1);
+  /* El progreso, en el borde de arriba, hace de separación con la lista */
+  padding: 0 0 var(--espacio-2);
+  background: var(--color-fondo);
+}
+
+/* El progreso y el guardado a la izquierda, la acción a la derecha, en una fila */
+.pieFila {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: var(--espacio-2);
+  gap: var(--espacio-3);
+}
+
+.pieTexto {
+  display: grid;
+  min-width: 0;
+}
+
+/* Pasar lista, más junta que el resto para que quepan más jugadores (GH-258) */
+.pagina.compacta {
+  gap: var(--espacio-3);
+}
+
+.progreso {
+  display: flex;
+  height: 6px;
+  overflow: hidden;
+  border-radius: var(--radio-completo);
+  background: var(--color-superficie-alterna);
+}
+
+.progreso span {
+  transition: width var(--duracion) var(--curva);
+}
+
+.progreso .asiste {
+  background: var(--color-exito);
+}
+
+.progreso .justificada {
+  background: var(--color-aviso);
+}
+
+.progreso .falta {
+  background: var(--color-peligro);
+}
+
+.listaCompleta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--espacio-1);
+  min-height: var(--altura-tactil);
+  color: var(--color-exito);
+  font-weight: var(--peso-medio);
 }
 
 .recuentos {
   color: var(--color-texto-suave);
   font-size: var(--texto-sm);
+}
+
+/* Después de .recuentos, que tiene menos especificidad */
+.pieTexto .recuentos {
+  margin: 0;
+  color: var(--color-texto);
 }
 
 .guardado {
@@ -390,6 +453,14 @@
 }
 
 /* Sesiones del día: una pastilla por entreno y + para añadir otra */
+/* Las sesiones del día y, si el entreno no tiene plan, «Planificar» al final de la fila (GH-258) */
+.filaSesiones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-2);
+}
+
 .sesiones {
   display: flex;
   flex-wrap: wrap;
@@ -666,11 +737,38 @@ li > .cierre {
   font-size: max(16px, var(--texto-base));
 }
 
-/* Resumen para WhatsApp del entreno de hoy, plegado encima de la lista (GH-215) */
-.resumenHoy summary {
+/* «¿Quién va?» del entreno de hoy, una línea plegada encima de la lista (GH-258), con el botón de
+   compartir a la derecha, visible sin desplegarla */
+.filaRespuestasHoy {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espacio-2);
+}
+
+.respuestasHoy {
+  flex: 1;
+  min-width: 0;
+}
+
+.respuestasHoy > p {
+  margin: 0 0 var(--espacio-2);
+}
+
+.respuestasHoy > summary {
   min-height: var(--altura-tactil);
   padding: var(--espacio-2) 0;
-  color: var(--color-acento);
-  font-weight: var(--peso-medio);
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
   cursor: pointer;
+}
+
+.respuestasHoy > summary strong {
+  color: var(--color-texto);
+}
+
+/* Resumen para WhatsApp: un botón de icono que abre la hoja con el mensaje */
+.botonCompartir {
+  flex: none;
+  width: var(--altura-tactil);
+  padding: 0;
 }

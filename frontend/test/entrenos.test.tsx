@@ -152,7 +152,7 @@ describe('pasar lista', () => {
     conEntrenos({ [HOY]: [IKER, BRAIS, ZOE] })
     abrir('/plantillas/p1/entrenos')
     await screen.findByText('Íker')
-    expect(screen.getByText(/0 asisten · 0 justificadas · 0 faltan · 3 sin marcar/)).toBeVisible()
+    expect(screen.getByText('0 de 3 marcados')).toBeVisible()
 
     await pulsar('Íker', 'Asiste')
     await pulsar('Brais', 'Falta')
@@ -162,7 +162,10 @@ describe('pasar lista', () => {
       'aria-pressed',
       'false',
     )
-    expect(screen.getByText(/1 asiste · 0 justificadas · 1 falta · 1 sin marcar/)).toBeVisible()
+    // En el pie, el progreso; el lector de pantalla oye también el desglose (GH-259)
+    expect(screen.getByText('2 de 3 marcados').closest('p')).toHaveTextContent(
+      '2 de 3 marcados: 1 asiste, 0 justificadas, 1 falta',
+    )
 
     await esperarGuardado()
     // Los toques seguidos se agrupan: la última petición lleva la lista completa
@@ -192,13 +195,15 @@ describe('pasar lista', () => {
     ])
   })
 
-  it('marca el resto como asiste', async () => {
+  it('el resto asiste, y con todos marcados la lista está completa (GH-259)', async () => {
     conEntrenos({ [HOY]: [IKER, BRAIS, ZOE] })
     abrir('/plantillas/p1/entrenos')
     await screen.findByText('Íker')
     await pulsar('Brais', 'Falta')
-    await userEvent.click(screen.getByRole('button', { name: 'Marcar el resto como asiste (2)' }))
-    expect(screen.queryByRole('button', { name: /Marcar el resto/ })).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'El resto asiste (2)' }))
+    expect(screen.queryByRole('button', { name: /El resto asiste/ })).not.toBeInTheDocument()
+    expect(screen.getByText('Lista completa')).toBeInTheDocument()
+    expect(screen.getByText('3 de 3 marcados')).toBeInTheDocument()
     await esperarGuardado()
     expect(enviados().at(-1)).toEqual([
       { jugadorId: 'j1', estado: 'asiste' },
@@ -343,5 +348,44 @@ describe('nombres en pasar lista (GH-257)', () => {
     expect(
       within(lista).getByRole('group', { name: 'Asistencia de Breogán Couto Pérez' }),
     ).toBeInTheDocument()
+  })
+})
+
+describe('cabecera de pasar lista (GH-258)', () => {
+  // El listado del día con lo que se indique: plan y respuestas
+  const conListado = (extra: Partial<Entreno> & { respuestas?: unknown }) => {
+    const base = entreno(HOY, [IKER])
+    manejadores['GET /api/plantillas/p1/entrenos'] = () =>
+      json([{ ...base, ...base.recuentos, ...SIN_RESPUESTAS, ...extra }])
+  }
+
+  it('sin plan, «Planificar» es un enlace en la fila de la sesión', async () => {
+    conEntrenos({ [HOY]: [IKER] })
+    abrir('/plantillas/p1/entrenos')
+    const enlace = await screen.findByRole('link', { name: 'Planificar' })
+    expect(enlace).toHaveAttribute('href', `/plantillas/p1/entrenos/plan/e-${HOY}`)
+    expect(screen.queryByText('Plan del entreno')).not.toBeInTheDocument()
+  })
+
+  it('con plan, la tarjeta del plan y sin enlace', async () => {
+    conEntrenos({ [HOY]: [IKER] })
+    conListado({ objetivo: 'Presión', ejerciciosPlan: 4, duracionPlan: 75 })
+    abrir('/plantillas/p1/entrenos')
+    expect(await screen.findByText('Plan del entreno')).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Planificar' })).not.toBeInTheDocument()
+  })
+
+  it('«¿Quién va?» es una línea plegada con lo que no es cero', async () => {
+    conEntrenos({ [HOY]: [IKER] })
+    conListado({ respuestas: { voy: 0, duda: 0, noVoy: 1, sinResponder: 31 } })
+    abrir('/plantillas/p1/entrenos')
+    const respuestas = await screen.findByRole('region', { name: 'Respuestas' })
+    const resumen = within(respuestas).getByText('¿Quién va?').closest('summary') as HTMLElement
+    expect(resumen).toHaveTextContent('¿Quién va? 1 no va · 31 sin responder')
+    expect(resumen.closest('details')).not.toHaveAttribute('open')
+    await userEvent.click(resumen)
+    expect(
+      within(respuestas).getByText('0 van · 0 dudan · 1 no va · 31 sin responder'),
+    ).toBeVisible()
   })
 })
