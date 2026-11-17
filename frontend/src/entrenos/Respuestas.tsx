@@ -245,14 +245,25 @@ export function CompartirRespuestas({ entreno }: { entreno: EntrenoListado }) {
         title="Resumen para WhatsApp"
         onClick={() => setAbierta(true)}
       />
-      <HojaInferior
-        abierta={abierta}
-        alCerrar={() => setAbierta(false)}
-        titulo="Resumen para WhatsApp"
-      >
-        {abierta && <MensajeRespuestas entreno={entreno} />}
-      </HojaInferior>
+      <HojaRespuestas entreno={entreno} abierta={abierta} alCerrar={() => setAbierta(false)} />
     </>
+  )
+}
+
+// La hoja con el mensaje; también se abre desde las opciones del entreno (GH-261)
+export function HojaRespuestas({
+  entreno,
+  abierta,
+  alCerrar,
+}: {
+  entreno: EntrenoListado
+  abierta: boolean
+  alCerrar: () => void
+}) {
+  return (
+    <HojaInferior abierta={abierta} alCerrar={alCerrar} titulo="Resumen para WhatsApp">
+      {abierta && <MensajeRespuestas entreno={entreno} />}
+    </HojaInferior>
   )
 }
 

@@ -499,6 +499,63 @@
   color: var(--color-acento);
 }
 
+/* Cada sesión y, en la elegida, su «⋯» pegado a la pastilla (GH-261) */
+.sesion {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.sesiones .opcionesSesion {
+  justify-content: center;
+  width: var(--altura-tactil);
+  padding: 0;
+  color: var(--color-texto-suave);
+}
+
+/* Hoja de opciones del entreno: el día y la hora, y una acción por fila */
+.cuandoEntreno {
+  margin: 0 0 var(--espacio-2);
+  color: var(--color-texto-suave);
+}
+
+.opciones {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.opciones > li + li {
+  border-top: 1px solid var(--color-borde);
+}
+
+.opciones a,
+.opciones button {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  width: 100%;
+  min-height: calc(var(--altura-tactil) + var(--espacio-2));
+  padding: 0 var(--espacio-1);
+  border: 0;
+  background: transparent;
+  color: var(--color-texto);
+  font: inherit;
+  font-weight: var(--peso-medio);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.opciones svg {
+  color: var(--color-acento);
+}
+
+.opciones .opcionPeligrosa,
+.opciones .opcionPeligrosa svg {
+  color: var(--color-peligro);
+}
+
 .aviso {
   padding: var(--espacio-3);
   border-radius: var(--radio-m);
