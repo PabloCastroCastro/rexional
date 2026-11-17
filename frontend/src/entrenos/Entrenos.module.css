@@ -1080,3 +1080,77 @@ li > .cierre {
   border-left: 2px solid var(--color-borde);
   list-style: none;
 }
+
+/* Horario guardado, como resumen de solo lectura (GH-268) */
+.resumenHorario {
+  display: grid;
+  gap: var(--espacio-3);
+  padding: var(--espacio-4);
+  border-radius: var(--radio-l);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra-1);
+}
+
+/* La semana L–D, con los días de entreno marcados */
+.semana {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: var(--espacio-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.diaHorario {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  max-width: 2.75rem;
+  border-radius: var(--radio-completo);
+  background: var(--color-superficie-alterna);
+  color: var(--color-texto-suave);
+  font-weight: var(--peso-medio);
+}
+
+.diaHorario[data-entreno] {
+  background: var(--color-primario);
+  color: var(--color-sobre-primario);
+}
+
+.gruposHoras {
+  display: grid;
+  gap: var(--espacio-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Entrenos del horario hechos y por venir, para el cuerpo técnico */
+.cifrasHorario {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--espacio-2);
+  margin: 0;
+}
+
+.cifrasHorario > div {
+  display: grid;
+  gap: 2px;
+  padding: var(--espacio-2) var(--espacio-3);
+  border-radius: var(--radio-m);
+  background: var(--color-superficie-alterna);
+}
+
+.cifrasHorario dt {
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
+}
+
+.cifrasHorario dd {
+  margin: 0;
+  font-family: var(--fuente-titulos);
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
