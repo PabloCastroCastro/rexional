@@ -353,14 +353,15 @@ describe('historial', () => {
       resumen('p1', '2026-10-08', '20:00', { asiste: 9, falta: 1, horaFin: '21:30' }),
     ])
     abrir('/plantillas/p1/entrenos/historial')
+    // El próximo en una línea y el resto plegado: siguen en el DOM, dentro de «1 próximo más» (GH-264)
     const proximos = await screen.findByRole('region', { name: 'Próximos' })
     expect(
       within(proximos)
         .getAllByRole('link')
         .map((a) => a.textContent),
     ).toEqual([
-      expect.stringMatching(/jueves, 15 oct20:00/),
-      expect.stringMatching(/martes, 20 oct20:00/),
+      expect.stringMatching(/jueves, 15 oct · 20:00Sin respuestas/),
+      expect.stringMatching(/martes, 20 oct · 20:00Sin respuestas/),
     ])
     const octubre = screen.getByRole('region', { name: 'octubre de 2026' })
     expect(

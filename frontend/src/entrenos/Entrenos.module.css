@@ -966,3 +966,24 @@ li > .cierre {
   color: var(--color-texto-suave);
   font-size: var(--texto-sm);
 }
+
+/* Historial (GH-264): el entreno con plan lleva su icono, en vez de «Sin plan» en los que no */
+.conPlan {
+  flex: none;
+  color: var(--color-acento);
+}
+
+/* El resto de próximos, plegados bajo el primero */
+.masProximos {
+  display: grid;
+  gap: var(--espacio-2);
+}
+
+.masProximos > summary {
+  min-height: var(--altura-tactil);
+  padding: var(--espacio-2) 0;
+  color: var(--color-acento);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
+  cursor: pointer;
+}
