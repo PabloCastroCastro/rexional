@@ -23,6 +23,13 @@ afterEach(() => vi.useRealTimers())
 const HOY = '2026-10-14'
 const MANANA = '2026-10-15'
 
+// Las opciones del entreno elegido, desde el «⋯» de su pastilla (GH-261)
+async function opcion(nombre: string) {
+  await userEvent.click(await screen.findByRole('button', { name: 'Opciones del entreno' }))
+  const hoja = screen.getByRole('dialog', { name: 'Opciones del entreno' })
+  await userEvent.click(within(hoja).getByRole('button', { name: nombre }))
+}
+
 const resumen = (
   id: string,
   fecha: string,
@@ -160,7 +167,7 @@ describe('entrenos del día', () => {
   it('se cambia la hora de un entreno; el fin ha de ser posterior al inicio', async () => {
     conCalendario([resumen('e1', HOY, '20:00', { horaFin: '21:30', deHorario: true })])
     abrir('/plantillas/p1/entrenos')
-    await userEvent.click(await screen.findByRole('button', { name: 'Cambiar hora' }))
+    await opcion('Cambiar la hora')
     const hoja = screen.getByRole('dialog', { name: 'Cambiar la hora' })
     expect(within(hoja).getByLabelText('Hora')).toHaveValue('20:00')
     expect(within(hoja).getByLabelText('Hora de fin')).toHaveValue('21:30')
@@ -185,8 +192,8 @@ describe('entrenos del día', () => {
   it('cancelar un entreno con asistencia pide confirmación y avisa', async () => {
     conCalendario([resumen('e1', HOY, '20:00', { asiste: 3 })])
     abrir('/plantillas/p1/entrenos')
-    await userEvent.click(await screen.findByRole('button', { name: 'Cancelar entreno' }))
-    const confirmacion = screen.getByRole('alertdialog')
+    await opcion('Cancelar entreno')
+    const confirmacion = await screen.findByRole('alertdialog')
     expect(confirmacion).toHaveTextContent('se borrará también su asistencia')
     await userEvent.click(within(confirmacion).getByRole('button', { name: 'Cancelar entreno' }))
     expect(await screen.findByText(/Entreno cancelado/)).toBeInTheDocument()
@@ -198,7 +205,35 @@ describe('entrenos del día', () => {
     abrir(`/plantillas/p1/entrenos?fecha=${MANANA}`)
     expect(await screen.findByText(/aún no ha llegado/)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Asiste' })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Cancelar entreno' })).toBeInTheDocument()
+    await opcion('Cancelar entreno')
+    expect(await screen.findByRole('alertdialog')).toBeInTheDocument()
+  })
+
+  it('el «⋯» de la sesión abre sus opciones, y al final de la lista ya no hay botones (GH-261)', async () => {
+    conCalendario([resumen('e1', HOY, '20:00', { horaFin: '21:30' })])
+    abrir('/plantillas/p1/entrenos')
+    await userEvent.click(await screen.findByRole('button', { name: 'Opciones del entreno' }))
+    const hoja = screen.getByRole('dialog', { name: 'Opciones del entreno' })
+    expect(hoja).toHaveTextContent(/Hoy · miércoles, 14 oct · 20:00–21:30/)
+    const opciones = within(hoja)
+      .getAllByRole('listitem')
+      .map((li) => li.textContent)
+    expect(opciones).toEqual([
+      'Cambiar la hora',
+      'Planificar el entreno',
+      'Resumen para WhatsApp',
+      'Cancelar entreno',
+    ])
+    expect(within(hoja).getByRole('link', { name: 'Planificar el entreno' })).toHaveAttribute(
+      'href',
+      '/plantillas/p1/entrenos/plan/e1',
+    )
+
+    // El resumen para WhatsApp cierra las opciones y abre su hoja
+    await userEvent.click(within(hoja).getByRole('button', { name: 'Resumen para WhatsApp' }))
+    expect(await screen.findByRole('dialog', { name: 'Resumen para WhatsApp' })).toBeInTheDocument()
+
+    expect(screen.queryByRole('button', { name: 'Cambiar hora' })).not.toBeInTheDocument()
   })
 })
 

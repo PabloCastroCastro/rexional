@@ -6,16 +6,19 @@ import {
   ChevronLeft,
   ChevronRight,
   CircleAlert,
+  ClipboardList,
   Clock,
   Cloud,
   CloudCheck,
+  Ellipsis,
   Hand,
   LoaderCircle,
   Plus,
+  Share2,
   X,
 } from 'lucide-react'
 import { useState } from 'react'
-import { useSearchParams } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { api, datos, ErrorApi, enviar, erroresPorCampo } from '../api/cliente'
 import { useAvisos } from '../componentes/Avisos'
 import { Boton } from '../componentes/Boton'
@@ -29,12 +32,13 @@ import { nombreCompleto, nombresCortos, puedeGestionarJugadores } from '../jugad
 import { estadoJugador } from '../jugadores/estado'
 import { textoVuelta } from '../jugadores/Lesiones'
 import { Dorsal } from '../jugadores/PaginaPlantilla'
-import { resumenPlan } from '../planificacion/datos'
+import { resumenPlan, rutaPlan } from '../planificacion/datos'
 import { EnlacePlanificar, TarjetaPlan } from '../planificacion/TarjetaPlan'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
 import {
   CLAVE_ENTRENOS,
   type Entreno,
+  type EntrenoListado,
   type Estado,
   esFechaValida,
   hoy,
@@ -47,7 +51,7 @@ import {
 } from './datos'
 import estilos from './Entrenos.module.css'
 import { type Asistencia, type EstadoGuardado, useGuardadoAutomatico } from './guardado'
-import { PistaRespuesta, RespuestasDeHoy, RespuestasEntreno } from './Respuestas'
+import { HojaRespuestas, PistaRespuesta, RespuestasDeHoy, RespuestasEntreno } from './Respuestas'
 
 const ESTADOS: { estado: Estado; texto: string; icono: typeof Check }[] = [
   { estado: 'asiste', texto: 'Asiste', icono: Check },
@@ -73,6 +77,8 @@ export function PaginaPasarLista() {
   const entreno = useEntreno(plantilla.id, elegida && !futuro ? elegida.id : undefined)
   const [creando, setCreando] = useState(false)
   const [cambiandoHora, setCambiandoHora] = useState(false)
+  const [opciones, setOpciones] = useState(false)
+  const [compartiendo, setCompartiendo] = useState(false)
 
   const irA = (nueva: string) => setParametros(nueva === actual ? {} : { fecha: nueva })
   const elegir = (id: string) =>
@@ -116,15 +122,28 @@ export function PaginaPasarLista() {
           <fieldset className={estilos.sesiones}>
             <legend className="solo-lectores">Sesiones del día</legend>
             {sesiones.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                aria-pressed={s.id === elegida?.id}
-                onClick={() => elegir(s.id)}
-              >
-                <Clock aria-hidden size={16} />
-                {textoHoras(s) ?? 'Sin hora'}
-              </button>
+              <span key={s.id} className={estilos.sesion}>
+                <button
+                  type="button"
+                  aria-pressed={s.id === elegida?.id}
+                  onClick={() => elegir(s.id)}
+                >
+                  <Clock aria-hidden size={16} />
+                  {textoHoras(s) ?? 'Sin hora'}
+                </button>
+                {/* Las opciones de la sesión elegida, pegadas a su pastilla (GH-261) */}
+                {gestiona && s.id === elegida?.id && (
+                  <button
+                    type="button"
+                    className={estilos.opcionesSesion}
+                    aria-label="Opciones del entreno"
+                    title="Opciones del entreno"
+                    onClick={() => setOpciones(true)}
+                  >
+                    <Ellipsis aria-hidden size={20} />
+                  </button>
+                )}
+              </span>
             ))}
             {gestiona && (
               <button
@@ -176,9 +195,6 @@ export function PaginaPasarLista() {
             Este entreno aún no ha llegado: la lista se pasa el mismo día.
           </p>
           {gestiona && <RespuestasEntreno entreno={elegida} />}
-          {gestiona && (
-            <AccionesEntreno entreno={elegida} alCambiarHora={() => setCambiandoHora(true)} />
-          )}
         </>
       ) : entreno.isPending ? (
         <Cargando />
@@ -194,7 +210,6 @@ export function PaginaPasarLista() {
           )}
           {/* Cada entreno empieza con su propio estado local y su propio guardado */}
           <Lista key={entreno.data.id} entreno={entreno.data} />
-          <AccionesEntreno entreno={elegida} alCambiarHora={() => setCambiandoHora(true)} />
         </>
       ) : (
         <SoloLectura entreno={entreno.data} />
@@ -210,13 +225,35 @@ export function PaginaPasarLista() {
         }}
       />
       {elegida && (
-        <CrearEntreno
-          abierta={cambiandoHora}
-          fecha={fecha}
-          entreno={elegida}
-          alCerrar={() => setCambiandoHora(false)}
-          alCrear={() => setCambiandoHora(false)}
-        />
+        <>
+          <CrearEntreno
+            abierta={cambiandoHora}
+            fecha={fecha}
+            entreno={elegida}
+            alCerrar={() => setCambiandoHora(false)}
+            alCrear={() => setCambiandoHora(false)}
+          />
+          <OpcionesEntreno
+            entreno={elegida}
+            abierta={opciones}
+            // El resumen para WhatsApp, mientras se muestra «¿Quién va?»: antes de pasar lista
+            conResumen={futuro || elegida.asiste + elegida.justificada + elegida.falta === 0}
+            alCerrar={() => setOpciones(false)}
+            alCambiarHora={() => {
+              setOpciones(false)
+              setCambiandoHora(true)
+            }}
+            alCompartir={() => {
+              setOpciones(false)
+              setCompartiendo(true)
+            }}
+          />
+          <HojaRespuestas
+            entreno={elegida}
+            abierta={compartiendo}
+            alCerrar={() => setCompartiendo(false)}
+          />
+        </>
       )}
     </div>
   )
@@ -250,21 +287,73 @@ function CrearEntreno({
   )
 }
 
-// Cambiar la hora y cancelar el entreno elegido
-function AccionesEntreno({
+// Opciones de la sesión elegida, desde el «⋯» de su pastilla (GH-261): el día y la hora, y las
+// acciones; cancelar va al final, en rojo y con confirmación
+function OpcionesEntreno({
   entreno,
+  abierta,
+  conResumen,
+  alCerrar,
   alCambiarHora,
+  alCompartir,
 }: {
-  entreno: ResumenEntreno
+  entreno: EntrenoListado
+  abierta: boolean
+  conResumen: boolean
+  alCerrar: () => void
   alCambiarHora: () => void
+  alCompartir: () => void
 }) {
+  const plantilla = usePlantillaActiva()
+  const cancelar = useCancelarEntreno(entreno)
+  const horas = textoHoras(entreno)
   return (
-    <div className={estilos.acciones}>
-      <Boton variante="texto" icono={<Clock aria-hidden size={18} />} onClick={alCambiarHora}>
-        Cambiar hora
-      </Boton>
-      <CancelarEntreno entreno={entreno} />
-    </div>
+    <HojaInferior abierta={abierta} alCerrar={alCerrar} titulo="Opciones del entreno">
+      {abierta && (
+        <>
+          <p className={estilos.cuandoEntreno}>
+            {mayuscula(textoFecha(entreno.fecha))}
+            {horas && ` · ${horas}`}
+          </p>
+          <ul className={estilos.opciones}>
+            <li>
+              <button type="button" onClick={alCambiarHora}>
+                <Clock aria-hidden size={20} />
+                Cambiar la hora
+              </button>
+            </li>
+            <li>
+              <Link to={rutaPlan(plantilla.id, entreno.id)}>
+                <ClipboardList aria-hidden size={20} />
+                {resumenPlan(entreno) ? 'Ver el plan del entreno' : 'Planificar el entreno'}
+              </Link>
+            </li>
+            {conResumen && (
+              <li>
+                <button type="button" onClick={alCompartir}>
+                  <Share2 aria-hidden size={20} />
+                  Resumen para WhatsApp
+                </button>
+              </li>
+            )}
+            <li>
+              <button
+                type="button"
+                className={estilos.opcionPeligrosa}
+                disabled={cancelar.pendiente}
+                onClick={() => {
+                  alCerrar()
+                  void cancelar.pedir()
+                }}
+              >
+                <CalendarX aria-hidden size={20} />
+                Cancelar entreno
+              </button>
+            </li>
+          </ul>
+        </>
+      )}
+    </HojaInferior>
   )
 }
 
@@ -379,8 +468,9 @@ function FormularioCrear({
   )
 }
 
-// Cancelar el entreno elegido: lo borra con su asistencia, si la tiene, tras confirmarlo
-function CancelarEntreno({ entreno }: { entreno: ResumenEntreno }) {
+// Cancelar el entreno elegido: lo borra con su asistencia, si la tiene, tras confirmarlo. Devuelve la
+// acción para el menú de opciones (GH-261)
+function useCancelarEntreno(entreno: ResumenEntreno) {
   const plantilla = usePlantillaActiva()
   const cliente = useQueryClient()
   const { avisar } = useAvisos()
@@ -409,32 +499,25 @@ function CancelarEntreno({ entreno }: { entreno: ResumenEntreno }) {
       }),
   })
 
-  return (
-    <Boton
-      variante="texto"
-      icono={<CalendarX aria-hidden size={18} />}
-      cargando={cancelar.isPending}
-      onClick={async () => {
-        const confirmado = await confirmar({
-          titulo: `¿Cancelar el entreno del ${cuando}?`,
-          mensaje: [
-            conAsistencia
-              ? 'Ya tiene la lista pasada: se borrará también su asistencia.'
-              : 'Desaparece del calendario. Si sale del horario, al cambiar el horario puede volver a crearse.',
-            resumenPlan(entreno) && 'También se pierde su plan.',
-          ]
-            .filter(Boolean)
-            .join(' '),
-          textoConfirmar: 'Cancelar entreno',
-          textoCancelar: 'Volver',
-          peligrosa: true,
-        })
-        if (confirmado) cancelar.mutate()
-      }}
-    >
-      Cancelar entreno
-    </Boton>
-  )
+  const pedir = async () => {
+    const confirmado = await confirmar({
+      titulo: `¿Cancelar el entreno del ${cuando}?`,
+      mensaje: [
+        conAsistencia
+          ? 'Ya tiene la lista pasada: se borrará también su asistencia.'
+          : 'Desaparece del calendario. Si sale del horario, al cambiar el horario puede volver a crearse.',
+        resumenPlan(entreno) && 'También se pierde su plan.',
+      ]
+        .filter(Boolean)
+        .join(' '),
+      textoConfirmar: 'Cancelar entreno',
+      textoCancelar: 'Volver',
+      peligrosa: true,
+    })
+    if (confirmado) cancelar.mutate()
+  }
+
+  return { pedir, pendiente: cancelar.isPending }
 }
 
 type Marca = { estado: Estado | null; motivo: string }
