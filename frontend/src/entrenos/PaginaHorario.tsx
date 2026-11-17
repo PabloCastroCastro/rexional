@@ -16,6 +16,7 @@ import {
   finDeTemporada,
   type Horario,
   hoy,
+  type SimulacionHorario,
   sumarDias,
   textoDiaMes,
   textoFecha,
@@ -23,6 +24,7 @@ import {
   useCifrasHorario,
   useHorario,
   useSiguienteEntreno,
+  useSimulacionHorario,
 } from './datos'
 import estilos from './Entrenos.module.css'
 
@@ -49,6 +51,71 @@ function textoSesiones(sesiones: Horario['sesiones']) {
     partes.length > 1 ? `${partes.slice(0, -1).join(', ')} y ${partes.at(-1)}` : (partes[0] ?? '')
   if (horas.size === 1) return `${unir(ordenadas.map((s) => nombre(s.dia)))} ${[...horas][0]}`
   return unir(ordenadas.map((s) => `${nombre(s.dia)} ${franja(s)}`))
+}
+
+// El horario en una forma comparable: sesiones por día y hora, y sin fin como null
+const normalizar = (h: Horario) =>
+  JSON.stringify({
+    desde: h.desde,
+    hasta: h.hasta,
+    sesiones: [...h.sesiones]
+      .map((s) => ({ dia: s.dia, hora: s.hora, horaFin: s.horaFin || null }))
+      .sort((a, b) => a.dia - b.dia || a.hora.localeCompare(b.hora)),
+  })
+
+// «los miércoles», «los sábados»
+const plural = (dia: number) => {
+  const nombre = DIAS.find((d) => d.dia === dia)?.nombre ?? ''
+  return nombre.endsWith('s') ? nombre : `${nombre}s`
+}
+
+// Lo que cambia al guardar respecto al horario guardado (GH-269), una línea por día de la semana. La
+// franja solo se dice si el mismo día sale más de una vez
+function AvisoCambios({ simulacion }: { simulacion: SimulacionHorario }) {
+  const { anadidos, quitados, cambios } = simulacion
+  const entrenos = (n: number) => `${n} ${n === 1 ? 'entreno' : 'entrenos'}`
+  const repetido = (lista: { dia: number }[], dia: number) =>
+    lista.filter((x) => x.dia === dia).length > 1
+  const lineas = [
+    ...anadidos.map(
+      (a) =>
+        `+ Se ${a.cuantos === 1 ? 'añade' : 'añaden'} ${entrenos(a.cuantos)} ${
+          a.cuantos === 1 ? 'el' : 'los'
+        } ${a.cuantos === 1 ? DIAS.find((d) => d.dia === a.dia)?.nombre : plural(a.dia)}${
+          repetido(anadidos, a.dia) ? ` a las ${a.franja}` : ''
+        }`,
+    ),
+    ...quitados.map(
+      (q) =>
+        `− Se ${q.cuantos === 1 ? 'quita' : 'quitan'} ${entrenos(q.cuantos)} ${
+          q.cuantos === 1 ? 'del' : 'de los'
+        } ${q.cuantos === 1 ? DIAS.find((d) => d.dia === q.dia)?.nombre : plural(q.dia)}${
+          repetido(quitados, q.dia) ? ` de las ${q.franja}` : ''
+        }`,
+    ),
+    ...cambios.map(
+      (c) =>
+        `↻ Cambia la hora de ${entrenos(c.cuantos)} ${c.cuantos === 1 ? 'del' : 'de los'} ${
+          c.cuantos === 1 ? DIAS.find((d) => d.dia === c.dia)?.nombre : plural(c.dia)
+        }: de ${c.de} a ${c.a}`,
+    ),
+  ]
+  return (
+    <div className={estilos.aviso} role="status">
+      {lineas.length === 0 ? (
+        <p>No cambia ningún entreno.</p>
+      ) : (
+        <ul className={estilos.listaCambios}>
+          {lineas.map((l) => (
+            <li key={l}>{l}</li>
+          ))}
+        </ul>
+      )}
+      <p className={estilos.secundario}>
+        Los entrenos sueltos y los que ya tienen la lista pasada, plan o respuestas no se tocan.
+      </p>
+    </div>
+  )
 }
 
 // Horario semanal de entrenos de la plantilla: al guardarlo se crean sus entrenos. Guardado, se ve
@@ -227,6 +294,17 @@ function FormularioHorario({
   const fechasValidas = desde !== '' && hasta !== '' && hasta >= desde
   const aCrear = fechasValidas ? entrenosDelHorario({ desde, hasta, sesiones }, actual) : 0
   const inicio = desde > actual ? desde : actual
+  // Con horario guardado, el aviso dice lo que cambia (GH-269): se simula en el servidor cuando el
+  // formulario es válido
+  const horasValidas = sesiones.every((s) => s.hora && (!s.horaFin || s.horaFin > s.hora))
+  const valido = sesiones.length > 0 && fechasValidas && horasValidas
+  const sinCambios =
+    guardado !== null && normalizar(guardado) === normalizar({ desde, hasta, sesiones })
+  // Sin cambios no hay nada que simular
+  const simulacion = useSimulacionHorario(
+    plantilla.id,
+    guardado && valido && !sinCambios ? { desde, hasta, sesiones } : null,
+  )
 
   function alternar(dia: number) {
     const nuevas = { ...horas }
@@ -299,11 +377,6 @@ function FormularioHorario({
 
   return (
     <form className={estilos.formulario} onSubmit={enviarFormulario} noValidate>
-      <p className={estilos.secundario}>
-        Al guardar se crean los entrenos de esos días. Los entrenos sueltos y los que ya tienen la
-        lista pasada no se tocan.
-      </p>
-
       <fieldset className={estilos.diasSemana}>
         <legend>Días de entreno</legend>
         <div className={estilos.botonesDias}>
@@ -377,14 +450,21 @@ function FormularioHorario({
         />
       </div>
 
-      {sesiones.length > 0 && fechasValidas && (
+      {!guardado && sesiones.length > 0 && fechasValidas && (
         <p className={estilos.aviso} role="status">
           {aCrear === 0
             ? 'Con estas fechas no se crea ningún entreno.'
-            : `Se crearán ${aCrear} ${aCrear === 1 ? 'entreno' : 'entrenos'}: los ${textoSesiones(sesiones)}, del ${textoDiaMes(inicio)} al ${textoDiaMes(hasta)}.`}
-          {guardado && ' Los entrenos futuros del horario que aún no tienen asistencia se rehacen.'}
+            : `Se crean ${aCrear} ${aCrear === 1 ? 'entreno' : 'entrenos'}: los ${textoSesiones(sesiones)}, del ${textoDiaMes(inicio)} al ${textoDiaMes(hasta)}.`}
         </p>
       )}
+      {guardado &&
+        (sinCambios ? (
+          <p className={estilos.aviso} role="status">
+            Sin cambios respecto al horario guardado.
+          </p>
+        ) : (
+          valido && simulacion.data && <AvisoCambios simulacion={simulacion.data} />
+        ))}
 
       {errores.general && (
         <p className={estilos.error} role="alert">
@@ -393,7 +473,12 @@ function FormularioHorario({
       )}
 
       <div className={estilos.acciones}>
-        <Boton type="submit" cargando={guardar.isPending} icono={<Save aria-hidden size={18} />}>
+        <Boton
+          type="submit"
+          cargando={guardar.isPending}
+          disabled={sinCambios}
+          icono={<Save aria-hidden size={18} />}
+        >
           Guardar horario
         </Boton>
         {alTerminar && (

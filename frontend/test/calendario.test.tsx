@@ -276,7 +276,7 @@ describe('horario', () => {
     await userEvent.type(hasta, '2026-10-29')
     expect(
       screen.getByText(
-        /Se crearán 5 entrenos: los martes y jueves de 20:00 a 21:30, del 14 de octubre al 29 de octubre/,
+        /Se crean 5 entrenos: los martes y jueves de 20:00 a 21:30, del 14 de octubre al 29 de octubre/,
       ),
     ).toBeInTheDocument()
 
@@ -310,7 +310,9 @@ describe('horario', () => {
       'aria-pressed',
       'true',
     )
-    expect(screen.getByText(/se rehacen/)).toBeInTheDocument()
+    // Sin tocar nada, nada que guardar (GH-269)
+    expect(screen.getByText('Sin cambios respecto al horario guardado.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Guardar horario' })).toBeDisabled()
     await userEvent.click(screen.getByRole('button', { name: 'Quitar horario' }))
     await userEvent.click(
       within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Quitar horario' }),
@@ -386,6 +388,7 @@ describe('horario', () => {
 
     // Al guardar también vuelve al resumen
     await userEvent.click(screen.getByRole('button', { name: 'Editar horario' }))
+    await userEvent.click(screen.getByRole('button', { name: 'miércoles' }))
     await userEvent.click(screen.getByRole('button', { name: 'Guardar horario' }))
     expect(await screen.findByRole('region', { name: 'Horario de entrenos' })).toBeInTheDocument()
     expect(enviado('PUT /api/plantillas/p1/horario')).toHaveLength(1)
@@ -503,5 +506,57 @@ describe('dobles sesiones en el historial (GH-267)', () => {
     )
     // Un día de una sola sesión, como siempre
     expect(within(dias[1] as HTMLElement).getByRole('link')).toHaveTextContent(/^Jueves, 8 oct/)
+  })
+})
+
+describe('aviso del horario (GH-269)', () => {
+  it('con horario guardado, dice solo lo que cambia, según el servidor', async () => {
+    conDatos({ plantillas: [senior26] })
+    const guardado = {
+      desde: '2026-09-01',
+      hasta: '2027-06-15',
+      sesiones: [
+        { dia: 2, hora: '20:00', horaFin: '21:30' },
+        { dia: 4, hora: '20:00', horaFin: '21:30' },
+      ],
+    }
+    manejadores['GET /api/plantillas/p1/horario'] = () => json(guardado)
+    manejadores['GET /api/plantillas/p1/entrenos'] = () => json([])
+    manejadores['POST /api/plantillas/p1/horario/simulacion'] = () =>
+      json({
+        guardado: true,
+        igualAlGuardado: false,
+        creados: 60,
+        anadidos: [{ dia: 3, franja: '20:00–21:30', cuantos: 30 }],
+        quitados: [{ dia: 4, franja: '20:00–21:30', cuantos: 30 }],
+        cambios: [{ dia: 2, de: '20:00–21:30', a: '19:30–21:00', cuantos: 1 }],
+      })
+    abrir('/plantillas/p1/entrenos/horario')
+    await userEvent.click(await screen.findByRole('button', { name: 'Editar horario' }))
+    expect(screen.getByText('Sin cambios respecto al horario guardado.')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'miércoles' }))
+    const aviso = await screen.findByRole('list', {}, { timeout: 2000 })
+    expect(
+      within(aviso)
+        .getAllByRole('listitem')
+        .map((li) => li.textContent),
+    ).toEqual([
+      '+ Se añaden 30 entrenos los miércoles',
+      '− Se quitan 30 entrenos de los jueves',
+      '↻ Cambia la hora de 1 entreno del martes: de 20:00–21:30 a 19:30–21:00',
+    ])
+    expect(
+      screen.getByText(/Los entrenos sueltos y los que ya tienen la lista pasada/),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Guardar horario' })).toBeEnabled()
+    // Se pide con el horario del formulario
+    expect(enviado('POST /api/plantillas/p1/horario/simulacion').at(-1)).toMatchObject({
+      sesiones: [
+        { dia: 2, hora: '20:00' },
+        { dia: 3, hora: '20:00' },
+        { dia: 4, hora: '20:00' },
+      ],
+    })
   })
 })

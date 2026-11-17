@@ -156,6 +156,45 @@ describe('horario', () => {
     expect(await (await pedir('GET', `${base()}/horario`, 'jugador')).json()).toEqual(horario)
   })
 
+  it('simula un cambio sin guardarlo: lo que se añade, se quita y cambia de hora (GH-269)', async () => {
+    const simular = async (cuerpo: unknown, quien = 'delegado') =>
+      pedir('POST', `${base()}/horario/simulacion`, quien, cuerpo)
+    const guardado = { desde: dia(-7), hasta: dia(13), sesiones: TODOS_LOS_DIAS('20:00') }
+
+    // El mismo horario: nada cambia
+    expect(await (await simular(guardado)).json()).toEqual({
+      guardado: true,
+      igualAlGuardado: true,
+      creados: 14,
+      anadidos: [],
+      quitados: [],
+      cambios: [],
+    })
+
+    // Sin lunes y con los martes de 19:00 a 20:30: dos lunes menos y dos martes cambian de hora
+    const otro = {
+      ...guardado,
+      sesiones: [
+        { dia: 2, hora: '19:00', horaFin: '20:30' },
+        ...TODOS_LOS_DIAS('20:00').filter((s) => s.dia > 2),
+      ],
+    }
+    const res = await simular(otro)
+    expect(res.status).toBe(200)
+    expect(await res.json()).toMatchObject({
+      igualAlGuardado: false,
+      creados: 12,
+      anadidos: [],
+      quitados: [{ dia: 1, franja: '20:00', cuantos: 2 }],
+      cambios: [{ dia: 2, de: '20:00', a: '19:00–20:30', cuantos: 2 }],
+    })
+    // No ha tocado nada
+    expect(await entrenosEntre(HOY, dia(13))).toHaveLength(14)
+
+    expect((await simular(otro, 'jugador')).status).toBe(403)
+    expect((await simular({ ...otro, sesiones: [] })).status).toBe(400)
+  })
+
   it('al cambiarlo rehace los entrenos futuros sin asistencia y conserva los que la tienen', async () => {
     const [hoy] = await entrenosEntre(HOY, HOY)
     await pasarLista(hoy?.id ?? '', [{ jugadorId: ids.Brais, estado: 'asiste' }])

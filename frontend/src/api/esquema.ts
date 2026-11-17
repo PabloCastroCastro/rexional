@@ -3334,6 +3334,93 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/plantillas/{id}/horario/simulacion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Simular un cambio de horario
+         * @description Delegado o superior. Lo que haría guardar este horario, sin guardarlo: los entrenos que se añaden, que se quitan y que cambian de hora, por día de la semana y franja. No cuenta los que tienen lista pasada, plan o respuestas ni los sueltos, que no se tocan.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @example 2026-10-13 */
+                        desde: string;
+                        /** @example 2026-10-13 */
+                        hasta: string;
+                        sesiones: components["schemas"]["SesionHorario"][];
+                    };
+                };
+            };
+            responses: {
+                /** @description Simulación */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SimulacionHorario"];
+                    };
+                };
+                /** @description Datos no válidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin permiso */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No existe */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/plantillas/{id}/entrenos": {
         parameters: {
             query?: never;
@@ -9815,6 +9902,30 @@ export interface components {
             hora: string;
             /** @example 20:00 */
             horaFin?: string | null;
+        };
+        SimulacionHorario: {
+            /** @description Si la plantilla ya tiene horario */
+            guardado: boolean;
+            /** @description Si es exactamente el horario guardado */
+            igualAlGuardado: boolean;
+            /** @description Entrenos que se crearían */
+            creados: number;
+            anadidos: {
+                dia: number;
+                franja: string;
+                cuantos: number;
+            }[];
+            quitados: {
+                dia: number;
+                franja: string;
+                cuantos: number;
+            }[];
+            cambios: {
+                dia: number;
+                de: string;
+                a: string;
+                cuantos: number;
+            }[];
         };
         EntrenoListado: components["schemas"]["ResumenEntreno"] & {
             /**

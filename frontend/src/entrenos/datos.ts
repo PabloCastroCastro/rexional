@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { useEffect, useState } from 'react'
 import { api, datos } from '../api/cliente'
 import type { components } from '../api/esquema'
 
@@ -168,6 +169,35 @@ export const useSiguienteEntreno = (plantillaId: string, fecha: string) =>
       return primero ?? null
     },
   })
+
+export type SimulacionHorario = components['schemas']['SimulacionHorario']
+
+// Espera desde el último cambio del formulario antes de pedir la simulación
+export const ESPERA_SIMULACION = 400
+
+// Lo que haría guardar el horario del formulario (GH-269), sin guardarlo. Se pide un poco después del
+// último cambio, para no llamar al servidor en cada tecla; mientras, se mantiene la anterior. null si
+// el horario aún no es válido
+export function useSimulacionHorario(plantillaId: string, horario: Horario | null) {
+  const clave = horario && JSON.stringify(horario)
+  const [pedida, setPedida] = useState(clave)
+  useEffect(() => {
+    const espera = setTimeout(() => setPedida(clave), ESPERA_SIMULACION)
+    return () => clearTimeout(espera)
+  }, [clave])
+  return useQuery({
+    queryKey: [...CLAVE_ENTRENOS, plantillaId, 'simulacion-horario', pedida],
+    queryFn: () =>
+      datos(
+        api.POST('/api/plantillas/{id}/horario/simulacion', {
+          params: { path: { id: plantillaId } },
+          body: JSON.parse(pedida ?? 'null') as Horario,
+        }),
+      ),
+    enabled: pedida !== null,
+    placeholderData: keepPreviousData,
+  })
+}
 
 // Entrenos del horario en su temporada (GH-268): los ya hechos (hasta ayer) y los que quedan
 export const useCifrasHorario = (plantillaId: string, horario: { desde: string; hasta: string }) =>

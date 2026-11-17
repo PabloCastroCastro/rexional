@@ -1154,3 +1154,13 @@ li > .cierre {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
+
+/* Lo que cambia al guardar el horario (GH-269), una línea por cambio */
+.listaCambios {
+  display: grid;
+  gap: var(--espacio-1);
+  margin: 0 0 var(--espacio-2);
+  padding: 0;
+  list-style: none;
+  font-variant-numeric: tabular-nums;
+}

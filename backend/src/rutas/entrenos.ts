@@ -384,6 +384,112 @@ function sesionesDelHorario(horario: { hasta: string; sesiones: SesionHorario[] 
   return resultado
 }
 
+type Sesion = { fecha: string; hora: string | null; horaFin: string | null }
+
+const franja = (s: { hora: string | null; horaFin: string | null }) =>
+  s.hora ? (s.horaFin ? `${s.hora}–${s.horaFin}` : s.hora) : 'sin hora'
+
+// Qué cambia al guardar un horario (GH-269): compara los entrenos que se borrarían con los que se
+// crearían. Los idénticos (misma fecha, hora y fin) no cambian; en un mismo día, los que quedan se
+// emparejan por orden de hora como cambios de hora, y el resto son entrenos que se añaden o se quitan.
+// Se agrupa por día de la semana y franja.
+export function compararHorario(rehacibles: Sesion[], nuevos: Sesion[]) {
+  const clave = (s: Sesion) => `${s.fecha} ${s.hora} ${s.horaFin}`
+  const iguales = new Set(rehacibles.map(clave))
+  const quedanNuevos = nuevos.filter((n) => !iguales.has(clave(n)))
+  const enNuevos = new Set(nuevos.map(clave))
+  const quedanViejos = rehacibles.filter((r) => !enNuevos.has(clave(r)))
+
+  const porFecha = (lista: Sesion[]) => {
+    const mapa = new Map<string, Sesion[]>()
+    for (const s of [...lista].sort((a, b) => (a.hora ?? '').localeCompare(b.hora ?? '')))
+      mapa.set(s.fecha, [...(mapa.get(s.fecha) ?? []), s])
+    return mapa
+  }
+  const viejos = porFecha(quedanViejos)
+  const recientes = porFecha(quedanNuevos)
+
+  const anadidos = new Map<string, { dia: number; franja: string; cuantos: number }>()
+  const quitados = new Map<string, { dia: number; franja: string; cuantos: number }>()
+  const cambios = new Map<string, { dia: number; de: string; a: string; cuantos: number }>()
+  const sumar = <T extends { cuantos: number }>(mapa: Map<string, T>, k: string, nuevo: T) =>
+    mapa.set(k, { ...nuevo, cuantos: (mapa.get(k)?.cuantos ?? 0) + 1 })
+
+  for (const fecha of new Set([...viejos.keys(), ...recientes.keys()])) {
+    const dia = diaSemana(fecha)
+    const antes = viejos.get(fecha) ?? []
+    const despues = recientes.get(fecha) ?? []
+    for (let i = 0; i < Math.max(antes.length, despues.length); i++) {
+      const a = antes[i]
+      const d = despues[i]
+      if (a && d) {
+        const de = franja(a)
+        const nueva = franja(d)
+        sumar(cambios, `${dia} ${de} ${nueva}`, { dia, de, a: nueva, cuantos: 0 })
+      } else if (d) sumar(anadidos, `${dia} ${franja(d)}`, { dia, franja: franja(d), cuantos: 0 })
+      else if (a) sumar(quitados, `${dia} ${franja(a)}`, { dia, franja: franja(a), cuantos: 0 })
+    }
+  }
+  const porDia = <T extends { dia: number }>(m: Map<string, T>) =>
+    [...m.values()].sort((x, y) => x.dia - y.dia)
+  return { anadidos: porDia(anadidos), quitados: porDia(quitados), cambios: porDia(cambios) }
+}
+
+// Lo que haría guardar este horario, sin guardarlo: los mismos pasos que el PUT
+async function simularHorario(plantillaId: string, horario: z.infer<typeof CuerpoHorario>) {
+  const inicio = horario.desde > hoy() ? horario.desde : hoy()
+  const futuros = await db
+    .select({
+      fecha: entrenos.fecha,
+      hora: horaEntreno,
+      horaFin: horaFinEntreno,
+      rehacible: sql<boolean>`${and(
+        eq(entrenos.deHorario, true),
+        sinAsistencias(),
+        sinPlan(),
+        sinRespuestas(),
+      )}`,
+    })
+    .from(entrenos)
+    .where(and(eq(entrenos.plantillaId, plantillaId), gte(entrenos.fecha, hoy())))
+  const rehacibles = futuros.filter((e) => e.rehacible)
+  // Los que se conservan (con lista, plan o respuestas, y los sueltos) ocupan su hora: ahí no se crea
+  const ocupadas = new Set(futuros.filter((e) => !e.rehacible).map((e) => `${e.fecha} ${e.hora}`))
+  const nuevos = sesionesDelHorario(horario, inicio).filter(
+    (n) => !ocupadas.has(`${n.fecha} ${n.hora}`),
+  )
+  const [guardado] = await db
+    .select({ desde: horarios.desde, hasta: horarios.hasta, sesiones: horarios.sesiones })
+    .from(horarios)
+    .where(eq(horarios.plantillaId, plantillaId))
+  const normalizar = (h: { desde: string; hasta: string; sesiones: SesionHorario[] }) =>
+    JSON.stringify({
+      desde: h.desde,
+      hasta: h.hasta,
+      sesiones: h.sesiones
+        .map((s) => ({ dia: s.dia, hora: s.hora, horaFin: s.horaFin ?? null }))
+        .sort((a, b) => a.dia - b.dia || a.hora.localeCompare(b.hora)),
+    })
+  const diferencias = compararHorario(rehacibles, nuevos)
+  return {
+    guardado: guardado !== undefined,
+    igualAlGuardado: guardado !== undefined && normalizar(guardado) === normalizar(horario),
+    creados: nuevos.length,
+    ...diferencias,
+  }
+}
+
+const EsquemaSimulacionHorario = z
+  .object({
+    guardado: z.boolean().openapi({ description: 'Si la plantilla ya tiene horario' }),
+    igualAlGuardado: z.boolean().openapi({ description: 'Si es exactamente el horario guardado' }),
+    creados: z.int().openapi({ description: 'Entrenos que se crearían' }),
+    anadidos: z.array(z.object({ dia: z.int(), franja: z.string(), cuantos: z.int() })),
+    quitados: z.array(z.object({ dia: z.int(), franja: z.string(), cuantos: z.int() })),
+    cambios: z.array(z.object({ dia: z.int(), de: z.string(), a: z.string(), cuantos: z.int() })),
+  })
+  .openapi('SimulacionHorario')
+
 // Sin plan: ni ejercicios ni objetivo (ciclo 7)
 const sinPlan = () =>
   and(
@@ -528,6 +634,27 @@ export const rutasEntrenos = () =>
         })
         return c.json({ horario, ...resultado }, 200)
       },
+    )
+    .openapi(
+      createRoute({
+        method: 'post',
+        path: '/plantillas/{id}/horario/simulacion',
+        tags: ['Entrenos'],
+        summary: 'Simular un cambio de horario',
+        description:
+          'Delegado o superior. Lo que haría guardar este horario, sin guardarlo: los entrenos que se añaden, que se quitan y que cambian de hora, por día de la semana y franja. No cuenta los que tienen lista pasada, plan o respuestas ni los sueltos, que no se tocan.',
+        middleware: [requireRol('delegado')] as const,
+        request: {
+          params: ParamPlantilla,
+          body: { content: { 'application/json': { schema: CuerpoHorario } } },
+        },
+        responses: {
+          200: json(EsquemaSimulacionHorario, 'Simulación'),
+          400: json(EsquemaError, 'Datos no válidos'),
+          ...errores,
+        },
+      }),
+      async (c) => c.json(await simularHorario(c.var.plantilla.id, c.req.valid('json')), 200),
     )
     .openapi(
       createRoute({
