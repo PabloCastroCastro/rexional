@@ -1,4 +1,4 @@
-import { Check, ChevronRight, ClipboardCheck, FileText, X } from 'lucide-react'
+import { Check, ChevronRight, ClipboardCheck, ClipboardList, FileText, X } from 'lucide-react'
 import { Link, Navigate } from 'react-router'
 import { Cargando } from '../componentes/Cargando'
 import { EstadoVacio } from '../componentes/EstadoVacio'
@@ -6,6 +6,7 @@ import { puedeGestionarJugadores } from '../jugadores/datos'
 import { resumenPlan } from '../planificacion/datos'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
 import {
+  type EntrenoListado,
   hoy,
   type ResumenEntreno,
   textoFecha,
@@ -15,7 +16,6 @@ import {
   useProximos,
 } from './datos'
 import estilos from './Entrenos.module.css'
-import { RecuentoRespuestas } from './Respuestas'
 
 // Próximos entrenos y, debajo, los pasados por mes, el más reciente primero (la API ya los ordena).
 // Cada uno abre ese día y esa sesión en pasar lista, para pasarla o corregirla.
@@ -61,26 +61,49 @@ export function PaginaHistorial() {
     meses.at(-1)?.entrenos.push(e)
   }
 
+  // El historial empieza por el pasado: arriba solo el próximo, en una línea, y el resto plegado
+  // (GH-264)
+  const [proximo, ...masProximos] = siguientes
+  const filaProximo = (e: EntrenoListado) => (
+    <li key={e.id}>
+      {/* Un entreno futuro se abre en su día: el plan y quién va (GH-204) */}
+      <Link to={enlace(e)} className={estilos.entreno}>
+        <span className={estilos.nombre}>
+          <span>
+            {textoFecha(e.fecha)}
+            {textoHoras(e) && ` · ${textoHoras(e)}`}
+          </span>
+          <span className={estilos.recuentoRespuestas}>{textoRespuestas(e.respuestas)}</span>
+        </span>
+        {resumenPlan(e) && (
+          <ClipboardList
+            className={estilos.conPlan}
+            size={18}
+            role="img"
+            aria-label={`Con plan: ${resumenPlan(e)}`}
+          >
+            <title>{`Con plan: ${resumenPlan(e)}`}</title>
+          </ClipboardList>
+        )}
+        <ChevronRight aria-hidden size={20} className={estilos.secundario} />
+      </Link>
+    </li>
+  )
+
   return (
     <div className={estilos.meses}>
-      {siguientes.length > 0 && (
+      {proximo && (
         <section aria-label="Próximos">
-          <h2 className={estilos.mes}>Próximos</h2>
-          <ul className={estilos.lista}>
-            {siguientes.map((e) => (
-              <li key={e.id}>
-                {/* Un entreno futuro se abre en su día: el plan y quién va (GH-204) */}
-                <Link to={enlace(e)} className={estilos.entreno}>
-                  <span className={estilos.nombre}>
-                    {cuando(e)}
-                    <span className={estilos.planResumen}>{resumenPlan(e) ?? 'Sin plan'}</span>
-                    <RecuentoRespuestas respuestas={e.respuestas} />
-                  </span>
-                  <ChevronRight aria-hidden size={20} className={estilos.secundario} />
-                </Link>
-              </li>
-            ))}
-          </ul>
+          <h2 className={estilos.mes}>Próximo</h2>
+          <ul className={estilos.lista}>{filaProximo(proximo)}</ul>
+          {masProximos.length > 0 && (
+            <details className={estilos.masProximos}>
+              <summary>
+                {masProximos.length} {masProximos.length === 1 ? 'próximo más' : 'próximos más'}
+              </summary>
+              <ul className={estilos.lista}>{masProximos.map(filaProximo)}</ul>
+            </details>
+          )}
         </section>
       )}
       {meses.map(({ mes, entrenos }) => (
@@ -115,6 +138,16 @@ export function PaginaHistorial() {
     </div>
   )
 }
+
+// Las respuestas de un próximo entreno, sin ceros ni los que no han respondido: «10 van · 2 dudan»
+const textoRespuestas = (r: EntrenoListado['respuestas']) =>
+  [
+    r.voy && `${r.voy} ${r.voy === 1 ? 'va' : 'van'}`,
+    r.duda && `${r.duda} ${r.duda === 1 ? 'duda' : 'dudan'}`,
+    r.noVoy && `${r.noVoy} no ${r.noVoy === 1 ? 'va' : 'van'}`,
+  ]
+    .filter(Boolean)
+    .join(' · ') || 'Sin respuestas'
 
 // "Ayer · martes, 13 oct" y debajo, si las tiene, las horas: "20:00–21:30"
 const cuando = (e: ResumenEntreno) => {

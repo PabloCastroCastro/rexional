@@ -243,14 +243,24 @@ describe('lectura y resúmenes', () => {
           : [],
       )
     abrir('/plantillas/p1/entrenos/historial')
+    // Arriba, solo el próximo en una línea, y el resto plegado (GH-264)
     const proximos = await screen.findByRole('region', { name: 'Próximos' })
     const enlaces = within(proximos).getAllByRole('link')
-    expect(enlaces[0]).toHaveTextContent("Presión · 4 ejercicios · 75'")
+    expect(enlaces[0]).toHaveTextContent(/martes, 20 oct · 20:00/)
+    expect(enlaces[0]).toHaveTextContent('Sin respuestas')
     expect(enlaces[0]).toHaveAttribute(
       'href',
       '/plantillas/p1/entrenos?fecha=2099-10-20&entreno=e1',
     )
-    expect(enlaces[1]).toHaveTextContent('Sin plan')
+    // Con plan, un icono con su resumen; sin plan, nada («Sin plan» desaparece)
+    expect(within(enlaces[0] as HTMLElement).getByRole('img')).toHaveAccessibleName(
+      "Con plan: Presión · 4 ejercicios · 75'",
+    )
+    expect(within(proximos).getByText('1 próximo más').closest('details')).not.toHaveAttribute(
+      'open',
+    )
+    expect(enlaces[1]).not.toHaveTextContent('Sin plan')
+    expect(within(enlaces[1] as HTMLElement).queryByRole('img')).not.toBeInTheDocument()
   })
 })
 

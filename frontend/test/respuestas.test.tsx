@@ -273,9 +273,7 @@ describe('el cuerpo técnico', () => {
           : [],
       )
     abrir('/plantillas/p1/entrenos/historial')
-    expect(
-      await screen.findByText('2 van · 0 dudan · 0 no van · 4 sin responder'),
-    ).toBeInTheDocument()
+    expect(await screen.findByText('2 van')).toBeInTheDocument()
   })
 
   it('al pasar lista, lo que dijo cada jugador es solo una pista', async () => {
@@ -311,9 +309,7 @@ describe('el cuerpo técnico', () => {
     abrir('/plantillas/p1/entrenos/historial')
     const proximos = await screen.findByRole('region', { name: 'Próximos' })
     expect(within(proximos).getByText(/^Hoy/)).toBeInTheDocument()
-    expect(
-      within(proximos).getByText('0 van · 0 dudan · 1 no va · 2 sin responder'),
-    ).toBeInTheDocument()
+    expect(within(proximos).getByText('1 no va')).toBeInTheDocument()
   })
 })
 
