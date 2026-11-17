@@ -649,7 +649,7 @@
 .respuestas button[aria-pressed="true"] {
   border-color: var(--color-estado);
   background: var(--color-estado);
-  color: var(--color-superficie);
+  color: var(--color-sobre-estado);
 }
 
 .respuestas:disabled button {
@@ -672,6 +672,11 @@
   min-height: calc(var(--altura-tactil) - 6px);
   padding: 0 var(--espacio-2);
   border-color: transparent;
+}
+
+/* Solo la elegida lleva color, como al pasar lista (GH-256) */
+.respuestas.pastillas button:not([aria-pressed="true"]) {
+  color: var(--color-texto-suave);
 }
 
 /* Cabecera de «¿Quién va?» en un próximo entreno: el título y compartir a la derecha */

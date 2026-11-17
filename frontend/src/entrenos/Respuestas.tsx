@@ -326,7 +326,7 @@ export function RespuestasEntreno({ entreno }: { entreno: EntrenoListado }) {
             <li key={j.jugadorId}>
               <div className={estilos.fila}>
                 <Dorsal dorsal={j.dorsal} />
-                <span className={estilos.nombre}>
+                <span className={`${estilos.nombre} ${estilos.entero}`}>
                   {nombres.get(j.jugadorId)}
                   {j.motivoRespuesta && (
                     <span className={estilos.motivoRespuesta}>{j.motivoRespuesta}</span>
