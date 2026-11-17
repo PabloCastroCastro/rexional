@@ -8,7 +8,7 @@ import { Boton } from '../componentes/Boton'
 import { Cargando } from '../componentes/Cargando'
 import { HojaInferior } from '../componentes/HojaInferior'
 import { MensajeCompartible } from '../componentes/MensajeCompartible'
-import { nombreCompleto } from '../jugadores/datos'
+import { nombreCompleto, nombresCortos } from '../jugadores/datos'
 import { Dorsal } from '../jugadores/PaginaPlantilla'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
 import { CLAVE_ENTRENOS, type Entreno, type EntrenoListado, useEntreno } from './datos'
@@ -44,23 +44,31 @@ const textoCierre = (cierre: string) => {
   return `hasta el ${dia} a las ${hora}`
 }
 
-// Tres botones: tocar la elegida la quita. Compactos, solo con el icono (en la lista del cuerpo técnico)
+// La respuesta de cada jugador, vista por el cuerpo técnico
+const TEXTOS_CUERPO_TECNICO: Record<Respuesta, string> = {
+  voy: 'Va',
+  duda: 'Duda',
+  no_voy: 'No va',
+}
+
+// Tres botones: tocar la elegida la quita. El jugador ve la suya con icono y texto; el cuerpo técnico,
+// en pastillas solo de texto («Va / Duda / No va»), para no confundirlas con pasar lista (GH-260)
 function ControlRespuesta({
   valor,
   etiqueta,
   deshabilitado,
-  compacto = false,
+  pastillas = false,
   alElegir,
 }: {
   valor: Respuesta | null
   etiqueta: string
   deshabilitado?: boolean
-  compacto?: boolean
+  pastillas?: boolean
   alElegir: (nueva: Respuesta | null) => void
 }) {
   return (
     <fieldset
-      className={compacto ? `${estilos.respuestas} ${estilos.compacto}` : estilos.respuestas}
+      className={pastillas ? `${estilos.respuestas} ${estilos.pastillas}` : estilos.respuestas}
       disabled={deshabilitado}
     >
       <legend className="solo-lectores">{etiqueta}</legend>
@@ -70,12 +78,16 @@ function ControlRespuesta({
           type="button"
           className={clase}
           aria-pressed={valor === v}
-          aria-label={compacto ? texto : undefined}
-          title={compacto ? texto : undefined}
           onClick={() => alElegir(valor === v ? null : v)}
         >
-          <Icono aria-hidden size={compacto ? 20 : 16} />
-          {!compacto && texto}
+          {pastillas ? (
+            TEXTOS_CUERPO_TECNICO[v]
+          ) : (
+            <>
+              <Icono aria-hidden size={16} />
+              {texto}
+            </>
+          )}
         </button>
       ))}
     </fieldset>
@@ -275,7 +287,6 @@ export function RespuestasEntreno({ entreno }: { entreno: EntrenoListado }) {
   const cliente = useQueryClient()
   const { avisar } = useAvisos()
   const detalle = useEntreno(plantilla.id, entreno.id)
-  const mensaje = useMensajeRespuestas(plantilla.id, entreno.id)
   const apuntar = useMutation({
     mutationFn: ({ jugadorId, respuesta }: { jugadorId: string; respuesta: Respuesta | null }) => {
       const ruta = { params: { path: { id: plantilla.id, eid: entreno.id, jid: jugadorId } } }
@@ -294,13 +305,17 @@ export function RespuestasEntreno({ entreno }: { entreno: EntrenoListado }) {
 
   // Responden los jugadores activos en la dinámica
   const jugadores = detalle.data?.jugadores.filter((j) => j.activo) ?? []
+  // Nombre y primer apellido, como al pasar lista (GH-257); la leyenda de cada fila lleva el completo
+  const nombres = nombresCortos(jugadores)
 
   return (
     <section aria-label="Respuestas" className={estilos.seccionRespuestas}>
-      <h2 className={estilos.mes}>¿Quién va?</h2>
-      <p>
-        <RecuentoRespuestas respuestas={entreno.respuestas} />
-      </p>
+      <div className={estilos.cabeceraRespuestas}>
+        <h2>¿Quién va?</h2>
+        <CompartirRespuestas entreno={entreno} />
+      </div>
+      <p className={estilos.cierre}>{textoPlazo(entreno.cierreRespuestas)}</p>
+      <PastillasRecuento respuestas={entreno.respuestas} />
       {detalle.isPending ? null : detalle.isError ? (
         <p className={estilos.error} role="alert">
           {detalle.error.message}
@@ -311,8 +326,8 @@ export function RespuestasEntreno({ entreno }: { entreno: EntrenoListado }) {
             <li key={j.jugadorId}>
               <div className={estilos.fila}>
                 <Dorsal dorsal={j.dorsal} />
-                <span className={estilos.nombre}>
-                  {nombreCompleto(j)}
+                <span className={`${estilos.nombre} ${estilos.entero}`}>
+                  {nombres.get(j.jugadorId)}
                   {j.motivoRespuesta && (
                     <span className={estilos.motivoRespuesta}>{j.motivoRespuesta}</span>
                   )}
@@ -324,7 +339,7 @@ export function RespuestasEntreno({ entreno }: { entreno: EntrenoListado }) {
                       : j.respuesta
                   }
                   etiqueta={`Respuesta de ${nombreCompleto(j)}`}
-                  compacto
+                  pastillas
                   deshabilitado={apuntar.isPending}
                   alElegir={(respuesta) => apuntar.mutate({ jugadorId: j.jugadorId, respuesta })}
                 />
@@ -333,7 +348,31 @@ export function RespuestasEntreno({ entreno }: { entreno: EntrenoListado }) {
           ))}
         </ul>
       )}
-      {mensaje.data && <MensajeCompartible {...mensaje.data} />}
     </section>
+  )
+}
+
+// «Pueden responder hasta el martes a las 20:00», o que ya se cerró
+const textoPlazo = (cierre: string) =>
+  new Date(cierre).getTime() > Date.now()
+    ? `Pueden responder ${textoCierre(cierre)}`
+    : 'Ya no se puede responder: el plazo se ha cerrado'
+
+// El recuento en pastillas, cada una con el color de su respuesta (GH-260)
+function PastillasRecuento({ respuestas: r }: { respuestas: EntrenoListado['respuestas'] }) {
+  const pastillas = [
+    { clase: estilos.asiste, texto: `${r.voy} ${r.voy === 1 ? 'va' : 'van'}` },
+    { clase: estilos.justificada, texto: `${r.duda} ${r.duda === 1 ? 'duda' : 'dudan'}` },
+    { clase: estilos.falta, texto: `${r.noVoy} no ${r.noVoy === 1 ? 'va' : 'van'}` },
+    { clase: '', texto: `${r.sinResponder} sin responder` },
+  ]
+  return (
+    <ul className={estilos.pastillasRecuento} aria-label="Recuento de respuestas">
+      {pastillas.map(({ clase, texto }) => (
+        <li key={texto} className={`${estilos.pastilla} ${clase}`}>
+          {texto}
+        </li>
+      ))}
+    </ul>
   )
 }

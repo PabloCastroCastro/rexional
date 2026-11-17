@@ -218,23 +218,50 @@ describe('el cuerpo técnico', () => {
     conEntrenoFuturo()
     abrir(`/plantillas/p1/entrenos?fecha=${MANANA}`)
     const seccion = await screen.findByRole('region', { name: 'Respuestas' })
+    // Una sección con título, el plazo y el recuento en pastillas (GH-260)
+    expect(within(seccion).getByRole('heading', { name: '¿Quién va?' })).toBeInTheDocument()
+    expect(within(seccion).getByText(/^Pueden responder hasta el /)).toBeInTheDocument()
+    const recuento = within(seccion).getByRole('list', { name: 'Recuento de respuestas' })
     expect(
-      within(seccion).getByText('1 va · 0 dudan · 1 no va · 1 sin responder'),
-    ).toBeInTheDocument()
+      within(recuento)
+        .getAllByRole('listitem')
+        .map((li) => li.textContent),
+    ).toEqual(['1 va', '0 dudan', '1 no va', '1 sin responder'])
+
+    // Las respuestas, en pastillas de texto «Va / Duda / No va», sin los iconos de pasar lista
     const lista = await within(seccion).findByRole('list', { name: 'Respuestas de los jugadores' })
     expect(within(lista).getByText('Trabajo')).toBeInTheDocument()
     const zoe = within(lista).getByRole('group', { name: 'Respuesta de Zoe' })
-    expect(within(zoe).getByRole('button', { name: 'No voy' })).toHaveAttribute(
+    expect(
+      within(zoe)
+        .getAllByRole('button')
+        .map((b) => b.textContent),
+    ).toEqual(['Va', 'Duda', 'No va'])
+    expect(zoe.querySelector('svg')).toBeNull()
+    expect(within(zoe).getByRole('button', { name: 'No va' })).toHaveAttribute(
       'aria-pressed',
       'true',
     )
 
     const iker = within(lista).getByRole('group', { name: 'Respuesta de Íker' })
-    await userEvent.click(within(iker).getByRole('button', { name: 'Voy' }))
+    await userEvent.click(within(iker).getByRole('button', { name: 'Va' }))
     expect(enviado('PUT /api/plantillas/p1/entrenos/e1/respuestas/j3')).toEqual([
       { respuesta: 'voy' },
     ])
-    expect(await within(seccion).findByText(/7 · Brais/)).toBeInTheDocument()
+
+    // El resumen para WhatsApp, desde la cabecera de la sección
+    await userEvent.click(within(seccion).getByRole('button', { name: 'Resumen para WhatsApp' }))
+    const hoja = await screen.findByRole('dialog', { name: 'Resumen para WhatsApp' })
+    expect(await within(hoja).findByText(/7 · Brais/)).toBeInTheDocument()
+  })
+
+  it('con el plazo cerrado, lo dice', async () => {
+    conEntrenoFuturo()
+    const entreno = proximo({ cierreRespuestas: '2026-10-14T08:00:00Z' })
+    manejadores['GET /api/plantillas/p1/entrenos'] = () => json([entreno])
+    abrir(`/plantillas/p1/entrenos?fecha=${MANANA}`)
+    const seccion = await screen.findByRole('region', { name: 'Respuestas' })
+    expect(within(seccion).getByText(/el plazo se ha cerrado/)).toBeInTheDocument()
   })
 
   it('el historial muestra el recuento de los próximos', async () => {
