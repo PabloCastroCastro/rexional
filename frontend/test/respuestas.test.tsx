@@ -261,12 +261,15 @@ describe('el cuerpo técnico', () => {
     // No rellena el estado
     expect(within(lista).queryAllByRole('button', { pressed: true })).toHaveLength(0)
 
-    // Antes de pasar lista, encima, quién va y el resumen para WhatsApp (GH-215)
+    // Antes de pasar lista, encima, quién va (GH-215); el resumen para WhatsApp, con un botón que se
+    // ve sin desplegar «¿Quién va?» y abre el mensaje en una hoja (GH-258)
     const respuestas = screen.getByRole('region', { name: 'Respuestas' })
     expect(
       within(respuestas).getByText('1 va · 0 dudan · 1 no va · 1 sin responder'),
     ).toBeInTheDocument()
-    expect(await within(respuestas).findByText('Resumen para WhatsApp')).toBeInTheDocument()
+    await userEvent.click(within(respuestas).getByRole('button', { name: 'Resumen para WhatsApp' }))
+    const hoja = await screen.findByRole('dialog', { name: 'Resumen para WhatsApp' })
+    expect(await within(hoja).findByText(/7 · Brais/)).toBeInTheDocument()
   })
 
   it('en el historial, el entreno de hoy sin lista va en los próximos con su recuento (GH-215)', async () => {

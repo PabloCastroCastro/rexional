@@ -737,7 +737,23 @@ li > .cierre {
   font-size: max(16px, var(--texto-base));
 }
 
-/* «¿Quién va?» del entreno de hoy, una línea plegada encima de la lista (GH-258) */
+/* «¿Quién va?» del entreno de hoy, una línea plegada encima de la lista (GH-258), con el botón de
+   compartir a la derecha, visible sin desplegarla */
+.filaRespuestasHoy {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espacio-2);
+}
+
+.respuestasHoy {
+  flex: 1;
+  min-width: 0;
+}
+
+.respuestasHoy > p {
+  margin: 0 0 var(--espacio-2);
+}
+
 .respuestasHoy > summary {
   min-height: var(--altura-tactil);
   padding: var(--espacio-2) 0;
@@ -750,11 +766,9 @@ li > .cierre {
   color: var(--color-texto);
 }
 
-/* Resumen para WhatsApp del entreno de hoy, plegado encima de la lista (GH-215) */
-.resumenHoy summary {
-  min-height: var(--altura-tactil);
-  padding: var(--espacio-2) 0;
-  color: var(--color-acento);
-  font-weight: var(--peso-medio);
-  cursor: pointer;
+/* Resumen para WhatsApp: un botón de icono que abre la hoja con el mensaje */
+.botonCompartir {
+  flex: none;
+  width: var(--altura-tactil);
+  padding: 0;
 }
