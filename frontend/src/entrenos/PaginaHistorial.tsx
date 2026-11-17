@@ -1,4 +1,4 @@
-import { Check, ChevronRight, ClipboardCheck, ClipboardList, FileText, X } from 'lucide-react'
+import { Check, ChevronRight, ClipboardCheck, ClipboardList, Hand, X } from 'lucide-react'
 import { Link, Navigate } from 'react-router'
 import { Cargando } from '../componentes/Cargando'
 import { EstadoVacio } from '../componentes/EstadoVacio'
@@ -16,6 +16,7 @@ import {
   useProximos,
 } from './datos'
 import estilos from './Entrenos.module.css'
+import { Porcentaje } from './Porcentaje'
 
 // Próximos entrenos y, debajo, los pasados por mes, el más reciente primero (la API ya los ordena).
 // Cada uno abre ese día y esa sesión en pasar lista, para pasarla o corregirla.
@@ -112,24 +113,7 @@ export function PaginaHistorial() {
           <ul className={estilos.lista}>
             {entrenos.map((e) => (
               <li key={e.id}>
-                <Link to={enlace(e)} className={estilos.entreno}>
-                  <span className={estilos.nombre}>{cuando(e)}</span>
-                  {e.asiste + e.justificada + e.falta === 0 ? (
-                    <span className={estilos.sinLista}>Sin pasar lista</span>
-                  ) : (
-                    <>
-                      <Recuento icono={Check} clase={estilos.asiste} n={e.asiste} texto="asisten" />
-                      <Recuento
-                        icono={FileText}
-                        clase={estilos.justificada}
-                        n={e.justificada}
-                        texto="justificadas"
-                      />
-                      <Recuento icono={X} clase={estilos.falta} n={e.falta} texto="faltan" />
-                    </>
-                  )}
-                  <ChevronRight aria-hidden size={20} className={estilos.secundario} />
-                </Link>
+                <FilaPasado entreno={e} enlace={enlace(e)} />
               </li>
             ))}
           </ul>
@@ -149,33 +133,73 @@ const textoRespuestas = (r: EntrenoListado['respuestas']) =>
     .filter(Boolean)
     .join(' · ') || 'Sin respuestas'
 
-// "Ayer · martes, 13 oct" y debajo, si las tiene, las horas: "20:00–21:30"
-const cuando = (e: ResumenEntreno) => {
+// Asistencia de un entreno: asisten entre marcados, redondeado; null si no tiene lista
+const porcentajeEntreno = (e: ResumenEntreno) => {
+  const marcados = e.asiste + e.justificada + e.falta
+  return marcados ? Math.round((e.asiste / marcados) * 100) : null
+}
+
+// Un entreno pasado (GH-265): el día y, debajo, la hora y los recuentos; a la derecha, el porcentaje
+// con su color y una barra con la proporción de cada estado. El lector de pantalla lo lee entero
+function FilaPasado({ entreno: e, enlace }: { entreno: ResumenEntreno; enlace: string }) {
   const horas = textoHoras(e)
+  const porcentaje = porcentajeEntreno(e)
+  const dia = mayuscula(textoFecha(e.fecha))
+  const recuentos = [
+    {
+      n: e.asiste,
+      icono: Check,
+      clase: estilos.asiste,
+      texto: e.asiste === 1 ? 'asiste' : 'asisten',
+    },
+    {
+      n: e.justificada,
+      icono: Hand,
+      clase: estilos.justificada,
+      texto: e.justificada === 1 ? 'justificada' : 'justificadas',
+    },
+    { n: e.falta, icono: X, clase: estilos.falta, texto: e.falta === 1 ? 'falta' : 'faltan' },
+  ]
+  const etiqueta =
+    porcentaje === null
+      ? `${dia}${horas ? `, ${horas}` : ''}: sin pasar lista`
+      : `${dia}${horas ? `, ${horas}` : ''}: ${porcentaje} % de asistencia, ${recuentos
+          .map((r) => `${r.n} ${r.texto}`)
+          .join(', ')}`
+  const total = e.asiste + e.justificada + e.falta
+  const ancho = (n: number) => `${(n / total) * 100}%`
+
   return (
-    <>
-      <span>{textoFecha(e.fecha)}</span>
-      {horas && <span className={estilos.horas}>{horas}</span>}
-    </>
+    <Link to={enlace} className={estilos.entreno} aria-label={etiqueta}>
+      <span className={estilos.nombre}>
+        <span>{dia}</span>
+        <span className={estilos.lineaPasado}>
+          {horas && <span className={estilos.horas}>{horas}</span>}
+          {porcentaje !== null &&
+            recuentos.map(({ n, icono: Icono, clase }) => (
+              // Los ceros, en gris: solo lo que hay lleva color
+              <span key={clase} className={`${estilos.recuento} ${n ? clase : ''}`}>
+                <Icono aria-hidden size={14} />
+                {n}
+              </span>
+            ))}
+        </span>
+      </span>
+      {porcentaje === null ? (
+        <span className={estilos.sinLista}>Sin pasar lista</span>
+      ) : (
+        <span className={estilos.asistenciaEntreno}>
+          <Porcentaje valor={porcentaje} />
+          <span className={estilos.progreso}>
+            <span className={estilos.asiste} style={{ width: ancho(e.asiste) }} />
+            <span className={estilos.justificada} style={{ width: ancho(e.justificada) }} />
+            <span className={estilos.falta} style={{ width: ancho(e.falta) }} />
+          </span>
+        </span>
+      )}
+      <ChevronRight aria-hidden size={20} className={estilos.secundario} />
+    </Link>
   )
 }
 
-function Recuento({
-  icono: Icono,
-  clase,
-  n,
-  texto,
-}: {
-  icono: typeof Check
-  clase?: string
-  n: number
-  texto: string
-}) {
-  return (
-    <span className={`${estilos.recuento} ${clase ?? ''}`}>
-      <Icono aria-hidden size={16} />
-      {n}
-      <span className="solo-lectores"> {texto}</span>
-    </span>
-  )
-}
+const mayuscula = (texto: string) => texto.charAt(0).toUpperCase() + texto.slice(1)

@@ -363,14 +363,32 @@ describe('historial', () => {
       expect.stringMatching(/jueves, 15 oct · 20:00Sin respuestas/),
       expect.stringMatching(/martes, 20 oct · 20:00Sin respuestas/),
     ])
+    // Cada pasado se lee entero: el día, la hora, el porcentaje y los recuentos (GH-265)
     const octubre = screen.getByRole('region', { name: 'octubre de 2026' })
-    expect(
-      within(octubre)
-        .getAllByRole('link')
-        .map((a) => a.textContent),
-    ).toEqual([
-      expect.stringMatching(/Ayer.*Sin pasar lista/),
-      expect.stringMatching(/jueves, 8 oct20:00–21:30.*9 asisten/),
+    const enlaces = within(octubre).getAllByRole('link')
+    expect(enlaces.map((a) => a.getAttribute('aria-label'))).toEqual([
+      'Ayer · martes, 13 oct, 20:00: sin pasar lista',
+      'Jueves, 8 oct, 20:00–21:30: 90 % de asistencia, 9 asisten, 0 justificadas, 1 falta',
     ])
+    expect(enlaces[0]).toHaveTextContent('Sin pasar lista')
+    expect(enlaces[1]).toHaveTextContent('90 %')
+  })
+
+  it('el porcentaje de cada entreno con el color de su nivel, y los ceros en gris (GH-265)', async () => {
+    conCalendario([
+      resumen('a', '2026-10-08', '20:00', { asiste: 9, falta: 1 }),
+      resumen('b', '2026-10-06', '20:00', { asiste: 6, justificada: 2, falta: 2 }),
+      resumen('c', '2026-10-01', '20:00', { asiste: 1, falta: 2 }),
+    ])
+    abrir('/plantillas/p1/entrenos/historial')
+    const octubre = await screen.findByRole('region', { name: 'octubre de 2026' })
+    const [alto, medio, bajo] = within(octubre).getAllByRole('link') as HTMLElement[]
+    expect(within(alto as HTMLElement).getByText('90 %')).toHaveAttribute('data-nivel', 'alto')
+    expect(within(medio as HTMLElement).getByText('60 %')).toHaveAttribute('data-nivel', 'medio')
+    expect(within(bajo as HTMLElement).getByText('33 %')).toHaveAttribute('data-nivel', 'bajo')
+    // La justificada de «a» es 0: sin el color de su estado, y con la mano (GH-256)
+    const justificada = (alto as HTMLElement).querySelector('.lucide-hand')?.parentElement
+    expect(justificada).toHaveTextContent('0')
+    expect(justificada?.className).not.toMatch(/justificada/)
   })
 })
