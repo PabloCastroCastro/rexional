@@ -176,11 +176,11 @@ describe('pasar lista', () => {
     expect(enviados().length).toBeLessThan(4)
   })
 
-  it('el motivo de una justificada se guarda con ella', async () => {
+  it('el motivo de una justificada se elige con un chip y se guarda con ella (GH-262)', async () => {
     conEntrenos({ [HOY]: [IKER] })
     abrir('/plantillas/p1/entrenos')
     await screen.findByText('Íker')
-    expect(screen.queryByLabelText('Motivo de Íker')).not.toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: 'Motivo de Íker' })).not.toBeInTheDocument()
     // La justificada es una mano levantada: avisó (GH-256)
     expect(
       within(fila('Íker'))
@@ -188,11 +188,46 @@ describe('pasar lista', () => {
         .querySelector('.lucide-hand'),
     ).not.toBeNull()
     await pulsar('Íker', 'Justificada')
-    await userEvent.type(screen.getByLabelText('Motivo de Íker'), 'Trabajo')
+    const motivos = screen.getByRole('group', { name: 'Motivo de Íker' })
+    expect(
+      within(motivos)
+        .getAllByRole('button')
+        .map((b) => b.textContent),
+    ).toEqual(['Lesión', 'Trabajo', 'Estudios', 'Enfermo', 'Otro'])
+    await userEvent.click(within(motivos).getByRole('button', { name: 'Trabajo' }))
+    expect(within(motivos).getByRole('button', { name: 'Trabajo' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
     await esperarGuardado()
     expect(enviados().at(-1)).toEqual([
       { jugadorId: 'j1', estado: 'justificada', motivo: 'Trabajo' },
     ])
+
+    // Tocarlo otra vez lo quita
+    await userEvent.click(within(motivos).getByRole('button', { name: 'Trabajo' }))
+    await waitFor(
+      () =>
+        expect(enviados().at(-1)).toEqual([
+          { jugadorId: 'j1', estado: 'justificada', motivo: null },
+        ]),
+      { timeout: 3000 },
+    )
+  })
+
+  it('«Otro» abre un campo con etiqueta y el foco, para cualquier motivo (GH-262)', async () => {
+    conEntrenos({ [HOY]: [IKER] })
+    abrir('/plantillas/p1/entrenos')
+    await screen.findByText('Íker')
+    await pulsar('Íker', 'Justificada')
+    const motivos = screen.getByRole('group', { name: 'Motivo de Íker' })
+    expect(within(motivos).queryByLabelText('Otro motivo')).not.toBeInTheDocument()
+    await userEvent.click(within(motivos).getByRole('button', { name: 'Otro' }))
+    const campo = within(motivos).getByLabelText('Otro motivo')
+    expect(campo).toHaveFocus()
+    await userEvent.type(campo, 'Boda')
+    await esperarGuardado()
+    expect(enviados().at(-1)).toEqual([{ jugadorId: 'j1', estado: 'justificada', motivo: 'Boda' }])
   })
 
   it('el resto asiste, y con todos marcados la lista está completa (GH-259)', async () => {
@@ -216,6 +251,7 @@ describe('pasar lista', () => {
     conEntrenos({
       [HOY]: [
         { ...IKER, estado: 'justificada', motivo: 'Lesión' },
+        { ...ZOE, estado: 'justificada', motivo: 'Boda' },
         jugador('j9', 'Hugo', 10, { activo: false, estado: 'asiste' }),
       ],
     })
@@ -225,7 +261,19 @@ describe('pasar lista', () => {
       'aria-pressed',
       'true',
     )
-    expect(screen.getByLabelText('Motivo de Íker')).toHaveValue('Lesión')
+    const motivoIker = screen.getByRole('group', { name: 'Motivo de Íker' })
+    expect(within(motivoIker).getByRole('button', { name: 'Lesión' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    // Un motivo que no es de la lista sale en «Otro», sin quitarle el foco a nada (GH-262)
+    const motivoZoe = screen.getByRole('group', { name: 'Motivo de Zoe' })
+    expect(within(motivoZoe).getByRole('button', { name: 'Otro' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    expect(within(motivoZoe).getByLabelText('Otro motivo')).toHaveValue('Boda')
+    expect(within(motivoZoe).getByLabelText('Otro motivo')).not.toHaveFocus()
     expect(fila('Hugo')).toHaveTextContent(/baja/)
   })
 
@@ -266,7 +314,11 @@ describe('lesionados en pasar lista (GH-230)', () => {
       'aria-pressed',
       'true',
     )
-    expect(within(fila('Brais')).getByLabelText('Motivo de Brais')).toHaveValue('Lesión')
+    const motivo = within(fila('Brais')).getByRole('group', { name: 'Motivo de Brais' })
+    expect(within(motivo).getByRole('button', { name: 'Lesión' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
     // Hasta que se pasa lista no se guarda nada
     expect(enviados()).toEqual([])
 

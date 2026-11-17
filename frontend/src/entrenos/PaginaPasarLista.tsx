@@ -17,7 +17,7 @@ import {
   Share2,
   X,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { api, datos, ErrorApi, enviar, erroresPorCampo } from '../api/cliente'
 import { useAvisos } from '../componentes/Avisos'
@@ -524,6 +524,75 @@ type Marca = { estado: Estado | null; motivo: string }
 
 const MOTIVO_LESION = 'Lesión'
 
+// Motivos frecuentes de una falta justificada, a un toque (GH-262); cualquier otro va en «Otro»
+const MOTIVOS = [MOTIVO_LESION, 'Trabajo', 'Estudios', 'Enfermo']
+
+// Chips con los motivos frecuentes: tocar uno lo guarda y tocarlo otra vez lo quita. «Otro» abre un
+// campo con etiqueta; un motivo guardado que no es de la lista sale ahí
+function MotivoJustificada({
+  nombre,
+  motivo,
+  alCambiar,
+}: {
+  nombre: string
+  motivo: string
+  alCambiar: (motivo: string) => void
+}) {
+  const [otro, setOtro] = useState(motivo.trim() !== '' && !MOTIVOS.includes(motivo))
+  const idCampo = useId()
+  const campo = useRef<HTMLInputElement>(null)
+  // El campo recibe el foco al abrirlo, no al pintar la lista con un motivo ya guardado
+  const enfocar = useRef(false)
+  useEffect(() => {
+    if (otro && enfocar.current) campo.current?.focus()
+    enfocar.current = false
+  }, [otro])
+
+  return (
+    <fieldset className={estilos.motivos}>
+      <legend className="solo-lectores">Motivo de {nombre}</legend>
+      <div className={estilos.chips}>
+        {MOTIVOS.map((m) => (
+          <button
+            key={m}
+            type="button"
+            aria-pressed={!otro && motivo === m}
+            onClick={() => {
+              setOtro(false)
+              alCambiar(!otro && motivo === m ? '' : m)
+            }}
+          >
+            {m}
+          </button>
+        ))}
+        <button
+          type="button"
+          aria-pressed={otro}
+          onClick={() => {
+            enfocar.current = !otro
+            setOtro(!otro)
+            alCambiar('')
+          }}
+        >
+          Otro
+        </button>
+      </div>
+      {otro && (
+        <div className={estilos.otroMotivo}>
+          <label htmlFor={idCampo}>Otro motivo</label>
+          <input
+            ref={campo}
+            id={idCampo}
+            maxLength={200}
+            value={motivo}
+            onChange={(e) => alCambiar(e.target.value)}
+          />
+        </div>
+      )}
+    </fieldset>
+  )
+}
+
 const mayuscula = (texto: string) => texto.charAt(0).toUpperCase() + texto.slice(1)
 
 function Lista({ entreno }: { entreno: Entreno }) {
@@ -623,14 +692,11 @@ function Lista({ entreno }: { entreno: Entreno }) {
                 </fieldset>
               </div>
               {marca.estado === 'justificada' && (
-                <input
-                  className={estilos.motivo}
-                  aria-label={`Motivo de ${nombreCompleto(j)}`}
-                  placeholder="Motivo (opcional)"
-                  maxLength={200}
-                  value={marca.motivo}
-                  onChange={(e) =>
-                    cambiar({ ...marcas, [j.jugadorId]: { ...marca, motivo: e.target.value } })
+                <MotivoJustificada
+                  nombre={nombreCompleto(j)}
+                  motivo={marca.motivo}
+                  alCambiar={(motivo) =>
+                    cambiar({ ...marcas, [j.jugadorId]: { ...marca, motivo } })
                   }
                 />
               )}
