@@ -620,7 +620,7 @@ function MotivoJustificada({
               alCambiar(!otro && motivo === m ? '' : m)
             }}
           >
-            {m}
+            <span className={estilos.chip}>{m}</span>
           </button>
         ))}
         <button
@@ -632,7 +632,7 @@ function MotivoJustificada({
             alCambiar('')
           }}
         >
-          Otro
+          <span className={estilos.chip}>Otro</span>
         </button>
       </div>
       {otro && (
