@@ -187,11 +187,28 @@ function MesHistorial({
       </h2>
       <ul id={idLista} className={estilos.lista} hidden={!abierto}>
         {abierto &&
-          entrenos.map((e) => (
-            <li key={e.id}>
-              <FilaPasado entreno={e} enlace={enlace(e)} />
-            </li>
-          ))}
+          porDia(entrenos).map((sesiones) =>
+            sesiones.length === 1 ? (
+              <li key={sesiones[0]?.id}>
+                {sesiones[0] && <FilaPasado entreno={sesiones[0]} enlace={enlace(sesiones[0])} />}
+              </li>
+            ) : (
+              // Varias sesiones el mismo día: una fila con el día y, debajo, cada sesión (GH-267)
+              <li key={sesiones[0]?.fecha} className={estilos.diaConSesiones}>
+                <p className={estilos.cabeceraDia}>
+                  <span>{mayuscula(textoFecha(sesiones[0]?.fecha ?? ''))}</span>
+                  <span className={estilos.horas}>{sesiones.length} sesiones</span>
+                </p>
+                <ul className={estilos.sesionesDia}>
+                  {sesiones.map((e) => (
+                    <li key={e.id}>
+                      <FilaPasado entreno={e} enlace={enlace(e)} sesion />
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            ),
+          )}
       </ul>
     </section>
   )
@@ -215,7 +232,15 @@ const porcentajeEntreno = (e: ResumenEntreno) => {
 
 // Un entreno pasado (GH-265): el día y, debajo, la hora y los recuentos; a la derecha, el porcentaje
 // con su color y una barra con la proporción de cada estado. El lector de pantalla lo lee entero
-function FilaPasado({ entreno: e, enlace }: { entreno: ResumenEntreno; enlace: string }) {
+function FilaPasado({
+  entreno: e,
+  enlace,
+  sesion = false,
+}: {
+  entreno: ResumenEntreno
+  enlace: string
+  sesion?: boolean
+}) {
   const horas = textoHoras(e)
   const porcentaje = porcentajeEntreno(e)
   const dia = mayuscula(textoFecha(e.fecha))
@@ -246,9 +271,10 @@ function FilaPasado({ entreno: e, enlace }: { entreno: ResumenEntreno; enlace: s
   return (
     <Link to={enlace} className={estilos.entreno} aria-label={etiqueta}>
       <span className={estilos.nombre}>
-        <span>{dia}</span>
+        {/* Una sesión de un día con varias: el día ya va en su grupo, arriba la hora (GH-267) */}
+        <span>{sesion ? (horas ?? 'Sin hora') : dia}</span>
         <span className={estilos.lineaPasado}>
-          {horas && <span className={estilos.horas}>{horas}</span>}
+          {horas && !sesion && <span className={estilos.horas}>{horas}</span>}
           {porcentaje !== null &&
             recuentos.map(({ n, icono: Icono, clase }) => (
               // Los ceros, en gris: solo lo que hay lleva color
@@ -277,3 +303,15 @@ function FilaPasado({ entreno: e, enlace }: { entreno: ResumenEntreno; enlace: s
 }
 
 const mayuscula = (texto: string) => texto.charAt(0).toUpperCase() + texto.slice(1)
+
+// Los entrenos de un mes por día, en el orden de la API (del más reciente al más antiguo y, en un
+// mismo día, por hora)
+const porDia = (entrenos: ResumenEntreno[]) => {
+  const dias: ResumenEntreno[][] = []
+  for (const e of entrenos) {
+    const ultimo = dias.at(-1)
+    if (ultimo?.[0]?.fecha === e.fecha) ultimo.push(e)
+    else dias.push([e])
+  }
+  return dias
+}

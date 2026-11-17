@@ -426,3 +426,34 @@ describe('meses del historial (GH-266)', () => {
     expect(within(agosto).getAllByRole('link')).toHaveLength(1)
   })
 })
+
+describe('dobles sesiones en el historial (GH-267)', () => {
+  it('las sesiones del mismo día van bajo una fila con el día, y cada una abre la suya', async () => {
+    conCalendario([
+      resumen('t', '2026-10-13', '10:00', { asiste: 8, falta: 2 }),
+      resumen('n', '2026-10-13', '20:00'),
+      resumen('u', '2026-10-08', '20:00', { asiste: 9, falta: 1 }),
+    ])
+    abrir('/plantillas/p1/entrenos/historial')
+    const octubre = await screen.findByRole('region', { name: 'octubre de 2026' })
+    const dias = within(octubre)
+      .getAllByRole('listitem')
+      .filter((li) => li.parentElement?.id)
+    expect(dias).toHaveLength(2)
+    const doble = dias[0] as HTMLElement
+    expect(doble).toHaveTextContent(/^Ayer · martes, 13 oct2 sesiones/)
+    const sesiones = within(doble).getAllByRole('link')
+    expect(sesiones.map((a) => a.getAttribute('aria-label'))).toEqual([
+      'Ayer · martes, 13 oct, 10:00: 80 % de asistencia, 8 asisten, 0 justificadas, 2 faltan',
+      'Ayer · martes, 13 oct, 20:00: sin pasar lista',
+    ])
+    expect(sesiones[0]).toHaveTextContent(/^10:00/)
+    expect(sesiones[1]).toHaveTextContent(/^20:00Sin pasar lista/)
+    expect(sesiones[1]).toHaveAttribute(
+      'href',
+      '/plantillas/p1/entrenos?fecha=2026-10-13&entreno=n',
+    )
+    // Un día de una sola sesión, como siempre
+    expect(within(dias[1] as HTMLElement).getByRole('link')).toHaveTextContent(/^Jueves, 8 oct/)
+  })
+})

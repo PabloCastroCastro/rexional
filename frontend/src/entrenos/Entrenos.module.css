@@ -1060,3 +1060,23 @@ li > .cierre {
 [aria-expanded="false"] > .flechaMes {
   transform: rotate(-90deg);
 }
+
+/* Un día con varias sesiones en el historial (GH-267): el día y «2 sesiones», y debajo cada sesión
+   con sangría */
+.diaConSesiones {
+  display: grid;
+}
+
+.cabeceraDia {
+  display: grid;
+  margin: 0;
+  padding: var(--espacio-2) 0 0;
+  font-weight: var(--peso-medio);
+}
+
+.sesionesDia {
+  margin: 0;
+  padding: 0 0 0 var(--espacio-4);
+  border-left: 2px solid var(--color-borde);
+  list-style: none;
+}
