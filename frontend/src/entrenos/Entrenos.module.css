@@ -305,14 +305,58 @@
   color: var(--color-sobre-estado);
 }
 
-.motivo {
+/* Motivo de una justificada (GH-262): chips con los frecuentes y «Otro» con su campo, alineados con el
+   nombre */
+.motivos {
+  display: grid;
+  gap: var(--espacio-2);
+  min-width: 0;
+  margin: 0 0 0 calc(2.5rem + var(--espacio-3));
+  padding: 0;
+  border: 0;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-1);
+}
+
+.chips button {
   min-height: var(--altura-tactil);
-  margin-left: calc(2.5rem + var(--espacio-3));
+  padding: 0 var(--espacio-3);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-completo);
+  background: var(--color-superficie);
+  color: var(--color-texto-suave);
+  font: inherit;
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
+  cursor: pointer;
+}
+
+/* El elegido, con el color de la justificada */
+.chips button[aria-pressed="true"] {
+  border-color: var(--color-aviso);
+  background: var(--color-aviso);
+  color: var(--color-sobre-estado);
+}
+
+.otroMotivo {
+  display: grid;
+  gap: var(--espacio-1);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
+}
+
+.otroMotivo input {
+  min-height: var(--altura-tactil);
   padding: 0 var(--espacio-3);
   border: 1px solid var(--color-borde);
   border-radius: var(--radio-m);
   background: var(--color-superficie);
   font-size: max(16px, var(--texto-base));
+  font-weight: var(--peso-normal);
 }
 
 .error {
