@@ -1,4 +1,13 @@
-import { Check, ChevronRight, ClipboardCheck, ClipboardList, Hand, X } from 'lucide-react'
+import {
+  Check,
+  ChevronDown,
+  ChevronRight,
+  ClipboardCheck,
+  ClipboardList,
+  Hand,
+  X,
+} from 'lucide-react'
+import { useId, useState } from 'react'
 import { Link, Navigate } from 'react-router'
 import { Cargando } from '../componentes/Cargando'
 import { EstadoVacio } from '../componentes/EstadoVacio'
@@ -108,18 +117,83 @@ export function PaginaHistorial() {
         </section>
       )}
       {meses.map(({ mes, entrenos }) => (
-        <section key={mes} aria-label={mes}>
-          <h2 className={estilos.mes}>{mes}</h2>
-          <ul className={estilos.lista}>
-            {entrenos.map((e) => (
-              <li key={e.id}>
-                <FilaPasado entreno={e} enlace={enlace(e)} />
-              </li>
-            ))}
-          </ul>
-        </section>
+        <MesHistorial
+          key={mes}
+          mes={mes}
+          entrenos={entrenos}
+          // El mes en curso y el anterior, abiertos; los más antiguos, plegados (GH-266)
+          abiertoAlEmpezar={entrenos[0] !== undefined && entrenos[0].fecha >= inicioMesAnterior()}
+          enlace={enlace}
+        />
       ))}
     </div>
+  )
+}
+
+// Primer día del mes anterior al de hoy, «AAAA-MM-01»
+const inicioMesAnterior = () => {
+  const [anio, mes] = hoy().split('-').map(Number) as [number, number]
+  return mes === 1 ? `${anio - 1}-12-01` : `${anio}-${String(mes - 1).padStart(2, '0')}-01`
+}
+
+// «10 entrenos · 72 % asistencia · 6 sin lista» (GH-266): la media es asisten entre marcados, solo de
+// los entrenos con lista
+const resumenMes = (entrenos: ResumenEntreno[]) => {
+  const conLista = entrenos.filter((e) => e.asiste + e.justificada + e.falta > 0)
+  const cuantos = `${entrenos.length} ${entrenos.length === 1 ? 'entreno' : 'entrenos'}`
+  if (conLista.length === 0) return `${cuantos} · ninguna lista pasada`
+  const asisten = conLista.reduce((s, e) => s + e.asiste, 0)
+  const marcados = conLista.reduce((s, e) => s + e.asiste + e.justificada + e.falta, 0)
+  const sinLista = entrenos.length - conLista.length
+  return [
+    cuantos,
+    `${Math.round((asisten / marcados) * 100)} % asistencia`,
+    sinLista > 0 && `${sinLista} sin lista`,
+  ]
+    .filter(Boolean)
+    .join(' · ')
+}
+
+// Un mes del historial: la cabecera con su resumen, fija arriba mientras se baja por el mes, que lo
+// abre y lo cierra
+function MesHistorial({
+  mes,
+  entrenos,
+  abiertoAlEmpezar,
+  enlace,
+}: {
+  mes: string
+  entrenos: ResumenEntreno[]
+  abiertoAlEmpezar: boolean
+  enlace: (e: ResumenEntreno) => string
+}) {
+  const [abierto, setAbierto] = useState(abiertoAlEmpezar)
+  const idLista = useId()
+  return (
+    <section aria-label={mes}>
+      <h2 className={estilos.cabeceraMes}>
+        <button
+          type="button"
+          aria-expanded={abierto}
+          aria-controls={idLista}
+          className={estilos.botonMes}
+          onClick={() => setAbierto(!abierto)}
+        >
+          <ChevronDown aria-hidden size={18} className={estilos.flechaMes} />
+          <span>
+            <span className={estilos.nombreMes}>{mayuscula(mes)}</span> · {resumenMes(entrenos)}
+          </span>
+        </button>
+      </h2>
+      <ul id={idLista} className={estilos.lista} hidden={!abierto}>
+        {abierto &&
+          entrenos.map((e) => (
+            <li key={e.id}>
+              <FilaPasado entreno={e} enlace={enlace(e)} />
+            </li>
+          ))}
+      </ul>
+    </section>
   )
 }
 
