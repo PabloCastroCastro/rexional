@@ -1309,6 +1309,101 @@
           "hora"
         ]
       },
+      "SimulacionHorario": {
+        "type": "object",
+        "properties": {
+          "guardado": {
+            "type": "boolean",
+            "description": "Si la plantilla ya tiene horario"
+          },
+          "igualAlGuardado": {
+            "type": "boolean",
+            "description": "Si es exactamente el horario guardado"
+          },
+          "creados": {
+            "type": "integer",
+            "description": "Entrenos que se crearían"
+          },
+          "anadidos": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "dia": {
+                  "type": "integer"
+                },
+                "franja": {
+                  "type": "string"
+                },
+                "cuantos": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "dia",
+                "franja",
+                "cuantos"
+              ]
+            }
+          },
+          "quitados": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "dia": {
+                  "type": "integer"
+                },
+                "franja": {
+                  "type": "string"
+                },
+                "cuantos": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "dia",
+                "franja",
+                "cuantos"
+              ]
+            }
+          },
+          "cambios": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "dia": {
+                  "type": "integer"
+                },
+                "de": {
+                  "type": "string"
+                },
+                "a": {
+                  "type": "string"
+                },
+                "cuantos": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "dia",
+                "de",
+                "a",
+                "cuantos"
+              ]
+            }
+          }
+        },
+        "required": [
+          "guardado",
+          "igualAlGuardado",
+          "creados",
+          "anadidos",
+          "quitados",
+          "cambios"
+        ]
+      },
       "EntrenoListado": {
         "allOf": [
           {
@@ -7647,6 +7742,112 @@
                   "required": [
                     "borrados"
                   ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plantillas/{id}/horario/simulacion": {
+      "post": {
+        "tags": [
+          "Entrenos"
+        ],
+        "summary": "Simular un cambio de horario",
+        "description": "Delegado o superior. Lo que haría guardar este horario, sin guardarlo: los entrenos que se añaden, que se quitan y que cambian de hora, por día de la semana y franja. No cuenta los que tienen lista pasada, plan o respuestas ni los sueltos, que no se tocan.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "desde": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "example": "2026-10-13"
+                  },
+                  "hasta": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "example": "2026-10-13"
+                  },
+                  "sesiones": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/SesionHorario"
+                    },
+                    "minItems": 1,
+                    "maxItems": 14
+                  }
+                },
+                "required": [
+                  "desde",
+                  "hasta",
+                  "sesiones"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Simulación",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SimulacionHorario"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }
