@@ -668,13 +668,6 @@
   color: var(--color-sobre-primario);
 }
 
-.horasDias {
-  display: grid;
-  align-items: start;
-  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
-  gap: var(--espacio-3);
-}
-
 .errorCampo {
   color: var(--color-peligro);
   font-size: var(--texto-sm);
@@ -688,15 +681,6 @@
   color: var(--color-aviso);
   font-size: var(--texto-sm);
   font-weight: var(--peso-medio);
-}
-
-/* Horario: inicio y fin de cada día, en una fila */
-.franja {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-items: start;
-  gap: var(--espacio-3);
-  grid-column: 1 / -1;
 }
 
 /* Resumen del plan bajo la fecha de un entreno próximo */
@@ -1163,4 +1147,55 @@ li > .cierre {
   padding: 0;
   list-style: none;
   font-variant-numeric: tabular-nums;
+}
+
+/* Formulario del horario (GH-270): una fila por día y las fechas como temporada, a 360 px sin scroll
+   horizontal */
+.grupoHorario {
+  display: grid;
+  gap: var(--espacio-2);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.grupoHorario legend {
+  margin-bottom: var(--espacio-2);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
+}
+
+.filaDia {
+  display: grid;
+  grid-template-columns: 5.25rem minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--espacio-2);
+}
+
+.nombreDiaFila {
+  font-weight: var(--peso-medio);
+}
+
+.filaTemporada {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--espacio-2);
+}
+
+.entradaHorario {
+  width: 100%;
+  min-width: 0;
+  min-height: var(--altura-tactil);
+  padding: 0 var(--espacio-2);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-m);
+  background: var(--color-superficie);
+  /* 16px como mínimo: con menos, iOS hace zoom al enfocar el campo */
+  font-size: max(16px, var(--texto-base));
+}
+
+.entradaHorario[aria-invalid="true"] {
+  border-color: var(--color-peligro);
 }

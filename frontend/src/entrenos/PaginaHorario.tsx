@@ -4,7 +4,6 @@ import { type FormEvent, useState } from 'react'
 import { api, datos, erroresPorCampo } from '../api/cliente'
 import { useAvisos } from '../componentes/Avisos'
 import { Boton } from '../componentes/Boton'
-import { Campo } from '../componentes/Campo'
 import { Cargando } from '../componentes/Cargando'
 import { useConfirmacion } from '../componentes/Confirmacion'
 import { EstadoVacio } from '../componentes/EstadoVacio'
@@ -400,55 +399,85 @@ function FormularioHorario({
         )}
       </fieldset>
 
+      {/* Una fila por día marcado: «Martes [20:00] – [21:30]» (GH-270). Cada campo conserva su
+          etiqueta para el lector de pantalla; el error de la hora, debajo de su fila */}
       {sesiones.length > 0 && (
-        <div className={estilos.horasDias}>
+        <fieldset className={estilos.grupoHorario}>
+          <legend>Horas de entreno</legend>
           {sesiones.map((s) => {
-            const nombre = DIAS.find((d) => d.dia === s.dia)?.nombre
+            const nombre = DIAS.find((d) => d.dia === s.dia)?.nombre ?? ''
+            const error = errores[`fin${s.dia}`]
+            const idError = `error-fin-${s.dia}`
             const cambiar = (cambios: Partial<{ hora: string; horaFin: string }>) =>
               setHoras({
                 ...horas,
                 [s.dia]: { hora: s.hora, horaFin: s.horaFin ?? '', ...cambios },
               })
             return (
-              <div key={s.dia} className={estilos.franja}>
-                <Campo
-                  etiqueta={`Inicio del ${nombre}`}
-                  type="time"
-                  value={s.hora}
-                  onChange={(e) => cambiar({ hora: e.target.value })}
-                />
-                <Campo
-                  etiqueta={`Fin del ${nombre}`}
-                  type="time"
-                  value={s.horaFin ?? ''}
-                  onChange={(e) => cambiar({ horaFin: e.target.value })}
-                  error={errores[`fin${s.dia}`]}
-                  ayuda="Opcional"
-                />
+              <div key={s.dia}>
+                <div className={estilos.filaDia}>
+                  <span className={estilos.nombreDiaFila} aria-hidden="true">
+                    {mayuscula(nombre)}
+                  </span>
+                  <input
+                    type="time"
+                    className={estilos.entradaHorario}
+                    aria-label={`Inicio del ${nombre}`}
+                    value={s.hora}
+                    onChange={(e) => cambiar({ hora: e.target.value })}
+                  />
+                  <span aria-hidden="true">–</span>
+                  <input
+                    type="time"
+                    className={estilos.entradaHorario}
+                    aria-label={`Fin del ${nombre} (opcional)`}
+                    aria-invalid={error ? true : undefined}
+                    aria-describedby={error ? idError : undefined}
+                    value={s.horaFin ?? ''}
+                    onChange={(e) => cambiar({ horaFin: e.target.value })}
+                  />
+                </div>
+                {error && (
+                  <p id={idError} className={estilos.errorCampo} role="alert">
+                    {error}
+                  </p>
+                )}
               </div>
             )
           })}
-        </div>
+        </fieldset>
       )}
 
-      <div className={estilos.horasDias}>
-        <Campo
-          etiqueta="Desde"
-          type="date"
-          value={desde}
-          onChange={(e) => setDesde(e.target.value)}
-          error={errores.desde}
-        />
-        <Campo
-          etiqueta="Hasta"
-          type="date"
-          value={hasta}
-          min={desde}
-          onChange={(e) => setHasta(e.target.value)}
-          error={errores.hasta}
-          ayuda="El último día con entrenos: 25 de mayo, 15 de junio…"
-        />
-      </div>
+      {/* Las fechas, como temporada: «[01/09/2026] al [15/06/2027]» (GH-270) */}
+      <fieldset className={estilos.grupoHorario}>
+        <legend>Temporada de entrenos</legend>
+        <div className={estilos.filaTemporada}>
+          <input
+            type="date"
+            className={estilos.entradaHorario}
+            aria-label="Desde"
+            aria-invalid={errores.desde ? true : undefined}
+            value={desde}
+            onChange={(e) => setDesde(e.target.value)}
+          />
+          <span>al</span>
+          <input
+            type="date"
+            className={estilos.entradaHorario}
+            aria-label="Hasta"
+            aria-invalid={errores.hasta ? true : undefined}
+            aria-describedby={errores.hasta ? 'error-hasta' : undefined}
+            value={hasta}
+            min={desde}
+            onChange={(e) => setHasta(e.target.value)}
+          />
+        </div>
+        {(errores.desde || errores.hasta) && (
+          <p id="error-hasta" className={estilos.errorCampo} role="alert">
+            {errores.desde ?? errores.hasta}
+          </p>
+        )}
+      </fieldset>
 
       {!guardado && sesiones.length > 0 && fechasValidas && (
         <p className={estilos.aviso} role="status">

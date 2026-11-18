@@ -262,13 +262,17 @@ describe('horario', () => {
     await userEvent.click(screen.getByRole('button', { name: 'jueves' }))
     expect(screen.getByLabelText('Inicio del martes')).toHaveValue('20:00')
     // Fin antes que el inicio: no se guarda
-    await userEvent.type(screen.getByLabelText('Fin del martes'), '19:00')
+    await userEvent.type(screen.getByLabelText('Fin del martes (opcional)'), '19:00')
     await userEvent.click(screen.getByRole('button', { name: 'Guardar horario' }))
     expect(screen.getByText('La hora de fin debe ser posterior a la de inicio')).toBeInTheDocument()
+    // El error, debajo de su fila y ligado al campo (GH-270)
+    expect(screen.getByLabelText('Fin del martes (opcional)')).toHaveAccessibleDescription(
+      'La hora de fin debe ser posterior a la de inicio',
+    )
     expect(enviado('PUT /api/plantillas/p1/horario')).toEqual([])
-    await userEvent.clear(screen.getByLabelText('Fin del martes'))
-    await userEvent.type(screen.getByLabelText('Fin del martes'), '21:30')
-    await userEvent.type(screen.getByLabelText('Fin del jueves'), '21:30')
+    await userEvent.clear(screen.getByLabelText('Fin del martes (opcional)'))
+    await userEvent.type(screen.getByLabelText('Fin del martes (opcional)'), '21:30')
+    await userEvent.type(screen.getByLabelText('Fin del jueves (opcional)'), '21:30')
 
     // «Hasta» elegido: del miércoles 14 al jueves 29 de octubre hay dos martes y tres jueves
     const hasta = screen.getByLabelText('Hasta')
@@ -558,5 +562,28 @@ describe('aviso del horario (GH-269)', () => {
         { dia: 4, hora: '20:00' },
       ],
     })
+  })
+})
+
+describe('formulario del horario (GH-270)', () => {
+  it('una fila por día con inicio y fin, y las fechas como temporada', async () => {
+    conDatos({ plantillas: [senior26] })
+    manejadores['GET /api/plantillas/p1/horario'] = () => json(null)
+    abrir('/plantillas/p1/entrenos/horario')
+    await userEvent.click(await screen.findByRole('button', { name: 'martes' }))
+    await userEvent.click(screen.getByRole('button', { name: 'jueves' }))
+
+    const horas = screen.getByRole('group', { name: 'Horas de entreno' })
+    const inicio = within(horas).getByLabelText('Inicio del martes')
+    const fila = inicio.parentElement as HTMLElement
+    expect(fila).toHaveTextContent(/^Martes–$/)
+    expect(within(fila).getByLabelText('Fin del martes (opcional)')).toBeInTheDocument()
+    expect(within(horas).getByLabelText('Inicio del jueves')).toBeInTheDocument()
+
+    const temporada = screen.getByRole('group', { name: 'Temporada de entrenos' })
+    expect(temporada).toHaveTextContent('al')
+    expect(within(temporada).getByLabelText('Desde')).toHaveValue('2026-10-14')
+    expect(within(temporada).getByLabelText('Hasta')).toHaveValue('2027-06-30')
+    expect(screen.queryByText(/El último día con entrenos/)).not.toBeInTheDocument()
   })
 })
