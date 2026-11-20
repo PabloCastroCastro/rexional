@@ -329,15 +329,127 @@ describe('ficha del ejercicio', () => {
     expect(screen.getByText('Cuadrado de 6×6 m')).toBeInTheDocument()
   })
 
+  it('primero ver: sin controles alrededor, cada uno con su «⋯» y el enlace con su título (GH-276)', async () => {
+    const enlace = medio('m3', {
+      tipo: 'enlace',
+      url: 'https://www.youtube.com/watch?v=abc',
+      urlArchivo: null,
+      urlMiniatura: null,
+      pie: 'Vídeos de ejemplo del rondo',
+      orden: 1,
+    })
+    conBiblioteca(senior26, undefined, {
+      ...RONDO,
+      medios: [medio('m1', { pie: 'Colocación' }), enlace],
+    })
+    manejadores[`PATCH ${BASE}/e1/medios/m1`] = () => json(medio('m1', { pie: 'Inicio' }))
+    manejadores[`DELETE ${BASE}/e1/medios/m3`] = () => new Response(null, { status: 204 })
+    manejadores[`POST ${BASE}/e1/medios/enlace`] = () => json(enlace, 201)
+    abrir('/plantillas/p1/entrenos/ejercicios/e1')
+    const galeria = await screen.findByRole('list', { name: 'Fotos, vídeos y enlaces' })
+    // En la galería solo hay «⋯»: ni flechas, ni lápiz, ni papelera
+    expect(
+      within(galeria)
+        .getAllByRole('button')
+        .map((b) => b.getAttribute('aria-label')),
+    ).toEqual([
+      'Opciones de la foto «Colocación»',
+      'Opciones del enlace «Vídeos de ejemplo del rondo»',
+    ])
+    // El enlace lleva su título dentro y la web debajo
+    expect(
+      within(galeria).getByRole('link', { name: 'Vídeos de ejemplo del rondo youtube.com' }),
+    ).toHaveAttribute('href', 'https://www.youtube.com/watch?v=abc')
+
+    // Cambiar el título
+    await userEvent.click(
+      within(galeria).getByRole('button', { name: 'Opciones de la foto «Colocación»' }),
+    )
+    await userEvent.click(
+      within(screen.getByRole('dialog', { name: 'Foto' })).getByRole('button', {
+        name: 'Cambiar el título',
+      }),
+    )
+    const titulo = screen.getByRole('dialog', { name: 'Título' })
+    await userEvent.clear(within(titulo).getByLabelText('Título'))
+    await userEvent.type(within(titulo).getByLabelText('Título'), 'Inicio')
+    await userEvent.click(within(titulo).getByRole('button', { name: 'Guardar' }))
+    await waitFor(() => expect(enviado(`PATCH ${BASE}/e1/medios/m1`)).toEqual([{ pie: 'Inicio' }]))
+
+    // Quitar, en rojo y con confirmación
+    await userEvent.click(
+      within(galeria).getByRole('button', {
+        name: 'Opciones del enlace «Vídeos de ejemplo del rondo»',
+      }),
+    )
+    await userEvent.click(
+      within(screen.getByRole('dialog', { name: 'Enlace' })).getByRole('button', {
+        name: 'Quitar',
+      }),
+    )
+    await userEvent.click(
+      within(screen.getByRole('alertdialog', { name: '¿Quitar el enlace?' })).getByRole('button', {
+        name: 'Quitar',
+      }),
+    )
+    expect(await screen.findByText('Enlace quitado')).toBeInTheDocument()
+
+    // Al final, un único botón para añadir, que deja elegir
+    await userEvent.click(screen.getByRole('button', { name: 'Añadir foto, vídeo o enlace' }))
+    const elegir = screen.getByRole('dialog', { name: 'Añadir foto, vídeo o enlace' })
+    expect(within(elegir).getByRole('button', { name: 'Subir foto o vídeo' })).toBeInTheDocument()
+    await userEvent.click(within(elegir).getByRole('button', { name: 'Pegar un enlace' }))
+    const formulario = screen.getByRole('dialog', { name: 'Añadir enlace' })
+    await userEvent.type(
+      within(formulario).getByLabelText('Dirección'),
+      'https://www.youtube.com/watch?v=abc',
+    )
+    await userEvent.type(
+      within(formulario).getByLabelText('Título (opcional)'),
+      'Vídeos de ejemplo',
+    )
+    await userEvent.click(within(formulario).getByRole('button', { name: /Añadir/ }))
+    await waitFor(() =>
+      expect(enviado(`POST ${BASE}/e1/medios/enlace`)).toEqual([
+        { url: 'https://www.youtube.com/watch?v=abc', pie: 'Vídeos de ejemplo' },
+      ]),
+    )
+  })
+
+  it('con uno solo, su «⋯» no tiene nada que mover (GH-276)', async () => {
+    conBiblioteca(senior26, undefined, { ...RONDO, medios: [medio('m1', { pie: 'Colocación' })] })
+    abrir('/plantillas/p1/entrenos/ejercicios/e1')
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Opciones de la foto «Colocación»' }),
+    )
+    const hoja = screen.getByRole('dialog', { name: 'Foto' })
+    expect(
+      within(hoja)
+        .getAllByRole('button')
+        .map((b) => b.textContent),
+    ).toEqual(['', 'Cambiar el título', 'Quitar'])
+  })
+
   it('reordena y archiva', async () => {
     conBiblioteca()
     abrir('/plantillas/p1/entrenos/ejercicios/e1')
-    await userEvent.click(await screen.findByRole('button', { name: 'Bajar la foto' }))
+    // Cada foto, vídeo o enlace se mueve desde su «⋯» (GH-276)
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Opciones de la foto «Colocación»' }),
+    )
+    const foto = screen.getByRole('dialog', { name: 'Foto' })
+    expect(within(foto).getByRole('button', { name: 'Mover arriba' })).toBeDisabled()
+    await userEvent.click(within(foto).getByRole('button', { name: 'Mover abajo' }))
     await waitFor(() =>
       expect(enviado(`PUT ${BASE}/e1/medios/orden`)).toEqual([
         { medios: ['m2', 'm1', 'm3', 'm4'] },
       ]),
     )
+    // La hoja sigue abierta para seguir moviendo; ya no es la primera
+    await waitFor(() =>
+      expect(within(foto).getByRole('button', { name: 'Mover arriba' })).toBeEnabled(),
+    )
+    await userEvent.click(within(foto).getByRole('button', { name: 'Cerrar' }))
     // Archivar, en «⋯» (GH-275)
     await userEvent.click(screen.getByRole('button', { name: 'Opciones del ejercicio' }))
     const hoja = screen.getByRole('dialog', { name: 'Opciones del ejercicio' })
@@ -451,6 +563,10 @@ describe('ficha del ejercicio', () => {
     expect(screen.queryByRole('button', { name: 'Editar' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Opciones del ejercicio' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Quitar/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Opciones (de la|del) / })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Añadir foto, vídeo o enlace' }),
+    ).not.toBeInTheDocument()
   })
 
   it('un ejercicio usado no se puede borrar, solo archivar', async () => {
