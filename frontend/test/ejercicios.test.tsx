@@ -327,10 +327,68 @@ describe('ficha del ejercicio', () => {
         { medios: ['m2', 'm1', 'm3', 'm4'] },
       ]),
     )
-    await userEvent.click(screen.getByRole('button', { name: 'Archivar' }))
+    // Archivar, en «⋯» (GH-275)
+    await userEvent.click(screen.getByRole('button', { name: 'Opciones del ejercicio' }))
+    const hoja = screen.getByRole('dialog', { name: 'Opciones del ejercicio' })
+    await userEvent.click(within(hoja).getByRole('button', { name: 'Archivar' }))
     expect(await screen.findByText('Ejercicio archivado')).toBeInTheDocument()
     expect(enviado(`PATCH ${BASE}/e1`)).toEqual([{ archivado: true }])
-    expect(await screen.findByRole('button', { name: 'Recuperar' })).toBeInTheDocument()
+    expect(await screen.findByText('Archivado')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Opciones del ejercicio' }))
+    expect(within(hoja).getByRole('button', { name: 'Desarchivar' })).toBeInTheDocument()
+  })
+
+  it('lápiz y «⋯» junto al título, la categoría como chip y los datos en casillas (GH-275)', async () => {
+    conBiblioteca()
+    abrir('/plantillas/p1/entrenos/ejercicios/e1')
+    const titulo = await screen.findByRole('heading', { name: 'Rondo 4 contra 1' })
+    const fila = titulo.parentElement as HTMLElement
+    expect(
+      within(fila)
+        .getAllByRole('button')
+        .map((b) => b.getAttribute('aria-label')),
+    ).toEqual(['Editar', 'Opciones del ejercicio'])
+    // Debajo del título, la categoría con su color y las etiquetas
+    const chip = screen.getByText('Calentamiento')
+    expect(chip.style.getPropertyValue('--color-chip')).toBe('var(--color-cat-calentamiento)')
+    expect(chip.querySelector('svg')).not.toBeNull()
+    expect(screen.getByText('posesión')).toBeInTheDocument()
+    // Minutos y jugadores en casillas; el material, a lo ancho
+    const casillas = [...document.querySelectorAll('dl > div')].map((d) => [
+      d.querySelector('dt')?.textContent,
+      d.querySelector('dd')?.textContent,
+      d.hasAttribute('data-ancha'),
+    ])
+    expect(casillas).toEqual([
+      ['Minutos', '10', false],
+      ['Jugadores', '5', false],
+      ['Material', 'Conos', true],
+    ])
+    // Duplicar va en «⋯» y lleva a la copia
+    manejadores[`POST ${BASE}/e1/duplicar`] = () =>
+      json({ ...RONDO, id: 'e2', nombre: 'Rondo 4 contra 1 (copia)' }, 201)
+    await userEvent.click(screen.getByRole('button', { name: 'Opciones del ejercicio' }))
+    await userEvent.click(
+      within(screen.getByRole('dialog', { name: 'Opciones del ejercicio' })).getByRole('button', {
+        name: 'Duplicar',
+      }),
+    )
+    expect(await screen.findByText('Copia creada: «Rondo 4 contra 1 (copia)»')).toBeInTheDocument()
+  })
+
+  it('una casilla sin dato no se muestra (GH-275)', async () => {
+    conBiblioteca(senior26, undefined, {
+      ...RONDO,
+      categoria: null,
+      duracionMin: null,
+      jugadores: null,
+      material: 'Petos',
+    })
+    abrir('/plantillas/p1/entrenos/ejercicios/e1')
+    expect(await screen.findByText('Sin categoría')).toBeInTheDocument()
+    expect([...document.querySelectorAll('dl > div > dt')].map((d) => d.textContent)).toEqual([
+      'Material',
+    ])
   })
 
   it('avisa antes de subir de las HEIC y de lo que pasa del límite, y sube lo demás', async () => {
@@ -380,13 +438,16 @@ describe('ficha del ejercicio', () => {
     abrir('/plantillas/p1/entrenos/ejercicios/e1')
     await screen.findByRole('list', { name: 'Fotos, vídeos y enlaces' })
     expect(screen.queryByRole('button', { name: 'Editar' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Opciones del ejercicio' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Quitar/ })).not.toBeInTheDocument()
   })
 
   it('un ejercicio usado no se puede borrar, solo archivar', async () => {
     conBiblioteca(senior26, undefined, { ...RONDO, usos: 2 })
     abrir('/plantillas/p1/entrenos/ejercicios/e1')
-    expect(await screen.findByRole('button', { name: 'Archivar' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Borrar' })).not.toBeInTheDocument()
+    await userEvent.click(await screen.findByRole('button', { name: 'Opciones del ejercicio' }))
+    const hoja = screen.getByRole('dialog', { name: 'Opciones del ejercicio' })
+    expect(within(hoja).getByRole('button', { name: 'Archivar' })).toBeInTheDocument()
+    expect(within(hoja).queryByRole('button', { name: 'Borrar' })).not.toBeInTheDocument()
   })
 })
