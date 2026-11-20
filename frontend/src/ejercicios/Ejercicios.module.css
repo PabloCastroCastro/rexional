@@ -151,6 +151,38 @@
   accent-color: var(--color-primario);
 }
 
+/* Un grupo por categoría (GH-274): encabezado con su color, nombre y cuántos tiene */
+.grupos,
+.grupo {
+  display: grid;
+  gap: var(--espacio-2);
+}
+
+.grupos {
+  gap: var(--espacio-5);
+}
+
+.cabeceraGrupo {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  margin: 0;
+  padding-inline: var(--espacio-1);
+  font-size: var(--texto-base);
+}
+
+.cuentaGrupo {
+  min-width: 1.5rem;
+  padding: 0 var(--espacio-2);
+  border-radius: var(--radio-completo);
+  background: color-mix(in srgb, var(--color-chip) 14%, var(--color-superficie));
+  color: var(--color-texto);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-fuerte);
+  line-height: 1.5rem;
+  text-align: center;
+}
+
 .lista {
   display: grid;
   margin: 0;
