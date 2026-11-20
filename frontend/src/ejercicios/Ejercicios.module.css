@@ -330,6 +330,13 @@
   color: var(--color-texto-suave);
 }
 
+/* En cuántos entrenos de la plantilla se ha usado (GH-277) */
+.usoEjercicio {
+  margin: 0;
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
+}
+
 .descripcion {
   margin: 0;
   white-space: pre-line;

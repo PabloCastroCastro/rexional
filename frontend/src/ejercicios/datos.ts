@@ -68,13 +68,25 @@ export const useEtiquetas = (clubId: string) =>
       ),
   })
 
-export const useEjercicio = (clubId: string, ejercicioId: string) =>
+// Con plantilla, también en cuántos de sus entrenos se ha usado y cuándo fue el último (GH-277)
+export const claveEjercicio = (clubId: string, ejercicioId: string, plantillaId?: string) => [
+  ...CLAVE_EJERCICIOS,
+  clubId,
+  'ejercicio',
+  ejercicioId,
+  plantillaId ?? null,
+]
+
+export const useEjercicio = (clubId: string, ejercicioId: string, plantillaId?: string) =>
   useQuery({
-    queryKey: [...CLAVE_EJERCICIOS, clubId, 'ejercicio', ejercicioId],
+    queryKey: claveEjercicio(clubId, ejercicioId, plantillaId),
     queryFn: () =>
       datos(
         api.GET('/api/clubes/{cid}/ejercicios/{eid}', {
-          params: { path: { cid: clubId, eid: ejercicioId } },
+          params: {
+            path: { cid: clubId, eid: ejercicioId },
+            query: plantillaId ? { plantilla: plantillaId } : {},
+          },
         }),
       ),
     // Mientras un vídeo se procesa, se vuelve a mirar cada pocos segundos
