@@ -173,15 +173,8 @@
 }
 
 .miniatura {
-  display: grid;
-  flex: none;
-  place-items: center;
   width: 4rem;
   height: 3rem;
-  border-radius: var(--radio-s);
-  background: var(--color-superficie-alterna);
-  color: var(--color-texto-suave);
-  object-fit: cover;
 }
 
 .textoTarjeta {
@@ -191,10 +184,13 @@
   min-width: 0;
 }
 
+/* Hasta dos líneas antes de cortarse (GH-273) */
 .textoTarjeta strong {
+  display: -webkit-box;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 .secundario {
