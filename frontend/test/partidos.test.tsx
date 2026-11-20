@@ -2,7 +2,13 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { components } from '../src/api/esquema'
-import { type Partido, type ResumenPartido, tipoResultado } from '../src/partidos/datos'
+import {
+  competicionHabitual,
+  nombreCompeticion,
+  type Partido,
+  type ResumenPartido,
+  tipoResultado,
+} from '../src/partidos/datos'
 import { minutoPropuesto } from '../src/partidos/Notas'
 import { type ArchivoPartido, MAXIMO_ARCHIVOS } from '../src/partidos/Planificacion'
 import { cuandoSeJuega } from '../src/partidos/TarjetaPartido'
@@ -110,19 +116,20 @@ describe('lista de partidos', () => {
     conPartidos()
     abrir('/plantillas/p1/partidos')
     const lista = await screen.findByRole('list', { name: 'Próximos partidos' })
-    expect(
-      within(lista)
-        .getAllByRole('link')
-        .map((a) => a.textContent),
-    ).toEqual([
-      expect.stringMatching(
-        /domingo, 18 oct · 17:00.*en SD Compostela.*Fuera.*Preferente.*10 convocados/,
-      ),
-      expect.stringMatching(/domingo, 25 oct.*vs CD Lalín.*Casa.*Sin convocatoria/),
+    // El lector de pantalla lee el partido completo (GH-278); «Preferente» es la habitual: no se repite
+    const enlaces = within(lista).getAllByRole('link')
+    expect(enlaces.map((a) => a.getAttribute('aria-label'))).toEqual([
+      'Domingo, 18 oct, 17:00, SD Compostela, fuera, 10 convocados',
+      'Domingo, 25 oct, CD Lalín, en casa, sin convocatoria',
     ])
+    // En pantalla, el rival sin «vs / en» y casa o fuera una sola vez
+    expect(enlaces[0]).toHaveTextContent('Domingo, 18 oct · 17:00SD CompostelaFuera10 convocados')
+    expect(enlaces[1]).toHaveTextContent('Domingo, 25 octCD LalínEn casaSin convocatoria')
     await userEvent.click(screen.getByRole('button', { name: 'Pasados' }))
     const pasados = await screen.findByRole('list', { name: 'Partidos pasados' })
-    expect(within(pasados).getByRole('link')).toHaveTextContent(/vs Arosa SC.*11 convocados/)
+    expect(within(pasados).getByRole('link')).toHaveAccessibleName(
+      'Domingo, 11 oct, Arosa SC, en casa, 11 convocados',
+    )
   })
 
   it('el resultado de los pasados, con el color de victoria, empate o derrota (GH-228)', async () => {
@@ -139,16 +146,48 @@ describe('lista de partidos', () => {
     abrir('/plantillas/p1/partidos?ver=pasados')
     const pasados = await screen.findByRole('list', { name: 'Partidos pasados' })
     const [ganado, empatado, perdido, aplazado] = within(pasados).getAllByRole('link')
-    const resultado = (enlace?: HTMLElement) => enlace?.querySelector('[data-estado]')
-    expect(resultado(ganado)).toHaveAttribute('data-resultado', 'victoria')
-    expect(resultado(ganado)).toHaveTextContent('Victoria, 2–1')
-    expect(resultado(empatado)).toHaveAttribute('data-resultado', 'empate')
-    expect(resultado(empatado)).toHaveTextContent('Empate, 1–1')
-    expect(resultado(perdido)).toHaveAttribute('data-resultado', 'derrota')
-    expect(resultado(perdido)).toHaveTextContent('Derrota, 0–3')
-    // El aplazado, como antes: sin color de resultado
-    expect(resultado(aplazado)).not.toHaveAttribute('data-resultado')
-    expect(resultado(aplazado)).toHaveTextContent('Aplazado')
+    // El marcador, a la derecha (antes de la flecha) y en su color
+    const marcador = (enlace?: HTMLElement) => enlace?.querySelector('[data-resultado]')
+    expect(marcador(ganado)).toHaveAttribute('data-resultado', 'victoria')
+    expect(marcador(ganado)).toHaveTextContent('2–1')
+    expect(marcador(ganado)?.nextElementSibling?.tagName).toBe('svg')
+    expect(ganado).toHaveAccessibleName(
+      'Domingo, 11 oct, Arosa SC, 2 a 1, victoria, sin convocatoria',
+    )
+    expect(marcador(empatado)).toHaveAttribute('data-resultado', 'empate')
+    expect(empatado).toHaveAccessibleName(/1 a 1, empate/)
+    expect(marcador(perdido)).toHaveAttribute('data-resultado', 'derrota')
+    expect(perdido).toHaveAccessibleName(/0 a 3, derrota/)
+    // El aplazado, sin color de resultado
+    expect(marcador(aplazado)).toBeNull()
+    expect(aplazado).toHaveTextContent('Aplazado')
+    expect(aplazado).toHaveAccessibleName(/Silva SD, aplazado/)
+    // Todas las filas con las mismas tres líneas, tengan o no resultado
+    for (const enlace of [ganado, empatado, perdido, aplazado]) {
+      expect(enlace?.firstElementChild?.children).toHaveLength(3)
+    }
+  })
+
+  it('la competición solo si no es la habitual, con su nombre arreglado (GH-278)', async () => {
+    conPartidos(
+      senior26,
+      [
+        resumen('c1', '2026-10-18', 'SD Compostela', { competicion: 'PREFERENTE GALICIA' }),
+        resumen('c2', '2026-10-21', 'Silva SD', {
+          competicion: 'COPA DA DEPUTACIÓN · Jornada 3',
+        }),
+      ],
+      [
+        resumen('c0', '2026-10-11', 'Arosa SC', { competicion: 'PREFERENTE GALICIA' }),
+        resumen('c00', '2026-10-04', 'CD Lalín', { competicion: 'PREFERENTE GALICIA' }),
+      ],
+    )
+    abrir('/plantillas/p1/partidos')
+    const lista = await screen.findByRole('list', { name: 'Próximos partidos' })
+    await waitFor(() =>
+      expect(within(lista).getAllByRole('link')[0]).not.toHaveTextContent(/preferente/i),
+    )
+    expect(within(lista).getAllByRole('link')[1]).toHaveTextContent('Copa da deputación · J3')
   })
 
   it('sin partidos invita a crear el próximo solo a quien puede', async () => {
@@ -748,5 +787,24 @@ describe('tarjeta del partido (GH-229)', () => {
     expect(within(tarjeta).getByText('Derrota')).toHaveAttribute('data-resultado', 'derrota')
     expect(tarjeta).not.toHaveTextContent('17:00')
     expect(tarjeta).toHaveTextContent('Fuera')
+  })
+})
+
+describe('nombres de competición (GH-278)', () => {
+  it('la habitual es la de más de la mitad de los partidos', () => {
+    const p = (competicion: string | null) => ({ competicion })
+    expect(competicionHabitual([p('Liga'), p('Liga'), p('Copa')])).toBe('Liga')
+    expect(competicionHabitual([p('Liga'), p('Copa')])).toBeNull()
+    expect(competicionHabitual([p('Liga'), p(null), p(null)])).toBeNull()
+    expect(competicionHabitual([])).toBeNull()
+  })
+
+  it('las mayúsculas, en minúsculas con la primera en mayúscula, y «Jornada N», «JN»', () => {
+    expect(nombreCompeticion('TERCEIRA PROBA (GRUPO 1)')).toBe('Terceira proba (grupo 1)')
+    expect(nombreCompeticion('Preferente · Jornada 12')).toBe('Preferente · J12')
+    expect(nombreCompeticion('Copa Diputación')).toBe('Copa Diputación')
+    expect(nombreCompeticion('U19')).toBe('U19')
+    expect(nombreCompeticion('COPA DA DEPUTACIÓN · Jornada 3')).toBe('Copa da deputación · J3')
+    expect(nombreCompeticion('PRIMERA INVENTADA | GRUPO 9')).toBe('Primera inventada | Grupo 9')
   })
 })

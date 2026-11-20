@@ -44,8 +44,31 @@ export const useMensaje = (plantillaId: string, partidoId: string) =>
   })
 
 // "Casa", "Fuera" o nada si no se sabe
-export const textoLocal = (local: boolean | null) =>
-  local === true ? 'Casa' : local === false ? 'Fuera' : null
+// La competición de la mayoría de los partidos de la plantilla (GH-278): en la lista no se repite.
+// Sin mayoría clara, ninguna
+export function competicionHabitual(partidos: { competicion: string | null }[]) {
+  const cuenta = new Map<string, number>()
+  for (const { competicion } of partidos) {
+    if (competicion) cuenta.set(competicion, (cuenta.get(competicion) ?? 0) + 1)
+  }
+  const [masUsada, veces = 0] = [...cuenta].sort((a, b) => b[1] - a[1])[0] ?? []
+  return masUsada && veces > partidos.length / 2 ? masUsada : null
+}
+
+// «TERCEIRA PROBA (GRUPO 1) · Jornada 5» → «Terceira proba (grupo 1) · J5» (GH-278): cada tramo
+// (entre « · » o « | ») que llega en mayúsculas, como los nombres de la federación, en minúsculas con
+// la primera en mayúscula
+export function nombreCompeticion(texto: string) {
+  return texto
+    .split(/(\s[·|]\s)/u)
+    .map((tramo) =>
+      tramo === tramo.toUpperCase() && /\p{Lu}{2}/u.test(tramo)
+        ? tramo.charAt(0) + tramo.slice(1).toLocaleLowerCase('es')
+        : tramo,
+    )
+    .join('')
+    .replace(/\bjornada\s*(\d+)/giu, 'J$1')
+}
 
 // Competiciones ya usadas y el último campo en casa, para proponerlos en el formulario
 export function sugerencias(partidos: ResumenPartido[]) {
