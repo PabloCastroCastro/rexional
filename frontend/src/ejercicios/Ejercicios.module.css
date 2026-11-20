@@ -344,8 +344,7 @@
   margin: 0;
 }
 
-.acciones,
-.accionesMedios {
+.acciones {
   display: flex;
   flex-wrap: wrap;
   gap: var(--espacio-2);
@@ -417,29 +416,26 @@
   }
 }
 
-.pieMedio {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
+/* Primero ver (GH-276): la foto o el vídeo con su «⋯» en la esquina y el título debajo */
+.medio {
+  display: grid;
   gap: var(--espacio-2);
+  margin: 0;
 }
 
-.pieMedio p {
-  margin: 0;
+.medio figcaption {
   color: var(--color-texto-suave);
   font-size: var(--texto-sm);
 }
 
-.controles {
-  display: flex;
-  gap: var(--espacio-1);
-  margin-left: auto;
+.marcoMedio {
+  position: relative;
 }
 
-.controles button,
-.subidas button {
+/* El «⋯» de cada foto, vídeo o enlace */
+.masMedio {
   display: grid;
+  flex: none;
   place-items: center;
   width: var(--altura-tactil);
   height: var(--altura-tactil);
@@ -450,9 +446,45 @@
   cursor: pointer;
 }
 
-.controles button:disabled {
-  opacity: 0.35;
-  cursor: default;
+.marcoMedio .masMedio {
+  position: absolute;
+  top: var(--espacio-2);
+  right: var(--espacio-2);
+  border-radius: var(--radio-completo);
+  background: rgb(0 0 0 / 55%);
+  color: #ffffff;
+}
+
+/* El enlace: su tarjeta a lo ancho y el «⋯» al lado */
+.filaEnlace {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+}
+
+.filaEnlace .enlace {
+  flex: 1;
+  min-width: 0;
+}
+
+.enlace strong {
+  overflow-wrap: anywhere;
+}
+
+.botonAnadir {
+  justify-self: start;
+}
+
+.subidas button {
+  display: grid;
+  place-items: center;
+  width: var(--altura-tactil);
+  height: var(--altura-tactil);
+  border: 0;
+  border-radius: var(--radio-m);
+  background: none;
+  color: var(--color-texto-suave);
+  cursor: pointer;
 }
 
 .subidas {
@@ -572,4 +604,9 @@
 .opciones .opcionPeligrosa,
 .opciones .opcionPeligrosa svg {
   color: var(--color-peligro);
+}
+
+.opciones > li > button:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
