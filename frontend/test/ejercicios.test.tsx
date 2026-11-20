@@ -137,15 +137,18 @@ describe('lista de ejercicios', () => {
     // La miniatura es decorativa (alt vacío): no tiene rol de imagen
     expect(lista.querySelector('img')).toHaveAttribute('src', '/api/medios/m1/miniatura')
 
-    // Categoría en la fila de chips; etiqueta y archivados en la hoja «Filtros» (GH-272)
-    await userEvent.click(screen.getByRole('button', { name: 'Táctica' }))
-    expect(screen.getByRole('button', { name: 'Táctica' })).toHaveAttribute('aria-pressed', 'true')
+    // Categoría, etiqueta y archivados, en la hoja «Filtros» (GH-272)
     await userEvent.click(screen.getByRole('button', { name: 'Filtros' }))
     const hoja = screen.getByRole('dialog', { name: 'Filtros' })
+    await userEvent.click(within(hoja).getByRole('button', { name: 'Táctica' }))
+    expect(within(hoja).getByRole('button', { name: 'Táctica' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
     await userEvent.click(within(hoja).getByRole('button', { name: 'presión' }))
     await userEvent.click(within(hoja).getByRole('switch', { name: 'Mostrar archivados' }))
     await userEvent.click(within(hoja).getByRole('button', { name: 'Ver 1 ejercicio' }))
-    expect(screen.getByRole('button', { name: 'Filtros (2)' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Filtros (3)' })).toBeInTheDocument()
     // La búsqueda se aplica al dejar de escribir
     await userEvent.type(screen.getByRole('searchbox', { name: 'Buscar ejercicio' }), 'rondo')
     await waitFor(() =>
@@ -214,11 +217,13 @@ describe('lista de ejercicios', () => {
       'Carrera continua',
       'Movilidad articular',
     ])
-    // Los chips siguen el mismo orden
-    const chips = within(screen.getByRole('group', { name: 'Filtrar por categoría' }))
+    // Las categorías de «Filtros» siguen el mismo orden
+    await userEvent.click(screen.getByRole('button', { name: 'Filtros' }))
+    const hoja = screen.getByRole('dialog', { name: 'Filtros' })
+    const categorias = within(within(hoja).getByRole('group', { name: 'Categoría' }))
       .getAllByRole('button')
       .map((b) => b.textContent)
-    expect(chips.slice(1, 6)).toEqual([
+    expect(categorias.slice(0, 5)).toEqual([
       'Calentamiento',
       'Técnica',
       'Táctica',
@@ -227,7 +232,7 @@ describe('lista de ejercicios', () => {
     ])
 
     // Con una categoría elegida, solo su grupo
-    await userEvent.click(screen.getByRole('button', { name: 'Táctica' }))
+    await userEvent.click(within(hoja).getByRole('button', { name: 'Táctica' }))
     await waitFor(() =>
       expect(grupos().map((g) => g.querySelector('h2')?.textContent)).toEqual([
         'Táctica 1 ejercicio',
@@ -235,26 +240,31 @@ describe('lista de ejercicios', () => {
     )
   })
 
-  it('los filtros se leen de la dirección y se quitan desde los chips y la hoja', async () => {
+  it('los filtros se leen de la dirección, se ven puestos y se quitan uno a uno o todos', async () => {
     conBiblioteca()
     const router = abrir(
       '/plantillas/p1/entrenos/ejercicios?categoria=tactica&etiqueta=presi%C3%B3n&archivados=si',
     )
     const parametros = () => new URLSearchParams(router.state.location.search).toString()
-    // Junto al buscador, «＋» de 44 px para crear
+    // En la fila del buscador, «Filtros» con cuántos hay y «＋» para crear
     expect(await screen.findByRole('button', { name: 'Nuevo ejercicio' })).toBeInTheDocument()
-    const tactica = screen.getByRole('button', { name: 'Táctica' })
-    expect(tactica).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByRole('button', { name: 'Calentamiento' })).toHaveAttribute(
-      'aria-pressed',
-      'false',
-    )
-    // Tocar otra vez la categoría elegida la quita
-    await userEvent.click(tactica)
+    expect(screen.getByRole('button', { name: 'Filtros (3)' })).toBeInTheDocument()
+    // Debajo, los puestos; tocar uno lo quita
+    const puestos = screen.getByRole('list', { name: 'Filtros puestos' })
+    expect(
+      within(puestos)
+        .getAllByRole('button')
+        .map((b) => b.textContent),
+    ).toEqual(['Táctica', 'presión', 'Archivados'])
+    await userEvent.click(within(puestos).getByRole('button', { name: 'Quitar el filtro Táctica' }))
     await waitFor(() => expect(parametros()).toBe('etiqueta=presi%C3%B3n&archivados=si'))
 
     await userEvent.click(screen.getByRole('button', { name: 'Filtros (2)' }))
     const hoja = screen.getByRole('dialog', { name: 'Filtros' })
+    expect(within(hoja).getByRole('button', { name: 'Táctica' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
     expect(within(hoja).getByRole('button', { name: 'presión' })).toHaveAttribute(
       'aria-pressed',
       'true',
@@ -264,6 +274,7 @@ describe('lista de ejercicios', () => {
     await waitFor(() => expect(parametros()).toBe(''))
     expect(within(hoja).getByRole('button', { name: 'Quitar filtros' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Filtros' })).toBeInTheDocument()
+    expect(screen.queryByRole('list', { name: 'Filtros puestos' })).not.toBeInTheDocument()
   })
 
   it('el cuerpo técnico crea un ejercicio y va a su ficha', async () => {
