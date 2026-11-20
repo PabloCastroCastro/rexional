@@ -515,9 +515,15 @@ function FormularioHorario({
             Cancelar
           </Boton>
         )}
-        {guardado && (
+      </div>
+
+      {/* Quitar borra entrenos (GH-271): aparte, al final y en rojo, con lo que hace debajo */}
+      {guardado && (
+        <div className={estilos.quitarHorario}>
           <Boton
             variante="texto"
+            className={estilos.botonPeligroso}
+            aria-describedby="efecto-quitar-horario"
             icono={<CalendarX aria-hidden size={18} />}
             cargando={quitar.isPending}
             onClick={async () => {
@@ -534,8 +540,11 @@ function FormularioHorario({
           >
             Quitar horario
           </Boton>
-        )}
-      </div>
+          <p id="efecto-quitar-horario" className={estilos.secundario}>
+            Borra los entrenos futuros del horario que no tienen lista pasada
+          </p>
+        </div>
+      )}
     </form>
   )
 }
