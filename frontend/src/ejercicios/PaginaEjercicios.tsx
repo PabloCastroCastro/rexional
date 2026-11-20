@@ -1,4 +1,4 @@
-import { Dumbbell, Plus, Search, SlidersHorizontal } from 'lucide-react'
+import { Dumbbell, Plus, Search, SlidersHorizontal, X } from 'lucide-react'
 import { type CSSProperties, useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { Boton } from '../componentes/Boton'
@@ -20,9 +20,9 @@ import estilos from './Ejercicios.module.css'
 import { FormularioEjercicio } from './FormularioEjercicio'
 import { MiniaturaEjercicio } from './MiniaturaEjercicio'
 
-// Biblioteca de ejercicios del club, en la pestaña Entrenos: el buscador con «＋» para crear, una fila
-// de chips por categoría y el resto de filtros en una hoja (GH-272). Los filtros van en la dirección,
-// para volver a la lista tal como estaba.
+// Biblioteca de ejercicios del club, en la pestaña Entrenos: el buscador, «Filtros» (categoría,
+// etiqueta y archivados, en una hoja) y «＋» para crear (GH-272). Los filtros puestos se ven debajo,
+// como chips que se quitan con un toque. Van en la dirección, para volver a la lista tal como estaba.
 export function PaginaEjercicios() {
   const plantilla = usePlantillaActiva()
   const navegar = useNavigate()
@@ -65,8 +65,16 @@ export function PaginaEjercicios() {
   })
 
   const hayFiltros = Boolean(filtros.q || filtros.categoria || filtros.etiqueta)
-  // Los de la hoja «Filtros»: la etiqueta y los archivados
-  const enHoja = (filtros.etiqueta ? 1 : 0) + (filtros.archivados === 'si' ? 1 : 0)
+  // Los de la hoja «Filtros»: la categoría, la etiqueta y los archivados
+  const puestos = [
+    filtros.categoria && {
+      clave: 'categoria',
+      texto: CATEGORIAS[filtros.categoria],
+      color: colorCategoria(filtros.categoria),
+    },
+    filtros.etiqueta && { clave: 'etiqueta', texto: filtros.etiqueta, color: null },
+    filtros.archivados === 'si' && { clave: 'archivados', texto: 'Archivados', color: null },
+  ].filter((p) => typeof p === 'object')
   const total = ejercicios.data?.length ?? 0
 
   return (
@@ -76,12 +84,27 @@ export function PaginaEjercicios() {
           <Search aria-hidden size={18} />
           <input
             type="search"
-            placeholder="Buscar ejercicio, etiqueta…"
+            placeholder="Buscar ejercicio"
             aria-label="Buscar ejercicio"
             value={texto}
             onChange={(e) => setTexto(e.target.value)}
           />
         </div>
+        <Boton
+          variante={puestos.length > 0 ? 'primario' : 'secundario'}
+          className={estilos.botonFiltros}
+          aria-haspopup="dialog"
+          aria-label={puestos.length ? `Filtros (${puestos.length})` : 'Filtros'}
+          title="Filtros"
+          icono={<SlidersHorizontal aria-hidden size={20} />}
+          onClick={() => setFiltrando(true)}
+        >
+          {puestos.length > 0 && (
+            <span className={estilos.cuentaFiltros} aria-hidden="true">
+              {puestos.length}
+            </span>
+          )}
+        </Boton>
         {gestiona && (
           <Boton
             className={estilos.botonNuevo}
@@ -92,38 +115,25 @@ export function PaginaEjercicios() {
         )}
       </div>
 
-      {/* Se desliza en horizontal: «Filtros» y una por categoría; tocar la elegida la quita */}
-      <fieldset className={estilos.chips} aria-label="Filtrar por categoría">
-        <button
-          type="button"
-          className={estilos.chip}
-          aria-haspopup="dialog"
-          aria-label={enHoja ? `Filtros (${enHoja})` : 'Filtros'}
-          data-activo={enHoja > 0 || undefined}
-          onClick={() => setFiltrando(true)}
-        >
-          <SlidersHorizontal aria-hidden size={16} />
-          Filtros
-          {enHoja > 0 && (
-            <span className={estilos.cuentaFiltros} aria-hidden="true">
-              {enHoja}
-            </span>
-          )}
-        </button>
-        {(Object.entries(CATEGORIAS) as [Categoria, string][]).map(([valor, nombre]) => (
-          <button
-            key={valor}
-            type="button"
-            className={estilos.chip}
-            style={{ '--color-chip': colorCategoria(valor) } as CSSProperties}
-            aria-pressed={filtros.categoria === valor}
-            onClick={() => cambiar('categoria', filtros.categoria === valor ? null : valor)}
-          >
-            <span className={estilos.puntoCategoria} aria-hidden="true" />
-            {nombre}
-          </button>
-        ))}
-      </fieldset>
+      {puestos.length > 0 && (
+        <ul className={estilos.filtrosPuestos} aria-label="Filtros puestos">
+          {puestos.map((p) => (
+            <li key={p.clave}>
+              <button
+                type="button"
+                className={estilos.chip}
+                style={p.color ? ({ '--color-chip': p.color } as CSSProperties) : undefined}
+                aria-label={`Quitar el filtro ${p.texto}`}
+                onClick={() => cambiar(p.clave, null)}
+              >
+                {p.color && <span className={estilos.puntoCategoria} aria-hidden="true" />}
+                {p.texto}
+                <X aria-hidden size={16} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
 
       {ejercicios.isPending ? (
         <Cargando />
@@ -219,8 +229,8 @@ export function PaginaEjercicios() {
           <>
             <Boton
               variante="secundario"
-              disabled={enHoja === 0}
-              onClick={() => cambiarVarios({ etiqueta: null, archivados: null })}
+              disabled={puestos.length === 0}
+              onClick={() => cambiarVarios({ categoria: null, etiqueta: null, archivados: null })}
             >
               Quitar filtros
             </Boton>
@@ -231,6 +241,24 @@ export function PaginaEjercicios() {
         }
       >
         <div className={estilos.hojaFiltros}>
+          <fieldset className={estilos.grupoFiltro}>
+            <legend>Categoría</legend>
+            <div className={estilos.chipsEtiquetas}>
+              {(Object.entries(CATEGORIAS) as [Categoria, string][]).map(([valor, nombre]) => (
+                <button
+                  key={valor}
+                  type="button"
+                  className={estilos.chip}
+                  style={{ '--color-chip': colorCategoria(valor) } as CSSProperties}
+                  aria-pressed={filtros.categoria === valor}
+                  onClick={() => cambiar('categoria', filtros.categoria === valor ? null : valor)}
+                >
+                  <span className={estilos.puntoCategoria} aria-hidden="true" />
+                  {nombre}
+                </button>
+              ))}
+            </div>
+          </fieldset>
           {(etiquetas.data?.length ?? 0) > 0 && (
             <fieldset className={estilos.grupoFiltro}>
               <legend>Etiquetas</legend>

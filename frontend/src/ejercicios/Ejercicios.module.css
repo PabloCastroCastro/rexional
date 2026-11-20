@@ -44,23 +44,22 @@
   outline: none;
 }
 
-/* Fila de chips que se desliza en horizontal hasta el borde de la pantalla */
-.chips {
-  display: flex;
-  gap: var(--espacio-2);
-  /* Un fieldset no encoge por debajo de su contenido sin esto, y la fila no se deslizaría */
-  min-width: 0;
-  margin-block: 0;
-  border: 0;
-  margin-inline: calc(-1 * var(--espacio-4));
-  padding-inline: var(--espacio-4);
-  overflow-x: auto;
-  scrollbar-width: none;
-  scroll-padding-inline: var(--espacio-4);
+/* «Filtros» junto al buscador: con filtros puestos, relleno y con cuántos hay */
+.botonFiltros {
+  flex: none;
+  min-width: var(--altura-tactil);
+  padding: 0 var(--espacio-3);
+  gap: var(--espacio-1);
 }
 
-.chips::-webkit-scrollbar {
-  display: none;
+/* Los filtros puestos, debajo: cada uno se quita con un toque */
+.filtrosPuestos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .chip {
@@ -82,8 +81,7 @@
   cursor: pointer;
 }
 
-.chip[aria-pressed="true"],
-.chip[data-activo] {
+.chip[aria-pressed="true"] {
   border-color: var(--color-chip);
   background: color-mix(in srgb, var(--color-chip) 14%, var(--color-superficie));
 }
@@ -102,8 +100,8 @@
   height: 1.25rem;
   padding: 0 var(--espacio-1);
   border-radius: var(--radio-completo);
-  background: var(--color-acento);
-  color: var(--color-superficie);
+  background: var(--color-sobre-primario);
+  color: var(--color-primario);
   font-size: var(--texto-xs);
   font-weight: var(--peso-fuerte);
 }
