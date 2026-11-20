@@ -272,27 +272,69 @@
 }
 
 .cabecera h2 {
+  flex: 1;
+  min-width: 0;
   margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* El título con el lápiz y «⋯» al lado (GH-275) */
+.filaTitulo {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espacio-2);
+}
+
+.botonIcono {
+  flex: none;
+  width: var(--altura-tactil);
+  padding: 0;
+}
+
+/* Debajo del título: la categoría con su color e icono, y las etiquetas */
+.chipsFicha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-2);
+  margin: var(--espacio-1) 0 0;
+}
+
+.chipCategoria,
+.marcaArchivado,
+.etiquetaFicha {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-1);
+  min-height: 1.75rem;
+  padding: 0 var(--espacio-3);
+  border-radius: var(--radio-completo);
+  font-size: var(--texto-sm);
+}
+
+.chipCategoria {
+  background: color-mix(in srgb, var(--color-chip) 14%, var(--color-superficie));
+  color: var(--color-texto);
+  font-weight: var(--peso-medio);
+}
+
+.chipCategoria svg {
+  color: var(--color-chip);
+}
+
+.marcaArchivado {
+  border: 1px solid var(--color-borde);
+  color: var(--color-texto-suave);
+}
+
+.etiquetaFicha {
+  background: var(--color-superficie-alterna);
+  color: var(--color-texto-suave);
 }
 
 .descripcion {
   margin: 0;
   white-space: pre-line;
-}
-
-.datosFicha {
-  display: grid;
-  gap: var(--espacio-2);
-  margin: 0;
-}
-
-.datosFicha dt {
-  color: var(--color-texto-suave);
-  font-size: var(--texto-sm);
-}
-
-.datosFicha dd {
-  margin: 0;
 }
 
 .seccion {
@@ -495,4 +537,41 @@
 /* Al final: separador entre ejercicios de la lista (más específico que las reglas de li) */
 .lista li + li {
   border-top: 1px solid var(--color-borde);
+}
+
+/* Hoja «⋯» de la ficha */
+.opciones {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.opciones > li + li {
+  border-top: 1px solid var(--color-borde);
+}
+
+.opciones > li > button {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  width: 100%;
+  min-height: calc(var(--altura-tactil) + var(--espacio-2));
+  padding: 0 var(--espacio-1);
+  border: 0;
+  background: transparent;
+  color: var(--color-texto);
+  font: inherit;
+  font-weight: var(--peso-medio);
+  text-align: left;
+  cursor: pointer;
+}
+
+.opciones svg {
+  color: var(--color-acento);
+}
+
+.opciones .opcionPeligrosa,
+.opciones .opcionPeligrosa svg {
+  color: var(--color-peligro);
 }

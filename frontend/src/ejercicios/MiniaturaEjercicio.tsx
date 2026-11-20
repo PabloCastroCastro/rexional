@@ -50,6 +50,18 @@ const ICONOS: Record<Categoria | 'ninguna', LucideIcon | typeof Balon> = {
   ninguna: Dumbbell,
 }
 
+// Solo el icono de la categoría (en el chip de la ficha, GH-275)
+export function IconoCategoria({
+  categoria,
+  size = 16,
+}: {
+  categoria: Categoria | null
+  size?: number
+}) {
+  const Icono = ICONOS[categoria ?? 'ninguna']
+  return <Icono aria-hidden size={size} />
+}
+
 // Miniatura de un ejercicio: su foto, o sin ella, el icono de la categoría sobre su color suave.
 // El tamaño lo pone quien la usa con className.
 export function MiniaturaEjercicio({
@@ -65,7 +77,6 @@ export function MiniaturaEjercicio({
 }) {
   const clases = [estilos.miniatura, className].filter(Boolean).join(' ')
   if (url) return <img src={url} alt="" className={clases} loading="lazy" />
-  const Icono = ICONOS[categoria ?? 'ninguna']
   return (
     <span
       className={clases}
@@ -73,7 +84,7 @@ export function MiniaturaEjercicio({
       data-categoria={categoria ?? 'ninguna'}
       aria-hidden="true"
     >
-      <Icono size={tamanoIcono} />
+      <IconoCategoria categoria={categoria} size={tamanoIcono} />
     </span>
   )
 }

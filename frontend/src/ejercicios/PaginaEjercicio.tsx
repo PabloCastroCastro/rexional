@@ -7,6 +7,7 @@ import {
   ChevronLeft,
   CircleAlert,
   Copy,
+  Ellipsis,
   ExternalLink,
   ImagePlus,
   Link2,
@@ -15,31 +16,34 @@ import {
   Trash2,
   X,
 } from 'lucide-react'
-import { type FormEvent, useRef, useState } from 'react'
+import { type CSSProperties, type FormEvent, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { api, datos, enviar } from '../api/cliente'
 import { useAvisos } from '../componentes/Avisos'
 import { Boton } from '../componentes/Boton'
 import { Campo } from '../componentes/Campo'
 import { Cargando } from '../componentes/Cargando'
+import { type Cifra, Cifras } from '../componentes/Cifras'
 import { useConfirmacion } from '../componentes/Confirmacion'
 import { EstadoVacio } from '../componentes/EstadoVacio'
 import { HojaInferior } from '../componentes/HojaInferior'
 import { puedeGestionarJugadores } from '../jugadores/datos'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
 import {
+  CATEGORIAS,
   CLAVE_EJERCICIOS,
+  colorCategoria,
   dominio,
   type Ejercicio,
   type Medio,
   subirMedio,
-  textoDetalles,
   textoMb,
   useEjercicio,
   useLimites,
 } from './datos'
 import estilos from './Ejercicios.module.css'
 import { FormularioEjercicio } from './FormularioEjercicio'
+import { IconoCategoria } from './MiniaturaEjercicio'
 
 // Ficha de un ejercicio: explicación, fotos, vídeos y enlaces. El cuerpo técnico sube fotos y vídeos
 // (desde la galería o la cámara del móvil), añade enlaces, ordena, edita pies, duplica y archiva.
@@ -80,44 +84,64 @@ function Ficha({
   const gestiona = puedeGestionarJugadores(plantilla)
   const [editando, setEditando] = useState(false)
   const [enlace, setEnlace] = useState(false)
-  const datosFicha = [
-    e.jugadores && { titulo: 'Jugadores', texto: e.jugadores },
-    e.material && { titulo: 'Material', texto: e.material },
-  ].filter((d): d is { titulo: string; texto: string } => Boolean(d))
+  const [opciones, setOpciones] = useState(false)
+  // En casillas (GH-275); la que no tiene dato no se muestra
+  const cifras = (
+    [
+      e.duracionMin ? { texto: 'Minutos', valor: e.duracionMin } : null,
+      e.jugadores ? { texto: 'Jugadores', valor: e.jugadores } : null,
+      e.material ? { texto: 'Material', valor: e.material, ancha: true } : null,
+    ] satisfies (Cifra | null)[]
+  ).filter((c) => c !== null)
 
   return (
     <div className={estilos.ficha}>
       {volver}
       <header className={estilos.cabecera}>
-        <h2>{e.nombre}</h2>
-        <p className={estilos.secundario}>
-          {[textoDetalles(e), e.archivado && 'Archivado'].filter(Boolean).join(' · ') ||
-            'Sin categoría'}
+        {/* Editar y «⋯» junto al título, como en la ficha del jugador (GH-234, GH-275) */}
+        <div className={estilos.filaTitulo}>
+          <h2>{e.nombre}</h2>
+          {gestiona && (
+            <>
+              <Boton
+                variante="secundario"
+                className={estilos.botonIcono}
+                icono={<Pencil aria-hidden size={18} />}
+                aria-label="Editar"
+                title="Editar"
+                onClick={() => setEditando(true)}
+              />
+              <Boton
+                variante="secundario"
+                className={estilos.botonIcono}
+                icono={<Ellipsis aria-hidden size={20} />}
+                aria-label="Opciones del ejercicio"
+                aria-haspopup="dialog"
+                title="Opciones del ejercicio"
+                onClick={() => setOpciones(true)}
+              />
+            </>
+          )}
+        </div>
+        <p className={estilos.chipsFicha}>
+          <span
+            className={estilos.chipCategoria}
+            style={{ '--color-chip': colorCategoria(e.categoria) } as CSSProperties}
+          >
+            <IconoCategoria categoria={e.categoria} />
+            {e.categoria ? CATEGORIAS[e.categoria] : 'Sin categoría'}
+          </span>
+          {e.archivado && <span className={estilos.marcaArchivado}>Archivado</span>}
+          {e.etiquetas.map((t) => (
+            <span key={t} className={estilos.etiquetaFicha}>
+              {t}
+            </span>
+          ))}
         </p>
-        {e.etiquetas.length > 0 && (
-          <p className={estilos.etiquetas}>
-            {e.etiquetas.map((t) => (
-              <span key={t}>{t}</span>
-            ))}
-          </p>
-        )}
       </header>
 
-      {gestiona && (
-        <Acciones ejercicio={e} alEditar={() => setEditando(true)} biblioteca={biblioteca} />
-      )}
-
       {e.descripcion && <p className={estilos.descripcion}>{e.descripcion}</p>}
-      {datosFicha.length > 0 && (
-        <dl className={estilos.datosFicha}>
-          {datosFicha.map((d) => (
-            <div key={d.titulo}>
-              <dt>{d.titulo}</dt>
-              <dd>{d.texto}</dd>
-            </div>
-          ))}
-        </dl>
-      )}
+      {cifras.length > 0 && <Cifras cifras={cifras} columnas={2} />}
 
       <section className={estilos.seccion} aria-labelledby="medios">
         <h3 id="medios">Fotos, vídeos y enlaces</h3>
@@ -164,6 +188,14 @@ function Ficha({
       </section>
 
       <FormularioEjercicio abierta={editando} ejercicio={e} alCerrar={() => setEditando(false)} />
+      {gestiona && (
+        <OpcionesEjercicio
+          ejercicio={e}
+          abierta={opciones}
+          alCerrar={() => setOpciones(false)}
+          biblioteca={biblioteca}
+        />
+      )}
       <HojaInferior abierta={enlace} alCerrar={() => setEnlace(false)} titulo="Añadir enlace">
         {enlace && <FormularioEnlace ejercicio={e} alCerrar={() => setEnlace(false)} />}
       </HojaInferior>
@@ -556,13 +588,16 @@ function FormularioEnlace({ ejercicio, alCerrar }: { ejercicio: Ejercicio; alCer
   )
 }
 
-function Acciones({
+// «⋯» de la ficha (GH-275): duplicar, archivar o desarchivar y, si no se ha usado, borrar
+function OpcionesEjercicio({
   ejercicio: e,
-  alEditar,
+  abierta,
+  alCerrar,
   biblioteca,
 }: {
   ejercicio: Ejercicio
-  alEditar: () => void
+  abierta: boolean
+  alCerrar: () => void
   biblioteca: string
 }) {
   const plantilla = usePlantillaActiva()
@@ -589,7 +624,7 @@ function Acciones({
       await cliente.invalidateQueries({ queryKey: CLAVE_EJERCICIOS })
       avisar({
         tipo: 'exito',
-        mensaje: actualizado.archivado ? 'Ejercicio archivado' : 'Ejercicio recuperado',
+        mensaje: actualizado.archivado ? 'Ejercicio archivado' : 'Ejercicio desarchivado',
       })
     },
     onError: fallo,
@@ -616,46 +651,62 @@ function Acciones({
   })
 
   return (
-    <div className={estilos.acciones}>
-      <Boton variante="secundario" icono={<Pencil aria-hidden size={18} />} onClick={alEditar}>
-        Editar
-      </Boton>
-      <Boton
-        variante="secundario"
-        icono={<Copy aria-hidden size={18} />}
-        cargando={duplicar.isPending}
-        onClick={() => duplicar.mutate()}
-      >
-        Duplicar
-      </Boton>
-      <Boton
-        variante="secundario"
-        icono={
-          e.archivado ? <ArchiveRestore aria-hidden size={18} /> : <Archive aria-hidden size={18} />
-        }
-        cargando={archivar.isPending}
-        onClick={() => archivar.mutate()}
-      >
-        {e.archivado ? 'Recuperar' : 'Archivar'}
-      </Boton>
-      {e.usos === 0 && (
-        <Boton
-          variante="peligro"
-          icono={<Trash2 aria-hidden size={18} />}
-          cargando={borrar.isPending}
-          onClick={async () => {
-            const si = await confirmar({
-              titulo: `¿Borrar «${e.nombre}»?`,
-              mensaje: 'Se borran también sus fotos y vídeos. No se puede deshacer.',
-              textoConfirmar: 'Borrar ejercicio',
-              peligrosa: true,
-            })
-            if (si) borrar.mutate()
-          }}
-        >
-          Borrar
-        </Boton>
-      )}
-    </div>
+    <HojaInferior abierta={abierta} alCerrar={alCerrar} titulo="Opciones del ejercicio">
+      <ul className={estilos.opciones}>
+        <li>
+          <button
+            type="button"
+            disabled={duplicar.isPending}
+            onClick={() => {
+              alCerrar()
+              duplicar.mutate()
+            }}
+          >
+            <Copy aria-hidden size={20} />
+            Duplicar
+          </button>
+        </li>
+        <li>
+          <button
+            type="button"
+            disabled={archivar.isPending}
+            onClick={() => {
+              alCerrar()
+              archivar.mutate()
+            }}
+          >
+            {e.archivado ? (
+              <ArchiveRestore aria-hidden size={20} />
+            ) : (
+              <Archive aria-hidden size={20} />
+            )}
+            {e.archivado ? 'Desarchivar' : 'Archivar'}
+          </button>
+        </li>
+        {/* Solo si no se ha usado en ningún plan: si no, se archiva */}
+        {e.usos === 0 && (
+          <li>
+            <button
+              type="button"
+              className={estilos.opcionPeligrosa}
+              disabled={borrar.isPending}
+              onClick={async () => {
+                alCerrar()
+                const si = await confirmar({
+                  titulo: `¿Borrar «${e.nombre}»?`,
+                  mensaje: 'Se borran también sus fotos y vídeos. No se puede deshacer.',
+                  textoConfirmar: 'Borrar ejercicio',
+                  peligrosa: true,
+                })
+                if (si) borrar.mutate()
+              }}
+            >
+              <Trash2 aria-hidden size={20} />
+              Borrar
+            </button>
+          </li>
+        )}
+      </ul>
+    </HojaInferior>
   )
 }
