@@ -631,6 +631,23 @@
   gap: var(--espacio-2);
 }
 
+/* «Quitar horario», separado de Guardar por una línea (GH-271) */
+.quitarHorario {
+  display: grid;
+  justify-items: start;
+  gap: var(--espacio-1);
+  padding-top: var(--espacio-4);
+  border-top: 1px solid var(--color-borde);
+}
+
+.quitarHorario p {
+  margin: 0;
+}
+
+.quitarHorario .botonPeligroso {
+  color: var(--color-peligro);
+}
+
 /* Horario: siete botones de día y una hora por día marcado */
 .diasSemana {
   display: grid;

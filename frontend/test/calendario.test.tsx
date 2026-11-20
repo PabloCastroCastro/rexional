@@ -316,8 +316,19 @@ describe('horario', () => {
     )
     // Sin tocar nada, nada que guardar (GH-269)
     expect(screen.getByText('Sin cambios respecto al horario guardado.')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Guardar horario' })).toBeDisabled()
-    await userEvent.click(screen.getByRole('button', { name: 'Quitar horario' }))
+    const guardar = screen.getByRole('button', { name: 'Guardar horario' })
+    expect(guardar).toBeDisabled()
+    // Junto a Guardar solo queda Cancelar; Quitar va aparte, con lo que hace (GH-271)
+    const junto = within(guardar.parentElement as HTMLElement).getAllByRole('button')
+    expect(junto.map((b) => b.textContent)).toEqual(['Guardar horario', 'Cancelar'])
+    const quitarBoton = screen.getByRole('button', { name: 'Quitar horario' })
+    expect(quitarBoton).toHaveAccessibleDescription(
+      'Borra los entrenos futuros del horario que no tienen lista pasada',
+    )
+    expect(
+      guardar.compareDocumentPosition(quitarBoton) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    await userEvent.click(quitarBoton)
     await userEvent.click(
       within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Quitar horario' }),
     )
