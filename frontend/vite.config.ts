@@ -1,6 +1,7 @@
 /// <reference types="vitest/config" />
 
 import { readFileSync } from 'node:fs'
+import { availableParallelism } from 'node:os'
 import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
@@ -67,6 +68,11 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./test/preparar.ts'],
     include: ['test/**/*.test.{ts,tsx}'],
+    // Como mucho 6 procesos (GH-214). Cada uno lleva su jsdom y casi todo el tiempo de un test es CPU
+    // (consultas por rol y renders): con el valor por defecto (núcleos - 1, 15 en un PC de 16 hilos)
+    // la propia batería satura la máquina, los tests tardan el triple y algunos pasan de 5 s. Con 6
+    // termina antes (42 s frente a 49 s) y ninguno pasa de 3 s. En la CI (4 núcleos) siguen siendo 3.
+    maxWorkers: Math.min(6, Math.max(1, availableParallelism() - 1)),
     css: { modules: { classNameStrategy: 'non-scoped' } },
     // El módulo virtual del service worker solo existe al compilar con el plugin de la PWA
     alias: {

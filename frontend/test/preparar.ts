@@ -6,8 +6,10 @@ afterEach(() => cleanup())
 
 // Con varios archivos de tests en paralelo, la primera pantalla de cada archivo puede tardar más del
 // segundo que espera por defecto Testing Library (findBy…, waitFor) y el test falla de forma
-// intermitente. Se espera hasta 5 segundos; un test que funciona termina igual de rápido.
-configure({ asyncUtilTimeout: 5000 })
+// intermitente. Se espera hasta 4 segundos; un test que funciona termina igual de rápido. Por debajo
+// de los 5 s de cada test (GH-214): si lo que se espera no llega, se ve qué faltaba en lugar de
+// «Test timed out».
+configure({ asyncUtilTimeout: 4000 })
 
 // jsdom no implementa los diálogos modales: versión mínima para los tests (abre, cierra y emite
 // "cancel" con Escape)
