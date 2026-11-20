@@ -18,6 +18,10 @@ export const CATEGORIAS: Record<Categoria, string> = {
   vuelta_calma: 'Vuelta a la calma',
 }
 
+// Color de cada categoría (tokens --color-cat-*, en claro y en oscuro)
+export const colorCategoria = (categoria: Categoria | null) =>
+  `var(--color-cat-${categoria ?? 'ninguna'})`
+
 // La biblioteca es del club: sus consultas cuelgan de esta clave
 export const CLAVE_EJERCICIOS = ['ejercicios'] as const
 

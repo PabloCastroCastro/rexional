@@ -6,12 +6,22 @@
   gap: var(--espacio-4);
 }
 
-.biblioteca > button {
-  justify-self: start;
+/* El buscador ocupa la fila, con «＋» al lado para quien gestiona (GH-272) */
+.filaBuscador {
+  display: flex;
+  gap: var(--espacio-2);
+}
+
+.botonNuevo {
+  flex: none;
+  width: var(--altura-tactil);
+  padding: 0;
 }
 
 .buscador {
   display: flex;
+  flex: 1;
+  min-width: 0;
   align-items: center;
   gap: var(--espacio-2);
   min-height: var(--altura-tactil);
@@ -34,32 +44,111 @@
   outline: none;
 }
 
-.filtros {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-items: center;
+/* Fila de chips que se desliza en horizontal hasta el borde de la pantalla */
+.chips {
+  display: flex;
   gap: var(--espacio-2);
+  /* Un fieldset no encoge por debajo de su contenido sin esto, y la fila no se deslizaría */
+  min-width: 0;
+  margin-block: 0;
+  border: 0;
+  margin-inline: calc(-1 * var(--espacio-4));
+  padding-inline: var(--espacio-4);
+  overflow-x: auto;
+  scrollbar-width: none;
+  scroll-padding-inline: var(--espacio-4);
 }
 
-.filtros select {
-  width: 100%;
-  min-width: 0;
-  min-height: 2.5rem;
-  padding: 0 var(--espacio-2);
+.chips::-webkit-scrollbar {
+  display: none;
+}
+
+.chip {
+  --color-chip: var(--color-acento);
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--espacio-2);
+  min-height: var(--altura-tactil);
+  padding: 0 var(--espacio-3);
   border: 1px solid var(--color-borde);
-  border-radius: var(--radio-m);
+  border-radius: var(--radio-completo);
   background: var(--color-superficie);
   color: var(--color-texto);
   font: inherit;
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
+  white-space: nowrap;
+  cursor: pointer;
 }
 
-.archivados {
-  display: inline-flex;
-  align-items: center;
+.chip[aria-pressed="true"],
+.chip[data-activo] {
+  border-color: var(--color-chip);
+  background: color-mix(in srgb, var(--color-chip) 14%, var(--color-superficie));
+}
+
+.puntoCategoria {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: var(--radio-completo);
+  background: var(--color-chip);
+}
+
+.cuentaFiltros {
+  display: grid;
+  place-items: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 var(--espacio-1);
+  border-radius: var(--radio-completo);
+  background: var(--color-acento);
+  color: var(--color-superficie);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-fuerte);
+}
+
+/* Hoja «Filtros»: etiquetas en chips y el interruptor de archivados */
+.hojaFiltros {
+  display: grid;
+  gap: var(--espacio-5);
+}
+
+.grupoFiltro {
+  display: grid;
   gap: var(--espacio-2);
-  min-height: 2.5rem;
-  color: var(--color-texto-suave);
-  font-size: var(--texto-sm);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.grupoFiltro legend {
+  margin-bottom: var(--espacio-2);
+  padding: 0;
+  font-weight: var(--peso-medio);
+}
+
+.chipsEtiquetas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-2);
+}
+
+.interruptor {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  min-height: var(--altura-tactil);
+  font-weight: var(--peso-medio);
+  cursor: pointer;
+}
+
+.interruptor input {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+  accent-color: var(--color-primario);
 }
 
 .lista {
