@@ -59,6 +59,7 @@ const RONDO: Ejercicio = {
   jugadores: '5',
   material: 'Conos',
   usos: 0,
+  enPlantilla: { entrenos: 3, ultimo: '2026-10-15' },
   medios: [
     medio('m1', { pie: 'Colocación' }),
     medio('m2', { tipo: 'video', mime: 'video/mp4', orden: 1, duracionSeg: 30 }),
@@ -497,6 +498,36 @@ describe('ficha del ejercicio', () => {
       }),
     )
     expect(await screen.findByText('Copia creada: «Rondo 4 contra 1 (copia)»')).toBeInTheDocument()
+  })
+
+  it('en cuántos entrenos de la plantilla se ha usado y cuándo fue el último (GH-277)', async () => {
+    conBiblioteca()
+    const urls: string[] = []
+    manejadores[`GET ${BASE}/e1`] = (peticion) => {
+      urls.push(peticion.url)
+      return json(RONDO)
+    }
+    abrir('/plantillas/p1/entrenos/ejercicios/e1')
+    // Entre la explicación y las fotos
+    const uso = await screen.findByText('Usado en 3 entrenos · el último, jueves 15 oct')
+    expect(screen.getByText('Cuadrado de 6×6 m').compareDocumentPosition(uso)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    )
+    expect(
+      uso.compareDocumentPosition(screen.getByRole('heading', { name: 'Fotos, vídeos y enlaces' })),
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
+    // Solo los entrenos de la plantilla activa
+    expect(new URL(urls[0] ?? '').searchParams.get('plantilla')).toBe('p1')
+  })
+
+  it.each([
+    [{ entrenos: 0, ultimo: null }, 'Todavía no se ha usado en ningún entreno'],
+    [{ entrenos: 1, ultimo: '2026-10-08' }, 'Usado en 1 entreno · el último, jueves 8 oct'],
+    [{ entrenos: 2, ultimo: null }, 'Planificado en 2 entrenos; todavía no se ha hecho'],
+  ])('uso %o: «%s» (GH-277)', async (enPlantilla, texto) => {
+    conBiblioteca(senior26, undefined, { ...RONDO, enPlantilla })
+    abrir('/plantillas/p1/entrenos/ejercicios/e1')
+    expect(await screen.findByText(texto)).toBeInTheDocument()
   })
 
   it('una casilla sin dato no se muestra (GH-275)', async () => {

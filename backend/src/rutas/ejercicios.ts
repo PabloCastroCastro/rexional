@@ -7,9 +7,13 @@ import {
   ejercicioMedios,
   ejercicios,
   entrenoEjercicios,
+  entrenos,
+  membresias,
   modeloEjercicios,
+  plantillas,
 } from '../db/schema/index.js'
 import { ErrorApi, EsquemaError, validacionFallida } from '../errores.js'
+import { hoy } from '../fechas.js'
 import { absoluta, borrar, carpetaDeClub, nueva } from '../medios/almacen.js'
 import { type EnvClub, requireRolEnClub } from '../permisos.js'
 import { EsquemaTexto, EsquemaUuid } from '../validacion.js'
@@ -89,6 +93,20 @@ const EsquemaEjercicio = z
     jugadores: z.string().nullable(),
     material: z.string().nullable(),
     usos: z.int().openapi({ description: 'Planes de entreno y modelos que lo usan' }),
+    enPlantilla: z
+      .object({
+        entrenos: z
+          .int()
+          .openapi({ description: 'Entrenos de la plantilla con el ejercicio en su plan' }),
+        ultimo: z.string().nullable().openapi({
+          description:
+            'Fecha del último de esos entrenos hasta hoy; null si aún no ha habido ninguno',
+        }),
+      })
+      .nullable()
+      .openapi({
+        description: 'Uso en la plantilla pedida con ?plantilla= (GH-277); null sin ella',
+      }),
     medios: z.array(EsquemaMedio),
   })
   .openapi('Ejercicio')
@@ -112,7 +130,24 @@ async function buscarEjercicio(clubId: string, ejercicioId: string) {
   return ejercicio
 }
 
-async function detalle(clubId: string, ejercicioId: string) {
+// En cuántos entrenos de una plantilla está el ejercicio en el plan y cuándo fue el último (GH-277)
+async function usoEnPlantilla(ejercicioId: string, plantillaId: string) {
+  const [uso] = await db
+    .select({
+      entrenos: sql<number>`count(distinct ${entrenos.id})::int`,
+      ultimo: sql<
+        string | null
+      >`max(${entrenos.fecha}) filter (where ${entrenos.fecha} <= ${hoy()})::text`,
+    })
+    .from(entrenoEjercicios)
+    .innerJoin(entrenos, eq(entrenos.id, entrenoEjercicios.entrenoId))
+    .where(
+      and(eq(entrenoEjercicios.ejercicioId, ejercicioId), eq(entrenos.plantillaId, plantillaId)),
+    )
+  return { entrenos: uso?.entrenos ?? 0, ultimo: uso?.ultimo ?? null }
+}
+
+async function detalle(clubId: string, ejercicioId: string, plantillaId?: string) {
   const e = await buscarEjercicio(clubId, ejercicioId)
   const medios = await db
     .select(columnasMedio)
@@ -134,6 +169,7 @@ async function detalle(clubId: string, ejercicioId: string) {
     jugadores: e.jugadores,
     material: e.material,
     usos: total,
+    enPlantilla: plantillaId ? await usoEnPlantilla(e.id, plantillaId) : null,
     medios: medios.map(aMedio),
   }
 }
@@ -269,13 +305,40 @@ export const rutasEjercicios = () =>
         path: '/clubes/{cid}/ejercicios/{eid}',
         tags: ['Ejercicios'],
         summary: 'Un ejercicio con sus fotos, vídeos y enlaces',
+        description:
+          'Con ?plantilla=, también en cuántos entrenos de esa plantilla se ha usado y cuándo fue el último. La plantilla tiene que ser del club y de quien pregunta (o administrar el club).',
         middleware: [requireRolEnClub('jugador')] as const,
-        request: { params: ParamEjercicio },
+        request: {
+          params: ParamEjercicio,
+          query: z.object({
+            plantilla: EsquemaUuid.optional().openapi({
+              param: { name: 'plantilla', in: 'query' },
+            }),
+          }),
+        },
         responses: { 200: json(EsquemaEjercicio, 'Ejercicio'), ...errores },
       }),
       async (c) => {
         const { cid, eid } = c.req.valid('param')
-        return c.json(await detalle(cid, eid), 200)
+        const { plantilla } = c.req.valid('query')
+        if (plantilla) {
+          // Solo una plantilla del club a la que se pertenece: si no, como si no existiera
+          const [acceso] = await db
+            .select({ id: plantillas.id, miembro: membresias.usuarioId })
+            .from(plantillas)
+            .leftJoin(
+              membresias,
+              and(
+                eq(membresias.plantillaId, plantillas.id),
+                eq(membresias.usuarioId, c.var.usuario.id),
+              ),
+            )
+            .where(and(eq(plantillas.id, plantilla), eq(plantillas.clubId, cid)))
+          if (!acceso || (!acceso.miembro && !c.var.esAdminClub)) {
+            throw new ErrorApi(404, 'no_encontrado', 'No existe esa plantilla en el club')
+          }
+        }
+        return c.json(await detalle(cid, eid, plantilla), 200)
       },
     )
     .openapi(

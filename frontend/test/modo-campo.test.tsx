@@ -44,6 +44,7 @@ const ejercicio = (id: string, nombre: string): Ejercicio => ({
   id,
   nombre,
   categoria: 'tecnica',
+  enPlantilla: null,
   duracionMin: null,
   etiquetas: [],
   archivado: false,

@@ -7108,10 +7108,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Un ejercicio con sus fotos, vídeos y enlaces */
+        /**
+         * Un ejercicio con sus fotos, vídeos y enlaces
+         * @description Con ?plantilla=, también en cuántos entrenos de esa plantilla se ha usado y cuándo fue el último. La plantilla tiene que ser del club y de quien pregunta (o administrar el club).
+         */
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    plantilla?: string;
+                };
                 header?: never;
                 path: {
                     cid: string;
@@ -10427,6 +10432,13 @@ export interface components {
             material: string | null;
             /** @description Planes de entreno y modelos que lo usan */
             usos: number;
+            /** @description Uso en la plantilla pedida con ?plantilla= (GH-277); null sin ella */
+            enPlantilla: {
+                /** @description Entrenos de la plantilla con el ejercicio en su plan */
+                entrenos: number;
+                /** @description Fecha del último de esos entrenos hasta hoy; null si aún no ha habido ninguno */
+                ultimo: string | null;
+            } | null;
             medios: components["schemas"]["Medio"][];
         };
         Medio: {

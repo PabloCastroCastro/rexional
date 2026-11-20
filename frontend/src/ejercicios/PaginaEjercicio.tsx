@@ -28,11 +28,13 @@ import { type Cifra, Cifras } from '../componentes/Cifras'
 import { useConfirmacion } from '../componentes/Confirmacion'
 import { EstadoVacio } from '../componentes/EstadoVacio'
 import { HojaInferior } from '../componentes/HojaInferior'
+import { textoFecha } from '../entrenos/datos'
 import { puedeGestionarJugadores } from '../jugadores/datos'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
 import {
   CATEGORIAS,
   CLAVE_EJERCICIOS,
+  claveEjercicio,
   colorCategoria,
   dominio,
   type Ejercicio,
@@ -52,7 +54,7 @@ import { IconoCategoria } from './MiniaturaEjercicio'
 export function PaginaEjercicio() {
   const plantilla = usePlantillaActiva()
   const { ejercicioId = '' } = useParams()
-  const ejercicio = useEjercicio(plantilla.clubId, ejercicioId)
+  const ejercicio = useEjercicio(plantilla.clubId, ejercicioId, plantilla.id)
   const biblioteca = `/plantillas/${plantilla.id}/entrenos/ejercicios`
   const volver = (
     <Link to={biblioteca} className={estilos.volver}>
@@ -142,6 +144,7 @@ function Ficha({
 
       {e.descripcion && <p className={estilos.descripcion}>{e.descripcion}</p>}
       {cifras.length > 0 && <Cifras cifras={cifras} columnas={2} />}
+      {e.enPlantilla && <p className={estilos.usoEjercicio}>{textoUso(e.enPlantilla)}</p>}
 
       {/* Primero ver: cada foto, vídeo o enlace se gestiona desde su «⋯» (GH-276) */}
       <section className={estilos.seccion} aria-labelledby="medios">
@@ -175,6 +178,21 @@ function Ficha({
       )}
     </div>
   )
+}
+
+// «Usado en 3 entrenos · el último, jueves 15 oct» (GH-277): solo los entrenos de la plantilla activa
+function textoUso({ entrenos, ultimo }: { entrenos: number; ultimo: string | null }) {
+  if (entrenos === 0) return 'Todavía no se ha usado en ningún entreno'
+  const cuantos = `${entrenos} ${entrenos === 1 ? 'entreno' : 'entrenos'}`
+  // Solo en planes de entrenos que aún no han llegado
+  if (!ultimo) return `Planificado en ${cuantos}; todavía no se ha hecho`
+  const dia = textoFecha(ultimo)
+  const cuando = dia.startsWith('Hoy')
+    ? 'hoy'
+    : dia.startsWith('Ayer')
+      ? 'ayer'
+      : dia.replace(',', '')
+  return `Usado en ${cuantos} · el último, ${cuando}`
 }
 
 // «la foto», «el vídeo», «el enlace»
@@ -483,10 +501,11 @@ function OpcionesMedio({
         }),
       )
     },
+    // La respuesta no trae el uso en la plantilla: se conserva el que ya había
     onSuccess: (actualizado) =>
-      cliente.setQueryData(
-        [...CLAVE_EJERCICIOS, plantilla.clubId, 'ejercicio', ejercicio.id],
-        actualizado,
+      cliente.setQueryData<Ejercicio>(
+        claveEjercicio(plantilla.clubId, ejercicio.id, plantilla.id),
+        (previo) => ({ ...actualizado, enPlantilla: previo?.enPlantilla ?? null }),
       ),
     onError: fallo,
   })

@@ -3288,6 +3288,30 @@
             "type": "integer",
             "description": "Planes de entreno y modelos que lo usan"
           },
+          "enPlantilla": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "entrenos": {
+                "type": "integer",
+                "description": "Entrenos de la plantilla con el ejercicio en su plan"
+              },
+              "ultimo": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Fecha del último de esos entrenos hasta hoy; null si aún no ha habido ninguno"
+              }
+            },
+            "required": [
+              "entrenos",
+              "ultimo"
+            ],
+            "description": "Uso en la plantilla pedida con ?plantilla= (GH-277); null sin ella"
+          },
           "medios": {
             "type": "array",
             "items": {
@@ -3306,6 +3330,7 @@
           "jugadores",
           "material",
           "usos",
+          "enPlantilla",
           "medios"
         ]
       },
@@ -12598,6 +12623,7 @@
           "Ejercicios"
         ],
         "summary": "Un ejercicio con sus fotos, vídeos y enlaces",
+        "description": "Con ?plantilla=, también en cuántos entrenos de esa plantilla se ha usado y cuándo fue el último. La plantilla tiene que ser del club y de quien pregunta (o administrar el club).",
         "parameters": [
           {
             "schema": {
@@ -12616,6 +12642,15 @@
             "required": true,
             "name": "eid",
             "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "plantilla",
+            "in": "query"
           }
         ],
         "responses": {
