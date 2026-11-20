@@ -40,6 +40,16 @@
   /* Tarjetas de fútbol (GH-251): la amarilla es la misma en los dos temas; la roja usa el peligro */
   --color-tarjeta-amarilla: #f2c230;
   --color-borde-tarjeta-amarilla: #b8860b;
+  /* Categorías de ejercicio (GH-272, GH-273): al menos 4.5:1 sobre la superficie y el fondo */
+  --color-cat-calentamiento: #c2410c;
+  --color-cat-tecnica: #1d6fb8;
+  --color-cat-tactica: #7c3aed;
+  --color-cat-fisico: #a16207;
+  --color-cat-finalizacion: #be123c;
+  --color-cat-porteros: #0f766e;
+  --color-cat-partido: #15803d;
+  --color-cat-vuelta_calma: #4f46e5;
+  --color-cat-ninguna: var(--color-texto-suave);
   /* Texto de enlaces y acentos sobre la superficie: el primario del club, oscurecido si hace falta
      para leerse (en oscuro, aclarado) */
   --color-acento: var(--acento-claro, var(--color-primario));
@@ -116,6 +126,14 @@
     --color-derrota: #f07167;
     --color-sobre-derrota: #0f1311;
     --color-acento: var(--acento-oscuro, #7fd1aa);
+    --color-cat-calentamiento: #fb923c;
+    --color-cat-tecnica: #60a5fa;
+    --color-cat-tactica: #a78bfa;
+    --color-cat-fisico: #facc15;
+    --color-cat-finalizacion: #fb7185;
+    --color-cat-porteros: #2dd4bf;
+    --color-cat-partido: #4ade80;
+    --color-cat-vuelta_calma: #818cf8;
     --sombra-2: 0 8px 24px rgb(0 0 0 / 50%);
   }
 }
