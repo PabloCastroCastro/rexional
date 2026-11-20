@@ -1,0 +1,13 @@
+/* Miniatura de un ejercicio (GH-273): foto, o el icono de la categoría sobre su color suave */
+.miniatura {
+  display: grid;
+  flex: none;
+  place-items: center;
+  border-radius: var(--radio-s);
+  object-fit: cover;
+}
+
+span.miniatura {
+  background: color-mix(in srgb, var(--color-categoria) 14%, var(--color-superficie));
+  color: var(--color-categoria);
+}

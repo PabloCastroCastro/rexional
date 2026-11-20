@@ -112,16 +112,10 @@
   text-align: center;
 }
 
+/* El resto, en MiniaturaEjercicio (GH-273) */
 .miniatura {
-  display: grid;
-  flex: none;
-  place-items: center;
   width: 3.5rem;
   height: 2.6rem;
-  border-radius: var(--radio-s);
-  background: var(--color-superficie-alterna);
-  color: var(--color-texto-suave);
-  object-fit: cover;
 }
 
 .textoPaso {

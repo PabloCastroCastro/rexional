@@ -6,7 +6,6 @@ import {
   CalendarClock,
   ChevronLeft,
   Copy,
-  Image,
   LayoutTemplate,
   Plus,
   Save,
@@ -26,7 +25,8 @@ import { BotonesPdf } from '../componentes/CompartirPdf'
 import { useConfirmacion } from '../componentes/Confirmacion'
 import { EstadoVacio } from '../componentes/EstadoVacio'
 import { HojaInferior } from '../componentes/HojaInferior'
-import { textoDetalles, useEjercicios } from '../ejercicios/datos'
+import { type Categoria, textoDetalles, useEjercicios } from '../ejercicios/datos'
+import { MiniaturaEjercicio } from '../ejercicios/MiniaturaEjercicio'
 import { CLAVE_ENTRENOS, textoFecha, textoHoras } from '../entrenos/datos'
 import { puedeGestionarJugadores } from '../jugadores/datos'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
@@ -121,13 +121,14 @@ function CompartirPlan({ plan, disabled }: { plan: Plan; disabled?: boolean }) {
 const enlaceEjercicio = (plantillaId: string, id: string) =>
   `/plantillas/${plantillaId}/entrenos/ejercicios/${id}`
 
-function Miniatura({ url }: { url: string | null }) {
-  return url ? (
-    <img src={url} alt="" className={estilos.miniatura} loading="lazy" />
-  ) : (
-    <span className={estilos.miniatura} aria-hidden="true">
-      <Image size={18} />
-    </span>
+function Miniatura({ url, categoria }: { url: string | null; categoria: Categoria | null }) {
+  return (
+    <MiniaturaEjercicio
+      url={url}
+      categoria={categoria}
+      className={estilos.miniatura}
+      tamanoIcono={18}
+    />
   )
 }
 
@@ -155,7 +156,7 @@ function Lectura({ plan, volver }: { plan: Plan; volver: ReactNode }) {
           <ol className={estilos.lista} aria-label="Ejercicios del plan">
             {ejercicios.map((e) => (
               <li key={e.clave} className={estilos.paso}>
-                <Miniatura url={e.urlMiniatura} />
+                <Miniatura url={e.urlMiniatura} categoria={e.categoria} />
                 <span className={estilos.textoPaso}>
                   <Link to={enlaceEjercicio(plantilla.id, e.ejercicioId)}>{e.nombre}</Link>
                   {e.indicaciones && <span className={estilos.secundario}>{e.indicaciones}</span>}
@@ -173,7 +174,10 @@ function Lectura({ plan, volver }: { plan: Plan; volver: ReactNode }) {
   )
 }
 
-type Paso = Pick<EjercicioPlan, 'ejercicioId' | 'nombre' | 'urlMiniatura' | 'archivado'> & {
+type Paso = Pick<
+  EjercicioPlan,
+  'ejercicioId' | 'nombre' | 'categoria' | 'urlMiniatura' | 'archivado'
+> & {
   clave: number
   duracion: string
   indicaciones: string
@@ -184,6 +188,7 @@ const aPasos = (plan: Plan): Paso[] =>
     clave,
     ejercicioId: e.ejercicioId,
     nombre: e.nombre,
+    categoria: e.categoria,
     urlMiniatura: e.urlMiniatura,
     archivado: e.archivado,
     duracion: e.duracionMin ? String(e.duracionMin) : '',
@@ -334,7 +339,7 @@ function Editor({ plan, volver }: { plan: Plan; volver: ReactNode }) {
               <li key={p.clave} className={estilos.pasoEditable}>
                 <div className={estilos.paso}>
                   <span className={estilos.numero}>{i + 1}</span>
-                  <Miniatura url={p.urlMiniatura} />
+                  <Miniatura url={p.urlMiniatura} categoria={p.categoria} />
                   <span className={estilos.textoPaso}>
                     <Link to={enlaceEjercicio(plantilla.id, p.ejercicioId)}>{p.nombre}</Link>
                     {p.archivado && <span className={estilos.secundario}>archivado</span>}
@@ -461,6 +466,7 @@ function Editor({ plan, volver }: { plan: Plan; volver: ReactNode }) {
                   clave: siguiente,
                   ejercicioId: e.id,
                   nombre: e.nombre,
+                  categoria: e.categoria,
                   urlMiniatura: e.urlMiniatura,
                   archivado: false,
                   duracion: e.duracionMin ? String(e.duracionMin) : '',
@@ -521,6 +527,7 @@ function ElegirEjercicio({
   alElegir: (e: {
     id: string
     nombre: string
+    categoria: Categoria | null
     urlMiniatura: string | null
     duracionMin: number | null
   }) => void
@@ -558,7 +565,7 @@ function ElegirEjercicio({
           {ejercicios.data?.map((e) => (
             <li key={e.id}>
               <button type="button" className={estilos.opcionEjercicio} onClick={() => alElegir(e)}>
-                <Miniatura url={e.urlMiniatura} />
+                <Miniatura url={e.urlMiniatura} categoria={e.categoria} />
                 <span className={estilos.textoPaso}>
                   <strong>{e.nombre}</strong>
                   <span className={estilos.secundario}>{textoDetalles(e)}</span>

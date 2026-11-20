@@ -147,6 +147,29 @@ describe('lista de ejercicios', () => {
     )
   })
 
+  it('sin foto, la miniatura es el icono de la categoría; con foto, la foto (GH-273)', async () => {
+    conBiblioteca(senior26, [
+      resumen('e1', 'Rondo 4 contra 1', { categoria: 'calentamiento', urlMiniatura: '/m1' }),
+      resumen('e2', 'Salida de balón', { categoria: 'tactica' }),
+      resumen('e3', 'Movilidad articular y carrera continua suave'),
+    ])
+    abrir('/plantillas/p1/entrenos/ejercicios')
+    const enlaces = within(await screen.findByRole('list', { name: 'Ejercicios' })).getAllByRole(
+      'link',
+    )
+    const miniatura = (i: number) => enlaces[i]?.firstElementChild as HTMLElement
+    expect(miniatura(0).tagName).toBe('IMG')
+    expect(miniatura(1)).toHaveAttribute('data-categoria', 'tactica')
+    expect(miniatura(1)).toHaveAttribute('aria-hidden', 'true')
+    expect(miniatura(1).style.getPropertyValue('--color-categoria')).toBe(
+      'var(--color-cat-tactica)',
+    )
+    expect(miniatura(1).querySelector('svg')).not.toBeNull()
+    expect(miniatura(2)).toHaveAttribute('data-categoria', 'ninguna')
+    // El nombre entero está en el DOM: lo corta el CSS a dos líneas, no el texto
+    expect(enlaces[2]).toHaveTextContent('Movilidad articular y carrera continua suave')
+  })
+
   it('los filtros se leen de la dirección y se quitan desde los chips y la hoja', async () => {
     conBiblioteca()
     const router = abrir(

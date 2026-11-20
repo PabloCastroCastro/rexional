@@ -1,4 +1,4 @@
-import { Dumbbell, Image, Plus, Search, SlidersHorizontal } from 'lucide-react'
+import { Dumbbell, Plus, Search, SlidersHorizontal } from 'lucide-react'
 import { type CSSProperties, useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { Boton } from '../componentes/Boton'
@@ -18,6 +18,7 @@ import {
 } from './datos'
 import estilos from './Ejercicios.module.css'
 import { FormularioEjercicio } from './FormularioEjercicio'
+import { MiniaturaEjercicio } from './MiniaturaEjercicio'
 
 // Biblioteca de ejercicios del club, en la pestaña Entrenos: el buscador con «＋» para crear, una fila
 // de chips por categoría y el resto de filtros en una hoja (GH-272). Los filtros van en la dirección,
@@ -153,13 +154,11 @@ export function PaginaEjercicios() {
           {ejercicios.data.map((e) => (
             <li key={e.id}>
               <Link to={e.id} className={estilos.tarjetaEjercicio}>
-                {e.urlMiniatura ? (
-                  <img src={e.urlMiniatura} alt="" className={estilos.miniatura} loading="lazy" />
-                ) : (
-                  <span className={estilos.miniatura} aria-hidden="true">
-                    <Image size={22} />
-                  </span>
-                )}
+                <MiniaturaEjercicio
+                  url={e.urlMiniatura}
+                  categoria={e.categoria}
+                  className={estilos.miniatura}
+                />
                 <span className={estilos.textoTarjeta}>
                   <strong>{e.nombre}</strong>
                   <span className={estilos.secundario}>
