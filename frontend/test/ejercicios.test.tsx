@@ -79,6 +79,13 @@ const RONDO: Ejercicio = {
   ],
 }
 
+// Los grupos de la biblioteca (GH-274), cada uno con su lista. Por selector: las consultas por rol
+// con nombre sobre toda la página son lentas en jsdom; el nombre accesible se comprueba aparte
+const grupos = () => [
+  ...document.querySelectorAll<HTMLElement>('section[aria-labelledby^="grupo-"]'),
+]
+const enlacesBiblioteca = () => grupos().flatMap((g) => within(g).getAllByRole('link'))
+
 const enviado = (clave: string) => peticiones.filter((p) => p.clave === clave).map((p) => p.cuerpo)
 const BASE = '/api/clubes/c1/ejercicios'
 
@@ -122,10 +129,11 @@ describe('lista de ejercicios', () => {
   it('se busca y se filtra; los filtros van en la dirección', async () => {
     conBiblioteca()
     const router = abrir('/plantillas/p1/entrenos/ejercicios')
-    const lista = await screen.findByRole('list', { name: 'Ejercicios' })
-    expect(within(lista).getByRole('link')).toHaveTextContent(
-      "Rondo 4 contra 1Calentamiento · 10'posesión",
-    )
+    await screen.findByText('Rondo 4 contra 1')
+    const lista = within(grupos()[0] as HTMLElement).getByRole('list')
+    expect(lista).toHaveAccessibleName('Calentamiento 1 ejercicio')
+    // La categoría la dice el grupo: en la fila, la duración y las etiquetas
+    expect(within(lista).getByRole('link')).toHaveTextContent("Rondo 4 contra 110'posesión")
     // La miniatura es decorativa (alt vacío): no tiene rol de imagen
     expect(lista.querySelector('img')).toHaveAttribute('src', '/api/medios/m1/miniatura')
 
@@ -154,9 +162,8 @@ describe('lista de ejercicios', () => {
       resumen('e3', 'Movilidad articular y carrera continua suave'),
     ])
     abrir('/plantillas/p1/entrenos/ejercicios')
-    const enlaces = within(await screen.findByRole('list', { name: 'Ejercicios' })).getAllByRole(
-      'link',
-    )
+    await screen.findByText('Rondo 4 contra 1')
+    const enlaces = enlacesBiblioteca()
     const miniatura = (i: number) => enlaces[i]?.firstElementChild as HTMLElement
     expect(miniatura(0).tagName).toBe('IMG')
     expect(miniatura(1)).toHaveAttribute('data-categoria', 'tactica')
@@ -168,6 +175,64 @@ describe('lista de ejercicios', () => {
     expect(miniatura(2)).toHaveAttribute('data-categoria', 'ninguna')
     // El nombre entero está en el DOM: lo corta el CSS a dos líneas, no el texto
     expect(enlaces[2]).toHaveTextContent('Movilidad articular y carrera continua suave')
+  })
+
+  it('agrupada por categoría en el orden de una sesión, con cuántos tiene cada grupo (GH-274)', async () => {
+    const todos = [
+      resumen('e1', 'Carrera continua', { categoria: 'calentamiento' }),
+      resumen('e2', 'Conducción en zigzag', { categoria: 'tecnica' }),
+      resumen('e3', 'Estiramientos', { categoria: 'vuelta_calma' }),
+      resumen('e4', 'Juego de posición'),
+      resumen('e5', 'Movilidad articular', { categoria: 'calentamiento' }),
+      resumen('e6', 'Partido a dos toques', { categoria: 'partido' }),
+      resumen('e7', 'Remate de cabeza', { categoria: 'finalizacion' }),
+      resumen('e8', 'Salida de balón', { categoria: 'tactica' }),
+      resumen('e9', 'Series de 30 m', { categoria: 'fisico' }),
+    ]
+    conBiblioteca(senior26, todos)
+    // Como el servidor: con una categoría elegida solo llegan los suyos
+    manejadores[`GET ${BASE}`] = (peticion) => {
+      const categoria = new URL(peticion.url).searchParams.get('categoria')
+      return json(categoria ? todos.filter((e) => e.categoria === categoria) : todos)
+    }
+    abrir('/plantillas/p1/entrenos/ejercicios')
+    await screen.findByText('Carrera continua')
+    expect(grupos()[0]).toHaveAccessibleName('Calentamiento 2 ejercicios')
+    expect(grupos().map((g) => g.querySelector('h2')?.textContent)).toEqual([
+      'Calentamiento 2 ejercicios',
+      'Técnica 1 ejercicio',
+      'Táctica 1 ejercicio',
+      'Finalización 1 ejercicio',
+      'Físico 1 ejercicio',
+      'Partido 1 ejercicio',
+      'Vuelta a la calma 1 ejercicio',
+      'Sin categoría 1 ejercicio',
+    ])
+    // Dentro de cada grupo, por nombre (el orden en que los manda el servidor)
+    const calentamiento = within(grupos()[0] as HTMLElement).getAllByRole('link')
+    expect(calentamiento.map((l) => l.querySelector('strong')?.textContent)).toEqual([
+      'Carrera continua',
+      'Movilidad articular',
+    ])
+    // Los chips siguen el mismo orden
+    const chips = within(screen.getByRole('group', { name: 'Filtrar por categoría' }))
+      .getAllByRole('button')
+      .map((b) => b.textContent)
+    expect(chips.slice(1, 6)).toEqual([
+      'Calentamiento',
+      'Técnica',
+      'Táctica',
+      'Finalización',
+      'Físico',
+    ])
+
+    // Con una categoría elegida, solo su grupo
+    await userEvent.click(screen.getByRole('button', { name: 'Táctica' }))
+    await waitFor(() =>
+      expect(grupos().map((g) => g.querySelector('h2')?.textContent)).toEqual([
+        'Táctica 1 ejercicio',
+      ]),
+    )
   })
 
   it('los filtros se leen de la dirección y se quitan desde los chips y la hoja', async () => {

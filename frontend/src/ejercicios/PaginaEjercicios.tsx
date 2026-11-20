@@ -8,11 +8,11 @@ import { HojaInferior } from '../componentes/HojaInferior'
 import { puedeGestionarJugadores } from '../jugadores/datos'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
 import {
+  agruparPorCategoria,
   CATEGORIAS,
   type Categoria,
   colorCategoria,
   type Filtros,
-  textoDetalles,
   useEjercicios,
   useEtiquetas,
 } from './datos'
@@ -150,32 +150,64 @@ export function PaginaEjercicios() {
           }
         />
       ) : (
-        <ul className={estilos.lista} aria-label="Ejercicios">
-          {ejercicios.data.map((e) => (
-            <li key={e.id}>
-              <Link to={e.id} className={estilos.tarjetaEjercicio}>
-                <MiniaturaEjercicio
-                  url={e.urlMiniatura}
-                  categoria={e.categoria}
-                  className={estilos.miniatura}
-                />
-                <span className={estilos.textoTarjeta}>
-                  <strong>{e.nombre}</strong>
-                  <span className={estilos.secundario}>
-                    {[textoDetalles(e), e.archivado && 'archivado'].filter(Boolean).join(' · ')}
-                  </span>
-                  {e.etiquetas.length > 0 && (
-                    <span className={estilos.etiquetas}>
-                      {e.etiquetas.map((t) => (
-                        <span key={t}>{t}</span>
-                      ))}
+        // Un grupo por categoría, en el orden de una sesión (GH-274); con una categoría elegida o
+        // una búsqueda, solo salen los grupos con resultados
+        <div className={estilos.grupos}>
+          {agruparPorCategoria(ejercicios.data).map((grupo) => {
+            const idGrupo = `grupo-${grupo.categoria ?? 'ninguna'}`
+            return (
+              <section
+                key={idGrupo}
+                aria-labelledby={idGrupo}
+                className={estilos.grupo}
+                style={{ '--color-chip': colorCategoria(grupo.categoria) } as CSSProperties}
+              >
+                <h2 id={idGrupo} className={estilos.cabeceraGrupo}>
+                  <span className={estilos.puntoCategoria} aria-hidden="true" />
+                  {grupo.nombre}{' '}
+                  <span className={estilos.cuentaGrupo}>
+                    {grupo.ejercicios.length}{' '}
+                    {/* El espacio, fuera: dentro del texto oculto se pierde al leer el nombre */}
+                    <span className="solo-lectores">
+                      {grupo.ejercicios.length === 1 ? 'ejercicio' : 'ejercicios'}
                     </span>
-                  )}
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
+                  </span>
+                </h2>
+                <ul className={estilos.lista} aria-labelledby={idGrupo}>
+                  {grupo.ejercicios.map((e) => (
+                    <li key={e.id}>
+                      <Link to={e.id} className={estilos.tarjetaEjercicio}>
+                        <MiniaturaEjercicio
+                          url={e.urlMiniatura}
+                          categoria={e.categoria}
+                          className={estilos.miniatura}
+                        />
+                        <span className={estilos.textoTarjeta}>
+                          <strong>{e.nombre}</strong>
+                          {/* La categoría ya la dice el grupo */}
+                          {(e.duracionMin || e.archivado) && (
+                            <span className={estilos.secundario}>
+                              {[e.duracionMin && `${e.duracionMin}'`, e.archivado && 'archivado']
+                                .filter(Boolean)
+                                .join(' · ')}
+                            </span>
+                          )}
+                          {e.etiquetas.length > 0 && (
+                            <span className={estilos.etiquetas}>
+                              {e.etiquetas.map((t) => (
+                                <span key={t}>{t}</span>
+                              ))}
+                            </span>
+                          )}
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )
+          })}
+        </div>
       )}
 
       {/* Los cambios se aplican al momento: «Ver N» dice cuántos quedan y cierra */}
