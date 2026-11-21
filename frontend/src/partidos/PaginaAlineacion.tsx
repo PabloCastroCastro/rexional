@@ -37,6 +37,8 @@ function Alineacion({ partido }: { partido: Partido }) {
   const navegar = useNavigate()
   const { avisar } = useAvisos()
   const ficha = `/plantillas/${plantilla.id}/partidos/${partido.id}`
+  // Se vuelve a la pestaña Partido de la ficha, donde está la alineación (GH-283)
+  const volverA = `${ficha}?pestana=partido`
   const convocados = partido.jugadores.filter((j) => j.convocado)
   const [titulares, setTitulares] = useState<Set<string>>(
     () => new Set(convocados.filter((j) => j.titular).map((j) => j.jugadorId)),
@@ -70,7 +72,7 @@ function Alineacion({ partido }: { partido: Partido }) {
         tipo: 'exito',
         mensaje: `Guardado: ${titulares.size} ${titulares.size === 1 ? 'titular' : 'titulares'} y ${suplentes} ${suplentes === 1 ? 'suplente' : 'suplentes'}`,
       })
-      navegar(ficha)
+      navegar(volverA)
     },
     onError: (error) =>
       avisar({
@@ -81,7 +83,7 @@ function Alineacion({ partido }: { partido: Partido }) {
 
   return (
     <div className={estilos.pagina}>
-      <Link to={ficha} className={estilos.volver}>
+      <Link to={volverA} className={estilos.volver}>
         <ChevronLeft aria-hidden size={20} />
         {partido.local === false ? 'en ' : 'vs '}
         {partido.rival}
@@ -138,7 +140,7 @@ function Alineacion({ partido }: { partido: Partido }) {
             </p>
           )}
           <div className={estilos.pieFijo}>
-            <Boton variante="secundario" onClick={() => navegar(ficha)}>
+            <Boton variante="secundario" onClick={() => navegar(volverA)}>
               Cancelar
             </Boton>
             <Boton

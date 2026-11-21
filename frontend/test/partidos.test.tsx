@@ -386,9 +386,10 @@ describe('siguiente partido con convocatoria (GH-280)', () => {
     abrir('/plantillas/p1/partidos')
     const siguiente = await screen.findByRole('region', { name: 'Siguiente partido' })
     expect(siguiente).toHaveTextContent('16 convocados')
+    // A la pestaña Previa de la ficha, donde está la convocatoria (GH-283)
     expect(within(siguiente).getByRole('link', { name: 'Ver la convocatoria' })).toHaveAttribute(
       'href',
-      '/plantillas/p1/partidos/p1',
+      '/plantillas/p1/partidos/p1?pestana=previa',
     )
     // Uno solo: no hay «Después»
     expect(screen.queryByRole('heading', { name: 'Después' })).not.toBeInTheDocument()
@@ -511,6 +512,81 @@ describe('ficha del partido', () => {
     ).toEqual([expect.stringMatching(/Brais Iglesias/), expect.stringMatching(/Zoe/)])
   })
 
+  it('dos pestañas: abre en Previa hasta el día del partido y en Partido desde ese día (GH-283)', async () => {
+    conPartidos()
+    // El 18 de octubre todavía no ha llegado (hoy es 14): Previa
+    const router = abrir('/plantillas/p1/partidos/p1')
+    const previa = await screen.findByRole('tab', { name: 'Previa' })
+    expect(previa).toHaveAttribute('aria-selected', 'true')
+    const panel = screen.getByRole('tabpanel', { name: 'Previa' })
+    expect(within(panel).getByRole('heading', { name: /Convocatoria/ })).toBeInTheDocument()
+    expect(
+      within(panel).getByRole('heading', { name: /Mensaje para WhatsApp/ }),
+    ).toBeInTheDocument()
+    // La planificación, bajo «Solo para el cuerpo técnico»
+    expect(within(panel).getByText('Solo para el cuerpo técnico')).toBeInTheDocument()
+    // La elegida va en la dirección
+    await userEvent.click(screen.getByRole('tab', { name: 'Partido' }))
+    expect(router.state.location.search).toBe('?pestana=partido')
+    expect(
+      within(screen.getByRole('tabpanel', { name: 'Partido' })).getByRole('button', {
+        name: 'Borrar partido',
+      }),
+    ).toBeInTheDocument()
+  })
+
+  it('un partido que ya pasó abre en Partido; si le falta el resultado, lo dice (GH-283)', async () => {
+    conPartidos()
+    abrir('/plantillas/p1/partidos/p0')
+    expect(await screen.findByRole('tab', { name: 'Partido' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
+    await userEvent.click(screen.getByRole('tab', { name: 'Previa' }))
+    // Desde Previa, el punto ámbar en Partido: falta el resultado
+    expect(screen.getByRole('tab', { name: 'Partido, falta el resultado' })).toBeInTheDocument()
+  })
+
+  it('antes del partido, sin convocatoria, el punto está en Previa (GH-283)', async () => {
+    conPartidos()
+    abrir('/plantillas/p1/partidos/p2?pestana=partido')
+    expect(
+      await screen.findByRole('tab', { name: 'Previa, falta la convocatoria' }),
+    ).toBeInTheDocument()
+    // La pestaña abierta no lleva punto
+    expect(screen.getByRole('tab', { name: 'Partido' })).toHaveAttribute('aria-selected', 'true')
+  })
+
+  it('las pestañas se recorren con las flechas, Inicio y Fin (GH-283)', async () => {
+    conPartidos()
+    abrir('/plantillas/p1/partidos/p1')
+    const previa = await screen.findByRole('tab', { name: 'Previa' })
+    const partido = screen.getByRole('tab', { name: 'Partido' })
+    // Solo la abierta está en el orden de tabulación
+    expect(previa).toHaveAttribute('tabindex', '0')
+    expect(partido).toHaveAttribute('tabindex', '-1')
+    previa.focus()
+    await userEvent.keyboard('{ArrowRight}')
+    expect(partido).toHaveFocus()
+    expect(partido).toHaveAttribute('aria-selected', 'true')
+    await userEvent.keyboard('{ArrowRight}')
+    expect(previa).toHaveFocus()
+    await userEvent.keyboard('{End}')
+    expect(partido).toHaveFocus()
+    await userEvent.keyboard('{Home}')
+    expect(previa).toHaveAttribute('aria-selected', 'true')
+  })
+
+  it('el rol jugador ve las mismas pestañas, sin lo del cuerpo técnico (GH-283)', async () => {
+    conPartidos(plantilla('p1', 'Senior', '2026-27', { rol: 'jugador', esAdminClub: false }))
+    abrir('/plantillas/p1/partidos/p1')
+    const panel = await screen.findByRole('tabpanel', { name: 'Previa' })
+    expect(within(panel).getByRole('heading', { name: /Convocatoria/ })).toBeInTheDocument()
+    expect(within(panel).queryByText('Solo para el cuerpo técnico')).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('tab', { name: 'Partido' }))
+    expect(screen.queryByRole('button', { name: 'Borrar partido' })).not.toBeInTheDocument()
+  })
+
   it('un partido sin convocatoria lo dice', async () => {
     conPartidos()
     abrir('/plantillas/p1/partidos/p2')
@@ -520,7 +596,7 @@ describe('ficha del partido', () => {
   it('borrar pide confirmación, avisa de la convocatoria y vuelve a la lista', async () => {
     conPartidos()
     manejadores['DELETE /api/plantillas/p1/partidos/p1'] = () => new Response(null, { status: 204 })
-    const router = abrir('/plantillas/p1/partidos/p1')
+    const router = abrir('/plantillas/p1/partidos/p1?pestana=partido')
     await userEvent.click(await screen.findByRole('button', { name: 'Borrar partido' }))
     const confirmacion = screen.getByRole('alertdialog', {
       name: '¿Borrar el partido contra SD Compostela?',
@@ -559,7 +635,7 @@ describe('vídeos del partido', () => {
 
   it('se abren fuera de la app; sin título se ve el dominio', async () => {
     conVideos(plantilla('p1', 'Senior', '2026-27', { rol: 'jugador', esAdminClub: false }))
-    abrir('/plantillas/p1/partidos/p1')
+    abrir('/plantillas/p1/partidos/p1?pestana=partido')
     const lista = await screen.findByRole('list', { name: 'Vídeos' })
     const enlaces = within(lista).getAllByRole('link')
     expect(enlaces.map((a) => a.textContent)).toEqual(['1ª parte', 'drive.google.com'])
@@ -583,7 +659,7 @@ describe('vídeos del partido', () => {
       actuales = [...actuales, { id: 'v9', ...(await peticion.json()) }]
       return json(conVideo(), 201)
     }
-    abrir('/plantillas/p1/partidos/p1')
+    abrir('/plantillas/p1/partidos/p1?pestana=partido')
     await userEvent.click(await screen.findByRole('button', { name: 'Añadir vídeo' }))
     const hoja = screen.getByRole('dialog', { name: 'Añadir vídeo' })
     await userEvent.type(within(hoja).getByLabelText(/Dirección del vídeo/), 'youtube')
@@ -609,7 +685,7 @@ describe('vídeos del partido', () => {
       actuales = actuales.map((v) => (v.id === 'v2' ? { ...v, ...cambios } : v))
       return json(conVideo())
     }
-    abrir('/plantillas/p1/partidos/p1')
+    abrir('/plantillas/p1/partidos/p1?pestana=partido')
     await userEvent.click(await screen.findByRole('button', { name: 'Cambiar: drive.google.com' }))
     const hoja = screen.getByRole('dialog', { name: 'Cambiar vídeo' })
     expect(within(hoja).getByLabelText(/Dirección del vídeo/)).toHaveValue(
@@ -630,7 +706,7 @@ describe('vídeos del partido', () => {
       actuales = actuales.filter((v) => v.id !== 'v1')
       return json(conVideo())
     }
-    abrir('/plantillas/p1/partidos/p1')
+    abrir('/plantillas/p1/partidos/p1?pestana=partido')
     await userEvent.click(await screen.findByRole('button', { name: 'Quitar: 1ª parte' }))
     const confirmacion = screen.getByRole('alertdialog', { name: '¿Quitar este vídeo?' })
     await userEvent.click(within(confirmacion).getByRole('button', { name: 'Quitar' }))
@@ -674,7 +750,7 @@ describe('notas del partido', () => {
       nota('n1', { tipo: 'incidencia', texto: 'Golpe del 7', minuto: 12 }),
       nota('n2', { texto: 'Revisar el calentamiento', tipo: 'otra', autor: null }),
     ])
-    abrir('/plantillas/p1/partidos/p1')
+    abrir('/plantillas/p1/partidos/p1?pestana=partido')
     const lista = await screen.findByRole('list', { name: 'Notas' })
     const filas = within(lista).getAllByRole('listitem')
     expect(filas.map((f) => f.textContent)).toEqual([
@@ -690,7 +766,7 @@ describe('notas del partido', () => {
       actuales = [...actuales, nota('n9', await peticion.json())]
       return json(actuales, 201)
     }
-    abrir('/plantillas/p1/partidos/p1')
+    abrir('/plantillas/p1/partidos/p1?pestana=partido')
     await userEvent.click(await screen.findByRole('button', { name: 'Anotar' }))
     const hoja = screen.getByRole('dialog', { name: 'Anotar' })
     // Sin texto no se envía
@@ -721,7 +797,7 @@ describe('notas del partido', () => {
       actuales = []
       return json(actuales)
     }
-    abrir('/plantillas/p1/partidos/p1')
+    abrir('/plantillas/p1/partidos/p1?pestana=partido')
     await userEvent.click(
       await screen.findByRole('button', { name: 'Cambiar la nota: Presionar arriba' }),
     )

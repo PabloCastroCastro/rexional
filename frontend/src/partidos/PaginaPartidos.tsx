@@ -457,7 +457,7 @@ function SiguientePartido({
         </span>
         {gestiona && (
           <Link
-            to={hayConvocatoria ? p.id : `${p.id}/convocatoria`}
+            to={hayConvocatoria ? `${p.id}?pestana=previa` : `${p.id}/convocatoria`}
             className={hayConvocatoria ? estilos.accionSecundaria : estilos.enlaceBoton}
           >
             {hayConvocatoria ? 'Ver la convocatoria' : 'Hacer la convocatoria'}

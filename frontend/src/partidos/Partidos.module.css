@@ -1382,6 +1382,73 @@
   text-align: center;
 }
 
+/* Ficha del partido en dos pestañas, Previa y Partido (GH-283) */
+.pestanas {
+  display: flex;
+  border-bottom: 1px solid var(--color-borde);
+}
+
+.pestanas [role="tab"] {
+  position: relative;
+  display: inline-flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: var(--espacio-2);
+  min-height: var(--altura-tactil);
+  margin-bottom: -1px;
+  padding: 0 var(--espacio-3);
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: none;
+  color: var(--color-texto-suave);
+  font: inherit;
+  font-weight: var(--peso-medio);
+  cursor: pointer;
+}
+
+.pestanas [role="tab"][aria-selected="true"] {
+  border-bottom-color: var(--color-acento);
+  color: var(--color-texto);
+  font-weight: var(--peso-fuerte);
+}
+
+/* Le falta algo a la pestaña que no está abierta */
+.puntoAviso {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: var(--radio-completo);
+  background: var(--color-aviso);
+}
+
+.panelPestana {
+  display: grid;
+  gap: var(--espacio-5);
+}
+
+/* La planificación, separada y avisando de que no la ve el rol jugador */
+.soloCuerpoTecnico {
+  display: grid;
+  gap: var(--espacio-2);
+  padding-top: var(--espacio-4);
+  border-top: 1px solid var(--color-borde);
+}
+
+.avisoCuerpoTecnico {
+  color: var(--color-texto-suave);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-fuerte);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.subtitulo {
+  margin: 0;
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-fuerte);
+}
+
 /* Separador entre las filas de la lista de partidos (GH-278) */
 .lista > li:not(:first-child) {
   border-top: 1px solid var(--color-borde);
