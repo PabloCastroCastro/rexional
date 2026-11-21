@@ -12,7 +12,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router'
 import { Boton } from '../componentes/Boton'
 import { Cargando } from '../componentes/Cargando'
 import { EstadoVacio } from '../componentes/EstadoVacio'
-import { textoFecha } from '../entrenos/datos'
+import { hoy, textoFecha } from '../entrenos/datos'
 import { puedeGestionarJugadores } from '../jugadores/datos'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
 import {
@@ -140,21 +140,37 @@ export function PaginaPartidos() {
       ) : (
         <>
           {pasados && <Racha partidos={partidos.data} />}
-          <ul
-            className={estilos.lista}
-            aria-label={pasados ? 'Partidos pasados' : 'Próximos partidos'}
-          >
-            {lista.map((p) => (
-              <li key={p.id}>
-                <TarjetaPartido
-                  partido={p}
-                  conMiConvocatoria={!gestiona && !!plantilla.jugadorId}
-                  habitual={habitual}
-                  faltaResultado={faltaResultado(p)}
-                />
-              </li>
-            ))}
-          </ul>
+          {/* El siguiente, el que hay que preparar, destacado; el resto, «Después» (GH-280) */}
+          {!pasados && lista[0] && (
+            <SiguientePartido
+              partido={lista[0]}
+              gestiona={gestiona}
+              conMiConvocatoria={!gestiona && !!plantilla.jugadorId}
+            />
+          )}
+          {!pasados && lista.length > 1 && (
+            <h2 id="titulo-despues" className={estilos.tituloDespues}>
+              Después
+            </h2>
+          )}
+          {(pasados || lista.length > 1) && (
+            <ul
+              className={estilos.lista}
+              aria-label={pasados ? 'Partidos pasados' : undefined}
+              aria-labelledby={pasados ? undefined : 'titulo-despues'}
+            >
+              {(pasados ? lista : lista.slice(1)).map((p) => (
+                <li key={p.id}>
+                  <TarjetaPartido
+                    partido={p}
+                    conMiConvocatoria={!gestiona && !!plantilla.jugadorId}
+                    habitual={habitual}
+                    faltaResultado={faltaResultado(p)}
+                  />
+                </li>
+              ))}
+            </ul>
+          )}
         </>
       )}
 
@@ -315,6 +331,102 @@ function Racha({ partidos }: { partidos: ResumenPartido[] }) {
         {sinResultado > 0 &&
           ` · ${cuantos(sinResultado, 'partido sin resultado', 'partidos sin resultado')}`}
       </p>
+    </section>
+  )
+}
+
+// Las iniciales del rival, a falta de su escudo: sin «CD», «SD», «FC»…; de una sola palabra, sus dos
+// primeras letras («CD Lalín» → «LA», «Racing Villalbés» → «RV»)
+const SIGLAS_CLUB = new Set(['AD', 'CD', 'CF', 'CP', 'FC', 'RC', 'SC', 'SD', 'UD', 'CDF', 'SCD'])
+
+export function iniciales(rival: string) {
+  const palabras = rival
+    .split(/\s+/)
+    .filter((p) => p && !SIGLAS_CLUB.has(p.replaceAll('.', '').toUpperCase()))
+  const [primera = rival, segunda] = palabras
+  return (segunda ? primera.charAt(0) + segunda.charAt(0) : primera.slice(0, 2)).toUpperCase()
+}
+
+// «hoy», «mañana», «en 3 días»
+export function cuantoFalta(fecha: string, hoyEs = hoy()) {
+  const dias = Math.round(
+    (Date.parse(`${fecha}T12:00:00Z`) - Date.parse(`${hoyEs}T12:00:00Z`)) / 86_400_000,
+  )
+  return dias <= 0 ? 'hoy' : dias === 1 ? 'mañana' : `en ${dias} días`
+}
+
+// El siguiente partido, destacado (GH-280): cuándo y cuánto falta, el rival con sus iniciales, casa o
+// fuera y la competición con la jornada; debajo, la convocatoria y qué hacer con ella
+function SiguientePartido({
+  partido: p,
+  gestiona,
+  conMiConvocatoria,
+}: {
+  partido: ResumenPartido
+  gestiona: boolean
+  conMiConvocatoria: boolean
+}) {
+  const cuando = mayuscula(textoFecha(p.fecha))
+  const hayConvocatoria = p.convocados > 0
+  const convocatoria = !hayConvocatoria
+    ? 'Todavía sin convocatoria'
+    : conMiConvocatoria
+      ? p.meConvocan
+        ? 'Estás convocado'
+        : 'No estás convocado'
+      : `${p.convocados} ${p.convocados === 1 ? 'convocado' : 'convocados'}`
+  return (
+    <section className={estilos.siguiente} aria-labelledby="titulo-siguiente">
+      <h2 id="titulo-siguiente" className="solo-lectores">
+        Siguiente partido
+      </h2>
+      <Link to={p.id} className={estilos.enlaceSiguiente}>
+        <span className={estilos.cuandoSiguiente}>
+          {cuando}
+          {p.hora && ` · ${p.hora}`}
+          <span className={estilos.falta}>{cuantoFalta(p.fecha)}</span>
+        </span>
+        <span className={estilos.rivalSiguiente}>
+          <span className={estilos.iniciales} aria-hidden="true">
+            {iniciales(p.rival)}
+          </span>
+          <strong>{p.rival}</strong>
+          <ChevronRight aria-hidden size={20} className={estilos.flecha} />
+        </span>
+        <span className={estilos.detalles}>
+          {p.local !== null && (
+            <span className={estilos.lado}>
+              {p.local ? <House aria-hidden size={15} /> : <Bus aria-hidden size={15} />}
+              {p.local ? 'En casa' : 'Fuera'}
+            </span>
+          )}
+          {p.competicion && (
+            <span className={estilos.competicion}>{nombreCompeticion(p.competicion)}</span>
+          )}
+          {p.estado === 'aplazado' && <span className={estilos.aplazadoLista}>Aplazado</span>}
+        </span>
+      </Link>
+      <div className={estilos.pieSiguiente}>
+        <span
+          className={
+            !hayConvocatoria
+              ? estilos.pendiente
+              : conMiConvocatoria && p.meConvocan
+                ? estilos.meConvocan
+                : undefined
+          }
+        >
+          {convocatoria}
+        </span>
+        {gestiona && (
+          <Link
+            to={hayConvocatoria ? p.id : `${p.id}/convocatoria`}
+            className={hayConvocatoria ? estilos.accionSecundaria : estilos.enlaceBoton}
+          >
+            {hayConvocatoria ? 'Ver la convocatoria' : 'Hacer la convocatoria'}
+          </Link>
+        )}
+      </div>
     </section>
   )
 }

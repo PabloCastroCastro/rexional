@@ -1083,6 +1083,107 @@
   font-size: var(--texto-sm);
 }
 
+/* El siguiente partido, destacado (GH-280) */
+.siguiente {
+  display: grid;
+  border-radius: var(--radio-l);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra-1);
+  overflow: hidden;
+}
+
+.enlaceSiguiente {
+  display: grid;
+  gap: var(--espacio-2);
+  padding: var(--espacio-4);
+  color: inherit;
+  text-decoration: none;
+}
+
+.enlaceSiguiente:hover {
+  background: var(--color-superficie-alterna);
+}
+
+.cuandoSiguiente {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--espacio-2);
+  font-family: var(--fuente-titulos);
+  font-size: var(--texto-lg);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.falta {
+  padding: 0 var(--espacio-2);
+  border-radius: var(--radio-completo);
+  background: color-mix(in srgb, var(--color-primario) 14%, var(--color-superficie));
+  color: var(--color-acento);
+  font-family: var(--fuente);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
+}
+
+.rivalSiguiente {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  min-width: 0;
+}
+
+.rivalSiguiente strong {
+  flex: 1;
+  min-width: 0;
+  font-size: 1.5rem;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+/* Las iniciales del rival, a falta de su escudo */
+.iniciales {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: var(--radio-completo);
+  background: var(--color-superficie-alterna);
+  color: var(--color-texto);
+  font-family: var(--fuente-titulos);
+  font-size: var(--texto-lg);
+  font-weight: 700;
+}
+
+.pieSiguiente {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-2) var(--espacio-3);
+  padding: var(--espacio-3) var(--espacio-4);
+  border-top: 1px solid var(--color-borde);
+  font-size: var(--texto-sm);
+}
+
+.accionSecundaria {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--altura-tactil);
+  padding: 0 var(--espacio-3);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-m);
+  color: var(--color-texto);
+  font-weight: var(--peso-medio);
+  text-decoration: none;
+}
+
+.tituloDespues {
+  margin-top: var(--espacio-2);
+  color: var(--color-texto-suave);
+  font-size: var(--texto-base);
+}
+
 /* Separador entre las filas de la lista de partidos (GH-278) */
 .lista > li:not(:first-child) {
   border-top: 1px solid var(--color-borde);
