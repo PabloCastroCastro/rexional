@@ -112,6 +112,16 @@ function conPartidos(p = senior26, proximos = PROXIMOS, pasados = PASADOS) {
   }
 }
 
+// «Nuevo partido» abre las opciones; «Crear un partido», el formulario (GH-281)
+async function crearUnPartido() {
+  await userEvent.click(await screen.findByRole('button', { name: 'Nuevo partido' }))
+  await userEvent.click(
+    within(screen.getByRole('dialog', { name: 'Nuevo partido' })).getByRole('button', {
+      name: 'Crear un partido',
+    }),
+  )
+}
+
 describe('lista de partidos', () => {
   it('muestra los próximos con su convocatoria y cambia a los pasados', async () => {
     conPartidos()
@@ -289,9 +299,33 @@ describe('lista de partidos', () => {
     conPartidos(senior26, [], [])
     abrir('/plantillas/p1/partidos')
     expect(await screen.findByText('No hay partidos próximos')).toBeInTheDocument()
-    expect(screen.getAllByRole('button', { name: 'Nuevo partido' })).toHaveLength(2)
+    // En el estado vacío, las dos acciones a la vista (GH-281)
+    expect(screen.getByRole('button', { name: 'Crear un partido' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Importar el calendario' })).toHaveAttribute(
+      'href',
+      '/plantillas/p1/partidos/calendario',
+    )
     await userEvent.click(screen.getByRole('button', { name: 'Pasados' }))
     expect(await screen.findByText('Todavía no hay partidos jugados')).toBeInTheDocument()
+  })
+
+  it('«Nuevo partido» deja elegir entre crear uno o importar el calendario, con su explicación (GH-281)', async () => {
+    conPartidos()
+    const router = abrir('/plantillas/p1/partidos')
+    await screen.findByRole('region', { name: 'Siguiente partido' })
+    // En la cabecera, solo «Nuevo partido»
+    expect(screen.queryByRole('link', { name: /Importar/ })).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Nuevo partido' }))
+    const opciones = screen.getByRole('dialog', { name: 'Nuevo partido' })
+    expect(
+      within(opciones).getByRole('button', { name: 'Crear un partido' }),
+    ).toHaveAccessibleDescription('Rival, fecha, hora y si es en casa')
+    const importar = within(opciones).getByRole('link', { name: 'Importar el calendario' })
+    expect(importar).toHaveAccessibleDescription(
+      'El PDF de la federación, con todos los partidos de la temporada',
+    )
+    await userEvent.click(importar)
+    await waitFor(() => expect(ruta(router)).toBe('/plantillas/p1/partidos/calendario'))
   })
 
   it('el rol jugador ve los partidos sin crear', async () => {
@@ -381,7 +415,7 @@ describe('crear y editar', () => {
       return json(detalle(nuevo), 201)
     }
     const router = abrir('/plantillas/p1/partidos')
-    await userEvent.click(await screen.findByRole('button', { name: 'Nuevo partido' }))
+    await crearUnPartido()
     const hoja = screen.getByRole('dialog', { name: 'Nuevo partido' })
     expect(within(hoja).getByLabelText(/Fecha/)).toHaveValue('2026-10-14')
 
@@ -420,7 +454,7 @@ describe('crear y editar', () => {
       )
     }
     abrir('/plantillas/p1/partidos')
-    await userEvent.click(await screen.findByRole('button', { name: 'Nuevo partido' }))
+    await crearUnPartido()
     const hoja = screen.getByRole('dialog', { name: 'Nuevo partido' })
     await userEvent.click(within(hoja).getByRole('button', { name: 'Crear partido' }))
     expect(within(hoja).getByText('El rival es obligatorio')).toBeInTheDocument()

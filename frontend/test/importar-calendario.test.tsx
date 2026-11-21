@@ -71,7 +71,8 @@ describe('importar el calendario', () => {
     manejadores[LEER] = () => json(LEIDO)
     manejadores[IMPORTAR] = () => json({ creados: 2, omitidos: [] })
     const router = abrir('/plantillas/p1/partidos')
-    await userEvent.click(await screen.findByRole('link', { name: 'Importar calendario' }))
+    // Sin partidos, «Importar el calendario» está a la vista (GH-281)
+    await userEvent.click(await screen.findByRole('link', { name: 'Importar el calendario' }))
     await waitFor(() => expect(ruta(router)).toBe('/plantillas/p1/partidos/calendario'))
 
     await userEvent.upload(screen.getByLabelText('Archivo del calendario en PDF'), pdf())
@@ -148,6 +149,7 @@ describe('importar el calendario', () => {
     const router = abrir('/plantillas/p1/partidos/calendario')
     await waitFor(() => expect(ruta(router)).toBe('/plantillas/p1/partidos'))
     expect(await screen.findByText('No hay partidos próximos')).toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: 'Importar calendario' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Importar el calendario' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Nuevo partido' })).not.toBeInTheDocument()
   })
 })

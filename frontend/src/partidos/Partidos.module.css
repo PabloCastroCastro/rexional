@@ -843,22 +843,6 @@
   text-decoration: none;
 }
 
-/* En pantallas estrechas solo el icono, para que quepa junto a «Nuevo partido» */
-@media (max-width: 30rem) {
-  .enlaceCalendario span {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
-
-  .enlaceCalendario {
-    padding: 0;
-  }
-}
-
 .descanso {
   display: flex;
   align-items: center;
@@ -1182,6 +1166,47 @@
   margin-top: var(--espacio-2);
   color: var(--color-texto-suave);
   font-size: var(--texto-base);
+}
+
+/* «Nuevo partido» (GH-281): crear uno o importar el calendario, cada opción con su explicación */
+.opcionesNuevo {
+  display: grid;
+  gap: var(--espacio-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.opcionNuevo {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  width: 100%;
+  min-height: calc(var(--altura-tactil) + var(--espacio-4));
+  padding: var(--espacio-3) var(--espacio-4);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-l);
+  background: var(--color-superficie);
+  color: var(--color-texto);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.iconoOpcion {
+  flex: none;
+  color: var(--color-acento);
+}
+
+.textoOpcion {
+  display: grid;
+  gap: 2px;
+}
+
+.explicacionOpcion {
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
 }
 
 /* Separador entre las filas de la lista de partidos (GH-278) */

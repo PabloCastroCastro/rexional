@@ -12,6 +12,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router'
 import { Boton } from '../componentes/Boton'
 import { Cargando } from '../componentes/Cargando'
 import { EstadoVacio } from '../componentes/EstadoVacio'
+import { HojaInferior } from '../componentes/HojaInferior'
 import { hoy, textoFecha } from '../entrenos/datos'
 import { puedeGestionarJugadores } from '../jugadores/datos'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
@@ -48,34 +49,21 @@ export function PaginaPartidos() {
     ...(partidos.data ?? []).filter((p) => !faltaResultado(p)),
   ]
   const [creando, setCreando] = useState(false)
-
-  const nuevo = (
-    <Boton icono={<CalendarPlus aria-hidden size={18} />} onClick={() => setCreando(true)}>
-      Nuevo partido
-    </Boton>
-  )
-
-  const importar = (
-    <Link
-      to="calendario"
-      className={estilos.enlaceCalendario}
-      aria-label="Importar calendario"
-      title="Importar el calendario de la competición"
-    >
-      <FileUp aria-hidden size={18} />
-      <span aria-hidden>Importar calendario</span>
-    </Link>
-  )
+  const [eligiendo, setEligiendo] = useState(false)
 
   return (
     <div className={estilos.pagina}>
       <div className={estilos.cabecera}>
         <h1>Partidos</h1>
+        {/* Solo «Nuevo partido»: importar el calendario es una de sus opciones (GH-281) */}
         {gestiona && (
-          <div className={estilos.acciones}>
-            {importar}
-            {nuevo}
-          </div>
+          <Boton
+            icono={<CalendarPlus aria-hidden size={18} />}
+            aria-haspopup="dialog"
+            onClick={() => setEligiendo(true)}
+          >
+            Nuevo partido
+          </Boton>
         )}
       </div>
 
@@ -130,8 +118,16 @@ export function PaginaPartidos() {
             accion={
               gestiona && (
                 <div className={estilos.acciones}>
-                  {nuevo}
-                  {importar}
+                  <Boton
+                    icono={<CalendarPlus aria-hidden size={18} />}
+                    onClick={() => setCreando(true)}
+                  >
+                    Crear un partido
+                  </Boton>
+                  <Link to="calendario" className={estilos.enlaceCalendario}>
+                    <FileUp aria-hidden size={18} />
+                    Importar el calendario
+                  </Link>
                 </div>
               )
             }
@@ -173,6 +169,47 @@ export function PaginaPartidos() {
           )}
         </>
       )}
+
+      <HojaInferior abierta={eligiendo} alCerrar={() => setEligiendo(false)} titulo="Nuevo partido">
+        <ul className={estilos.opcionesNuevo}>
+          <li>
+            <button
+              type="button"
+              className={estilos.opcionNuevo}
+              aria-labelledby="nuevo-crear"
+              aria-describedby="nuevo-crear-que"
+              onClick={() => {
+                setEligiendo(false)
+                setCreando(true)
+              }}
+            >
+              <CalendarPlus aria-hidden size={22} className={estilos.iconoOpcion} />
+              <span className={estilos.textoOpcion}>
+                <strong id="nuevo-crear">Crear un partido</strong>
+                <span id="nuevo-crear-que" className={estilos.explicacionOpcion}>
+                  Rival, fecha, hora y si es en casa
+                </span>
+              </span>
+            </button>
+          </li>
+          <li>
+            <Link
+              to="calendario"
+              className={estilos.opcionNuevo}
+              aria-labelledby="nuevo-importar"
+              aria-describedby="nuevo-importar-que"
+            >
+              <FileUp aria-hidden size={22} className={estilos.iconoOpcion} />
+              <span className={estilos.textoOpcion}>
+                <strong id="nuevo-importar">Importar el calendario</strong>
+                <span id="nuevo-importar-que" className={estilos.explicacionOpcion}>
+                  El PDF de la federación, con todos los partidos de la temporada
+                </span>
+              </span>
+            </Link>
+          </li>
+        </ul>
+      </HojaInferior>
 
       <FormularioPartido
         abierta={creando}
