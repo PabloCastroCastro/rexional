@@ -148,7 +148,8 @@ export function PaginaActa() {
   const bajas = useJugadores(plantilla.id, false)
   // Jugadores de otras plantillas del club: también pueden estar en el acta (GH-189)
   const otras = useInvitables(plantilla.id, '', true)
-  const ficha = `/plantillas/${plantilla.id}/partidos/${partidoId}`
+  // Se vuelve a la pestaña Partido de la ficha, donde está el acta (GH-283)
+  const ficha = `/plantillas/${plantilla.id}/partidos/${partidoId}?pestana=partido`
 
   const volver = (
     <Link to={ficha} className={estilos.volver}>
@@ -270,7 +271,7 @@ function Revision({
         tipo: 'exito',
         mensaje: `Acta registrada: ${textoResultado(guardado) ?? ''} contra ${guardado.rival}`,
       })
-      navegar(`/plantillas/${plantilla.id}/partidos/${partido.id}`)
+      navegar(`/plantillas/${plantilla.id}/partidos/${partido.id}?pestana=partido`)
     },
     onError: (e) => setError(e instanceof Error ? e.message : 'No se ha podido registrar el acta'),
   })

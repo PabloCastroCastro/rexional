@@ -211,8 +211,8 @@ describe('acta del partido', () => {
 
   it('sin acta, el jugador no ve la sección', async () => {
     conActa(plantilla('p1', 'Senior', '2026-27', { rol: 'jugador', esAdminClub: false }))
-    abrir('/plantillas/p1/partidos/p1')
-    expect(await screen.findByRole('heading', { name: /Convocatoria/ })).toBeInTheDocument()
+    abrir('/plantillas/p1/partidos/p1?pestana=partido')
+    expect(await screen.findByRole('tab', { name: 'Partido', selected: true })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Acta del partido' })).not.toBeInTheDocument()
   })
 })

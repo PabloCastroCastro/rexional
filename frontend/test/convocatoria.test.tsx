@@ -165,7 +165,7 @@ describe('elegir convocados', () => {
 describe('convocatoria y mensaje en la ficha', () => {
   it('separa convocados y no convocados y enlaza a editar la convocatoria', async () => {
     conPartido()
-    abrir('/plantillas/p1/partidos/p1')
+    abrir('/plantillas/p1/partidos/p1?pestana=previa')
     const convocados = await screen.findByRole('list', { name: 'Convocados' })
     expect(within(convocados).getAllByRole('listitem')).toHaveLength(3)
     expect(screen.getByText('No convocados (1)')).toBeInTheDocument()
@@ -180,7 +180,7 @@ describe('convocatoria y mensaje en la ficha', () => {
       ...PARTIDO,
       jugadores: PARTIDO.jugadores.filter((j) => j.activo).map((j) => ({ ...j, convocado: false })),
     })
-    abrir('/plantillas/p1/partidos/p1')
+    abrir('/plantillas/p1/partidos/p1?pestana=previa')
     expect(await screen.findByRole('link', { name: 'Convocar' })).toBeInTheDocument()
     expect(screen.queryByText(/No convocados/)).not.toBeInTheDocument()
   })
@@ -189,7 +189,7 @@ describe('convocatoria y mensaje en la ficha', () => {
     const writeText = vi.fn().mockResolvedValue(undefined)
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
     conPartido()
-    abrir('/plantillas/p1/partidos/p1')
+    abrir('/plantillas/p1/partidos/p1?pestana=previa')
     expect(await screen.findByTestId('mensaje')).toHaveTextContent(
       'Convocatoria contra *SD Compostela*',
     )
@@ -203,7 +203,7 @@ describe('convocatoria y mensaje en la ficha', () => {
     Object.defineProperty(navigator, 'share', { value: share, configurable: true })
     const abrirVentana = vi.spyOn(window, 'open').mockReturnValue(null)
     conPartido()
-    abrir('/plantillas/p1/partidos/p1')
+    abrir('/plantillas/p1/partidos/p1?pestana=previa')
     await userEvent.click(await screen.findByRole('button', { name: 'Compartir' }))
     expect(share).toHaveBeenCalledWith({ text: TEXTO })
     expect(abrirVentana).not.toHaveBeenCalled()
@@ -212,14 +212,14 @@ describe('convocatoria y mensaje en la ficha', () => {
   it('sin menú del sistema, abre WhatsApp con el enlace wa.me', async () => {
     const abrirVentana = vi.spyOn(window, 'open').mockReturnValue(null)
     conPartido()
-    abrir('/plantillas/p1/partidos/p1')
+    abrir('/plantillas/p1/partidos/p1?pestana=previa')
     await userEvent.click(await screen.findByRole('button', { name: 'Compartir' }))
     expect(abrirVentana).toHaveBeenCalledWith(WHATSAPP, '_blank', 'noopener')
   })
 
   it('el rol jugador ve la convocatoria y el mensaje, sin editar ni compartir', async () => {
     conPartido(plantilla('p1', 'Senior', '2026-27', { rol: 'jugador', esAdminClub: false }))
-    abrir('/plantillas/p1/partidos/p1')
+    abrir('/plantillas/p1/partidos/p1?pestana=previa')
     expect(await screen.findByTestId('mensaje')).toBeInTheDocument()
     expect(screen.getByRole('list', { name: 'Convocados' })).toBeInTheDocument()
     for (const nombre of ['Copiar', 'Compartir']) {

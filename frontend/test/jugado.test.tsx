@@ -106,7 +106,7 @@ const hoja = () => screen.getByRole('dialog')
 describe('partido jugado', () => {
   it('muestra el marcador, la línea de tiempo y los minutos de cada convocado', async () => {
     conPartido()
-    abrir('/plantillas/p1/partidos/p1')
+    abrir('/plantillas/p1/partidos/p1?pestana=partido')
     expect(await screen.findByText('2–1')).toBeInTheDocument()
     // En la tarjeta (GH-229), con su pastilla de victoria, y una sola vez en la página
     expect(screen.getAllByText('2–1')).toHaveLength(1)
@@ -117,9 +117,8 @@ describe('partido jugado', () => {
         .getAllByRole('listitem')
         .map((li) => li.textContent),
     ).toEqual(["19'Gol de Braisacta", "30'Amarilla a Íker"])
-    expect(screen.getByRole('list', { name: 'Convocados' })).toHaveTextContent(
-      "Zoe · Suplente · 0'",
-    )
+    // La alineación con minutos, en la pestaña Partido (GH-283)
+    expect(screen.getByRole('list', { name: 'Suplentes' })).toHaveTextContent("Zoe · 0'")
     // 2–1 con un solo gol registrado: se avisa de cómo añadir el otro
     expect(screen.getByRole('note')).toHaveTextContent('Falta 1 gol por asignar')
   })

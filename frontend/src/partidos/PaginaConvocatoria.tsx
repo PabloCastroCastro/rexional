@@ -47,7 +47,8 @@ function Seleccion({ partido }: { partido: Partido }) {
   const navegar = useNavigate()
   const { avisar } = useAvisos()
   const confirmar = useConfirmacion()
-  const ficha = `/plantillas/${plantilla.id}/partidos/${partido.id}`
+  // Se vuelve a la pestaña Previa de la ficha, donde está la convocatoria (GH-283)
+  const ficha = `/plantillas/${plantilla.id}/partidos/${partido.id}?pestana=previa`
   const inicial = partido.jugadores.filter((j) => j.convocado).map((j) => j.jugadorId)
   const [elegidos, setElegidos] = useState<Set<string>>(() => new Set(inicial))
   const [guardado, setGuardado] = useState(false)
