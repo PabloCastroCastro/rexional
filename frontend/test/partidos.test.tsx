@@ -10,6 +10,7 @@ import {
   tipoResultado,
 } from '../src/partidos/datos'
 import { minutoPropuesto } from '../src/partidos/Notas'
+import { cuantoFalta, iniciales } from '../src/partidos/PaginaPartidos'
 import { type ArchivoPartido, MAXIMO_ARCHIVOS } from '../src/partidos/Planificacion'
 import { cuandoSeJuega } from '../src/partidos/TarjetaPartido'
 import {
@@ -115,16 +116,15 @@ describe('lista de partidos', () => {
   it('muestra los próximos con su convocatoria y cambia a los pasados', async () => {
     conPartidos()
     abrir('/plantillas/p1/partidos')
-    const lista = await screen.findByRole('list', { name: 'Próximos partidos' })
+    // El siguiente, destacado (GH-280); el resto, bajo «Después»
+    const siguiente = await screen.findByRole('region', { name: 'Siguiente partido' })
+    expect(siguiente).toHaveTextContent('SD Compostela')
+    const lista = screen.getByRole('list', { name: 'Después' })
     // El lector de pantalla lee el partido completo (GH-278); «Preferente» es la habitual: no se repite
-    const enlaces = within(lista).getAllByRole('link')
-    expect(enlaces.map((a) => a.getAttribute('aria-label'))).toEqual([
-      'Domingo, 18 oct, 17:00, SD Compostela, fuera, 10 convocados',
-      'Domingo, 25 oct, CD Lalín, en casa, sin convocatoria',
-    ])
+    const [lalin] = within(lista).getAllByRole('link')
+    expect(lalin).toHaveAccessibleName('Domingo, 25 oct, CD Lalín, en casa, sin convocatoria')
     // En pantalla, el rival sin «vs / en» y casa o fuera una sola vez
-    expect(enlaces[0]).toHaveTextContent('Domingo, 18 oct · 17:00SD CompostelaFuera10 convocados')
-    expect(enlaces[1]).toHaveTextContent('Domingo, 25 octCD LalínEn casaSin convocatoria')
+    expect(lalin).toHaveTextContent('Domingo, 25 octCD LalínEn casaSin convocatoria')
     await userEvent.click(screen.getByRole('button', { name: 'Pasados' }))
     const pasados = await screen.findByRole('list', { name: 'Partidos pasados' })
     // Ya pasó y no tiene resultado: eso, en lugar de la convocatoria (GH-279)
@@ -266,6 +266,7 @@ describe('lista de partidos', () => {
         resumen('c2', '2026-10-21', 'Silva SD', {
           competicion: 'COPA DA DEPUTACIÓN · Jornada 3',
         }),
+        resumen('c3', '2026-10-25', 'CD Barco', { competicion: 'PREFERENTE GALICIA' }),
       ],
       [
         resumen('c0', '2026-10-11', 'Arosa SC', { competicion: 'PREFERENTE GALICIA' }),
@@ -273,11 +274,15 @@ describe('lista de partidos', () => {
       ],
     )
     abrir('/plantillas/p1/partidos')
-    const lista = await screen.findByRole('list', { name: 'Próximos partidos' })
+    const lista = await screen.findByRole('list', { name: 'Después' })
+    expect(within(lista).getAllByRole('link')[0]).toHaveTextContent('Copa da deputación · J3')
     await waitFor(() =>
-      expect(within(lista).getAllByRole('link')[0]).not.toHaveTextContent(/preferente/i),
+      expect(within(lista).getAllByRole('link')[1]).not.toHaveTextContent(/preferente/i),
     )
-    expect(within(lista).getAllByRole('link')[1]).toHaveTextContent('Copa da deputación · J3')
+    // En la tarjeta del siguiente, la competición siempre, aunque sea la habitual (GH-280)
+    expect(screen.getByRole('region', { name: 'Siguiente partido' })).toHaveTextContent(
+      'Preferente galicia',
+    )
   })
 
   it('sin partidos invita a crear el próximo solo a quien puede', async () => {
@@ -292,8 +297,78 @@ describe('lista de partidos', () => {
   it('el rol jugador ve los partidos sin crear', async () => {
     conPartidos(plantilla('p1', 'Senior', '2026-27', { rol: 'jugador', esAdminClub: false }))
     abrir('/plantillas/p1/partidos')
-    expect(await screen.findByRole('list', { name: 'Próximos partidos' })).toBeInTheDocument()
+    expect(await screen.findByRole('region', { name: 'Siguiente partido' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Nuevo partido' })).not.toBeInTheDocument()
+  })
+
+  it('el siguiente partido, destacado: cuánto falta, iniciales y qué hacer con la convocatoria (GH-280)', async () => {
+    conPartidos(senior26, [
+      resumen('p1', '2026-10-16', 'CD Lalín', {
+        hora: '17:00',
+        local: true,
+        competicion: 'Preferente · Jornada 7',
+      }),
+      resumen('p2', '2026-10-25', 'Racing Villalbés', { convocados: 16 }),
+    ])
+    const router = abrir('/plantillas/p1/partidos')
+    const siguiente = await screen.findByRole('region', { name: 'Siguiente partido' })
+    // Hoy es miércoles 14: el viernes 16 es «en 2 días»
+    expect(siguiente).toHaveTextContent('Viernes, 16 oct · 17:00en 2 días')
+    expect(siguiente).toHaveTextContent('LACD Lalín')
+    expect(siguiente).toHaveTextContent('En casaPreferente · J7')
+    expect(siguiente).toHaveTextContent('Todavía sin convocatoria')
+    // El resto, bajo «Después», en filas compactas
+    expect(
+      within(screen.getByRole('list', { name: 'Después' }))
+        .getAllByRole('link')
+        .map((a) => a.querySelector('strong')?.textContent),
+    ).toEqual(['Racing Villalbés'])
+    await userEvent.click(within(siguiente).getByRole('link', { name: 'Hacer la convocatoria' }))
+    await waitFor(() => expect(ruta(router)).toBe('/plantillas/p1/partidos/p1/convocatoria'))
+  })
+
+  it.each([
+    ['2026-10-14', 'hoy'],
+    ['2026-10-15', 'mañana'],
+    ['2026-10-21', 'en 7 días'],
+  ])('el %s es «%s»', (fecha, texto) => {
+    expect(cuantoFalta(fecha, '2026-10-14')).toBe(texto)
+  })
+
+  it.each([
+    ['CD Lalín', 'LA'],
+    ['Racing Villalbés', 'RV'],
+    ['S.D. Compostela', 'CO'],
+    ['Bergantiños FC', 'BE'],
+    ['Arosa', 'AR'],
+  ])('las iniciales de %s son %s', (rival, esperado) => {
+    expect(iniciales(rival)).toBe(esperado)
+  })
+})
+
+describe('siguiente partido con convocatoria (GH-280)', () => {
+  it('quien gestiona la ve; el rol jugador, si está convocado', async () => {
+    conPartidos(senior26, [resumen('p1', '2026-10-18', 'SD Compostela', { convocados: 16 })])
+    abrir('/plantillas/p1/partidos')
+    const siguiente = await screen.findByRole('region', { name: 'Siguiente partido' })
+    expect(siguiente).toHaveTextContent('16 convocados')
+    expect(within(siguiente).getByRole('link', { name: 'Ver la convocatoria' })).toHaveAttribute(
+      'href',
+      '/plantillas/p1/partidos/p1',
+    )
+    // Uno solo: no hay «Después»
+    expect(screen.queryByRole('heading', { name: 'Después' })).not.toBeInTheDocument()
+  })
+
+  it('el rol jugador con ficha ve si está convocado, sin acción', async () => {
+    conPartidos(
+      plantilla('p1', 'Senior', '2026-27', { rol: 'jugador', esAdminClub: false, jugadorId: 'j1' }),
+      [resumen('p1', '2026-10-18', 'SD Compostela', { convocados: 16, meConvocan: true })],
+    )
+    abrir('/plantillas/p1/partidos')
+    const siguiente = await screen.findByRole('region', { name: 'Siguiente partido' })
+    expect(siguiente).toHaveTextContent('Estás convocado')
+    expect(within(siguiente).queryByRole('link', { name: /convocatoria/ })).not.toBeInTheDocument()
   })
 })
 
