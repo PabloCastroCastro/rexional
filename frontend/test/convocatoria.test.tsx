@@ -167,12 +167,32 @@ describe('convocatoria y mensaje en la ficha', () => {
     conPartido()
     abrir('/plantillas/p1/partidos/p1?pestana=previa')
     const convocados = await screen.findByRole('list', { name: 'Convocados' })
+    // En dos columnas, con dorsal y nombre y primer apellido (GH-284)
     expect(within(convocados).getAllByRole('listitem')).toHaveLength(3)
-    expect(screen.getByText('No convocados (1)')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Editar convocatoria' })).toHaveAttribute(
+    expect(screen.getByText('1 no convocado')).toBeInTheDocument()
+    // El número en el título y «Editar», que abre la pantalla de la convocatoria
+    expect(screen.getByRole('heading', { name: /Convocatoria/ })).toHaveTextContent('Convocatoria3')
+    expect(screen.getByRole('link', { name: 'Editar la convocatoria' })).toHaveAttribute(
       'href',
       '/plantillas/p1/partidos/p1/convocatoria',
     )
+  })
+
+  it('cada convocado, con su dorsal y su nombre y primer apellido (GH-284)', async () => {
+    conPartido(senior26, {
+      ...PARTIDO,
+      jugadores: [
+        { ...jugador('j1', 'Brais', 7, true), apellidos: 'Iglesias Pérez' },
+        { ...jugador('j2', 'Íker', 1, true), apellidos: 'Castro Rey' },
+      ],
+    })
+    abrir('/plantillas/p1/partidos/p1?pestana=previa')
+    const convocados = await screen.findByRole('list', { name: 'Convocados' })
+    expect(
+      within(convocados)
+        .getAllByRole('listitem')
+        .map((li) => li.textContent),
+    ).toEqual(['7Dorsal 7Brais Iglesias', '1Dorsal 1Íker Castro'])
   })
 
   it('sin convocatoria invita a convocar', async () => {
@@ -181,8 +201,13 @@ describe('convocatoria y mensaje en la ficha', () => {
       jugadores: PARTIDO.jugadores.filter((j) => j.activo).map((j) => ({ ...j, convocado: false })),
     })
     abrir('/plantillas/p1/partidos/p1?pestana=previa')
-    expect(await screen.findByRole('link', { name: 'Convocar' })).toBeInTheDocument()
-    expect(screen.queryByText(/No convocados/)).not.toBeInTheDocument()
+    expect(await screen.findByText('Todavía sin convocatoria')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Hacer la convocatoria' })).toHaveAttribute(
+      'href',
+      '/plantillas/p1/partidos/p1/convocatoria',
+    )
+    expect(screen.queryByText(/no convocado/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Editar la convocatoria' })).not.toBeInTheDocument()
   })
 
   it('muestra el mensaje y lo copia al portapapeles', async () => {
@@ -225,7 +250,7 @@ describe('convocatoria y mensaje en la ficha', () => {
     for (const nombre of ['Copiar', 'Compartir']) {
       expect(screen.queryByRole('button', { name: nombre })).not.toBeInTheDocument()
     }
-    expect(screen.queryByRole('link', { name: 'Editar convocatoria' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Editar la convocatoria' })).not.toBeInTheDocument()
   })
 })
 
