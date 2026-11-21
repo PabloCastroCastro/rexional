@@ -270,10 +270,19 @@ function ResultadosEquipo({ equipo }: { equipo: Equipo }) {
           { texto: 'Perdidos', valor: equipo.perdidos },
         ]}
       />
-      <p className={estilos.secundario}>
-        Goles: {equipo.golesFavor} a favor y {equipo.golesContra} en contra (
-        {diferencia > 0 ? `+${diferencia}` : diferencia})
-      </p>
+      {/* Los goles, en casillas debajo de las de resultados (GH-282) */}
+      <Cifras
+        columnas={3}
+        cifras={[
+          { texto: 'Goles a favor', valor: equipo.golesFavor },
+          { texto: 'Goles en contra', valor: equipo.golesContra },
+          {
+            texto: 'Diferencia',
+            valor: diferencia > 0 ? `+${diferencia}` : diferencia < 0 ? `−${-diferencia}` : 0,
+            vacia: diferencia === 0,
+          },
+        ]}
+      />
     </section>
   )
 }
