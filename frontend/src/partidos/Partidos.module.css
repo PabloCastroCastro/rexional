@@ -1209,6 +1209,179 @@
   font-size: var(--texto-sm);
 }
 
+/* Goles por minuto en barras (GH-282): en contra a la izquierda y a favor a la derecha de cada
+   tramo, con su número junto a la barra. Barras finas (16 px), redondeadas solo en el extremo del
+   dato; el texto, siempre en los colores de texto */
+.cabeceraGrafico {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-2);
+}
+
+.marcoGrafico {
+  display: grid;
+  gap: var(--espacio-3);
+  padding: var(--espacio-3) var(--espacio-4);
+  border-radius: var(--radio-l);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra-1);
+}
+
+.leyenda {
+  display: flex;
+  justify-content: center;
+  gap: var(--espacio-4);
+  margin: 0;
+  padding: 0;
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
+  list-style: none;
+}
+
+.claveLeyenda {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-2);
+}
+
+.claveLeyenda::before {
+  content: "";
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 3px;
+  background: var(--serie);
+}
+
+.grafico {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+[data-serie="favor"] {
+  --serie: var(--color-serie-favor);
+}
+
+[data-serie="contra"] {
+  --serie: var(--color-serie-contra);
+}
+
+/* El descanso, entre la 1.ª y la 2.ª parte */
+.filaTramo[data-descanso] {
+  margin-top: var(--espacio-2);
+  padding-top: var(--espacio-2);
+  border-top: 1px solid var(--color-borde);
+}
+
+.tramo {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 4rem minmax(0, 1fr);
+  align-items: center;
+  min-height: 2.25rem;
+  border-radius: var(--radio-s);
+  cursor: default;
+}
+
+.tramo:hover {
+  background: var(--color-superficie-alterna);
+}
+
+.tramo:focus-visible {
+  outline: 2px solid var(--color-foco);
+  outline-offset: 2px;
+}
+
+/* Cada lado crece desde el tramo: en contra, hacia la izquierda; el número, junto al extremo */
+.ladoGrafico {
+  --sitio-numero: 1.75rem;
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-1);
+  min-width: 0;
+}
+
+.ladoGrafico[data-serie="contra"] {
+  justify-content: flex-end;
+}
+
+.barra {
+  flex: none;
+  height: 1rem;
+  background: var(--serie);
+}
+
+/* Redondeada en el extremo del dato, recta junto al tramo */
+.ladoGrafico[data-serie="contra"] .barra {
+  border-radius: 4px 0 0 4px;
+}
+
+.ladoGrafico[data-serie="favor"] .barra {
+  border-radius: 0 4px 4px 0;
+}
+
+.numeroBarra {
+  flex: none;
+  color: var(--color-texto);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-fuerte);
+  font-variant-numeric: tabular-nums;
+}
+
+.numeroBarra[data-cero] {
+  color: var(--color-texto-suave);
+  font-weight: var(--peso-normal);
+}
+
+.etiquetaTramo {
+  color: var(--color-texto-suave);
+  font-size: var(--texto-xs);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* El valor completo del tramo, al pasar por encima o enfocar */
+.valorTramo {
+  position: absolute;
+  z-index: 1;
+  bottom: calc(100% + var(--espacio-1));
+  left: 50%;
+  display: none;
+  gap: 2px;
+  padding: var(--espacio-2) var(--espacio-3);
+  border-radius: var(--radio-m);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra-2);
+  color: var(--color-texto-suave);
+  font-size: var(--texto-xs);
+  white-space: nowrap;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.valorTramo strong {
+  color: var(--color-texto);
+  font-size: var(--texto-sm);
+}
+
+.tramo:hover .valorTramo,
+.tramo:focus-visible .valorTramo {
+  display: grid;
+}
+
+.resumenPartes {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  column-gap: var(--espacio-1);
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
+  text-align: center;
+}
+
 /* Separador entre las filas de la lista de partidos (GH-278) */
 .lista > li:not(:first-child) {
   border-top: 1px solid var(--color-borde);
