@@ -105,13 +105,20 @@
   text-transform: uppercase;
 }
 
+/* Siempre en una línea, para que todas las filas midan lo mismo (GH-278): si no cabe, se recorta la
+   competición */
 .detalles {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: var(--espacio-1) var(--espacio-3);
+  gap: var(--espacio-2);
+  min-width: 0;
   color: var(--color-texto-suave);
   font-size: var(--texto-sm);
+  white-space: nowrap;
+}
+
+.detalles > * {
+  flex: none;
 }
 
 /* Casa o fuera, una sola vez y con icono */
@@ -123,7 +130,8 @@
   font-weight: var(--peso-medio);
 }
 
-.competicion {
+.detalles > .competicion {
+  flex: 0 1 auto;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1018,7 +1026,64 @@
   font-weight: var(--peso-medio);
 }
 
+/* Pasados sin resultado (GH-279): el aviso en ámbar y el hueco del marcador, discontinuo */
+.faltaResultado {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-1);
+  color: var(--color-aviso);
+  font-weight: var(--peso-medio);
+}
+
+.marcadorVacio {
+  flex: none;
+  width: 2.5rem;
+  height: 1.75rem;
+  border: 2px dashed var(--color-borde);
+  border-radius: var(--radio-m);
+}
+
+/* «Últimos 5» (GH-279): bolas de color con su letra, del más antiguo al último */
+.racha {
+  display: grid;
+  gap: var(--espacio-2);
+  padding: var(--espacio-3) var(--espacio-4);
+  border-radius: var(--radio-l);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra-1);
+}
+
+.racha h2 {
+  font-size: var(--texto-base);
+}
+
+.bolas {
+  display: flex;
+  gap: var(--espacio-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.racha .bolas li {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--radio-completo);
+  background: var(--resultado);
+  color: var(--sobre-resultado);
+  font-family: var(--fuente-titulos);
+  font-size: var(--texto-base);
+  font-weight: 700;
+}
+
+.resumenRacha {
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
+}
+
 /* Separador entre las filas de la lista de partidos (GH-278) */
-.lista > li + li {
+.lista > li:not(:first-child) {
   border-top: 1px solid var(--color-borde);
 }

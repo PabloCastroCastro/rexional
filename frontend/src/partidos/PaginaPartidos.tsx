@@ -1,4 +1,12 @@
-import { Bus, CalendarDays, CalendarPlus, ChevronRight, FileUp, House } from 'lucide-react'
+import {
+  Bus,
+  CalendarDays,
+  CalendarPlus,
+  ChevronRight,
+  CircleAlert,
+  FileUp,
+  House,
+} from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { Boton } from '../componentes/Boton'
@@ -12,6 +20,7 @@ import {
   nombreCompeticion,
   type ResumenPartido,
   TEXTO_RESULTADO,
+  type TipoResultado,
   tipoResultado,
   usePartidos,
 } from './datos'
@@ -32,6 +41,12 @@ export function PaginaPartidos() {
   // La competición habitual, con los partidos de toda la temporada: los próximos y los pasados
   const otros = usePartidos(plantilla.id, pasados ? 'proximos' : 'pasados')
   const habitual = competicionHabitual([...(partidos.data ?? []), ...(otros.data ?? [])])
+  // En Pasados, primero los que no tienen resultado; después, del más reciente al más antiguo (GH-279)
+  const faltaResultado = (p: ResumenPartido) => pasados && p.estado === 'programado'
+  const lista = [
+    ...(partidos.data ?? []).filter(faltaResultado),
+    ...(partidos.data ?? []).filter((p) => !faltaResultado(p)),
+  ]
   const [creando, setCreando] = useState(false)
 
   const nuevo = (
@@ -123,20 +138,24 @@ export function PaginaPartidos() {
           />
         )
       ) : (
-        <ul
-          className={estilos.lista}
-          aria-label={pasados ? 'Partidos pasados' : 'Próximos partidos'}
-        >
-          {partidos.data.map((p) => (
-            <li key={p.id}>
-              <TarjetaPartido
-                partido={p}
-                conMiConvocatoria={!gestiona && !!plantilla.jugadorId}
-                habitual={habitual}
-              />
-            </li>
-          ))}
-        </ul>
+        <>
+          {pasados && <Racha partidos={partidos.data} />}
+          <ul
+            className={estilos.lista}
+            aria-label={pasados ? 'Partidos pasados' : 'Próximos partidos'}
+          >
+            {lista.map((p) => (
+              <li key={p.id}>
+                <TarjetaPartido
+                  partido={p}
+                  conMiConvocatoria={!gestiona && !!plantilla.jugadorId}
+                  habitual={habitual}
+                  faltaResultado={faltaResultado(p)}
+                />
+              </li>
+            ))}
+          </ul>
+        </>
       )}
 
       <FormularioPartido
@@ -158,10 +177,13 @@ function TarjetaPartido({
   partido: p,
   conMiConvocatoria,
   habitual,
+  faltaResultado,
 }: {
   partido: ResumenPartido
   conMiConvocatoria: boolean
   habitual: string | null
+  // Ya pasó y no tiene resultado: lo que importa es eso, no la convocatoria (GH-279)
+  faltaResultado: boolean
 }) {
   const cuando = mayuscula(textoFecha(p.fecha))
   const competicion =
@@ -184,7 +206,7 @@ function TarjetaPartido({
     competicion,
     tipo && `${p.golesFavor} a ${p.golesContra}, ${TEXTO_RESULTADO[tipo].toLowerCase()}`,
     p.estado === 'aplazado' && 'aplazado',
-    convocatoria.toLowerCase(),
+    faltaResultado ? 'falta el resultado' : convocatoria.toLowerCase(),
   ]
     .filter(Boolean)
     .join(', ')
@@ -204,27 +226,95 @@ function TarjetaPartido({
             </span>
           )}
           {competicion && <span className={estilos.competicion}>{competicion}</span>}
-          <span
-            className={
-              p.convocados > 0 && conMiConvocatoria && p.meConvocan
-                ? estilos.meConvocan
-                : p.convocados === 0
-                  ? estilos.pendiente
-                  : undefined
-            }
-          >
-            {convocatoria}
-          </span>
+          {faltaResultado ? (
+            <span className={estilos.faltaResultado}>
+              <CircleAlert aria-hidden size={15} />
+              Falta el resultado
+            </span>
+          ) : (
+            <span
+              className={
+                p.convocados > 0 && conMiConvocatoria && p.meConvocan
+                  ? estilos.meConvocan
+                  : p.convocados === 0
+                    ? estilos.pendiente
+                    : undefined
+              }
+            >
+              {convocatoria}
+            </span>
+          )}
         </span>
       </span>
       {tipo ? (
         <span className={estilos.marcadorLista} data-resultado={tipo}>
           {p.golesFavor}–{p.golesContra}
         </span>
+      ) : faltaResultado ? (
+        // El hueco del marcador, por rellenar
+        <span className={estilos.marcadorVacio} aria-hidden="true" />
       ) : (
         p.estado === 'aplazado' && <span className={estilos.aplazadoLista}>Aplazado</span>
       )}
       <ChevronRight aria-hidden size={20} className={estilos.flecha} />
     </Link>
+  )
+}
+
+const LETRA: Record<TipoResultado, string> = { victoria: 'V', empate: 'E', derrota: 'D' }
+
+const cuantos = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno : varios}`
+
+// «3 victorias, 1 empate y 1 derrota»: solo lo que haya
+function enumerar(partes: string[]) {
+  return partes.length < 2
+    ? (partes[0] ?? '')
+    : `${partes.slice(0, -1).join(', ')} y ${partes.at(-1)}`
+}
+
+// Los últimos cinco resultados, del más antiguo al último, como bolas de color con su letra; debajo,
+// el resumen y cuántos pasados faltan por resultado (GH-279). Sin partidos jugados, nada
+function Racha({ partidos }: { partidos: ResumenPartido[] }) {
+  // Llegan del más reciente al más antiguo
+  const ultimos = partidos
+    .filter((p) => p.estado === 'jugado')
+    .map((p) => tipoResultado(p))
+    .filter((t): t is TipoResultado => t !== null)
+    .slice(0, 5)
+    .reverse()
+  if (ultimos.length === 0) return null
+  const sinResultado = partidos.filter((p) => p.estado === 'programado').length
+  const contar = (tipo: TipoResultado) => ultimos.filter((t) => t === tipo).length
+  const resumen = enumerar(
+    [
+      [contar('victoria'), 'victoria', 'victorias'],
+      [contar('empate'), 'empate', 'empates'],
+      [contar('derrota'), 'derrota', 'derrotas'],
+    ]
+      .filter(([n]) => (n as number) > 0)
+      .map(([n, uno, varios]) => cuantos(n as number, uno as string, varios as string)),
+  )
+  const titulo = ultimos.length === 5 ? 'Últimos 5' : `Últimos ${ultimos.length}`
+  return (
+    <section className={estilos.racha} aria-labelledby="titulo-racha">
+      <h2 id="titulo-racha">{titulo}</h2>
+      <p className="solo-lectores">
+        Del más antiguo al último: {ultimos.map((t) => TEXTO_RESULTADO[t].toLowerCase()).join(', ')}
+        .
+      </p>
+      <ol className={estilos.bolas} aria-hidden="true">
+        {ultimos.map((t, i) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: la posición en la racha es su identidad
+          <li key={i} data-resultado={t}>
+            {LETRA[t]}
+          </li>
+        ))}
+      </ol>
+      <p className={estilos.resumenRacha}>
+        {resumen}
+        {sinResultado > 0 &&
+          ` · ${cuantos(sinResultado, 'partido sin resultado', 'partidos sin resultado')}`}
+      </p>
+    </section>
   )
 }
