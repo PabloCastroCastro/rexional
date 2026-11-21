@@ -127,8 +127,9 @@ describe('lista de partidos', () => {
     expect(enlaces[1]).toHaveTextContent('Domingo, 25 octCD LalínEn casaSin convocatoria')
     await userEvent.click(screen.getByRole('button', { name: 'Pasados' }))
     const pasados = await screen.findByRole('list', { name: 'Partidos pasados' })
+    // Ya pasó y no tiene resultado: eso, en lugar de la convocatoria (GH-279)
     expect(within(pasados).getByRole('link')).toHaveAccessibleName(
-      'Domingo, 11 oct, Arosa SC, en casa, 11 convocados',
+      'Domingo, 11 oct, Arosa SC, en casa, falta el resultado',
     )
   })
 
@@ -166,6 +167,95 @@ describe('lista de partidos', () => {
     for (const enlace of [ganado, empatado, perdido, aplazado]) {
       expect(enlace?.firstElementChild?.children).toHaveLength(3)
     }
+  })
+
+  it('pasados: primero los que faltan por resultado, que lo dicen en vez de la convocatoria (GH-279)', async () => {
+    const jugado = (id: string, fecha: string, gf: number, gc: number) =>
+      resumen(id, fecha, `Rival ${id}`, {
+        estado: 'jugado',
+        golesFavor: gf,
+        golesContra: gc,
+        convocados: 11,
+      })
+    conPartidos(senior26, PROXIMOS, [
+      resumen('s1', '2026-10-11', 'Silva SD', { convocados: 0 }),
+      jugado('j1', '2026-10-04', 2, 0),
+      resumen('s2', '2026-09-27', 'CD Barco', { convocados: 12 }),
+      resumen('a', '2026-09-20', 'Arosa SC', { estado: 'aplazado' }),
+      jugado('j2', '2026-09-13', 1, 1),
+    ])
+    abrir('/plantillas/p1/partidos?ver=pasados')
+    const pasados = await screen.findByRole('list', { name: 'Partidos pasados' })
+    const enlaces = within(pasados).getAllByRole('link')
+    expect(enlaces.map((a) => a.querySelector('strong')?.textContent)).toEqual([
+      'Silva SD',
+      'CD Barco',
+      'Rival j1',
+      'Arosa SC',
+      'Rival j2',
+    ])
+    const [silva, barco] = enlaces
+    expect(silva).toHaveTextContent('Falta el resultado')
+    expect(silva).not.toHaveTextContent('Sin convocatoria')
+    expect(barco).not.toHaveTextContent('convocados')
+    expect(barco).toHaveAccessibleName(/CD Barco, falta el resultado$/)
+    // El hueco del marcador, por rellenar, en el sitio del marcador
+    expect(silva?.querySelector('[data-resultado]')).toBeNull()
+    expect(silva?.lastElementChild?.previousElementSibling).toHaveAttribute('aria-hidden', 'true')
+    // Los que tienen resultado o están aplazados, como siempre
+    expect(enlaces[2]).toHaveTextContent('11 convocados')
+    expect(enlaces[3]).toHaveTextContent('Aplazado')
+  })
+
+  it('«Últimos 5»: los cinco últimos resultados, del más antiguo al último, y el resumen (GH-279)', async () => {
+    const jugado = (id: string, fecha: string, gf: number, gc: number) =>
+      resumen(id, fecha, `Rival ${id}`, { estado: 'jugado', golesFavor: gf, golesContra: gc })
+    conPartidos(senior26, PROXIMOS, [
+      resumen('s1', '2026-10-11', 'Silva SD'),
+      jugado('j6', '2026-10-04', 2, 0),
+      jugado('j5', '2026-09-27', 1, 1),
+      resumen('s2', '2026-09-20', 'CD Barco'),
+      jugado('j4', '2026-09-13', 0, 2),
+      jugado('j3', '2026-09-06', 3, 1),
+      jugado('j2', '2026-08-30', 1, 0),
+      // El sexto ya no entra
+      jugado('j1', '2026-08-23', 0, 4),
+    ])
+    abrir('/plantillas/p1/partidos?ver=pasados')
+    const racha = await screen.findByRole('region', { name: 'Últimos 5' })
+    expect([...racha.querySelectorAll('li')].map((b) => b.textContent)).toEqual([
+      'V',
+      'V',
+      'D',
+      'E',
+      'V',
+    ])
+    expect(racha.querySelector('li')).toHaveAttribute('data-resultado', 'victoria')
+    expect(racha).toHaveTextContent('3 victorias, 1 empate y 1 derrota · 2 partidos sin resultado')
+    // El lector de pantalla lee la racha completa, no las letras
+    expect(racha.querySelector('ol')).toHaveAttribute('aria-hidden', 'true')
+    expect(racha).toHaveTextContent(
+      'Del más antiguo al último: victoria, victoria, derrota, empate, victoria.',
+    )
+  })
+
+  it('con menos de cinco jugados, los que haya; sin ninguno, no hay racha (GH-279)', async () => {
+    conPartidos(senior26, PROXIMOS, [
+      resumen('j2', '2026-10-04', 'Silva SD', { estado: 'jugado', golesFavor: 1, golesContra: 1 }),
+      resumen('j1', '2026-09-27', 'CD Barco', { estado: 'jugado', golesFavor: 2, golesContra: 1 }),
+    ])
+    abrir('/plantillas/p1/partidos?ver=pasados')
+    const racha = await screen.findByRole('region', { name: 'Últimos 2' })
+    expect([...racha.querySelectorAll('li')].map((b) => b.textContent)).toEqual(['V', 'E'])
+    expect(racha).toHaveTextContent('1 victoria y 1 empate')
+    expect(racha).not.toHaveTextContent('sin resultado')
+  })
+
+  it('sin partidos jugados no hay racha (GH-279)', async () => {
+    conPartidos()
+    abrir('/plantillas/p1/partidos?ver=pasados')
+    await screen.findByRole('list', { name: 'Partidos pasados' })
+    expect(screen.queryByRole('region', { name: /^Últimos/ })).not.toBeInTheDocument()
   })
 
   it('la competición solo si no es la habitual, con su nombre arreglado (GH-278)', async () => {
