@@ -1677,6 +1677,16 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Partido ya jugado sin resultado (GH-287): el aviso, qué se lee del acta y las dos acciones */
+.faltaResultadoPartido {
+  display: grid;
+  gap: var(--espacio-2);
+  padding: var(--espacio-4);
+  border-radius: var(--radio-l);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra-1);
+}
+
 /* Separador entre las filas de la lista de partidos (GH-278) */
 .lista > li:not(:first-child) {
   border-top: 1px solid var(--color-borde);

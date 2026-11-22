@@ -119,10 +119,15 @@ describe('acta del partido', () => {
   it('se sube el PDF, se revisa lo leído y se registra', async () => {
     conActa()
     const router = abrir('/plantillas/p1/partidos/p1')
-    const seccion = (await screen.findByRole('heading', { name: 'Acta del partido' })).closest(
-      'section',
-    )
-    if (!seccion) throw new Error('Sin sección del acta')
+    // Ya jugado y sin resultado: «Subir el acta», la acción principal de «El partido» (GH-287)
+    const seccion = await screen.findByRole('region', { name: 'El partido' })
+    expect(within(seccion).getByText('Falta el resultado')).toBeInTheDocument()
+    expect(within(seccion).getByRole('button', { name: 'Subir el acta' })).toBeInTheDocument()
+    expect(
+      within(seccion).getByRole('button', { name: 'Poner el resultado a mano' }),
+    ).toBeInTheDocument()
+    // Sin el botón repetido en la sección del acta
+    expect(screen.queryByRole('region', { name: 'Acta del partido' })).not.toBeInTheDocument()
     const pdf = new File(['%PDF-1.4'], 'FichaPartido.pdf', { type: 'application/pdf' })
     await userEvent.upload(within(seccion).getByLabelText('Archivo del acta en PDF'), pdf)
 
