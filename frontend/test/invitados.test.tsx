@@ -232,9 +232,9 @@ describe('convocar a jugadores de otras plantillas', () => {
     manejadores['PUT /api/plantillas/p1/partidos/p1/convocados'] = () => json(PARTIDO)
     abrir('/plantillas/p1/partidos/p1/convocatoria')
 
-    const lista = await screen.findByRole('list', { name: 'Jugadores' })
-    // Marcado como invitado junto al nombre; en una línea, sin segunda (GH-289)
-    expect(within(lista).getAllByRole('listitem')[1]).toHaveTextContent(/^.*Mateo.*Invitado$/)
+    // Sin posición, en su grupo (GH-290); marcado como invitado junto al nombre y en una línea
+    const lista = await screen.findByRole('list', { name: 'Sin posición' })
+    expect(within(lista).getByText('Mateo').closest('li')).toHaveTextContent(/^.*Mateo.*Invitado$/)
 
     await userEvent.click(await screen.findByRole('button', { name: /Xoel/ }))
     const externos = screen.getByRole('list', { name: 'Convocados de otras plantillas' })
