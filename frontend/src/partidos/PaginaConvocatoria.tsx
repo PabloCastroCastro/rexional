@@ -10,13 +10,7 @@ import { useConfirmacion } from '../componentes/Confirmacion'
 import { EstadoVacio } from '../componentes/EstadoVacio'
 import { textoFecha } from '../entrenos/datos'
 import { BuscadorInvitables, MarcaInvitado } from '../jugadores/BuscadorInvitables'
-import {
-  CLAVE_JUGADORES,
-  type JugadorInvitable,
-  nombreCompleto,
-  POSICIONES,
-  textoInvitado,
-} from '../jugadores/datos'
+import { CLAVE_JUGADORES, type JugadorInvitable, nombreCompleto } from '../jugadores/datos'
 import { estadoJugador } from '../jugadores/estado'
 import { MarcaLesion } from '../jugadores/Lesiones'
 import { Dorsal } from '../jugadores/PaginaPlantilla'
@@ -192,29 +186,17 @@ function Seleccion({ partido }: { partido: Partido }) {
                         {nombreCompleto(j)}
                       </span>
                       {j.tipo === 'invitado' && <MarcaInvitado />}
+                      {/* De baja y ya convocado: raro, pero hay que verlo */}
+                      {!j.activo && <span className={estilos.secundario}> · baja</span>}
                     </span>
-                    <span className={estilos.secundario}>
-                      {[
-                        j.tipo === 'invitado' ? textoInvitado(j) : null,
-                        j.posicion ? POSICIONES[j.posicion] : null,
-                        !j.activo && 'baja',
-                        !elegido && 'No convocado',
-                      ]
-                        .filter(Boolean)
-                        .join(' · ')}
-                      {j.lesion && (
-                        <>
-                          {' · '}
-                          <MarcaLesion lesion={j.lesion} />
-                        </>
-                      )}
-                      {j.sancion && (
-                        <>
-                          {' · '}
-                          <MarcaSancion partidos={j.sancion.partidos} />
-                        </>
-                      )}
-                    </span>
+                    {/* Una línea por fila (GH-289): solo lesionados y sancionados llevan segunda */}
+                    {(j.lesion || j.sancion) && (
+                      <span className={estilos.secundario}>
+                        {j.lesion && <MarcaLesion lesion={j.lesion} />}
+                        {j.lesion && j.sancion && ' · '}
+                        {j.sancion && <MarcaSancion partidos={j.sancion.partidos} />}
+                      </span>
+                    )}
                   </span>
                   {/* Cómo ha entrenado desde el partido anterior, a la derecha (GH-288) */}
                   <EntrenosPrevios entrenos={j.entrenosPrevios} />

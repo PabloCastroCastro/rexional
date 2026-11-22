@@ -98,7 +98,13 @@ describe('elegir convocados', () => {
     expect(await screen.findByText(/convocados de 3/)).toHaveTextContent('3 convocados de 3')
     expect(casilla('Íker').checked).toBe(true)
     expect(casilla('Zoe').checked).toBe(false)
-    expect(casilla('Zoe').closest('li')).toHaveTextContent('No convocado')
+    // Sin «No convocado» ni la posición: el convocado se distingue por la casilla y el fondo (GH-289)
+    const zoe = casilla('Zoe').closest('li') as HTMLElement
+    expect(zoe).not.toHaveTextContent('No convocado')
+    expect(zoe).toHaveAttribute('data-convocado', 'false')
+    expect(casilla('Íker').closest('li')).toHaveAttribute('data-convocado', 'true')
+    // Una sola línea: sin texto secundario si no está lesionado ni sancionado
+    expect(zoe.querySelectorAll('[class*="secundario"]')).toHaveLength(0)
 
     await userEvent.click(screen.getByText('Zoe'))
     await userEvent.click(screen.getByText('Brais'))
