@@ -144,6 +144,32 @@ describe('partido jugado', () => {
     expect(screen.getByRole('note')).toHaveTextContent('Falta 1 gol por asignar')
   })
 
+  it('ya jugado y sin resultado: «Subir el acta» y, si no, ponerlo a mano (GH-287)', async () => {
+    conPartido(senior26, {
+      ...PARTIDO,
+      estado: 'programado',
+      golesFavor: null,
+      golesContra: null,
+      eventos: [],
+    })
+    abrir('/plantillas/p1/partidos/p1?pestana=partido')
+    const seccion = await screen.findByRole('region', { name: 'El partido' })
+    expect(seccion).toHaveTextContent('Falta el resultado')
+    expect(seccion).toHaveTextContent('se leen el resultado, los titulares, los cambios')
+    // La principal, subir el acta; la secundaria, a mano
+    expect(within(seccion).getByRole('button', { name: 'Subir el acta' })).toHaveClass('primario')
+    expect(within(seccion).queryByText(/Todavía no hay goles/)).not.toBeInTheDocument()
+    await userEvent.click(
+      within(seccion).getByRole('button', { name: 'Poner el resultado a mano' }),
+    )
+    await userEvent.click(within(hoja()).getByRole('button', { name: 'Sumar un gol: Senior' }))
+    await userEvent.click(within(hoja()).getByRole('button', { name: 'Guardar resultado' }))
+    expect(await screen.findByText(/Resultado guardado/)).toBeInTheDocument()
+    // Con resultado, la pestaña muestra la línea del partido y su «Editar»
+    expect(within(seccion).queryByText('Falta el resultado')).not.toBeInTheDocument()
+    expect(within(seccion).getByRole('button', { name: 'Editar el partido' })).toBeInTheDocument()
+  })
+
   it('se cambia el resultado con los contadores y se aplaza', async () => {
     conPartido()
     abrir('/plantillas/p1/partidos/p1')

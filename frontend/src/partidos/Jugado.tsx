@@ -3,6 +3,7 @@ import {
   ArrowDownLeft,
   ArrowLeftRight,
   ArrowUpRight,
+  CircleAlert,
   Goal,
   Handshake,
   ListOrdered,
@@ -23,6 +24,7 @@ import { Selector } from '../componentes/Selector'
 import { hoy } from '../entrenos/datos'
 import { nombreCompleto, puedeGestionarJugadores } from '../jugadores/datos'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
+import { faltaResultadoSinActa, SubirActa } from './Acta'
 import { CLAVE_PARTIDOS, type Partido, textoResultado } from './datos'
 import estilos from './Partidos.module.css'
 
@@ -89,15 +91,37 @@ export function SeccionPartido({ partido }: { partido: Partido }) {
           </Boton>
         )}
       </div>
-      {/* El resultado va en la tarjeta del partido (GH-229); sin nada aún, aquí se pone */}
-      {gestiona && !hayAlgo && (
-        <Boton
-          variante="secundario"
-          className={estilos.botonResultado}
-          onClick={() => setResultado(true)}
-        >
-          Poner resultado
-        </Boton>
+      {/* Ya jugado y sin resultado (GH-287): subir el acta, que lo rellena todo, como acción
+          principal; ponerlo a mano, como secundaria */}
+      {gestiona && faltaResultadoSinActa(partido) ? (
+        <div className={estilos.faltaResultadoPartido}>
+          <p className={estilos.faltaResultado}>
+            <CircleAlert aria-hidden size={18} />
+            Falta el resultado
+          </p>
+          <p className={estilos.secundario}>
+            Sube el acta de la federación: se leen el resultado, los titulares, los cambios, los
+            goles y las tarjetas, y los revisas antes de guardarlos.
+          </p>
+          <div className={estilos.acciones}>
+            <SubirActa partido={partido} texto="Subir el acta" variante="primario" />
+            <Boton variante="secundario" onClick={() => setResultado(true)}>
+              Poner el resultado a mano
+            </Boton>
+          </div>
+        </div>
+      ) : (
+        // El resultado va en la tarjeta del partido (GH-229); sin nada aún, aquí se pone
+        gestiona &&
+        !hayAlgo && (
+          <Boton
+            variante="secundario"
+            className={estilos.botonResultado}
+            onClick={() => setResultado(true)}
+          >
+            Poner resultado
+          </Boton>
+        )
       )}
       {gestiona && sinAutor > 0 && convocados.length > 0 && (
         <p className={estilos.avisoGoles} role="note">
@@ -105,7 +129,8 @@ export function SeccionPartido({ partido }: { partido: Partido }) {
           pulsa «Añadir gol, tarjeta o cambio», elige «Gol» y quién lo marcó.
         </p>
       )}
-      <LineaPartido partido={partido} />
+      {/* Con el aviso de arriba, «Todavía no hay goles…» sobraría */}
+      {!(gestiona && faltaResultadoSinActa(partido)) && <LineaPartido partido={partido} />}
       {gestiona && convocados.length > 0 && (
         <Boton
           variante="secundario"
@@ -121,18 +146,21 @@ export function SeccionPartido({ partido }: { partido: Partido }) {
         alCerrar={() => setEditando(false)}
         titulo="Editar el partido"
       >
-        <div className={estilos.edicionPartido}>
-          <Boton
-            variante="secundario"
-            onClick={() => {
-              setEditando(false)
-              setResultado(true)
-            }}
-          >
-            {conResultado ? 'Cambiar resultado' : 'Poner resultado'}
-          </Boton>
-          <LineaTiempo partido={partido} gestiona={gestiona} />
-        </div>
+        {/* Solo montada mientras está abierta: cerrada no pinta la lista de sucesos */}
+        {editando && (
+          <div className={estilos.edicionPartido}>
+            <Boton
+              variante="secundario"
+              onClick={() => {
+                setEditando(false)
+                setResultado(true)
+              }}
+            >
+              {conResultado ? 'Cambiar resultado' : 'Poner resultado'}
+            </Boton>
+            <LineaTiempo partido={partido} gestiona={gestiona} />
+          </div>
+        )}
       </HojaInferior>
       <HojaResultado partido={partido} abierta={resultado} alCerrar={() => setResultado(false)} />
       <HojaEvento partido={partido} abierta={evento} alCerrar={() => setEvento(false)} />

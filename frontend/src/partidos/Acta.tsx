@@ -18,7 +18,7 @@ import { useAvisos } from '../componentes/Avisos'
 import { Boton } from '../componentes/Boton'
 import { Cargando } from '../componentes/Cargando'
 import { EstadoVacio } from '../componentes/EstadoVacio'
-import { textoFecha } from '../entrenos/datos'
+import { hoy, textoFecha } from '../entrenos/datos'
 import {
   nombreCompleto,
   puedeGestionarJugadores,
@@ -49,15 +49,25 @@ const tamano = (bytes: number) =>
     : `${(bytes / 1024 / 1024).toFixed(1)} MB`
 
 // Botón que abre el selector de archivos y sube el PDF; al terminar lleva a la revisión
-function SubirActa({
+// Ya jugado (o de hoy), sin resultado, sin sucesos y sin acta: lo más rápido es subir el acta, que se
+// ofrece como acción principal en «El partido» (GH-287)
+export const faltaResultadoSinActa = (partido: Partido) =>
+  partido.estado === 'programado' &&
+  partido.fecha <= hoy() &&
+  partido.eventos.length === 0 &&
+  !partido.acta
+
+export function SubirActa({
   partido,
   texto,
   etiqueta,
+  variante = 'secundario',
 }: {
   partido: Partido
   texto: string
   // Nombre accesible, si el texto visible se queda corto
   etiqueta?: string
+  variante?: 'primario' | 'secundario'
 }) {
   const plantilla = usePlantillaActiva()
   const cliente = useQueryClient()
@@ -96,7 +106,7 @@ function SubirActa({
         }}
       />
       <Boton
-        variante="secundario"
+        variante={variante}
         icono={<FileUp aria-hidden size={18} />}
         cargando={subir.isPending}
         aria-label={etiqueta}
@@ -114,6 +124,8 @@ export function SeccionActa({ partido }: { partido: Partido }) {
   const gestiona = puedeGestionarJugadores(plantilla)
   const importado = partido.eventos.some((e) => e.origen === 'acta')
   if (!partido.acta && !gestiona) return null
+  // Se ofrece arriba, en «El partido», como acción principal (GH-287): aquí sobraría
+  if (faltaResultadoSinActa(partido)) return null
   // Sin acta, una fila de una línea (GH-285)
   if (!partido.acta) {
     return (
