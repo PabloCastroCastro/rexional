@@ -1497,6 +1497,71 @@
   font-weight: var(--peso-fuerte);
 }
 
+/* Secciones vacías de la ficha del partido (GH-285): una fila de una línea con icono, nombre, una
+   frase y la acción. Las que van seguidas forman una sola tarjeta: se anula el hueco del panel y
+   se separan con una línea */
+.filaVacia {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  min-height: calc(var(--altura-tactil) + var(--espacio-4));
+  padding: var(--espacio-2) var(--espacio-3) var(--espacio-2) var(--espacio-4);
+  border-radius: var(--radio-l);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra-1);
+}
+
+.filaVacia + .filaVacia {
+  margin-top: calc(-1 * var(--espacio-5));
+  border-top: 1px solid var(--color-borde);
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+.filaVacia:has(+ .filaVacia) {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+/* La acción, compacta y solo con su texto, para que la fila quepa en una línea */
+.accionFilaVacia {
+  display: flex;
+  flex: none;
+}
+
+.filaVacia .accionFilaVacia button {
+  padding: 0 var(--espacio-2);
+  border-color: transparent;
+  background: transparent;
+  color: var(--color-acento);
+}
+
+.filaVacia .accionFilaVacia svg {
+  display: none;
+}
+
+.iconoFilaVacia {
+  display: grid;
+  flex: none;
+  color: var(--color-texto-suave);
+}
+
+.textoFilaVacia {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
+}
+
+.textoFilaVacia h2 {
+  margin: 0;
+  color: var(--color-texto);
+  font-family: var(--fuente);
+  font-size: var(--texto-base);
+  font-weight: var(--peso-fuerte);
+}
+
 /* Separador entre las filas de la lista de partidos (GH-278) */
 .lista > li:not(:first-child) {
   border-top: 1px solid var(--color-borde);

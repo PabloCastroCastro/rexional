@@ -37,6 +37,7 @@ import {
   useActa,
   usePartido,
 } from './datos'
+import { FilaVacia } from './FilaVacia'
 import estilos from './Partidos.module.css'
 
 // Acta del partido (la ficha en PDF de la federación): subirla, verla y, tras revisar lo leído,
@@ -48,7 +49,16 @@ const tamano = (bytes: number) =>
     : `${(bytes / 1024 / 1024).toFixed(1)} MB`
 
 // Botón que abre el selector de archivos y sube el PDF; al terminar lleva a la revisión
-function SubirActa({ partido, texto }: { partido: Partido; texto: string }) {
+function SubirActa({
+  partido,
+  texto,
+  etiqueta,
+}: {
+  partido: Partido
+  texto: string
+  // Nombre accesible, si el texto visible se queda corto
+  etiqueta?: string
+}) {
   const plantilla = usePlantillaActiva()
   const cliente = useQueryClient()
   const navegar = useNavigate()
@@ -89,6 +99,7 @@ function SubirActa({ partido, texto }: { partido: Partido; texto: string }) {
         variante="secundario"
         icono={<FileUp aria-hidden size={18} />}
         cargando={subir.isPending}
+        aria-label={etiqueta}
         onClick={() => entrada.current?.click()}
       >
         {texto}
@@ -103,6 +114,18 @@ export function SeccionActa({ partido }: { partido: Partido }) {
   const gestiona = puedeGestionarJugadores(plantilla)
   const importado = partido.eventos.some((e) => e.origen === 'acta')
   if (!partido.acta && !gestiona) return null
+  // Sin acta, una fila de una línea (GH-285)
+  if (!partido.acta) {
+    return (
+      <FilaVacia
+        id="acta"
+        icono={<FileText size={20} />}
+        titulo="Acta del partido"
+        frase="El PDF de la federación"
+        accion={<SubirActa partido={partido} texto="Subir" etiqueta="Subir acta" />}
+      />
+    )
+  }
 
   return (
     <section className={estilos.seccion} aria-labelledby="acta">
@@ -110,28 +133,19 @@ export function SeccionActa({ partido }: { partido: Partido }) {
         <FileText aria-hidden size={20} />
         Acta del partido
       </h2>
-      {partido.acta ? (
-        <p className={estilos.secundario}>
-          <a href={urlActa(plantilla.id, partido.id)} target="_blank" rel="noreferrer">
-            {partido.acta.nombreArchivo}
-          </a>{' '}
-          · {tamano(partido.acta.tamano)} · {importado ? 'registrada' : 'sin registrar'}
-        </p>
-      ) : (
-        <p className={estilos.secundario}>
-          Sube la ficha del partido en PDF de la federación: se leen el resultado, los titulares,
-          los cambios, los goles y las tarjetas, y los revisas antes de guardarlos.
-        </p>
-      )}
+      <p className={estilos.secundario}>
+        <a href={urlActa(plantilla.id, partido.id)} target="_blank" rel="noreferrer">
+          {partido.acta.nombreArchivo}
+        </a>{' '}
+        · {tamano(partido.acta.tamano)} · {importado ? 'registrada' : 'sin registrar'}
+      </p>
       {gestiona && (
         <div className={estilos.acciones}>
-          {partido.acta && (
-            <Link to="acta" className={estilos.enlaceBoton}>
-              <FileCheck aria-hidden size={18} />
-              {importado ? 'Revisar el acta' : 'Revisar y registrar'}
-            </Link>
-          )}
-          <SubirActa partido={partido} texto={partido.acta ? 'Subir otra' : 'Subir acta'} />
+          <Link to="acta" className={estilos.enlaceBoton}>
+            <FileCheck aria-hidden size={18} />
+            {importado ? 'Revisar el acta' : 'Revisar y registrar'}
+          </Link>
+          <SubirActa partido={partido} texto="Subir otra" />
         </div>
       )}
     </section>
