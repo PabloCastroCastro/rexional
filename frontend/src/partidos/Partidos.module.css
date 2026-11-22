@@ -360,6 +360,7 @@
   top: var(--altura-cabecera);
   z-index: 5;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--espacio-2);
   padding: var(--espacio-2) var(--espacio-3);
@@ -368,8 +369,10 @@
   box-shadow: var(--sombra-1);
 }
 
+/* El recuento en una línea; si no caben los botones al lado, pasan debajo (GH-290) */
 .barraConvocatoria p {
-  flex: 1;
+  flex: 1 1 auto;
+  white-space: nowrap;
 }
 
 .seleccion {
@@ -1735,6 +1738,35 @@
 
 .fraccionEntrenos[data-nivel="pendiente"] {
   color: var(--color-texto-suave);
+}
+
+/* La convocatoria por líneas (GH-290): cada grupo con su encabezado y cuántos van convocados */
+.lineasConvocatoria {
+  display: grid;
+  gap: var(--espacio-4);
+}
+
+.lineasConvocatoria > section {
+  display: grid;
+  gap: var(--espacio-2);
+}
+
+.cabeceraLinea {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--espacio-2);
+  margin: 0;
+  padding-inline: var(--espacio-1);
+  font-size: var(--texto-base);
+}
+
+.cuentaLinea {
+  color: var(--color-texto-suave);
+  font-family: var(--fuente);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
+  font-variant-numeric: tabular-nums;
 }
 
 /* Separador entre las filas de la lista de partidos (GH-278) */

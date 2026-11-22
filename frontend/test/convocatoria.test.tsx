@@ -113,7 +113,7 @@ describe('elegir convocados', () => {
     expect(screen.getByRole('status')).toHaveTextContent('0 convocados de 3')
     // Hugo, de baja, ya no se puede volver a convocar
     expect(screen.queryByText('Hugo')).not.toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Todos' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Todos los disponibles' }))
     expect(screen.getByRole('status')).toHaveTextContent('3 convocados de 3')
     await userEvent.click(screen.getByText('Íker'))
 
@@ -277,7 +277,7 @@ describe('lesionados en la convocatoria (GH-230)', () => {
     expect(await screen.findByText(/convocados de 2/)).toBeInTheDocument()
     expect(casilla('Brais').closest('li')).toHaveTextContent('Lesionado · sin fecha de vuelta')
 
-    await userEvent.click(screen.getByRole('button', { name: 'Todos' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Todos los disponibles' }))
     expect(casilla('Íker').checked).toBe(true)
     expect(casilla('Brais').checked).toBe(false)
 
@@ -302,7 +302,7 @@ describe('sancionados en la convocatoria (GH-231)', () => {
     expect(screen.getByText('Brais').className).toMatch(/tachado/)
     expect(screen.getByText('Íker').className).not.toMatch(/tachado/)
 
-    await userEvent.click(screen.getByRole('button', { name: 'Todos' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Todos los disponibles' }))
     expect(casilla('Brais').checked).toBe(false)
 
     await userEvent.click(screen.getByText('Brais'))
@@ -407,5 +407,40 @@ describe('cómo ha entrenado desde el partido anterior (GH-288)', () => {
     expect(fraccion).toHaveAccessibleName(
       new RegExp(`^Entrenó ${fue} de 6 desde el partido anterior`),
     )
+  })
+})
+
+describe('convocatoria por líneas (GH-290)', () => {
+  it('agrupa por línea, por dorsal dentro, y cada grupo cuenta sus convocados', async () => {
+    conPartido(senior26, {
+      ...PARTIDO,
+      jugadores: [
+        { ...jugador('j1', 'Íker', 1, true), posicion: 'portero' },
+        { ...jugador('j2', 'Brais', 7, true), posicion: 'defensa' },
+        { ...jugador('j3', 'Zoe', 4, false), posicion: 'defensa' },
+        { ...jugador('j4', 'Hugo', 9, true), posicion: 'delantero' },
+        jugador('j5', 'Xoel', null, false),
+      ],
+    })
+    abrir('/plantillas/p1/partidos/p1/convocatoria')
+    await screen.findByText(/convocados de 5/)
+    // En el orden de un equipo; las líneas sin nadie no salen
+    const grupos = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)
+    expect(grupos.slice(0, 4)).toEqual([
+      'Porteros 1 de 1',
+      'Defensas 1 de 2',
+      'Delanteros 1 de 1',
+      'Sin posición 0 de 1',
+    ])
+    // Dentro, por dorsal: Zoe (4) antes que Brais (7)
+    const defensas = screen.getByRole('list', { name: 'Defensas' })
+    expect(
+      within(defensas)
+        .getAllByRole('checkbox')
+        .map((c) => c.closest('li')?.textContent),
+    ).toEqual([expect.stringContaining('Zoe'), expect.stringContaining('Brais')])
+    // El recuento cambia al marcar
+    await userEvent.click(within(defensas).getByText('Zoe'))
+    expect(screen.getByRole('heading', { name: /^Defensas/ })).toHaveTextContent('Defensas 2 de 2')
   })
 })

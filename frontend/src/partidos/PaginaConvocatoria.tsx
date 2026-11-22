@@ -10,7 +10,12 @@ import { useConfirmacion } from '../componentes/Confirmacion'
 import { EstadoVacio } from '../componentes/EstadoVacio'
 import { textoFecha } from '../entrenos/datos'
 import { BuscadorInvitables, MarcaInvitado } from '../jugadores/BuscadorInvitables'
-import { CLAVE_JUGADORES, type JugadorInvitable, nombreCompleto } from '../jugadores/datos'
+import {
+  CLAVE_JUGADORES,
+  type JugadorInvitable,
+  nombreCompleto,
+  type Posicion,
+} from '../jugadores/datos'
 import { estadoJugador } from '../jugadores/estado'
 import { MarcaLesion } from '../jugadores/Lesiones'
 import { Dorsal } from '../jugadores/PaginaPlantilla'
@@ -23,6 +28,21 @@ import estilos from './Partidos.module.css'
 // Elegir los convocados de un partido: se marca la lista y se guarda entera al final. Se puede
 // convocar también a jugadores de otras plantillas del club: al guardar se crea su ficha de
 // invitado, solo para partidos (GH-188)
+// Las líneas, en el orden de un equipo, y al final quien no tiene posición
+const LINEAS: { id: Posicion | null; nombre: string }[] = [
+  { id: 'portero', nombre: 'Porteros' },
+  { id: 'defensa', nombre: 'Defensas' },
+  { id: 'centrocampista', nombre: 'Centrocampistas' },
+  { id: 'delantero', nombre: 'Delanteros' },
+  { id: null, nombre: 'Sin posición' },
+]
+
+// Por dorsal; sin dorsal, al final y por nombre
+const porDorsal = (
+  a: { dorsal: number | null; nombre: string },
+  b: { dorsal: number | null; nombre: string },
+) => (a.dorsal ?? 1000) - (b.dorsal ?? 1000) || a.nombre.localeCompare(b.nombre, 'es')
+
 export function PaginaConvocatoria() {
   const plantilla = usePlantillaActiva()
   const { partidoId = '' } = useParams()
@@ -120,6 +140,44 @@ function Seleccion({ partido }: { partido: Partido }) {
     if (guardado) navegar(ficha)
   }, [guardado, navegar, ficha])
 
+  // Una fila de la lista para convocar
+  const fila = (j: (typeof convocables)[number]) => {
+    const elegido = elegidos.has(j.jugadorId)
+    return (
+      <li key={j.jugadorId} data-convocado={elegido}>
+        <label>
+          <input type="checkbox" checked={elegido} onChange={() => alternar(j.jugadorId)} />
+          <span className={estilos.casilla} aria-hidden="true">
+            {elegido && <Check size={20} />}
+          </span>
+          <Dorsal
+            dorsal={j.dorsal}
+            estado={estadoJugador({ lesion: j.lesion, sancion: j.sancion })}
+          />
+          <span className={estilos.texto}>
+            <span className={estilos.nombre}>
+              {/* El sancionado para este partido, tachado (GH-248); lo dice el texto de debajo */}
+              <span className={j.sancion ? estilos.tachado : undefined}>{nombreCompleto(j)}</span>
+              {j.tipo === 'invitado' && <MarcaInvitado />}
+              {/* De baja y ya convocado: raro, pero hay que verlo */}
+              {!j.activo && <span className={estilos.secundario}> · baja</span>}
+            </span>
+            {/* Una línea por fila (GH-289): solo lesionados y sancionados llevan segunda */}
+            {(j.lesion || j.sancion) && (
+              <span className={estilos.secundario}>
+                {j.lesion && <MarcaLesion lesion={j.lesion} />}
+                {j.lesion && j.sancion && ' · '}
+                {j.sancion && <MarcaSancion partidos={j.sancion.partidos} />}
+              </span>
+            )}
+          </span>
+          {/* Cómo ha entrenado desde el partido anterior, a la derecha (GH-288) */}
+          <EntrenosPrevios entrenos={j.entrenosPrevios} />
+        </label>
+      </li>
+    )
+  }
+
   return (
     <div className={estilos.pagina}>
       <Link to={ficha} className={estilos.volver}>
@@ -152,7 +210,7 @@ function Seleccion({ partido }: { partido: Partido }) {
             )
           }
         >
-          Todos
+          Todos los disponibles
         </Boton>
         <Boton variante="texto" onClick={() => setElegidos(new Set())}>
           Ninguno
@@ -165,46 +223,28 @@ function Seleccion({ partido }: { partido: Partido }) {
           descripcion="Añádelos desde la pestaña Plantilla para poder convocarlos."
         />
       ) : (
-        <ul className={estilos.seleccion} aria-label="Jugadores">
-          {convocables.map((j) => {
-            const elegido = elegidos.has(j.jugadorId)
+        // Por líneas, como se piensa una convocatoria (GH-290); dentro, por dorsal
+        <div className={estilos.lineasConvocatoria}>
+          {LINEAS.map(({ id, nombre }) => {
+            const deLaLinea = convocables.filter((j) => (j.posicion ?? null) === id).sort(porDorsal)
+            if (deLaLinea.length === 0) return null
+            const marcados = deLaLinea.filter((j) => elegidos.has(j.jugadorId)).length
+            const idTitulo = `linea-${id ?? 'sin-posicion'}`
             return (
-              <li key={j.jugadorId} data-convocado={elegido}>
-                <label>
-                  <input type="checkbox" checked={elegido} onChange={() => alternar(j.jugadorId)} />
-                  <span className={estilos.casilla} aria-hidden="true">
-                    {elegido && <Check size={20} />}
+              <section key={idTitulo} aria-labelledby={idTitulo}>
+                <h2 id={idTitulo} className={estilos.cabeceraLinea}>
+                  {nombre}{' '}
+                  <span className={estilos.cuentaLinea}>
+                    {marcados} de {deLaLinea.length}
                   </span>
-                  <Dorsal
-                    dorsal={j.dorsal}
-                    estado={estadoJugador({ lesion: j.lesion, sancion: j.sancion })}
-                  />
-                  <span className={estilos.texto}>
-                    <span className={estilos.nombre}>
-                      {/* El sancionado para este partido, tachado (GH-248); lo dice el texto de debajo */}
-                      <span className={j.sancion ? estilos.tachado : undefined}>
-                        {nombreCompleto(j)}
-                      </span>
-                      {j.tipo === 'invitado' && <MarcaInvitado />}
-                      {/* De baja y ya convocado: raro, pero hay que verlo */}
-                      {!j.activo && <span className={estilos.secundario}> · baja</span>}
-                    </span>
-                    {/* Una línea por fila (GH-289): solo lesionados y sancionados llevan segunda */}
-                    {(j.lesion || j.sancion) && (
-                      <span className={estilos.secundario}>
-                        {j.lesion && <MarcaLesion lesion={j.lesion} />}
-                        {j.lesion && j.sancion && ' · '}
-                        {j.sancion && <MarcaSancion partidos={j.sancion.partidos} />}
-                      </span>
-                    )}
-                  </span>
-                  {/* Cómo ha entrenado desde el partido anterior, a la derecha (GH-288) */}
-                  <EntrenosPrevios entrenos={j.entrenosPrevios} />
-                </label>
-              </li>
+                </h2>
+                <ul className={estilos.seleccion} aria-label={nombre}>
+                  {deLaLinea.map((j) => fila(j))}
+                </ul>
+              </section>
             )
           })}
-        </ul>
+        </div>
       )}
 
       <section className={estilos.otrasPlantillas} aria-labelledby="otras-plantillas">
