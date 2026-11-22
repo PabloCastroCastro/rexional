@@ -6,6 +6,7 @@ import {
   count,
   desc,
   eq,
+  gt,
   gte,
   inArray,
   lt,
@@ -17,8 +18,11 @@ import {
 import { db } from '../db/cliente.js'
 import {
   actasPartido,
+  asistencias,
   clubes,
   convocados,
+  entrenos,
+  estadoAsistencia,
   estadoPartido,
   eventosPartido,
   fichas,
@@ -30,10 +34,10 @@ import {
   videosPartido,
 } from '../db/schema/index.js'
 import { ErrorApi, EsquemaError, validacionFallida } from '../errores.js'
-import { hoy, textoDia } from '../fechas.js'
+import { hoy, sumarDias, textoDia } from '../fechas.js'
 import { EsquemaLesionActual, lesionEn, lesionesVisibles } from '../lesiones.js'
 import { borrarCarpeta, carpetaDePartido } from '../medios/almacen.js'
-import { type EnvPlantilla, requireRol } from '../permisos.js'
+import { type EnvPlantilla, requireRol, rolAlcanza } from '../permisos.js'
 import { sancionesParaPartido } from '../sanciones.js'
 import {
   EsquemaFecha,
@@ -99,6 +103,17 @@ const EsquemaResumenPartido = z
   })
   .openapi('ResumenPartido')
 
+const EsquemaEntrenoPrevio = z
+  .object({
+    fecha: z.string().openapi({ example: '2026-10-13' }),
+    estado: z
+      .enum(estadoAsistencia.enumValues)
+      .nullable()
+      .openapi({ description: 'null si aún no se ha pasado lista (o no está en ella)' }),
+    motivo: z.string().nullable().openapi({ description: 'De la falta justificada' }),
+  })
+  .openapi('EntrenoPrevio')
+
 const EsquemaJugadorConvocatoria = z
   .object({
     jugadorId: z.uuid(),
@@ -119,6 +134,10 @@ const EsquemaJugadorConvocatoria = z
       .openapi({ description: 'true titular, false suplente; null si no se ha registrado' }),
     minutos: z.int().nullable().openapi({ description: 'Minutos jugados, calculados' }),
     lesion: EsquemaLesionActual,
+    entrenosPrevios: z.array(EsquemaEntrenoPrevio).nullable().openapi({
+      description:
+        'Su asistencia a los entrenos entre el partido anterior y este, en orden (GH-288); en el primero de la temporada, los de la semana anterior. Solo la ve quien gestiona y el propio jugador; si no, null',
+    }),
     sancion: z
       .object({ partidos: z.int().openapi({ description: 'Los que le quedan por cumplir' }) })
       .nullable()
@@ -231,6 +250,67 @@ export async function crearFichasInvitado(
 
 // El partido, la lista para convocar (los activos y los de baja que ya estaban convocados) con la
 // participación de cada uno, y los eventos
+// Los entrenos entre el partido anterior y este (el primero de la temporada: la semana anterior), y
+// la asistencia de cada jugador a cada uno, para convocar (GH-288). Los aplazados no cuentan como
+// partido anterior
+async function asistenciaPrevia(plantillaId: string, partido: { id: string; fecha: string }) {
+  const [anterior] = await db
+    .select({ fecha: partidos.fecha })
+    .from(partidos)
+    .where(
+      and(
+        eq(partidos.plantillaId, plantillaId),
+        lt(partidos.fecha, partido.fecha),
+        ne(partidos.estado, 'aplazado'),
+      ),
+    )
+    .orderBy(desc(partidos.fecha))
+    .limit(1)
+  const desde = anterior ? anterior.fecha : sumarDias(partido.fecha, -8)
+  const lista = await db
+    .select({ id: entrenos.id, fecha: entrenos.fecha })
+    .from(entrenos)
+    .where(
+      and(
+        eq(entrenos.plantillaId, plantillaId),
+        gt(entrenos.fecha, desde),
+        lt(entrenos.fecha, partido.fecha),
+      ),
+    )
+    .orderBy(asc(entrenos.fecha), sql`${entrenos.hora} asc nulls first`, asc(entrenos.id))
+  const filas = lista.length
+    ? await db
+        .select({
+          entrenoId: asistencias.entrenoId,
+          jugadorId: asistencias.jugadorId,
+          estado: asistencias.estado,
+          motivo: asistencias.motivo,
+        })
+        .from(asistencias)
+        .where(
+          inArray(
+            asistencias.entrenoId,
+            lista.map((e) => e.id),
+          ),
+        )
+    : []
+  const porClave = new Map(filas.map((a) => [`${a.entrenoId}:${a.jugadorId}`, a]))
+  return (jugadorId: string) =>
+    lista.map((e) => {
+      const a = porClave.get(`${e.id}:${jugadorId}`)
+      return { fecha: e.fecha, estado: a?.estado ?? null, motivo: a?.motivo ?? null }
+    })
+}
+
+// La asistencia de los demás solo la ve quien gestiona (como las lesiones, GH-52)
+function entrenosVisibles<T extends { jugadorId: string; entrenosPrevios: unknown }>(
+  filas: T[],
+  acceso: { rol: Parameters<typeof rolAlcanza>[0]; jugadorId: string | null },
+): T[] {
+  if (rolAlcanza(acceso.rol, 'delegado')) return filas
+  return filas.map((f) => (f.jugadorId === acceso.jugadorId ? f : { ...f, entrenosPrevios: null }))
+}
+
 export async function detallePartido(plantillaId: string, partidoId: string) {
   const partido = await buscarPartido(plantillaId, partidoId)
   const filas = await db
@@ -304,11 +384,16 @@ export async function detallePartido(plantillaId: string, partidoId: string) {
     .orderBy(asc(videosPartido.createdAt), asc(videosPartido.id))
   // Sanciones para este partido (GH-231), calculadas con los anteriores de su competición
   const sanciones = await sancionesParaPartido(plantillaId, partido.id)
+  const entrenosDe = await asistenciaPrevia(plantillaId, partido)
   return {
     ...partido,
     jugadores: filas.map((f) => {
       const pendientes = sanciones.get(f.jugadorId)
-      return { ...f, sancion: pendientes ? { partidos: pendientes } : null }
+      return {
+        ...f,
+        entrenosPrevios: entrenosDe(f.jugadorId),
+        sancion: pendientes ? { partidos: pendientes } : null,
+      }
     }),
     eventos,
     acta: acta ? { ...acta, subidaEn: acta.subidaEn.toISOString() } : null,
@@ -472,7 +557,13 @@ export const rutasPartidos = () =>
       async (c) => {
         const { pid } = c.req.valid('param')
         const partido = await detallePartido(c.var.plantilla.id, pid)
-        return c.json({ ...partido, jugadores: lesionesVisibles(partido.jugadores, c.var) }, 200)
+        return c.json(
+          {
+            ...partido,
+            jugadores: entrenosVisibles(lesionesVisibles(partido.jugadores, c.var), c.var),
+          },
+          200,
+        )
       },
     )
     .openapi(

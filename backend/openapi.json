@@ -2278,6 +2278,16 @@
           "lesion": {
             "$ref": "#/components/schemas/LesionActual"
           },
+          "entrenosPrevios": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/EntrenoPrevio"
+            },
+            "description": "Su asistencia a los entrenos entre el partido anterior y este, en orden (GH-288); en el primero de la temporada, los de la semana anterior. Solo la ve quien gestiona y el propio jugador; si no, null"
+          },
           "sancion": {
             "type": [
               "object",
@@ -2308,7 +2318,42 @@
           "titular",
           "minutos",
           "lesion",
+          "entrenosPrevios",
           "sancion"
+        ]
+      },
+      "EntrenoPrevio": {
+        "type": "object",
+        "properties": {
+          "fecha": {
+            "type": "string",
+            "example": "2026-10-13"
+          },
+          "estado": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "asiste",
+              "justificada",
+              "falta",
+              null
+            ],
+            "description": "null si aún no se ha pasado lista (o no está en ella)"
+          },
+          "motivo": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "De la falta justificada"
+          }
+        },
+        "required": [
+          "fecha",
+          "estado",
+          "motivo"
         ]
       },
       "EventoPartido": {

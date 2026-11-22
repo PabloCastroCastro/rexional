@@ -87,6 +87,7 @@ const detalle = (r: ResumenPartido, convocados: string[] = []): Partido => {
       lesion: null,
       convocado: convocados.includes(jugadorId as string),
       sancion: null,
+      entrenosPrevios: null,
       titular: null,
       minutos: null,
     })),

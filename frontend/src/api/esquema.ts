@@ -10176,11 +10176,24 @@ export interface components {
             /** @description Minutos jugados, calculados */
             minutos: number | null;
             lesion: components["schemas"]["LesionActual"];
+            /** @description Su asistencia a los entrenos entre el partido anterior y este, en orden (GH-288); en el primero de la temporada, los de la semana anterior. Solo la ve quien gestiona y el propio jugador; si no, null */
+            entrenosPrevios: components["schemas"]["EntrenoPrevio"][] | null;
             /** @description Si está sancionado para este partido (GH-231), en su competición; null si puede jugar */
             sancion: {
                 /** @description Los que le quedan por cumplir */
                 partidos: number;
             } | null;
+        };
+        EntrenoPrevio: {
+            /** @example 2026-10-13 */
+            fecha: string;
+            /**
+             * @description null si aún no se ha pasado lista (o no está en ella)
+             * @enum {string|null}
+             */
+            estado: "asiste" | "justificada" | "falta" | null;
+            /** @description De la falta justificada */
+            motivo: string | null;
         };
         EventoPartido: {
             /** Format: uuid */

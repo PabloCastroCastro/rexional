@@ -37,6 +37,7 @@ const jugador = (
   lesion: null,
   convocado,
   sancion: null,
+  entrenosPrevios: null,
   titular: null,
   minutos: null,
 })
@@ -316,6 +317,89 @@ describe('sancionados en la convocatoria (GH-231)', () => {
       expect(enviado('PUT /api/plantillas/p1/partidos/p1/convocados')).toEqual([
         { jugadores: ['j1', 'j2'] },
       ]),
+    )
+  })
+})
+
+describe('cómo ha entrenado desde el partido anterior (GH-288)', () => {
+  type Previo = {
+    fecha: string
+    estado: 'asiste' | 'justificada' | 'falta' | null
+    motivo: string | null
+  }
+  const previo = (
+    fecha: string,
+    estado: Previo['estado'],
+    motivo: string | null = null,
+  ): Previo => ({
+    fecha,
+    estado,
+    motivo,
+  })
+
+  it('hasta 5 entrenos, un punto por sesión; sin texto en pantalla, pero sí para el lector', async () => {
+    conPartido(senior26, {
+      ...PARTIDO,
+      jugadores: [
+        {
+          ...jugador('j1', 'Íker', 1, false),
+          // Martes 13, jueves 15 y viernes 16 de octubre de 2026
+          entrenosPrevios: [
+            previo('2026-10-13', 'asiste'),
+            previo('2026-10-15', 'justificada', 'Trabajo'),
+            previo('2026-10-16', null),
+          ],
+        },
+        { ...jugador('j2', 'Brais', 7, false), entrenosPrevios: [] },
+      ],
+    })
+    abrir('/plantillas/p1/partidos/p1/convocatoria')
+    const fila = (await screen.findByText('Íker')).closest('li') as HTMLElement
+    const puntos = within(fila).getByRole('img')
+    const texto =
+      'Entrenó 1 de 2 desde el partido anterior. Faltó el jueves · Trabajo. Falta pasar lista del viernes.'
+    expect(puntos).toHaveAccessibleName(texto)
+    expect(puntos).toHaveAttribute('title', texto)
+    expect([...puntos.children].map((p) => p.getAttribute('data-estado'))).toEqual([
+      'fue',
+      'falto',
+      'pendiente',
+    ])
+    expect(puntos).toHaveTextContent('')
+    // Sin entrenos en ese periodo, nada
+    const brais = screen.getByText('Brais').closest('li') as HTMLElement
+    expect(within(brais).queryByRole('img')).not.toBeInTheDocument()
+  })
+
+  it.each([
+    [5, 'alto'],
+    [4, 'medio'],
+    [3, 'bajo'],
+  ])('con 6 o más, la fracción (%i de 6) en el color de su nivel (%s)', async (fue, nivel) => {
+    const fechas = [
+      '2026-10-05',
+      '2026-10-06',
+      '2026-10-07',
+      '2026-10-08',
+      '2026-10-09',
+      '2026-10-12',
+    ]
+    conPartido(senior26, {
+      ...PARTIDO,
+      jugadores: [
+        {
+          ...jugador('j1', 'Íker', 1, false),
+          entrenosPrevios: fechas.map((f, i) => previo(f, i < fue ? 'asiste' : 'falta')),
+        },
+      ],
+    })
+    abrir('/plantillas/p1/partidos/p1/convocatoria')
+    const fila = (await screen.findByText('Íker')).closest('li') as HTMLElement
+    const fraccion = within(fila).getByRole('img')
+    expect(fraccion).toHaveTextContent(`${fue}/6`)
+    expect(fraccion).toHaveAttribute('data-nivel', nivel)
+    expect(fraccion).toHaveAccessibleName(
+      new RegExp(`^Entrenó ${fue} de 6 desde el partido anterior`),
     )
   })
 })

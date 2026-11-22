@@ -23,6 +23,7 @@ import { Dorsal } from '../jugadores/PaginaPlantilla'
 import { MarcaSancion } from '../jugadores/Sanciones'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
 import { CLAVE_PARTIDOS, type Partido, usePartido } from './datos'
+import { EntrenosPrevios } from './EntrenosPrevios'
 import estilos from './Partidos.module.css'
 
 // Elegir los convocados de un partido: se marca la lista y se guarda entera al final. Se puede
@@ -215,6 +216,8 @@ function Seleccion({ partido }: { partido: Partido }) {
                       )}
                     </span>
                   </span>
+                  {/* Cómo ha entrenado desde el partido anterior, a la derecha (GH-288) */}
+                  <EntrenosPrevios entrenos={j.entrenosPrevios} />
                 </label>
               </li>
             )
