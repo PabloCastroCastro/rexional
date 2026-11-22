@@ -239,7 +239,7 @@ describe('convocar a jugadores de otras plantillas', () => {
     await userEvent.click(await screen.findByRole('button', { name: /Xoel/ }))
     const externos = screen.getByRole('list', { name: 'Convocados de otras plantillas' })
     expect(externos).toHaveTextContent(/Xoel.*Senior B/)
-    expect(screen.getByRole('status')).toHaveTextContent('3 convocados de 3')
+    expect(screen.getByRole('status')).toHaveTextContent('3 convocados')
     // Ya elegido, no vuelve a salir en el buscador
     expect(
       within(screen.getByRole('list', { name: 'Jugadores de otras plantillas' })).queryByText(

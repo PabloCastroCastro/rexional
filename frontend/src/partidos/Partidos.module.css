@@ -362,17 +362,13 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  /* Solo «Todos los disponibles» y «Ninguno»: el recuento va en la barra fija (GH-291) */
+  justify-content: flex-end;
   gap: var(--espacio-2);
   padding: var(--espacio-2) var(--espacio-3);
   border-radius: var(--radio-m);
   background: var(--color-superficie);
   box-shadow: var(--sombra-1);
-}
-
-/* El recuento en una línea; si no caben los botones al lado, pasan debajo (GH-290) */
-.barraConvocatoria p {
-  flex: 1 1 auto;
-  white-space: nowrap;
 }
 
 .seleccion {
@@ -1767,6 +1763,36 @@
   font-size: var(--texto-sm);
   font-weight: var(--peso-medio);
   font-variant-numeric: tabular-nums;
+}
+
+/* La barra fija de la convocatoria (GH-291): cuántos van y su reparto, y Guardar */
+.pieConvocatoria {
+  align-items: center;
+  justify-content: space-between;
+}
+
+.resumenConvocatoria {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.repartoLineas {
+  color: var(--color-texto-suave);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-fuerte);
+  letter-spacing: 0.04em;
+}
+
+.sinPortero {
+  color: var(--color-aviso);
+  font-weight: var(--peso-fuerte);
+}
+
+.resumenConvocatoria > p:first-child,
+.sinCortar {
+  white-space: nowrap;
 }
 
 /* Separador entre las filas de la lista de partidos (GH-278) */
