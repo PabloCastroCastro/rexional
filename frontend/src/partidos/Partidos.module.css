@@ -420,8 +420,10 @@
   background: var(--color-primario);
 }
 
-.seleccion li[data-convocado="false"] label {
-  opacity: 0.6;
+/* El convocado se distingue por la casilla y un fondo suave del acento; el resto se lee normal
+   (GH-289) */
+.seleccion li[data-convocado="true"] label {
+  background: color-mix(in srgb, var(--color-acento) 10%, var(--color-superficie));
 }
 
 /* Sancionado para el partido (GH-248): el nombre tachado; «Sancionado · N partidos» va debajo */

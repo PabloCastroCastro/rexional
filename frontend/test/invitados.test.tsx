@@ -233,9 +233,8 @@ describe('convocar a jugadores de otras plantillas', () => {
     abrir('/plantillas/p1/partidos/p1/convocatoria')
 
     const lista = await screen.findByRole('list', { name: 'Jugadores' })
-    expect(within(lista).getAllByRole('listitem')[1]).toHaveTextContent(
-      /Mateo.*Invitado.*Invitado · Juvenil A/,
-    )
+    // Marcado como invitado junto al nombre; en una línea, sin segunda (GH-289)
+    expect(within(lista).getAllByRole('listitem')[1]).toHaveTextContent(/^.*Mateo.*Invitado$/)
 
     await userEvent.click(await screen.findByRole('button', { name: /Xoel/ }))
     const externos = screen.getByRole('list', { name: 'Convocados de otras plantillas' })
