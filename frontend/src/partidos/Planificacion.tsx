@@ -12,6 +12,7 @@ import { subirConProgreso, textoMb, useLimites } from '../ejercicios/datos'
 import { puedeGestionarJugadores } from '../jugadores/datos'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
 import { CLAVE_PARTIDOS, type Partido } from './datos'
+import { FilaVacia } from './FilaVacia'
 import estilos from './Partidos.module.css'
 
 // Planificación del partido (GH-147): PDF o fotos con la charla, el plan táctico, el rival… Solo los
@@ -55,6 +56,49 @@ export function SeccionPlanificacion({ partido }: { partido: Partido }) {
   })
   if (!gestiona) return null
   const lleno = (archivos.data?.length ?? 0) >= MAXIMO_ARCHIVOS
+  const hoja = (
+    <HojaInferior
+      abierta={editando !== undefined}
+      alCerrar={() => setEditando(undefined)}
+      titulo={editando ? 'Cambiar título' : 'Subir archivo'}
+    >
+      {editando === null && (
+        <FormularioSubida partido={partido} alCerrar={() => setEditando(undefined)} />
+      )}
+      {editando && (
+        <FormularioTitulo
+          partido={partido}
+          archivo={editando}
+          alCerrar={() => setEditando(undefined)}
+        />
+      )}
+    </HojaInferior>
+  )
+
+  // Vacía, una fila de una línea (GH-285)
+  // También mientras se cargan: así la hoja no cambia de sitio si se abre antes de que lleguen
+  if (!archivos.isError && (archivos.data?.length ?? 0) === 0) {
+    return (
+      <FilaVacia
+        id="planificacion"
+        icono={<ClipboardList size={20} />}
+        titulo="Planificación"
+        frase="Charla, plan táctico o análisis del rival"
+        accion={
+          <Boton
+            variante="secundario"
+            icono={<Upload aria-hidden size={18} />}
+            aria-label="Subir archivo"
+            onClick={() => setEditando(null)}
+          >
+            Subir
+          </Boton>
+        }
+      >
+        {hoja}
+      </FilaVacia>
+    )
+  }
 
   return (
     <section className={estilos.seccion} aria-labelledby="planificacion">
@@ -62,18 +106,11 @@ export function SeccionPlanificacion({ partido }: { partido: Partido }) {
         <ClipboardList aria-hidden size={20} />
         Planificación
       </h2>
-      {archivos.isPending ? (
-        <p className={estilos.secundario}>Cargando archivos…</p>
-      ) : archivos.isError ? (
+      {archivos.isError ? (
         <p className={estilos.secundario}>No se han podido cargar los archivos.</p>
-      ) : archivos.data.length === 0 ? (
-        <p className={estilos.secundario}>
-          Sube la charla, el plan táctico o el análisis del rival (PDF o foto). Solo los ve el
-          cuerpo técnico.
-        </p>
       ) : (
         <ul className={estilos.lineaTiempo} aria-label="Archivos de planificación">
-          {archivos.data.map((a) => (
+          {(archivos.data ?? []).map((a) => (
             <FilaArchivo key={a.id} partido={partido} archivo={a} alEditar={() => setEditando(a)} />
           ))}
         </ul>
@@ -93,22 +130,7 @@ export function SeccionPlanificacion({ partido }: { partido: Partido }) {
           </Boton>
         )}
       </div>
-      <HojaInferior
-        abierta={editando !== undefined}
-        alCerrar={() => setEditando(undefined)}
-        titulo={editando ? 'Cambiar título' : 'Subir archivo'}
-      >
-        {editando === null && (
-          <FormularioSubida partido={partido} alCerrar={() => setEditando(undefined)} />
-        )}
-        {editando && (
-          <FormularioTitulo
-            partido={partido}
-            archivo={editando}
-            alCerrar={() => setEditando(undefined)}
-          />
-        )}
-      </HojaInferior>
+      {hoja}
     </section>
   )
 }

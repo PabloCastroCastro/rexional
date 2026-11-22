@@ -11,6 +11,7 @@ import { hoy } from '../entrenos/datos'
 import { puedeGestionarJugadores } from '../jugadores/datos'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
 import { CLAVE_PARTIDOS, type Partido } from './datos'
+import { FilaVacia } from './FilaVacia'
 import estilos from './Partidos.module.css'
 
 // Notas del cuerpo técnico durante el partido (GH-149): tácticas, incidencias u otras, con minuto
@@ -74,6 +75,40 @@ export function SeccionNotas({ partido }: { partido: Partido }) {
     enabled: gestiona,
   })
   if (!gestiona) return null
+  const hoja = (
+    <HojaInferior
+      abierta={editando !== undefined}
+      alCerrar={() => setEditando(undefined)}
+      titulo={editando ? 'Cambiar nota' : 'Anotar'}
+    >
+      {editando !== undefined && (
+        <FormularioNota partido={partido} nota={editando} alCerrar={() => setEditando(undefined)} />
+      )}
+    </HojaInferior>
+  )
+  // Sin notas (o mientras se cargan), una fila de una línea (GH-285): así la hoja no cambia de sitio
+  // si se abre antes de que lleguen
+  if (!notas.isError && (notas.data?.length ?? 0) === 0) {
+    return (
+      <FilaVacia
+        id="notas"
+        icono={<NotebookPen size={20} />}
+        titulo="Notas"
+        frase="Solo para el cuerpo técnico"
+        accion={
+          <Boton
+            variante="secundario"
+            icono={<NotebookPen aria-hidden size={18} />}
+            onClick={() => setEditando(null)}
+          >
+            Anotar
+          </Boton>
+        }
+      >
+        {hoja}
+      </FilaVacia>
+    )
+  }
 
   return (
     <section className={estilos.seccion} aria-labelledby="notas">
@@ -81,18 +116,11 @@ export function SeccionNotas({ partido }: { partido: Partido }) {
         <NotebookPen aria-hidden size={20} />
         Notas
       </h2>
-      {notas.isPending ? (
-        <p className={estilos.secundario}>Cargando notas…</p>
-      ) : notas.isError ? (
+      {notas.isError ? (
         <p className={estilos.secundario}>No se han podido cargar las notas.</p>
-      ) : notas.data.length === 0 ? (
-        <p className={estilos.secundario}>
-          Apunta detalles tácticos o incidencias para repasarlos después. Solo las ve el cuerpo
-          técnico.
-        </p>
       ) : (
         <ol className={estilos.lineaTiempo} aria-label="Notas">
-          {notas.data.map((n) => (
+          {(notas.data ?? []).map((n) => (
             <FilaNota key={n.id} partido={partido} nota={n} alEditar={() => setEditando(n)} />
           ))}
         </ol>
@@ -106,19 +134,7 @@ export function SeccionNotas({ partido }: { partido: Partido }) {
           Anotar
         </Boton>
       </div>
-      <HojaInferior
-        abierta={editando !== undefined}
-        alCerrar={() => setEditando(undefined)}
-        titulo={editando ? 'Cambiar nota' : 'Anotar'}
-      >
-        {editando !== undefined && (
-          <FormularioNota
-            partido={partido}
-            nota={editando}
-            alCerrar={() => setEditando(undefined)}
-          />
-        )}
-      </HojaInferior>
+      {hoja}
     </section>
   )
 }

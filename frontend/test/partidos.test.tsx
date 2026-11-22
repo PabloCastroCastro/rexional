@@ -587,6 +587,35 @@ describe('ficha del partido', () => {
     expect(screen.queryByRole('button', { name: 'Borrar partido' })).not.toBeInTheDocument()
   })
 
+  it('acta, vídeos y notas vacíos son filas de una línea, juntas en una tarjeta (GH-285)', async () => {
+    conPartidos()
+    manejadores['GET /api/plantillas/p1/partidos/p1/notas'] = () => json([])
+    abrir('/plantillas/p1/partidos/p1?pestana=partido')
+    const notas = await screen.findByRole('region', { name: 'Notas' })
+    const acta = screen.getByRole('region', { name: 'Acta del partido' })
+    const videos = screen.getByRole('region', { name: 'Vídeos' })
+    // Cada una: su nombre, una frase corta y la acción a la derecha
+    expect(acta).toHaveTextContent('Acta del partidoEl PDF de la federaciónSubir')
+    expect(within(acta).getByRole('button', { name: 'Subir acta' })).toBeInTheDocument()
+    expect(videos).toHaveTextContent('VídeosYouTube, Drive… uno por parteAñadir')
+    expect(within(videos).getByRole('button', { name: 'Añadir vídeo' })).toBeInTheDocument()
+    expect(notas).toHaveTextContent('NotasSolo para el cuerpo técnicoAnotar')
+    // Seguidas, para verse como una sola tarjeta
+    expect(acta.nextElementSibling).toBe(videos)
+    expect(videos.nextElementSibling).toBe(notas)
+    for (const fila of [acta, videos, notas]) expect(fila).toHaveClass('filaVacia')
+  })
+
+  it('la planificación vacía, una fila en Previa (GH-285)', async () => {
+    conPartidos()
+    manejadores['GET /api/plantillas/p1/partidos/p1/archivos'] = () => json([])
+    abrir('/plantillas/p1/partidos/p1?pestana=previa')
+    const fila = await screen.findByRole('region', { name: 'Planificación' })
+    expect(fila).toHaveTextContent('PlanificaciónCharla, plan táctico o análisis del rivalSubir')
+    await userEvent.click(within(fila).getByRole('button', { name: 'Subir archivo' }))
+    expect(screen.getByRole('dialog', { name: 'Subir archivo' })).toBeInTheDocument()
+  })
+
   it('un partido sin convocatoria lo dice', async () => {
     conPartidos()
     abrir('/plantillas/p1/partidos/p2')
