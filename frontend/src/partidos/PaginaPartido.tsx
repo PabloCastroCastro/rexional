@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { ChevronLeft, MessageCircle, Pencil, Trash2, UserCheck, Users } from 'lucide-react'
+import { ChevronLeft, MessageCircle, Pencil, Shirt, Trash2, UserCheck, Users } from 'lucide-react'
 import { type KeyboardEvent, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import { api, enviar } from '../api/cliente'
@@ -9,11 +9,12 @@ import { Cargando } from '../componentes/Cargando'
 import { useConfirmacion } from '../componentes/Confirmacion'
 import { EstadoVacio } from '../componentes/EstadoVacio'
 import { hoy } from '../entrenos/datos'
-import { nombreCompleto, nombresCortos, puedeGestionarJugadores } from '../jugadores/datos'
+import { nombresCortos, puedeGestionarJugadores } from '../jugadores/datos'
 import { Dorsal } from '../jugadores/PaginaPlantilla'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
 import { SeccionActa } from './Acta'
 import { CLAVE_PARTIDOS, type Partido, usePartido } from './datos'
+import { FilaVacia } from './FilaVacia'
 import { FormularioPartido } from './FormularioPartido'
 import { SeccionPartido } from './Jugado'
 import { Mensaje } from './Mensaje'
@@ -139,7 +140,7 @@ export function PaginaPartido() {
         {pestana === 'partido' ? (
           <>
             <SeccionPartido partido={p} />
-            <SeccionAlineacion convocados={convocados} />
+            <SeccionAlineacion convocados={convocados} gestiona={gestiona} />
             <SeccionActa partido={p} />
             <SeccionVideos partido={p} />
             <SeccionNotas partido={p} />
@@ -240,39 +241,73 @@ function ListaCorta({ jugadores, titulo }: { jugadores: Partido['jugadores']; ti
   )
 }
 
-// Titulares y suplentes con sus minutos, en la pestaña Partido (GH-283); sin alineación, nada
-function SeccionAlineacion({ convocados }: { convocados: Partido['jugadores'] }) {
-  if (!convocados.some((j) => j.titular !== null)) return null
-  const grupo = (titulo: string, jugadores: Partido['jugadores']) =>
-    jugadores.length > 0 && (
-      <ul className={estilos.convocados} aria-label={titulo}>
+// La alineación, aparte de la línea del partido (GH-286): en dos columnas, titulares y suplentes,
+// con los minutos de cada uno y su propio «Editar». Sin titulares indicados, una fila para indicarlos
+function SeccionAlineacion({
+  convocados,
+  gestiona,
+}: {
+  convocados: Partido['jugadores']
+  gestiona: boolean
+}) {
+  const nombres = nombresCortos(convocados)
+  if (!convocados.some((j) => j.titular !== null)) {
+    if (!gestiona || convocados.length === 0) return null
+    return (
+      <FilaVacia
+        id="alineacion"
+        icono={<Shirt size={20} />}
+        titulo="Alineación"
+        frase="Titulares, suplentes y minutos"
+        accion={
+          <Link to="alineacion" className={estilos.enlaceEditar} aria-label="Indicar titulares">
+            Indicar
+          </Link>
+        }
+      />
+    )
+  }
+  const columna = (titulo: string, jugadores: Partido['jugadores']) => (
+    <div className={estilos.columnaAlineacion}>
+      <h3 className={estilos.subtitulo}>{titulo}</h3>
+      <ul className={estilos.listaAlineacion} aria-label={titulo}>
         {jugadores.map((j) => (
-          <li key={j.jugadorId}>
+          <li key={j.jugadorId} className={estilos.jugadorAlineacion}>
             <Dorsal dorsal={j.dorsal} />
-            <span>
-              {nombreCompleto(j)}
-              {j.minutos !== null && <span className={estilos.secundario}> · {j.minutos}'</span>}
+            {/* Los minutos debajo, para que el nombre tenga todo el ancho y no se parta */}
+            <span className={estilos.nombreAlineacion}>
+              <span>{nombres.get(j.jugadorId)}</span>
+              {j.minutos !== null && <span className={estilos.minutosJugador}>{j.minutos}'</span>}
             </span>
           </li>
         ))}
       </ul>
-    )
+    </div>
+  )
   return (
     <section className={estilos.seccion} aria-labelledby="alineacion">
-      <h2 id="alineacion">
-        <Users aria-hidden size={20} />
-        Alineación
-      </h2>
-      <h3 className={estilos.subtitulo}>Titulares</h3>
-      {grupo(
-        'Titulares',
-        convocados.filter((j) => j.titular === true),
-      )}
-      <h3 className={estilos.subtitulo}>Suplentes</h3>
-      {grupo(
-        'Suplentes',
-        convocados.filter((j) => j.titular === false),
-      )}
+      <div className={estilos.cabeceraSeccion}>
+        <h2 id="alineacion">
+          <Shirt aria-hidden size={20} />
+          Alineación
+        </h2>
+        {gestiona && (
+          <Link to="alineacion" className={estilos.enlaceEditar} aria-label="Editar la alineación">
+            <Pencil aria-hidden size={16} />
+            Editar
+          </Link>
+        )}
+      </div>
+      <div className={estilos.alineacion}>
+        {columna(
+          'Titulares',
+          convocados.filter((j) => j.titular === true),
+        )}
+        {columna(
+          'Suplentes',
+          convocados.filter((j) => j.titular === false),
+        )}
+      </div>
     </section>
   )
 }

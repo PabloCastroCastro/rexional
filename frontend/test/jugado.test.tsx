@@ -2,6 +2,10 @@ import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import type { Partido } from '../src/partidos/datos'
+import { filasDelPartido } from '../src/partidos/Jugado'
+
+type Evento = Partido['eventos'][number]
+
 import {
   abrir,
   conDatos,
@@ -103,6 +107,16 @@ function conPartido(p = senior26, partido = PARTIDO) {
 
 const hoja = () => screen.getByRole('dialog')
 
+// «Editar» abre la edición del partido (GH-286) y, en ella, se elige qué hacer
+async function editarYElegir(boton: string) {
+  await userEvent.click(await screen.findByRole('button', { name: 'Editar el partido' }))
+  await userEvent.click(
+    within(screen.getByRole('dialog', { name: 'Editar el partido' })).getByRole('button', {
+      name: boton,
+    }),
+  )
+}
+
 describe('partido jugado', () => {
   it('muestra el marcador, la línea de tiempo y los minutos de cada convocado', async () => {
     conPartido()
@@ -117,8 +131,15 @@ describe('partido jugado', () => {
         .getAllByRole('listitem')
         .map((li) => li.textContent),
     ).toEqual(["19'Gol de Braisacta", "30'Amarilla a Íker"])
-    // La alineación con minutos, en la pestaña Partido (GH-283)
-    expect(screen.getByRole('list', { name: 'Suplentes' })).toHaveTextContent("Zoe · 0'")
+    // La alineación aparte, en dos columnas con los minutos (GH-286)
+    expect(screen.getByRole('list', { name: 'Titulares' })).toHaveTextContent('Brais')
+    expect(screen.getByRole('list', { name: 'Suplentes' })).toHaveTextContent("Zoe0'")
+    expect(screen.getByRole('link', { name: 'Editar la alineación' })).toHaveAttribute(
+      'href',
+      '/plantillas/p1/partidos/p1/alineacion',
+    )
+    // En la vista, sin papeleras
+    expect(screen.queryByRole('button', { name: /Borrar:/ })).not.toBeInTheDocument()
     // 2–1 con un solo gol registrado: se avisa de cómo añadir el otro
     expect(screen.getByRole('note')).toHaveTextContent('Falta 1 gol por asignar')
   })
@@ -126,7 +147,7 @@ describe('partido jugado', () => {
   it('se cambia el resultado con los contadores y se aplaza', async () => {
     conPartido()
     abrir('/plantillas/p1/partidos/p1')
-    await userEvent.click(await screen.findByRole('button', { name: 'Cambiar resultado' }))
+    await editarYElegir('Cambiar resultado')
     await userEvent.click(within(hoja()).getByRole('button', { name: 'Sumar un gol: Senior' }))
     await userEvent.click(within(hoja()).getByRole('button', { name: 'Quitar un gol: CD Lalín' }))
     await userEvent.click(within(hoja()).getByRole('button', { name: 'Guardar resultado' }))
@@ -135,7 +156,7 @@ describe('partido jugado', () => {
       { golesFavor: 3, golesContra: 0 },
     ])
 
-    await userEvent.click(screen.getByRole('button', { name: 'Cambiar resultado' }))
+    await editarYElegir('Cambiar resultado')
     await userEvent.click(within(hoja()).getByRole('button', { name: 'Aplazar partido' }))
     expect(await screen.findByText('Partido aplazado')).toBeInTheDocument()
     expect(enviado('PATCH /api/plantillas/p1/partidos/p1')).toEqual([{ estado: 'aplazado' }])
@@ -145,7 +166,9 @@ describe('partido jugado', () => {
   it('un gol con asistencia se registra de una vez; los errores del servidor se ven en la hoja', async () => {
     conPartido()
     abrir('/plantillas/p1/partidos/p1')
-    await userEvent.click(await screen.findByRole('button', { name: 'Añadir' }))
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Añadir gol, tarjeta o cambio' }),
+    )
     // Zoe es suplente y no ha entrado: no aparece para marcar
     expect(within(hoja()).getByLabelText('Jugador')).not.toHaveTextContent('Zoe')
     await userEvent.selectOptions(within(hoja()).getByLabelText('Jugador'), 'j1')
@@ -172,7 +195,9 @@ describe('partido jugado', () => {
   it('un cambio: entra un suplente y sale alguien del campo, con minuto', async () => {
     conPartido()
     abrir('/plantillas/p1/partidos/p1')
-    await userEvent.click(await screen.findByRole('button', { name: 'Añadir' }))
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Añadir gol, tarjeta o cambio' }),
+    )
     await userEvent.click(within(hoja()).getByRole('button', { name: 'Cambio' }))
     expect(within(hoja()).getByLabelText('Entra')).toHaveTextContent('Zoe')
     expect(within(hoja()).getByLabelText('Entra')).not.toHaveTextContent('Íker')
@@ -200,7 +225,9 @@ describe('partido jugado', () => {
       jugadores: PARTIDO.jugadores.map((j) => ({ ...j, titular: null, minutos: null })),
     })
     abrir('/plantillas/p1/partidos/p1')
-    await userEvent.click(await screen.findByRole('button', { name: 'Añadir' }))
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Añadir gol, tarjeta o cambio' }),
+    )
     await userEvent.click(within(hoja()).getByRole('button', { name: 'Cambio' }))
     expect(within(hoja()).getByRole('link', { name: 'titulares y suplentes' })).toBeInTheDocument()
   })
@@ -208,7 +235,7 @@ describe('partido jugado', () => {
   it('se borra un evento con confirmación', async () => {
     conPartido()
     abrir('/plantillas/p1/partidos/p1')
-    await userEvent.click(await screen.findByRole('button', { name: 'Borrar: Amarilla a Íker' }))
+    await editarYElegir('Borrar: Amarilla a Íker')
     await userEvent.click(
       within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Borrar' }),
     )
@@ -220,10 +247,75 @@ describe('partido jugado', () => {
     conPartido(plantilla('p1', 'Senior', '2026-27', { rol: 'jugador', esAdminClub: false }))
     abrir('/plantillas/p1/partidos/p1')
     expect(await screen.findByText('2–1')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Añadir' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Cambiar resultado' })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Añadir gol, tarjeta o cambio' }),
+    ).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Editar el partido' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Editar la alineación' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Borrar:/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('note')).not.toBeInTheDocument()
+  })
+})
+
+describe('la línea del partido (GH-286)', () => {
+  const ev = (
+    id: string,
+    tipo: Evento['tipo'],
+    minuto: number | null,
+    jugadorId: string | null = null,
+  ): Evento => ({
+    id,
+    jugadorId,
+    tipo,
+    minuto,
+    origen: 'manual',
+  })
+
+  it('el gol con su asistencia, el cambio junto, el descanso y los goles del rival sin minuto', async () => {
+    conPartido(senior26, {
+      ...PARTIDO,
+      eventos: [
+        ev('a', 'asistencia', 19, 'j2'),
+        ev('g', 'gol', 19, 'j1'),
+        ev('r1', 'gol_rival', 33),
+        ev('s', 'sale', 60, 'j2'),
+        ev('e', 'entra', 60, 'j3'),
+        ev('r2', 'gol_rival', null),
+        ev('r3', 'gol_rival', null),
+      ],
+    })
+    abrir('/plantillas/p1/partidos/p1?pestana=partido')
+    const linea = await screen.findByRole('list', { name: 'Línea de tiempo' })
+    expect(
+      within(linea)
+        .getAllByRole('listitem')
+        .map((li) => li.textContent),
+    ).toEqual([
+      "19'Gol de ÍkerAsistencia de Brais",
+      "33'Gol de CD Lalín",
+      'Descanso',
+      "60'Entra ZoeSale Brais",
+    ])
+    // Los del rival sin minuto, resumidos al final
+    expect(screen.getByText('CD Lalín marcó 2 goles sin minuto')).toBeInTheDocument()
+  })
+
+  it('ordena por minuto y, sin sucesos con minuto en la 2.ª parte, no hay descanso', () => {
+    const filas = filasDelPartido([
+      ev('b', 'amarilla', 30, 'j1'),
+      ev('a', 'gol', 10, 'j2'),
+      ev('n', 'roja', null, 'j3'),
+    ])
+    expect(filas.map((f) => (f.clase === 'suceso' ? f.principal.id : 'descanso'))).toEqual([
+      'a',
+      'b',
+      'n',
+    ])
+  })
+
+  it('una asistencia sin gol en su minuto va sola', () => {
+    const filas = filasDelPartido([ev('a', 'asistencia', 20, 'j2'), ev('g', 'gol', 21, 'j1')])
+    expect(filas).toHaveLength(2)
   })
 })
 
