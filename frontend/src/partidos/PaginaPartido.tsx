@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { ChevronLeft, MessageCircle, Trash2, UserCheck, Users } from 'lucide-react'
+import { ChevronLeft, MessageCircle, Pencil, Trash2, UserCheck, Users } from 'lucide-react'
 import { type KeyboardEvent, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import { api, enviar } from '../api/cliente'
@@ -9,7 +9,7 @@ import { Cargando } from '../componentes/Cargando'
 import { useConfirmacion } from '../componentes/Confirmacion'
 import { EstadoVacio } from '../componentes/EstadoVacio'
 import { hoy } from '../entrenos/datos'
-import { nombreCompleto, puedeGestionarJugadores } from '../jugadores/datos'
+import { nombreCompleto, nombresCortos, puedeGestionarJugadores } from '../jugadores/datos'
 import { Dorsal } from '../jugadores/PaginaPlantilla'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
 import { SeccionActa } from './Acta'
@@ -152,47 +152,49 @@ export function PaginaPartido() {
           </>
         ) : (
           <>
+            {/* Convocados en dos columnas, con dorsal y nombre corto (GH-284): la lista completa, con
+                las altas y bajas, está en la pantalla de la convocatoria */}
             <section className={estilos.seccion} aria-labelledby="convocatoria">
-              <h2 id="convocatoria">
-                <Users aria-hidden size={20} />
-                Convocatoria
-                {convocados.length > 0 && (
-                  <span className={estilos.contador}>{convocados.length}</span>
+              <div className={estilos.cabeceraSeccion}>
+                <h2 id="convocatoria">
+                  <Users aria-hidden size={20} />
+                  Convocatoria
+                  {convocados.length > 0 && (
+                    <span className={estilos.contador}>{convocados.length}</span>
+                  )}
+                </h2>
+                {gestiona && convocados.length > 0 && (
+                  <Link
+                    to="convocatoria"
+                    className={estilos.enlaceEditar}
+                    aria-label="Editar la convocatoria"
+                  >
+                    <Pencil aria-hidden size={16} />
+                    Editar
+                  </Link>
                 )}
-              </h2>
+              </div>
               {convocados.length === 0 ? (
-                <p className={estilos.secundario}>Todavía no hay convocatoria.</p>
+                <>
+                  <p className={estilos.pendiente}>Todavía sin convocatoria</p>
+                  {gestiona && (
+                    <Link to="convocatoria" className={estilos.enlaceBoton}>
+                      <UserCheck aria-hidden size={18} />
+                      Hacer la convocatoria
+                    </Link>
+                  )}
+                </>
               ) : (
-                <ul className={estilos.convocados} aria-label="Convocados">
-                  {convocados.map((j) => (
-                    <li key={j.jugadorId}>
-                      <Dorsal dorsal={j.dorsal} />
-                      <span>
-                        {nombreCompleto(j)}
-                        {!j.activo && <span className={estilos.secundario}> · baja</span>}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
+                <ListaCorta jugadores={convocados} titulo="Convocados" />
               )}
               {convocados.length > 0 && noConvocados.length > 0 && (
                 <details className={estilos.noConvocados}>
-                  <summary>No convocados ({noConvocados.length})</summary>
-                  <ul className={estilos.convocados} aria-label="No convocados">
-                    {noConvocados.map((j) => (
-                      <li key={j.jugadorId}>
-                        <Dorsal dorsal={j.dorsal} />
-                        <span>{nombreCompleto(j)}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  <summary>
+                    {noConvocados.length}{' '}
+                    {noConvocados.length === 1 ? 'no convocado' : 'no convocados'}
+                  </summary>
+                  <ListaCorta jugadores={noConvocados} titulo="No convocados" />
                 </details>
-              )}
-              {gestiona && (
-                <Link to="convocatoria" className={estilos.enlaceBoton}>
-                  <UserCheck aria-hidden size={18} />
-                  {convocados.length === 0 ? 'Convocar' : 'Editar convocatoria'}
-                </Link>
               )}
             </section>
 
@@ -217,6 +219,24 @@ export function PaginaPartido() {
 
       <FormularioPartido abierta={editando} partido={p} alCerrar={() => setEditando(false)} />
     </div>
+  )
+}
+
+// Jugadores en dos columnas: dorsal y nombre y primer apellido (como al pasar lista, GH-257)
+function ListaCorta({ jugadores, titulo }: { jugadores: Partido['jugadores']; titulo: string }) {
+  const nombres = nombresCortos(jugadores)
+  return (
+    <ul className={estilos.dosColumnas} aria-label={titulo}>
+      {jugadores.map((j) => (
+        <li key={j.jugadorId}>
+          <Dorsal dorsal={j.dorsal} />
+          <span className={estilos.nombreCorto}>
+            {nombres.get(j.jugadorId)}
+            {!j.activo && <span className={estilos.secundario}> · baja</span>}
+          </span>
+        </li>
+      ))}
+    </ul>
   )
 }
 

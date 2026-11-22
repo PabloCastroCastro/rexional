@@ -590,7 +590,7 @@ describe('ficha del partido', () => {
   it('un partido sin convocatoria lo dice', async () => {
     conPartidos()
     abrir('/plantillas/p1/partidos/p2')
-    expect(await screen.findByText('Todavía no hay convocatoria.')).toBeInTheDocument()
+    expect(await screen.findByText('Todavía sin convocatoria')).toBeInTheDocument()
   })
 
   it('borrar pide confirmación, avisa de la convocatoria y vuelve a la lista', async () => {

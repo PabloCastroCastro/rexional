@@ -214,6 +214,53 @@
   text-align: center;
 }
 
+/* La convocatoria en la ficha (GH-284): el título con «Editar» y los convocados en dos columnas */
+.cabeceraSeccion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-2);
+}
+
+.enlaceEditar {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--espacio-1);
+  min-height: var(--altura-tactil);
+  padding: 0 var(--espacio-2);
+  color: var(--color-acento);
+  font-weight: var(--peso-medio);
+  text-decoration: none;
+}
+
+.dosColumnas {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--espacio-1) var(--espacio-3);
+  margin: 0;
+  padding: var(--espacio-3);
+  border-radius: var(--radio-l);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra-1);
+  list-style: none;
+}
+
+.dosColumnas > li {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  min-width: 0;
+  min-height: 2.25rem;
+}
+
+/* Sin cortar (GH-257): si no cabe, el apellido pasa a la línea de abajo */
+.nombreCorto {
+  min-width: 0;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
 .convocados {
   display: grid;
   margin: 0;
@@ -300,7 +347,8 @@
   cursor: pointer;
 }
 
-.noConvocados .convocados {
+.noConvocados .convocados,
+.noConvocados .dosColumnas {
   opacity: 0.75;
 }
 
