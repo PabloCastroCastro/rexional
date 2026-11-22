@@ -1687,6 +1687,54 @@
   box-shadow: var(--sombra-1);
 }
 
+/* Cómo ha entrenado desde el partido anterior (GH-288): puntos por sesión o la fracción, a la
+   derecha de la fila de la convocatoria */
+.puntosEntrenos {
+  display: inline-flex;
+  flex: none;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.puntosEntrenos > [data-estado] {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: var(--radio-completo);
+  background: var(--color-borde);
+}
+
+.puntosEntrenos > [data-estado="fue"] {
+  background: var(--color-exito);
+}
+
+.puntosEntrenos > [data-estado="falto"] {
+  background: var(--color-peligro);
+}
+
+.fraccionEntrenos {
+  flex: none;
+  margin-left: auto;
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-fuerte);
+  font-variant-numeric: tabular-nums;
+}
+
+.fraccionEntrenos[data-nivel="alto"] {
+  color: var(--color-exito);
+}
+
+.fraccionEntrenos[data-nivel="medio"] {
+  color: var(--color-aviso);
+}
+
+.fraccionEntrenos[data-nivel="bajo"] {
+  color: var(--color-peligro);
+}
+
+.fraccionEntrenos[data-nivel="pendiente"] {
+  color: var(--color-texto-suave);
+}
+
 /* Separador entre las filas de la lista de partidos (GH-278) */
 .lista > li:not(:first-child) {
   border-top: 1px solid var(--color-borde);
