@@ -1562,6 +1562,121 @@
   font-weight: var(--peso-fuerte);
 }
 
+/* La línea del partido (GH-286): el minuto en una pastilla, el icono y el texto; lo unido (gol y
+   asistencia, entrada y salida) en la misma fila; el descanso separa las partes */
+.lineaPartido {
+  display: grid;
+  margin: 0;
+  padding: var(--espacio-2) 0;
+  border-radius: var(--radio-l);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra-1);
+  list-style: none;
+}
+
+.suceso {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espacio-3);
+  padding: var(--espacio-2) var(--espacio-4);
+}
+
+.pastillaMinuto {
+  flex: none;
+  min-width: 2.75rem;
+  padding: 1px var(--espacio-2);
+  border-radius: var(--radio-completo);
+  background: var(--color-superficie-alterna);
+  color: var(--color-texto);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-fuerte);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.textoSuceso {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+}
+
+.debajoSuceso {
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
+}
+
+.separacionDescanso {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  padding: var(--espacio-2) var(--espacio-4);
+  color: var(--color-texto-suave);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-fuerte);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.separacionDescanso::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--color-borde);
+}
+
+.edicionPartido {
+  display: grid;
+  gap: var(--espacio-4);
+}
+
+/* La alineación en dos columnas, titulares y suplentes, con los minutos de cada uno */
+.alineacion {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--espacio-3);
+  padding: var(--espacio-3);
+  border-radius: var(--radio-l);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra-1);
+}
+
+.columnaAlineacion {
+  display: grid;
+  align-content: start;
+  gap: var(--espacio-2);
+  min-width: 0;
+}
+
+.listaAlineacion {
+  display: grid;
+  gap: var(--espacio-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.jugadorAlineacion {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  min-width: 0;
+  min-height: 2.25rem;
+}
+
+.nombreAlineacion {
+  display: grid;
+  min-width: 0;
+  line-height: 1.2;
+  overflow-wrap: break-word;
+}
+
+.minutosJugador {
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
+  font-variant-numeric: tabular-nums;
+}
+
 /* Separador entre las filas de la lista de partidos (GH-278) */
 .lista > li:not(:first-child) {
   border-top: 1px solid var(--color-borde);
