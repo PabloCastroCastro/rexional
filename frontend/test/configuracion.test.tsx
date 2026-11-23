@@ -56,17 +56,46 @@ describe('acceso a la configuración', () => {
     expect(screen.queryByRole('link', { name: 'Configuración' })).not.toBeInTheDocument()
   })
 
-  it('el administrador del club ve todos los bloques', async () => {
+  it('el administrador del club ve dos pestañas, «Esta plantilla» y «Club» (GH-298)', async () => {
     conClub([senior26])
-    abrir('/plantillas/p1/mas/configuracion')
+    const router = abrir('/plantillas/p1/mas/configuracion')
+    const pestanas = await screen.findByRole('tablist', { name: 'Configuración' })
+    const plantillaTab = within(pestanas).getByRole('tab', { name: 'Esta plantilla' })
+    const clubTab = within(pestanas).getByRole('tab', { name: 'Club' })
+    // Por defecto, la de la plantilla: sus datos y miembros, nada del club
+    expect(plantillaTab).toHaveAttribute('aria-selected', 'true')
+    expect(await screen.findByRole('heading', { name: 'Esta plantilla' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Miembros' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Plantillas del club' })).not.toBeInTheDocument()
+
+    await userEvent.click(clubTab)
+    expect(clubTab).toHaveAttribute('aria-selected', 'true')
+    // La pestaña va en la dirección
+    expect(router.state.location.search).toBe('?pestana=club')
     for (const titulo of [
-      'Esta plantilla',
       'Club',
+      'Identidad del club',
       'Plantillas del club',
       'Administradores del club',
     ]) {
       expect(await screen.findByRole('heading', { name: titulo })).toBeInTheDocument()
     }
+    expect(screen.queryByRole('heading', { name: 'Miembros' })).not.toBeInTheDocument()
+
+    // Con el teclado, de vuelta a la de la plantilla
+    await userEvent.keyboard('{ArrowLeft}')
+    expect(plantillaTab).toHaveFocus()
+    expect(plantillaTab).toHaveAttribute('aria-selected', 'true')
+  })
+
+  it('quien no administra el club ve la página de la plantilla, sin pestañas', async () => {
+    conClub([plantilla('p1', 'Senior', '2026-27', { rol: 'admin', esAdminClub: false })])
+    // Aunque la dirección pida la del club
+    abrir('/plantillas/p1/mas/configuracion?pestana=club')
+    expect(await screen.findByRole('heading', { name: 'Esta plantilla' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Miembros' })).toBeInTheDocument()
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Club' })).not.toBeInTheDocument()
   })
 })
 
@@ -133,7 +162,7 @@ describe('club', () => {
     conClub([senior26])
     manejadores['PATCH /api/clubes/c1'] = async (peticion) =>
       json({ ...clubRexional, ...(await peticion.json()), esAdmin: true })
-    abrir('/plantillas/p1/mas/configuracion')
+    abrir('/plantillas/p1/mas/configuracion?pestana=club')
     const bloque = await screen.findByRole('region', { name: 'Club' })
     const campo = within(bloque).getByLabelText(/Nombre del club/)
     await userEvent.clear(campo)
@@ -147,7 +176,7 @@ describe('club', () => {
 describe('plantillas del club', () => {
   it('lista todas por temporada, la más reciente primero', async () => {
     conClub([juvenil26, senior26, senior25])
-    abrir('/plantillas/p1/mas/configuracion')
+    abrir('/plantillas/p1/mas/configuracion?pestana=club')
     const bloque = await screen.findByRole('region', { name: 'Plantillas del club' })
     expect(
       within(bloque)
@@ -161,7 +190,7 @@ describe('plantillas del club', () => {
     conClub([juvenil26, senior26])
     manejadores['PATCH /api/plantillas/p2'] = async (peticion) =>
       json({ ...juvenil26, ...(await peticion.json()) })
-    abrir('/plantillas/p1/mas/configuracion')
+    abrir('/plantillas/p1/mas/configuracion?pestana=club')
     await userEvent.click(await screen.findByRole('button', { name: 'Editar Juvenil 2026-27' }))
     const hoja = screen.getByRole('dialog', { name: 'Editar Juvenil 2026-27' })
     const categoria = within(hoja).getByLabelText(/Categoría/)
@@ -189,7 +218,7 @@ describe('plantillas del club', () => {
       plantillas = [senior26]
       return new Response(null, { status: 204 })
     }
-    abrir('/plantillas/p1/mas/configuracion')
+    abrir('/plantillas/p1/mas/configuracion?pestana=club')
     await userEvent.click(await screen.findByRole('button', { name: 'Borrar Juvenil 2026-27' }))
     const hoja = screen.getByRole('dialog', { name: 'Borrar Juvenil 2026-27' })
     const borrar = within(hoja).getByRole('button', { name: 'Borrar plantilla' })
@@ -213,7 +242,7 @@ describe('plantillas del club', () => {
       plantillas = [juvenil26]
       return new Response(null, { status: 204 })
     }
-    const router = abrir('/plantillas/p1/mas/configuracion')
+    const router = abrir('/plantillas/p1/mas/configuracion?pestana=club')
     await userEvent.click(await screen.findByRole('button', { name: 'Borrar Senior 2026-27' }))
     const hoja = screen.getByRole('dialog', { name: 'Borrar Senior 2026-27' })
     await userEvent.type(within(hoja).getByLabelText('Escribe Senior para confirmar'), 'Senior')
@@ -226,7 +255,7 @@ describe('plantillas del club', () => {
 describe('administradores del club', () => {
   it('lista los administradores marcando al usuario actual', async () => {
     conClub([senior26])
-    abrir('/plantillas/p1/mas/configuracion')
+    abrir('/plantillas/p1/mas/configuracion?pestana=club')
     const bloque = await screen.findByRole('region', { name: 'Administradores del club' })
     expect(await within(bloque).findByText(`${USUARIO.name} (tú)`)).toBeInTheDocument()
     expect(within(bloque).getByText('berta@rexional.test')).toBeInTheDocument()
@@ -244,7 +273,7 @@ describe('administradores del club', () => {
         201,
       )
     }
-    abrir('/plantillas/p1/mas/configuracion')
+    abrir('/plantillas/p1/mas/configuracion?pestana=club')
     await userEvent.click(await screen.findByRole('button', { name: 'Invitar administrador' }))
     const hoja = screen.getByRole('dialog', { name: 'Invitar administrador' })
     expect(within(hoja).queryByLabelText('Rol')).not.toBeInTheDocument()
@@ -269,7 +298,7 @@ describe('administradores del club', () => {
         },
         409,
       )
-    abrir('/plantillas/p1/mas/configuracion')
+    abrir('/plantillas/p1/mas/configuracion?pestana=club')
     const bloque = await screen.findByRole('region', { name: 'Administradores del club' })
     expect(await within(bloque).findByText(/invita a otro antes de retirarte/)).toBeInTheDocument()
 
@@ -285,7 +314,7 @@ describe('administradores del club', () => {
 
   it('cancelar la confirmación no retira a nadie', async () => {
     conClub([senior26])
-    abrir('/plantillas/p1/mas/configuracion')
+    abrir('/plantillas/p1/mas/configuracion?pestana=club')
     const bloque = await screen.findByRole('region', { name: 'Administradores del club' })
     await userEvent.click(
       await within(bloque).findByRole('button', { name: 'Retirar a Berta Bouzas' }),
