@@ -17,8 +17,10 @@ export const POSICIONES: Record<Posicion, string> = {
 // Todas las consultas de jugadores cuelgan de esta clave, para refrescarlas juntas tras un cambio
 export const CLAVE_JUGADORES = ['jugadores'] as const
 
-export const useJugadores = (plantillaId: string, activos: boolean) =>
+// habilitado: false para no pedirlos (p. ej., las bajas al rol jugador, que no las ve)
+export const useJugadores = (plantillaId: string, activos: boolean, habilitado = true) =>
   useQuery({
+    enabled: habilitado,
     queryKey: [...CLAVE_JUGADORES, 'plantilla', plantillaId, activos],
     queryFn: () =>
       datos(
