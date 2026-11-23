@@ -508,6 +508,28 @@
   color: var(--color-peligro);
 }
 
+/* Sin datos: «—» en texto suave, sin pastilla (GH-253) */
+.porcentaje[data-vacio="true"] {
+  background: none;
+}
+
+/* Mientras carga: el hueco reservado, latiendo (GH-253) */
+.porcentajeCargando {
+  animation: latir 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes latir {
+  to {
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .porcentajeCargando {
+    animation: none;
+  }
+}
+
 /* Sesiones del día: una pastilla por entreno y + para añadir otra */
 /* Las sesiones del día y, si el entreno no tiene plan, «Planificar» al final de la fila (GH-258) */
 .filaSesiones {

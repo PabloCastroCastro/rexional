@@ -124,6 +124,12 @@ export function PaginaPlantilla() {
             )
             return (
               <>
+                {/* Qué mide el porcentaje, sobre su columna (GH-253) */}
+                {gestiona && !verBajas && propios.length > 0 && (
+                  <div className={estilos.cabeceraColumnas} aria-hidden="true">
+                    <span>Asistencia</span>
+                  </div>
+                )}
                 {propios.length > 0 && lista(propios, verBajas ? 'Bajas' : 'Jugadores')}
                 {invitados.length > 0 && (
                   <details
@@ -156,6 +162,7 @@ export function PaginaPlantilla() {
               jugador={j}
               propio={propio}
               porcentaje={porcentajes.get(j.jugadorId)}
+              cargandoPorcentaje={resumen.isPending}
               deuda={deudas.get(j.jugadorId)}
               partidos={partidos.get(j.jugadorId)}
               sanciones={sancionesDe(sanciones.data, j.jugadorId)}
@@ -213,6 +220,7 @@ function Datos({
   jugador,
   propio = false,
   porcentaje,
+  cargandoPorcentaje = false,
   deuda,
   partidos,
   sanciones,
@@ -220,6 +228,7 @@ function Datos({
   jugador: JugadorPlantilla
   propio?: boolean
   porcentaje: number | null | undefined
+  cargandoPorcentaje?: boolean
   deuda: number | undefined
   partidos: number | undefined
   sanciones?: SancionesJugador
@@ -264,7 +273,7 @@ function Datos({
           </span>
         )}
       </span>
-      <Porcentaje valor={porcentaje} />
+      <Porcentaje valor={porcentaje} cargando={cargandoPorcentaje} />
     </>
   )
 }
