@@ -29,12 +29,12 @@ import estilos from './Partidos.module.css'
 // convocar también a jugadores de otras plantillas del club: al guardar se crea su ficha de
 // invitado, solo para partidos (GH-188)
 // Las líneas, en el orden de un equipo, y al final quien no tiene posición
-const LINEAS: { id: Posicion | null; nombre: string }[] = [
-  { id: 'portero', nombre: 'Porteros' },
-  { id: 'defensa', nombre: 'Defensas' },
-  { id: 'centrocampista', nombre: 'Centrocampistas' },
-  { id: 'delantero', nombre: 'Delanteros' },
-  { id: null, nombre: 'Sin posición' },
+const LINEAS: { id: Posicion | null; nombre: string; corto: string; uno: string }[] = [
+  { id: 'portero', nombre: 'Porteros', corto: 'POR', uno: 'portero' },
+  { id: 'defensa', nombre: 'Defensas', corto: 'DEF', uno: 'defensa' },
+  { id: 'centrocampista', nombre: 'Centrocampistas', corto: 'MED', uno: 'centrocampista' },
+  { id: 'delantero', nombre: 'Delanteros', corto: 'DEL', uno: 'delantero' },
+  { id: null, nombre: 'Sin posición', corto: 'sin posición', uno: 'sin posición' },
 ]
 
 // Por dorsal; sin dorsal, al final y por nombre
@@ -140,6 +140,17 @@ function Seleccion({ partido }: { partido: Partido }) {
     if (guardado) navegar(ficha)
   }, [guardado, navegar, ficha])
 
+  // El reparto por líneas de los convocados; los de otras plantillas no traen posición
+  const total = elegidos.size + externos.length
+  const reparto = LINEAS.map((linea) => ({
+    linea,
+    n:
+      partido.jugadores.filter(
+        (j) => elegidos.has(j.jugadorId) && (j.posicion ?? null) === linea.id,
+      ).length + (linea.id === null ? externos.length : 0),
+  })).filter(({ n }) => n > 0)
+  const sinPortero = total > 0 && !reparto.some(({ linea }) => linea.id === 'portero')
+
   // Una fila de la lista para convocar
   const fila = (j: (typeof convocables)[number]) => {
     const elegido = elegidos.has(j.jugadorId)
@@ -191,11 +202,6 @@ function Seleccion({ partido }: { partido: Partido }) {
       </div>
 
       <div className={estilos.barraConvocatoria}>
-        <p role="status" aria-live="polite">
-          <strong>{elegidos.size + externos.length}</strong>{' '}
-          {elegidos.size + externos.length === 1 ? 'convocado' : 'convocados'} de{' '}
-          {partido.jugadores.filter((j) => j.activo).length + externos.length}
-        </p>
         <Boton
           variante="texto"
           onClick={() =>
@@ -281,11 +287,48 @@ function Seleccion({ partido }: { partido: Partido }) {
         />
       </section>
 
-      <div className={estilos.pieFijo}>
-        <Boton variante="secundario" onClick={() => navegar(ficha)}>
-          Cancelar
-        </Boton>
+      {/* La barra fija (GH-291): cuántos van y su reparto por líneas, a la vista al bajar. Para
+          salir sin guardar, volver atrás (pide confirmación si hay cambios) */}
+      <div className={`${estilos.pieFijo} ${estilos.pieConvocatoria}`}>
+        <div className={estilos.resumenConvocatoria} role="status" aria-live="polite">
+          {total === 0 ? (
+            <p>Marca a los que van</p>
+          ) : (
+            <>
+              <p>
+                <strong>{total}</strong> {total === 1 ? 'convocado' : 'convocados'}
+                {sinPortero && <span className={estilos.sinPortero}> · Sin portero</span>}
+              </p>
+              <p className={estilos.repartoLineas}>
+                {/* Cada línea entera; entre ellas, se puede bajar de renglón */}
+                <span aria-hidden="true">
+                  {reparto.map(({ linea, n }, i) => (
+                    <span key={linea.corto}>
+                      {i > 0 && ' · '}
+                      <span className={estilos.sinCortar}>
+                        {n} {linea.corto}
+                      </span>
+                    </span>
+                  ))}
+                </span>
+                <span className="solo-lectores">
+                  {reparto
+                    .map(({ linea, n }) =>
+                      linea.id === null
+                        ? `${n} sin posición`
+                        : `${n} ${linea.uno}${n === 1 ? '' : 's'}`,
+                    )
+                    .join(', ')}
+                </span>
+              </p>
+            </>
+          )}
+        </div>
         <Boton
+          // Sin nadie, nada que guardar; salvo para vaciar una convocatoria ya guardada
+          disabled={total === 0 && inicial.length === 0}
+          // En la barra, corto para dejar sitio al resumen; el nombre completo, para el lector
+          aria-label="Guardar convocatoria"
           cargando={guardar.isPending}
           icono={<Save aria-hidden size={18} />}
           onClick={async () => {
@@ -308,7 +351,7 @@ function Seleccion({ partido }: { partido: Partido }) {
             guardar.mutate()
           }}
         >
-          Guardar convocatoria
+          Guardar
         </Boton>
       </div>
     </div>

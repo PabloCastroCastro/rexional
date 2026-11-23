@@ -95,7 +95,8 @@ describe('elegir convocados', () => {
   it('marca y desmarca con contador, Todos y Ninguno, y guarda la lista completa', async () => {
     conPartido()
     const router = abrir('/plantillas/p1/partidos/p1/convocatoria')
-    expect(await screen.findByText(/convocados de 3/)).toHaveTextContent('3 convocados de 3')
+    await screen.findByRole('button', { name: 'Ninguno' })
+    expect(screen.getByRole('status')).toHaveTextContent('3 convocados')
     expect(casilla('Íker').checked).toBe(true)
     expect(casilla('Zoe').checked).toBe(false)
     // Sin «No convocado» ni la posición: el convocado se distingue por la casilla y el fondo (GH-289)
@@ -108,13 +109,14 @@ describe('elegir convocados', () => {
 
     await userEvent.click(screen.getByText('Zoe'))
     await userEvent.click(screen.getByText('Brais'))
-    expect(screen.getByRole('status')).toHaveTextContent('3 convocados de 3')
+    expect(screen.getByRole('status')).toHaveTextContent('3 convocados')
     await userEvent.click(screen.getByRole('button', { name: 'Ninguno' }))
-    expect(screen.getByRole('status')).toHaveTextContent('0 convocados de 3')
+    // Sin nadie: «Marca a los que van» y Guardar desactivado (GH-291)
+    expect(screen.getByRole('status')).toHaveTextContent('Marca a los que van')
     // Hugo, de baja, ya no se puede volver a convocar
     expect(screen.queryByText('Hugo')).not.toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Todos los disponibles' }))
-    expect(screen.getByRole('status')).toHaveTextContent('3 convocados de 3')
+    expect(screen.getByRole('status')).toHaveTextContent('3 convocados')
     await userEvent.click(screen.getByText('Íker'))
 
     await userEvent.click(screen.getByRole('button', { name: 'Guardar convocatoria' }))
@@ -128,7 +130,8 @@ describe('elegir convocados', () => {
   it('un jugador de baja ya convocado se puede quitar', async () => {
     conPartido()
     abrir('/plantillas/p1/partidos/p1/convocatoria')
-    expect(await screen.findByText(/convocados de 3/)).toHaveTextContent('3 convocados')
+    await screen.findByRole('button', { name: 'Ninguno' })
+    expect(screen.getByRole('status')).toHaveTextContent('3 convocados')
     expect(casilla('Hugo').closest('li')).toHaveTextContent('baja')
     await userEvent.click(screen.getByText('Hugo'))
     await userEvent.click(screen.getByRole('button', { name: 'Guardar convocatoria' }))
@@ -142,7 +145,8 @@ describe('elegir convocados', () => {
     conPartido()
     const router = abrir('/plantillas/p1/partidos/p1/convocatoria')
     await userEvent.click(await screen.findByText('Zoe'))
-    await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }))
+    // «Cancelar» ya no está en la barra (GH-291): se sale volviendo atrás
+    await userEvent.click(screen.getByRole('link', { name: 'vs SD Compostela' }))
 
     const confirmacion = await screen.findByRole('alertdialog', {
       name: '¿Salir sin guardar la convocatoria?',
@@ -150,7 +154,7 @@ describe('elegir convocados', () => {
     await userEvent.click(within(confirmacion).getByRole('button', { name: 'Seguir convocando' }))
     expect(ruta(router)).toBe('/plantillas/p1/partidos/p1/convocatoria')
 
-    await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }))
+    await userEvent.click(screen.getByRole('link', { name: 'vs SD Compostela' }))
     await userEvent.click(
       within(await screen.findByRole('alertdialog')).getByRole('button', {
         name: 'Salir sin guardar',
@@ -163,7 +167,9 @@ describe('elegir convocados', () => {
   it('sin cambios se sale sin preguntar', async () => {
     conPartido()
     const router = abrir('/plantillas/p1/partidos/p1/convocatoria')
-    await userEvent.click(await screen.findByRole('button', { name: 'Cancelar' }))
+    await screen.findByRole('button', { name: 'Ninguno' })
+    expect(screen.queryByRole('button', { name: 'Cancelar' })).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('link', { name: 'vs SD Compostela' }))
     await waitFor(() => expect(ruta(router)).toBe('/plantillas/p1/partidos/p1'))
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
   })
@@ -274,7 +280,7 @@ describe('lesionados en la convocatoria (GH-230)', () => {
       ],
     })
     abrir('/plantillas/p1/partidos/p1/convocatoria')
-    expect(await screen.findByText(/convocados de 2/)).toBeInTheDocument()
+    await screen.findByRole('button', { name: 'Ninguno' })
     expect(casilla('Brais').closest('li')).toHaveTextContent('Lesionado · sin fecha de vuelta')
 
     await userEvent.click(screen.getByRole('button', { name: 'Todos los disponibles' }))
@@ -296,7 +302,7 @@ describe('sancionados en la convocatoria (GH-231)', () => {
       ],
     })
     abrir('/plantillas/p1/partidos/p1/convocatoria')
-    expect(await screen.findByText(/convocados de 2/)).toBeInTheDocument()
+    await screen.findByRole('button', { name: 'Ninguno' })
     expect(casilla('Brais').closest('li')).toHaveTextContent('Sancionado · 1 partido')
     // El nombre del sancionado, tachado (GH-248); el de quien puede jugar, no
     expect(screen.getByText('Brais').className).toMatch(/tachado/)
@@ -423,7 +429,7 @@ describe('convocatoria por líneas (GH-290)', () => {
       ],
     })
     abrir('/plantillas/p1/partidos/p1/convocatoria')
-    await screen.findByText(/convocados de 5/)
+    await screen.findByRole('button', { name: 'Ninguno' })
     // En el orden de un equipo; las líneas sin nadie no salen
     const grupos = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)
     expect(grupos.slice(0, 4)).toEqual([
@@ -442,5 +448,50 @@ describe('convocatoria por líneas (GH-290)', () => {
     // El recuento cambia al marcar
     await userEvent.click(within(defensas).getByText('Zoe'))
     expect(screen.getByRole('heading', { name: /^Defensas/ })).toHaveTextContent('Defensas 2 de 2')
+  })
+})
+
+describe('la barra fija de la convocatoria (GH-291)', () => {
+  const conLineas = (convocados: boolean) =>
+    conPartido(senior26, {
+      ...PARTIDO,
+      jugadores: [
+        { ...jugador('j1', 'Íker', 1, convocados), posicion: 'portero' },
+        { ...jugador('j2', 'Brais', 7, convocados), posicion: 'defensa' },
+        { ...jugador('j3', 'Zoe', 4, convocados), posicion: 'defensa' },
+        { ...jugador('j4', 'Hugo', 9, convocados), posicion: 'delantero' },
+      ],
+    })
+
+  it('cuántos van y su reparto por líneas; sin portero, el aviso en ámbar', async () => {
+    conLineas(true)
+    abrir('/plantillas/p1/partidos/p1/convocatoria')
+    await screen.findByRole('button', { name: 'Ninguno' })
+    const resumen = screen.getByRole('status')
+    expect(resumen).toHaveTextContent('4 convocados')
+    expect(resumen).toHaveTextContent('1 POR · 2 DEF · 1 DEL')
+    // El lector de pantalla oye el reparto completo, no las abreviaturas
+    expect(resumen).toHaveTextContent('1 portero, 2 defensas, 1 delantero')
+    expect(resumen).not.toHaveTextContent('Sin portero')
+    await userEvent.click(screen.getByText('Íker'))
+    expect(resumen).toHaveTextContent('3 convocados · Sin portero')
+  })
+
+  it('sin nadie marcado, «Marca a los que van» y Guardar desactivado', async () => {
+    conLineas(false)
+    abrir('/plantillas/p1/partidos/p1/convocatoria')
+    await screen.findByRole('button', { name: 'Ninguno' })
+    expect(screen.getByRole('status')).toHaveTextContent('Marca a los que van')
+    expect(screen.getByRole('button', { name: 'Guardar convocatoria' })).toBeDisabled()
+    await userEvent.click(screen.getByText('Zoe'))
+    expect(screen.getByRole('button', { name: 'Guardar convocatoria' })).toBeEnabled()
+  })
+
+  it('una convocatoria ya guardada se puede vaciar', async () => {
+    conLineas(true)
+    abrir('/plantillas/p1/partidos/p1/convocatoria')
+    await userEvent.click(await screen.findByRole('button', { name: 'Ninguno' }))
+    expect(screen.getByRole('status')).toHaveTextContent('Marca a los que van')
+    expect(screen.getByRole('button', { name: 'Guardar convocatoria' })).toBeEnabled()
   })
 })
