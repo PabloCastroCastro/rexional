@@ -36,18 +36,25 @@ export function PaginaCatalogo() {
   return (
     <>
       {gestiona && (
-        <div className={estilos.filtros}>
-          <label className={estilos.interruptor}>
-            <input
-              type="checkbox"
-              checked={verDesactivados}
-              onChange={(e) => setVerDesactivados(e.target.checked)}
-            />
-            Ver desactivados
-          </label>
+        <div className={estilos.accionesCatalogo}>
           <Boton icono={<Plus aria-hidden size={18} />} onClick={() => setEditando(null)}>
             Añadir motivo
           </Boton>
+          {/* Un interruptor en una fila de 48 px, toda ella pulsable (GH-296) */}
+          <label className={estilos.filaInterruptor}>
+            Ver los desactivados
+            <input
+              type="checkbox"
+              role="switch"
+              aria-checked={verDesactivados}
+              className={estilos.entradaInterruptor}
+              checked={verDesactivados}
+              onChange={(e) => setVerDesactivados(e.target.checked)}
+            />
+            <span className={estilos.pistaInterruptor} aria-hidden="true">
+              <span />
+            </span>
+          </label>
         </div>
       )}
 
