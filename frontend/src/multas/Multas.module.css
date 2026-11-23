@@ -405,12 +405,14 @@
   cursor: pointer;
 }
 
-/* Catálogo (GH-296): «Añadir motivo» y, debajo, «Ver los desactivados» como interruptor en una fila
-   de 48 px */
+/* Catálogo (GH-296): «Añadir motivo» y, en la misma línea, el interruptor de los desactivados, de 48 px
+   de alto; si no caben, el interruptor pasa debajo */
 .accionesCatalogo {
-  display: grid;
-  justify-items: start;
-  gap: var(--espacio-2);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-2) var(--espacio-3);
 }
 
 .filaInterruptor {
@@ -418,12 +420,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--espacio-3);
-  width: 100%;
   min-height: 3rem;
-  padding: 0 var(--espacio-4);
-  border-radius: var(--radio-l);
-  background: var(--color-superficie);
-  box-shadow: var(--sombra-1);
   font-weight: var(--peso-medio);
   cursor: pointer;
 }
