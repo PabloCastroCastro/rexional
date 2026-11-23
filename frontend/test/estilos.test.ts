@@ -156,3 +156,20 @@ describe('estados de pasar lista', () => {
     )
   })
 })
+
+// GH-351: el selector de jugador de Multas, con un nombre largo, se ensanchaba hasta su opción más
+// larga y pisaba «Poner multa»
+describe('los campos no se salen de su hueco', () => {
+  const campo = readFileSync(join(SRC, 'componentes', 'Campo.module.css'), 'utf8')
+  const regla = (clase: string) =>
+    campo.match(new RegExp(`\\n\\.${clase} \\{([^}]+)\\}`))?.[1] ?? ''
+
+  it('la columna del campo puede encoger por debajo de su contenido', () => {
+    expect(regla('campo')).toContain('grid-template-columns: minmax(0, 1fr)')
+  })
+
+  it('la entrada (también un <select>) ocupa su hueco y no lo que mide su opción más larga', () => {
+    expect(regla('entrada')).toContain('width: 100%')
+    expect(regla('entrada')).toContain('min-width: 0')
+  })
+})
