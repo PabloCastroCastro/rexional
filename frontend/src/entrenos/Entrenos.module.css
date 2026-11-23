@@ -960,7 +960,7 @@ li > .cierre {
   color: var(--color-texto);
 }
 
-/* Resumen para WhatsApp: un botón de icono que abre la hoja con el mensaje */
+/* Pedir confirmación: un botón de icono que abre la hoja con el mensaje (GH-213) */
 .botonCompartir {
   flex: none;
   width: var(--altura-tactil);

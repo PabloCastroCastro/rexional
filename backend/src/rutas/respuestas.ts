@@ -1,14 +1,12 @@
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
-import { and, asc, eq, sql } from 'drizzle-orm'
+import { and, eq, sql } from 'drizzle-orm'
 import { config } from '../config.js'
 import { db } from '../db/cliente.js'
-import { clubes, entrenos, fichas, jugadores, respuestasEntreno } from '../db/schema/index.js'
+import { clubes, entrenos, fichas, respuestasEntreno } from '../db/schema/index.js'
 import { ErrorApi, EsquemaError, validacionFallida } from '../errores.js'
-import { textoDia } from '../fechas.js'
 import { type EnvPlantilla, requireRol } from '../permisos.js'
 import { EsquemaUuid } from '../validacion.js'
 import { buscarEntreno, cierre, EsquemaRespuesta, horasLimite } from './entrenos.js'
-import { porNombre } from './jugadores.js'
 
 // Respuestas de los jugadores a si van a un entreno (GH-204). Es la intención de ir, no la asistencia:
 // se guarda aparte y pasar lista no la toca. Cada jugador responde por sí mismo hasta la hora límite
@@ -132,46 +130,47 @@ const noResponde = () =>
     'Ese jugador no tiene ficha activa en la dinámica de esta plantilla',
   )
 
-const nombre = (j: { nombre: string; apellidos: string | null }) =>
-  j.apellidos ? `${j.nombre} ${j.apellidos}` : j.nombre
+const diaSemana = new Intl.DateTimeFormat('es-ES', { weekday: 'long', timeZone: 'UTC' })
+const diaCompleto = new Intl.DateTimeFormat('es-ES', {
+  weekday: 'long',
+  day: 'numeric',
+  month: 'long',
+  timeZone: 'UTC',
+})
+const enUtc = (fecha: string) => new Date(`${fecha}T12:00:00Z`)
 
-// Resumen para WhatsApp: quién va, quién duda, quién no y quién no ha respondido, y el enlace para
-// responder en la app
+// «hasta el jueves» si el plazo acaba a medianoche (el entreno no tiene hora); si no, «antes del
+// jueves a las 18:00». cierre: fecha y hora del cierre en la zona de la aplicación
+function textoCierre(cierre: { fecha: string; hora: string }) {
+  if (cierre.hora === '00:00') {
+    const anterior = new Date(enUtc(cierre.fecha).getTime() - 86_400_000)
+    return `hasta el ${diaSemana.format(anterior)}`
+  }
+  return `antes del ${diaSemana.format(enUtc(cierre.fecha))} a las ${cierre.hora}`
+}
+
+// Para pedir en el grupo que confirmen (GH-213): el entreno, el plazo para responder y el enlace a
+// la app, donde se confirma. Sin quién va ni motivos: WhatsApp no deja crear encuestas y las
+// respuestas solo cuentan en la app
 export function mensajeRespuestas(
   club: string,
   plantilla: { id: string; nombre: string },
   entreno: { fecha: string; hora: string | null; horaFin: string | null },
-  filas: {
-    nombre: string
-    apellidos: string | null
-    dorsal: number | null
-    respuesta: Respuesta | null
-    motivo: string | null
-  }[],
+  cierre: { fecha: string; hora: string },
 ) {
+  const dia = diaCompleto.format(enUtc(entreno.fecha)).replace(',', '')
   const horas = entreno.hora
-    ? ` · ${entreno.hora}${entreno.horaFin ? `–${entreno.horaFin}` : ''}`
+    ? entreno.horaFin
+      ? ` de ${entreno.hora} a ${entreno.horaFin}`
+      : ` a las ${entreno.hora}`
     : ''
-  const lineas = [
+  return [
     `🏃 *${club} · ${plantilla.nombre}*`,
-    `Entreno: ${textoDia(entreno.fecha)}${horas}`,
-  ]
-  const grupos: [string, Respuesta | null][] = [
-    ['✅ *Van', 'voy'],
-    ['🤔 *En duda', 'duda'],
-    ['❌ *No van', 'no_voy'],
-    ['⏳ *Sin responder', null],
-  ]
-  for (const [titulo, respuesta] of grupos) {
-    const lista = filas.filter((f) => f.respuesta === respuesta)
-    if (lista.length === 0) continue
-    lineas.push('', `${titulo} (${lista.length})*`)
-    for (const f of lista) {
-      lineas.push(`${f.dorsal ?? '–'} · ${nombre(f)}${f.motivo ? ` (${f.motivo})` : ''}`)
-    }
-  }
-  lineas.push('', `Responde en la app: ${config.urlPublica}/plantillas/${plantilla.id}/entrenos`)
-  return lineas.join('\n')
+    `Entreno el ${dia}${horas}`,
+    '',
+    `¿Vienes? Confirma en la app ${textoCierre(cierre)}:`,
+    `${config.urlPublica}/plantillas/${plantilla.id}/entrenos`,
+  ].join('\n')
 }
 
 export const rutasRespuestas = () =>
@@ -284,9 +283,9 @@ export const rutasRespuestas = () =>
         method: 'get',
         path: '/plantillas/{id}/entrenos/{eid}/respuestas/mensaje',
         tags: ['Entrenos'],
-        summary: 'Resumen de respuestas para WhatsApp',
+        summary: 'Mensaje para pedir que confirmen la asistencia',
         description:
-          'Delegado o superior. Quién va, quién está en duda, quién no y quién no ha respondido (de los jugadores activos en la dinámica), con el enlace para responder en la app, y el enlace wa.me para compartirlo.',
+          'Delegado o superior. Para el grupo del equipo: el entreno, el plazo para responder y el enlace para hacerlo en la app, y el enlace wa.me para compartirlo. 409 si el plazo ya se ha cerrado.',
         middleware: [requireRol('delegado')] as const,
         request: { params: ParamEntreno },
         responses: {
@@ -299,6 +298,7 @@ export const rutasRespuestas = () =>
               .openapi('MensajeRespuestas'),
             'Mensaje',
           ),
+          409: json(EsquemaError, 'Respuestas cerradas'),
           ...errores,
         },
       }),
@@ -306,41 +306,28 @@ export const rutasRespuestas = () =>
         const { eid } = c.req.valid('param')
         const plantilla = c.var.plantilla
         const entreno = await buscarEntreno(plantilla.id, eid)
-        const filas = await db
+        // El plazo, en la zona de la aplicación; cerrado, ya no se pide confirmación
+        const horas = await horasLimite(plantilla.id)
+        const [plazo] = await db
           .select({
-            nombre: jugadores.nombre,
-            apellidos: jugadores.apellidos,
-            dorsal: fichas.dorsal,
-            respuesta: respuestasEntreno.respuesta,
-            motivo: respuestasEntreno.motivo,
+            abierto: sql<boolean>`now() < ${cierre(horas)}`,
+            fecha: sql<string>`to_char((${cierre(horas)}) at time zone 'Europe/Madrid', 'YYYY-MM-DD')`,
+            hora: sql<string>`to_char((${cierre(horas)}) at time zone 'Europe/Madrid', 'HH24:MI')`,
           })
-          .from(fichas)
-          .innerJoin(jugadores, eq(jugadores.id, fichas.jugadorId))
-          .leftJoin(
-            respuestasEntreno,
-            and(
-              eq(respuestasEntreno.jugadorId, fichas.jugadorId),
-              eq(respuestasEntreno.entrenoId, eid),
-            ),
+          .from(entrenos)
+          .where(eq(entrenos.id, eid))
+        if (!plazo?.abierto) {
+          throw new ErrorApi(
+            409,
+            'respuestas_cerradas',
+            'Ya no se puede responder a este entreno: no hace falta pedir que confirmen',
           )
-          .where(
-            and(
-              eq(fichas.plantillaId, plantilla.id),
-              eq(fichas.activo, true),
-              eq(fichas.enDinamica, true),
-            ),
-          )
-          .orderBy(
-            asc(fichas.tipo),
-            sql`${fichas.dorsal} asc nulls last`,
-            ...porNombre,
-            asc(jugadores.id),
-          )
+        }
         const [club] = await db
           .select({ nombre: clubes.nombre })
           .from(clubes)
           .where(eq(clubes.id, plantilla.clubId))
-        const texto = mensajeRespuestas(club?.nombre ?? '', plantilla, entreno, filas)
+        const texto = mensajeRespuestas(club?.nombre ?? '', plantilla, entreno, plazo)
         return c.json({ texto, whatsapp: `https://wa.me/?text=${encodeURIComponent(texto)}` }, 200)
       },
     )

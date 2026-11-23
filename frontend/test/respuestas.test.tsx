@@ -209,7 +209,11 @@ describe('el cuerpo técnico', () => {
         ]),
       )
     manejadores['GET /api/plantillas/p1/entrenos/e1/respuestas/mensaje'] = () =>
-      json({ texto: '✅ *Van (1)*\n7 · Brais', whatsapp: 'https://wa.me/?text=x' })
+      json({
+        texto:
+          '🏃 *CD Rexional · Senior*\n¿Vienes? Confirma en la app antes del jueves a las 20:00:',
+        whatsapp: 'https://wa.me/?text=x',
+      })
     manejadores['PUT /api/plantillas/p1/entrenos/e1/respuestas/j3'] = async (peticion) =>
       json({ jugadorId: 'j3', motivo: null, ...((await peticion.json()) as object) })
   }
@@ -249,10 +253,10 @@ describe('el cuerpo técnico', () => {
       { respuesta: 'voy' },
     ])
 
-    // El resumen para WhatsApp, desde la cabecera de la sección
-    await userEvent.click(within(seccion).getByRole('button', { name: 'Resumen para WhatsApp' }))
-    const hoja = await screen.findByRole('dialog', { name: 'Resumen para WhatsApp' })
-    expect(await within(hoja).findByText(/7 · Brais/)).toBeInTheDocument()
+    // «Pedir confirmación», desde la cabecera de la sección
+    await userEvent.click(within(seccion).getByRole('button', { name: 'Pedir confirmación' }))
+    const hoja = await screen.findByRole('dialog', { name: 'Pedir confirmación' })
+    expect(await within(hoja).findByText(/¿Vienes\? Confirma en la app/)).toBeInTheDocument()
   })
 
   it('con el plazo cerrado, lo dice', async () => {
@@ -262,6 +266,23 @@ describe('el cuerpo técnico', () => {
     abrir(`/plantillas/p1/entrenos?fecha=${MANANA}`)
     const seccion = await screen.findByRole('region', { name: 'Respuestas' })
     expect(within(seccion).getByText(/el plazo se ha cerrado/)).toBeInTheDocument()
+  })
+
+  it('con el plazo cerrado no se ofrece «Pedir confirmación» (GH-213)', async () => {
+    conEntrenoFuturo()
+    manejadores['GET /api/plantillas/p1/entrenos'] = () =>
+      json([proximo({ cierreRespuestas: '2026-10-14T08:00:00Z', respuestasAbiertas: false })])
+    abrir(`/plantillas/p1/entrenos?fecha=${MANANA}`)
+    const seccion = await screen.findByRole('region', { name: 'Respuestas' })
+    expect(
+      within(seccion).queryByRole('button', { name: 'Pedir confirmación' }),
+    ).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Opciones del entreno' }))
+    expect(
+      within(screen.getByRole('dialog', { name: 'Opciones del entreno' })).queryByRole('button', {
+        name: 'Pedir confirmación',
+      }),
+    ).not.toBeInTheDocument()
   })
 
   it('el historial muestra el recuento de los próximos', async () => {
@@ -292,9 +313,9 @@ describe('el cuerpo técnico', () => {
     expect(
       within(respuestas).getByText('1 va · 0 dudan · 1 no va · 1 sin responder'),
     ).toBeInTheDocument()
-    await userEvent.click(within(respuestas).getByRole('button', { name: 'Resumen para WhatsApp' }))
-    const hoja = await screen.findByRole('dialog', { name: 'Resumen para WhatsApp' })
-    expect(await within(hoja).findByText(/7 · Brais/)).toBeInTheDocument()
+    await userEvent.click(within(respuestas).getByRole('button', { name: 'Pedir confirmación' }))
+    const hoja = await screen.findByRole('dialog', { name: 'Pedir confirmación' })
+    expect(await within(hoja).findByText(/¿Vienes\? Confirma en la app/)).toBeInTheDocument()
   })
 
   it('en el historial, el entreno de hoy sin lista va en los próximos con su recuento (GH-215)', async () => {
