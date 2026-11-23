@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Pencil, ShieldAlert } from 'lucide-react'
+import { Pencil } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
 import { api, datos, erroresPorCampo } from '../api/cliente'
 import type { components } from '../api/esquema'
@@ -7,6 +7,7 @@ import { useAvisos } from '../componentes/Avisos'
 import { Boton } from '../componentes/Boton'
 import { Campo } from '../componentes/Campo'
 import { HojaInferior } from '../componentes/HojaInferior'
+import { IconoEstado } from '../componentes/IconoEstado'
 import { CLAVE_PARTIDOS } from '../partidos/datos'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
 import { CLAVE_JUGADORES } from './datos'
@@ -60,7 +61,7 @@ export function MarcaSancion({
   if (pendientes > 0) {
     return (
       <span className={estilos.marca} data-tipo="sancion">
-        <ShieldAlert aria-hidden size={14} />
+        <IconoEstado estado="sancion" size={14} />
         {partidos === undefined ? 'Sancionado' : textoSancion(partidos)}
       </span>
     )
@@ -68,7 +69,7 @@ export function MarcaSancion({
   if (sanciones?.apercibido.length) {
     return (
       <span className={estilos.marca} data-tipo="apercibido">
-        <ShieldAlert aria-hidden size={14} />
+        <IconoEstado estado="apercibido" size={14} />
         Apercibido
       </span>
     )
@@ -94,7 +95,11 @@ export function FranjaSancion({
       aria-label="Sanción"
       data-tipo={vigentes.length ? 'sancion' : 'apercibido'}
     >
-      <ShieldAlert aria-hidden size={20} className={estilos.icono} />
+      <IconoEstado
+        estado={vigentes.length ? 'sancion' : 'apercibido'}
+        size={20}
+        className={estilos.icono}
+      />
       <div className={estilos.texto}>
         {sanciones.pendientes.map((p) => (
           <strong key={p.competicion}>

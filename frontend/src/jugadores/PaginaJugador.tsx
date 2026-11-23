@@ -1,10 +1,11 @@
-import { Bandage, ChevronLeft, ChevronRight, Pencil, RotateCcw, UserMinus } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Pencil, RotateCcw, UserMinus } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { Boton } from '../componentes/Boton'
 import { Cargando } from '../componentes/Cargando'
 import { type Cifra, Cifras } from '../componentes/Cifras'
 import { EstadoVacio } from '../componentes/EstadoVacio'
+import { IconoEstado } from '../componentes/IconoEstado'
 import { useResumenAsistencia } from '../entrenos/datos'
 import { nivelAsistencia } from '../entrenos/Porcentaje'
 import { euros, useMultas } from '../multas/datos'
@@ -267,7 +268,7 @@ export function PaginaJugador() {
           {jugador.activo && !lesionActual && lesiones.isSuccess && (
             <Boton
               variante="secundario"
-              icono={<Bandage aria-hidden size={18} />}
+              icono={<IconoEstado estado="lesion" size={18} />}
               onClick={() => setEdicionLesion({ tipo: 'nueva' })}
             >
               Marcar lesión

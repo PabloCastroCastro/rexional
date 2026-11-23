@@ -112,16 +112,10 @@
   text-align: center;
 }
 
+/* El resto, en MiniaturaEjercicio (GH-273) */
 .miniatura {
-  display: grid;
-  flex: none;
-  place-items: center;
   width: 3.5rem;
   height: 2.6rem;
-  border-radius: var(--radio-s);
-  background: var(--color-superficie-alterna);
-  color: var(--color-texto-suave);
-  object-fit: cover;
 }
 
 .textoPaso {
@@ -322,6 +316,19 @@
   gap: 2px;
   min-width: 0;
   color: var(--color-texto);
+}
+
+/* Sin plan, en la fila de la sesión de pasar lista (GH-258) */
+.enlacePlanificar {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-1);
+  min-height: var(--altura-tactil);
+  margin-left: auto;
+  padding: 0 var(--espacio-2);
+  color: var(--color-acento);
+  font-weight: var(--peso-medio);
+  text-decoration: none;
 }
 
 /* Al final: separadores de las listas (más específicos que las reglas de li) */

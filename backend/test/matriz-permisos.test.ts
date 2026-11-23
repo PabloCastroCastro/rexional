@@ -105,6 +105,7 @@ const MATRIZ: Ruta[] = [
   // Entrenos y asistencia
   ['verDatos', 'GET', '/plantillas/{id}/horario'],
   ['gestionar', 'PUT', '/plantillas/{id}/horario'],
+  ['gestionar', 'POST', '/plantillas/{id}/horario/simulacion'],
   ['gestionar', 'DELETE', '/plantillas/{id}/horario'],
   ['verDatos', 'GET', '/plantillas/{id}/entrenos'],
   ['gestionar', 'POST', '/plantillas/{id}/entrenos'],

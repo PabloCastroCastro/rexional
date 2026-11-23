@@ -18,7 +18,7 @@ import { useAvisos } from '../componentes/Avisos'
 import { Boton } from '../componentes/Boton'
 import { Cargando } from '../componentes/Cargando'
 import { EstadoVacio } from '../componentes/EstadoVacio'
-import { textoFecha } from '../entrenos/datos'
+import { hoy, textoFecha } from '../entrenos/datos'
 import {
   nombreCompleto,
   puedeGestionarJugadores,
@@ -37,6 +37,7 @@ import {
   useActa,
   usePartido,
 } from './datos'
+import { FilaVacia } from './FilaVacia'
 import estilos from './Partidos.module.css'
 
 // Acta del partido (la ficha en PDF de la federación): subirla, verla y, tras revisar lo leído,
@@ -48,7 +49,26 @@ const tamano = (bytes: number) =>
     : `${(bytes / 1024 / 1024).toFixed(1)} MB`
 
 // Botón que abre el selector de archivos y sube el PDF; al terminar lleva a la revisión
-function SubirActa({ partido, texto }: { partido: Partido; texto: string }) {
+// Ya jugado (o de hoy), sin resultado, sin sucesos y sin acta: lo más rápido es subir el acta, que se
+// ofrece como acción principal en «El partido» (GH-287)
+export const faltaResultadoSinActa = (partido: Partido) =>
+  partido.estado === 'programado' &&
+  partido.fecha <= hoy() &&
+  partido.eventos.length === 0 &&
+  !partido.acta
+
+export function SubirActa({
+  partido,
+  texto,
+  etiqueta,
+  variante = 'secundario',
+}: {
+  partido: Partido
+  texto: string
+  // Nombre accesible, si el texto visible se queda corto
+  etiqueta?: string
+  variante?: 'primario' | 'secundario'
+}) {
   const plantilla = usePlantillaActiva()
   const cliente = useQueryClient()
   const navegar = useNavigate()
@@ -86,9 +106,10 @@ function SubirActa({ partido, texto }: { partido: Partido; texto: string }) {
         }}
       />
       <Boton
-        variante="secundario"
+        variante={variante}
         icono={<FileUp aria-hidden size={18} />}
         cargando={subir.isPending}
+        aria-label={etiqueta}
         onClick={() => entrada.current?.click()}
       >
         {texto}
@@ -103,6 +124,20 @@ export function SeccionActa({ partido }: { partido: Partido }) {
   const gestiona = puedeGestionarJugadores(plantilla)
   const importado = partido.eventos.some((e) => e.origen === 'acta')
   if (!partido.acta && !gestiona) return null
+  // Se ofrece arriba, en «El partido», como acción principal (GH-287): aquí sobraría
+  if (faltaResultadoSinActa(partido)) return null
+  // Sin acta, una fila de una línea (GH-285)
+  if (!partido.acta) {
+    return (
+      <FilaVacia
+        id="acta"
+        icono={<FileText size={20} />}
+        titulo="Acta del partido"
+        frase="El PDF de la federación"
+        accion={<SubirActa partido={partido} texto="Subir" etiqueta="Subir acta" />}
+      />
+    )
+  }
 
   return (
     <section className={estilos.seccion} aria-labelledby="acta">
@@ -110,28 +145,19 @@ export function SeccionActa({ partido }: { partido: Partido }) {
         <FileText aria-hidden size={20} />
         Acta del partido
       </h2>
-      {partido.acta ? (
-        <p className={estilos.secundario}>
-          <a href={urlActa(plantilla.id, partido.id)} target="_blank" rel="noreferrer">
-            {partido.acta.nombreArchivo}
-          </a>{' '}
-          · {tamano(partido.acta.tamano)} · {importado ? 'registrada' : 'sin registrar'}
-        </p>
-      ) : (
-        <p className={estilos.secundario}>
-          Sube la ficha del partido en PDF de la federación: se leen el resultado, los titulares,
-          los cambios, los goles y las tarjetas, y los revisas antes de guardarlos.
-        </p>
-      )}
+      <p className={estilos.secundario}>
+        <a href={urlActa(plantilla.id, partido.id)} target="_blank" rel="noreferrer">
+          {partido.acta.nombreArchivo}
+        </a>{' '}
+        · {tamano(partido.acta.tamano)} · {importado ? 'registrada' : 'sin registrar'}
+      </p>
       {gestiona && (
         <div className={estilos.acciones}>
-          {partido.acta && (
-            <Link to="acta" className={estilos.enlaceBoton}>
-              <FileCheck aria-hidden size={18} />
-              {importado ? 'Revisar el acta' : 'Revisar y registrar'}
-            </Link>
-          )}
-          <SubirActa partido={partido} texto={partido.acta ? 'Subir otra' : 'Subir acta'} />
+          <Link to="acta" className={estilos.enlaceBoton}>
+            <FileCheck aria-hidden size={18} />
+            {importado ? 'Revisar el acta' : 'Revisar y registrar'}
+          </Link>
+          <SubirActa partido={partido} texto="Subir otra" />
         </div>
       )}
     </section>
@@ -148,7 +174,8 @@ export function PaginaActa() {
   const bajas = useJugadores(plantilla.id, false)
   // Jugadores de otras plantillas del club: también pueden estar en el acta (GH-189)
   const otras = useInvitables(plantilla.id, '', true)
-  const ficha = `/plantillas/${plantilla.id}/partidos/${partidoId}`
+  // Se vuelve a la pestaña Partido de la ficha, donde está el acta (GH-283)
+  const ficha = `/plantillas/${plantilla.id}/partidos/${partidoId}?pestana=partido`
 
   const volver = (
     <Link to={ficha} className={estilos.volver}>
@@ -157,17 +184,13 @@ export function PaginaActa() {
     </Link>
   )
 
-  if (
-    partido.isPending ||
-    acta.isPending ||
-    activos.isPending ||
-    bajas.isPending ||
-    otras.isPending
-  ) {
+  // Los de otras plantillas no se esperan (GH-294): tardan y la revisión no los necesita para
+  // mostrarse; se añaden a los desplegables cuando llegan
+  if (partido.isPending || acta.isPending || activos.isPending || bajas.isPending) {
     return <Cargando />
   }
-  if (partido.isError || acta.isError || activos.isError || bajas.isError || otras.isError) {
-    const error = partido.error ?? acta.error ?? activos.error ?? bajas.error ?? otras.error
+  if (partido.isError || acta.isError || activos.isError || bajas.isError) {
+    const error = partido.error ?? acta.error ?? activos.error ?? bajas.error
     return (
       <div className={estilos.pagina}>
         {volver}
@@ -194,7 +217,8 @@ export function PaginaActa() {
       partido={partido.data}
       lectura={lectura}
       jugadores={[...activos.data, ...bajas.data]}
-      otras={otras.data.map((j) => ({ ...j, dorsal: null }))}
+      otras={otras.data?.map((j) => ({ ...j, dorsal: null })) ?? []}
+      cargandoOtras={otras.isPending}
       volver={volver}
     />
   )
@@ -214,12 +238,15 @@ function Revision({
   lectura,
   jugadores,
   otras,
+  cargandoOtras,
   volver,
 }: {
   partido: Partido
   lectura: LecturaActa
   jugadores: Opcion[]
   otras: OpcionOtra[]
+  // Los de otras plantillas aún no han llegado
+  cargandoOtras: boolean
   volver: ReactNode
 }) {
   const plantilla = usePlantillaActiva()
@@ -270,7 +297,7 @@ function Revision({
         tipo: 'exito',
         mensaje: `Acta registrada: ${textoResultado(guardado) ?? ''} contra ${guardado.rival}`,
       })
-      navegar(`/plantillas/${plantilla.id}/partidos/${partido.id}`)
+      navegar(`/plantillas/${plantilla.id}/partidos/${partido.id}?pestana=partido`)
     },
     onError: (e) => setError(e instanceof Error ? e.message : 'No se ha podido registrar el acta'),
   })
@@ -294,14 +321,27 @@ function Revision({
               {j.dorsal ?? '–'} · {nombreCompleto(j)}
             </option>
           ))}
-          {otras.length > 0 && (
+          {/* Ya emparejado con alguien que aún no está en la lista (de otra plantilla, que llega
+              después): se muestra con el nombre del acta hasta que llegue */}
+          {elegidos[p.nombre] && !porId.has(elegidos[p.nombre] ?? '') && (
+            <option value={elegidos[p.nombre]}>{p.nombre} · de otra plantilla</option>
+          )}
+          {cargandoOtras ? (
             <optgroup label="De otras plantillas">
-              {otras.map((j) => (
-                <option key={j.jugadorId} value={j.jugadorId}>
-                  {nombreCompleto(j)} · {j.plantilla}
-                </option>
-              ))}
+              <option disabled value="cargando">
+                Cargando…
+              </option>
             </optgroup>
+          ) : (
+            otras.length > 0 && (
+              <optgroup label="De otras plantillas">
+                {otras.map((j) => (
+                  <option key={j.jugadorId} value={j.jugadorId}>
+                    {nombreCompleto(j)} · {j.plantilla}
+                  </option>
+                ))}
+              </optgroup>
+            )
           )}
         </select>
       </label>

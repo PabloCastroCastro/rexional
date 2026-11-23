@@ -115,9 +115,12 @@ describe('historial de entrenos', () => {
 
     const octubre = await screen.findByRole('region', { name: 'octubre de 2026' })
     const enlaces = within(octubre).getAllByRole('link')
-    expect(enlaces.map((a) => a.textContent)).toEqual([
-      expect.stringMatching(/Ayer · martes, 13 oct.*12 asisten.*1 justificadas.*2 faltan/),
-      expect.stringMatching(/jueves, 1 oct.*10 asisten/),
+    // Cada entreno se lee entero, con su porcentaje y sus recuentos (GH-265)
+    expect(enlaces.map((a) => a.getAttribute('aria-label'))).toEqual([
+      expect.stringMatching(
+        /^Ayer · martes, 13 oct.*: 80 % de asistencia, 12 asisten, 1 justificada, 2 faltan$/,
+      ),
+      expect.stringMatching(/^Jueves, 1 oct.*10 asisten/),
     ])
     expect(
       within(screen.getByRole('region', { name: 'septiembre de 2026' })).getAllByRole('link'),
@@ -141,7 +144,7 @@ describe('historial de entrenos', () => {
         jugadores: [],
       })
     const router = abrir('/plantillas/p1/entrenos/historial')
-    await userEvent.click(await screen.findByRole('link', { name: /jueves, 1 oct/ }))
+    await userEvent.click(await screen.findByRole('link', { name: /^Jueves, 1 oct/ }))
     expect(await screen.findByText('jueves, 1 oct')).toBeInTheDocument()
     expect(router.state.location.pathname).toBe('/plantillas/p1/entrenos')
     expect(router.state.location.search).toBe('?fecha=2026-10-01&entreno=e2')
@@ -193,6 +196,45 @@ describe('asistencia en la plantilla', () => {
       expect.stringMatching(/Brais.*60 % de asistencia/),
       expect.stringMatching(/Zoe.*Sin asistencia registrada/),
     ])
+  })
+
+  it('dice qué mide el porcentaje y reserva su hueco mientras carga (GH-253)', async () => {
+    conDatos({ plantillas: [senior26] })
+    manejadores['GET /api/plantillas/p1/jugadores'] = () =>
+      json([ficha('j1', 'Íker', 1), ficha('j3', 'Zoe', 9)])
+    let soltar: (r: Response) => void = () => {}
+    manejadores['GET /api/plantillas/p1/asistencia/resumen'] = () =>
+      new Promise<Response>((resolver) => {
+        soltar = resolver
+      })
+    abrir('/plantillas/p1/jugadores')
+    const lista = await screen.findByRole('list', { name: 'Jugadores' })
+    // La cabecera, sobre la columna
+    expect(screen.getByText('Asistencia')).toBeInTheDocument()
+    // Mientras carga: una pastilla vacía en cada fila, sin texto para el lector de pantalla
+    const [iker, zoe] = within(lista).getAllByRole('listitem')
+    const hueco = iker?.querySelector('[aria-hidden="true"][class*="porcentajeCargando"]')
+    expect(hueco).not.toBeNull()
+    expect(iker).not.toHaveTextContent(/%|Sin asistencia/)
+
+    soltar(json([resumen('j1', 'Íker', 9, 1, 0), resumen('j3', 'Zoe', 0, 0, 0)]))
+    expect(await within(lista).findByText(/90 %/)).toBeInTheDocument()
+    expect(lista.querySelector('[class*="porcentajeCargando"]')).toBeNull()
+    // Sin datos: la raya, sin pastilla
+    const raya = within(zoe as HTMLElement).getByText('—').parentElement
+    expect(raya).toHaveAttribute('data-vacio', 'true')
+    expect(raya).not.toHaveAttribute('data-nivel')
+  })
+
+  it('al rol jugador no le sale la cabecera «Asistencia»', async () => {
+    conDatos({
+      plantillas: [plantilla('p1', 'Senior', '2026-27', { rol: 'jugador', esAdminClub: false })],
+    })
+    manejadores['GET /api/plantillas/p1/jugadores'] = () => json([ficha('j1', 'Íker', 1)])
+    manejadores['GET /api/plantillas/p1/asistencia/resumen'] = () => json([])
+    abrir('/plantillas/p1/jugadores')
+    await screen.findByRole('list', { name: 'Jugadores' })
+    expect(screen.queryByText('Asistencia')).not.toBeInTheDocument()
   })
 
   it('el rol jugador solo ve su porcentaje (la API no envía el de los demás)', async () => {

@@ -11,7 +11,8 @@
   grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: var(--espacio-2);
-  padding: var(--espacio-1);
+  /* Sin relleno: las flechas ya dan los 44 px de alto (GH-258) */
+  padding: 0;
   border-radius: var(--radio-l);
   background: var(--color-superficie);
   box-shadow: var(--sombra-1);
@@ -67,17 +68,79 @@
   border-radius: var(--radio-m);
 }
 
-.barra {
+/* Pie de pasar lista (GH-259): pegado encima de la navegación, sin tapar la última fila porque sigue
+   en el flujo de la página */
+.pieLista {
+  position: sticky;
+  bottom: calc(var(--altura-navegacion) + env(safe-area-inset-bottom, 0px));
+  display: grid;
+  gap: var(--espacio-1);
+  /* El progreso, en el borde de arriba, hace de separación con la lista */
+  padding: 0 0 var(--espacio-2);
+  background: var(--color-fondo);
+}
+
+/* El progreso y el guardado a la izquierda, la acción a la derecha, en una fila */
+.pieFila {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: var(--espacio-2);
+  gap: var(--espacio-3);
+}
+
+.pieTexto {
+  display: grid;
+  min-width: 0;
+}
+
+/* Pasar lista, más junta que el resto para que quepan más jugadores (GH-258) */
+.pagina.compacta {
+  gap: var(--espacio-3);
+}
+
+.progreso {
+  display: flex;
+  height: 6px;
+  overflow: hidden;
+  border-radius: var(--radio-completo);
+  background: var(--color-superficie-alterna);
+}
+
+.progreso span {
+  transition: width var(--duracion) var(--curva);
+}
+
+.progreso .asiste {
+  background: var(--color-exito);
+}
+
+.progreso .justificada {
+  background: var(--color-aviso);
+}
+
+.progreso .falta {
+  background: var(--color-peligro);
+}
+
+.listaCompleta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--espacio-1);
+  min-height: var(--altura-tactil);
+  color: var(--color-exito);
+  font-weight: var(--peso-medio);
 }
 
 .recuentos {
   color: var(--color-texto-suave);
   font-size: var(--texto-sm);
+}
+
+/* Después de .recuentos, que tiene menos especificidad */
+.pieTexto .recuentos {
+  margin: 0;
+  color: var(--color-texto);
 }
 
 .guardado {
@@ -164,6 +227,12 @@
   white-space: nowrap;
 }
 
+/* En pasar lista el nombre nunca se corta: si no cabe en una línea, pasa a la siguiente (GH-257) */
+.nombre.entero {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
 .baja {
   color: var(--color-texto-suave);
   font-size: var(--texto-xs);
@@ -174,7 +243,9 @@
 /* Lesionado ese día (GH-230), en su propia línea bajo el nombre */
 .lesion {
   display: block;
+  color: var(--color-aviso);
   font-size: var(--texto-xs);
+  font-weight: var(--peso-medio);
   /* El nombre va en una línea con puntos suspensivos; la lesión se lee entera */
   white-space: normal;
 }
@@ -198,8 +269,9 @@
   border: 0;
 }
 
+/* Sin marcar, los tres en gris neutro; solo el marcado lleva su color, relleno (GH-256). El texto suave
+   sobre la superficie supera el 3:1 en los dos temas */
 .estados button {
-  --color-estado: var(--color-texto-suave);
   display: grid;
   place-items: center;
   width: var(--altura-tactil);
@@ -207,10 +279,11 @@
   border: 1px solid var(--color-borde);
   border-radius: var(--radio-m);
   background: var(--color-superficie);
-  color: var(--color-estado);
+  color: var(--color-texto-suave);
   cursor: pointer;
   transition:
     background-color var(--duracion) var(--curva),
+    border-color var(--duracion) var(--curva),
     color var(--duracion) var(--curva);
 }
 
@@ -229,17 +302,73 @@
 .estados button[aria-pressed="true"] {
   border-color: var(--color-estado);
   background: var(--color-estado);
-  color: var(--color-superficie);
+  color: var(--color-sobre-estado);
 }
 
-.motivo {
+/* Motivo de una justificada (GH-262): chips con los frecuentes y «Otro» con su campo, alineados con el
+   nombre */
+.motivos {
+  display: grid;
+  gap: var(--espacio-2);
+  min-width: 0;
+  margin: 0 0 0 calc(2.5rem + var(--espacio-3));
+  padding: 0;
+  border: 0;
+}
+
+/* Chips pequeños y discretos, en una línea: el botón conserva los 44 px de alto para tocarlo y el chip
+   que se ve es más bajo */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 2px;
+}
+
+.chips button {
+  display: grid;
+  place-items: center;
   min-height: var(--altura-tactil);
-  margin-left: calc(2.5rem + var(--espacio-3));
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+
+.chip {
+  /* Ajustado para que los cinco quepan en una línea a 360–390 px */
+  padding: 3px 6px;
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-completo);
+  background: var(--color-superficie);
+  color: var(--color-texto-suave);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-medio);
+  line-height: 1.4;
+}
+
+/* El elegido, en ámbar suave: el color de la justificada sin rellenar del todo */
+[aria-pressed="true"] > .chip {
+  border-color: var(--color-aviso);
+  background: color-mix(in srgb, var(--color-aviso) 14%, var(--color-superficie));
+  color: var(--color-aviso);
+}
+
+.otroMotivo {
+  display: grid;
+  gap: var(--espacio-1);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
+}
+
+.otroMotivo input {
+  min-height: var(--altura-tactil);
   padding: 0 var(--espacio-3);
   border: 1px solid var(--color-borde);
   border-radius: var(--radio-m);
   background: var(--color-superficie);
   font-size: max(16px, var(--texto-base));
+  font-weight: var(--peso-normal);
 }
 
 .error {
@@ -379,7 +508,37 @@
   color: var(--color-peligro);
 }
 
+/* Sin datos: «—» en texto suave, sin pastilla (GH-253) */
+.porcentaje[data-vacio="true"] {
+  background: none;
+}
+
+/* Mientras carga: el hueco reservado, latiendo (GH-253) */
+.porcentajeCargando {
+  animation: latir 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes latir {
+  to {
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .porcentajeCargando {
+    animation: none;
+  }
+}
+
 /* Sesiones del día: una pastilla por entreno y + para añadir otra */
+/* Las sesiones del día y, si el entreno no tiene plan, «Planificar» al final de la fila (GH-258) */
+.filaSesiones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-2);
+}
+
 .sesiones {
   display: flex;
   flex-wrap: wrap;
@@ -418,6 +577,63 @@
   color: var(--color-acento);
 }
 
+/* Cada sesión y, en la elegida, su «⋯» pegado a la pastilla (GH-261) */
+.sesion {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.sesiones .opcionesSesion {
+  justify-content: center;
+  width: var(--altura-tactil);
+  padding: 0;
+  color: var(--color-texto-suave);
+}
+
+/* Hoja de opciones del entreno: el día y la hora, y una acción por fila */
+.cuandoEntreno {
+  margin: 0 0 var(--espacio-2);
+  color: var(--color-texto-suave);
+}
+
+.opciones {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.opciones > li + li {
+  border-top: 1px solid var(--color-borde);
+}
+
+.opciones a,
+.opciones button {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  width: 100%;
+  min-height: calc(var(--altura-tactil) + var(--espacio-2));
+  padding: 0 var(--espacio-1);
+  border: 0;
+  background: transparent;
+  color: var(--color-texto);
+  font: inherit;
+  font-weight: var(--peso-medio);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.opciones svg {
+  color: var(--color-acento);
+}
+
+.opciones .opcionPeligrosa,
+.opciones .opcionPeligrosa svg {
+  color: var(--color-peligro);
+}
+
 .aviso {
   padding: var(--espacio-3);
   border-radius: var(--radio-m);
@@ -435,6 +651,23 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--espacio-2);
+}
+
+/* «Quitar horario», separado de Guardar por una línea (GH-271) */
+.quitarHorario {
+  display: grid;
+  justify-items: start;
+  gap: var(--espacio-1);
+  padding-top: var(--espacio-4);
+  border-top: 1px solid var(--color-borde);
+}
+
+.quitarHorario p {
+  margin: 0;
+}
+
+.quitarHorario .botonPeligroso {
+  color: var(--color-peligro);
 }
 
 /* Horario: siete botones de día y una hora por día marcado */
@@ -474,13 +707,6 @@
   color: var(--color-sobre-primario);
 }
 
-.horasDias {
-  display: grid;
-  align-items: start;
-  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
-  gap: var(--espacio-3);
-}
-
 .errorCampo {
   color: var(--color-peligro);
   font-size: var(--texto-sm);
@@ -494,15 +720,6 @@
   color: var(--color-aviso);
   font-size: var(--texto-sm);
   font-weight: var(--peso-medio);
-}
-
-/* Horario: inicio y fin de cada día, en una fila */
-.franja {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-items: start;
-  gap: var(--espacio-3);
-  grid-column: 1 / -1;
 }
 
 /* Resumen del plan bajo la fecha de un entreno próximo */
@@ -568,19 +785,77 @@
 .respuestas button[aria-pressed="true"] {
   border-color: var(--color-estado);
   background: var(--color-estado);
-  color: var(--color-superficie);
+  color: var(--color-sobre-estado);
 }
 
 .respuestas:disabled button {
   cursor: progress;
 }
 
-/* En la lista del cuerpo técnico, los botones solo con su icono, como al pasar lista */
-.respuestas.compacto button {
+/* En la lista del cuerpo técnico, un control de pastillas solo de texto («Va / Duda / No va»), muy
+   distinto de los botones de icono de pasar lista (GH-260) */
+.respuestas.pastillas {
+  gap: 0;
+  padding: 2px;
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-completo);
+  background: var(--color-superficie);
+}
+
+.respuestas.pastillas button {
   justify-content: center;
-  width: var(--altura-tactil);
+  min-width: var(--altura-tactil);
+  min-height: calc(var(--altura-tactil) - 6px);
+  padding: 0 var(--espacio-2);
+  border-color: transparent;
+}
+
+/* Solo la elegida lleva color, como al pasar lista (GH-256) */
+.respuestas.pastillas button:not([aria-pressed="true"]) {
+  color: var(--color-texto-suave);
+}
+
+/* Cabecera de «¿Quién va?» en un próximo entreno: el título y compartir a la derecha */
+.cabeceraRespuestas {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-2);
+}
+
+.cabeceraRespuestas h2 {
+  margin: 0;
+}
+
+.pastillasRecuento {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-1);
+  margin: 0;
   padding: 0;
-  border-radius: var(--radio-m);
+  list-style: none;
+}
+
+.pastilla {
+  --color-estado: var(--color-texto-suave);
+  padding: 2px var(--espacio-2);
+  border: 1px solid var(--color-estado);
+  border-radius: var(--radio-completo);
+  color: var(--color-estado);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
+}
+
+.pastilla.asiste {
+  --color-estado: var(--color-exito);
+}
+
+.pastilla.justificada {
+  --color-estado: var(--color-aviso);
+}
+
+.pastilla.falta {
+  --color-estado: var(--color-peligro);
 }
 
 .miRespuesta {
@@ -656,11 +931,310 @@ li > .cierre {
   font-size: max(16px, var(--texto-base));
 }
 
-/* Resumen para WhatsApp del entreno de hoy, plegado encima de la lista (GH-215) */
-.resumenHoy summary {
+/* «¿Quién va?» del entreno de hoy, una línea plegada encima de la lista (GH-258), con el botón de
+   compartir a la derecha, visible sin desplegarla */
+.filaRespuestasHoy {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espacio-2);
+}
+
+.respuestasHoy {
+  flex: 1;
+  min-width: 0;
+}
+
+.respuestasHoy > p {
+  margin: 0 0 var(--espacio-2);
+}
+
+.respuestasHoy > summary {
+  min-height: var(--altura-tactil);
+  padding: var(--espacio-2) 0;
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
+  cursor: pointer;
+}
+
+.respuestasHoy > summary strong {
+  color: var(--color-texto);
+}
+
+/* Pedir confirmación: un botón de icono que abre la hoja con el mensaje (GH-213) */
+.botonCompartir {
+  flex: none;
+  width: var(--altura-tactil);
+  padding: 0;
+}
+
+/* Día sin entreno (GH-263): el próximo, en una tarjeta que lleva a su día, y crear uno debajo */
+.sinEntreno {
+  display: grid;
+  gap: var(--espacio-3);
+  /* El estado vacío centra su acción a lo ancho del contenido: el de la página menos su margen y el
+     del estado vacío, a cada lado */
+  width: min(100vw - 4 * var(--espacio-4), 24rem);
+  text-align: left;
+}
+
+.tarjetaProximo {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  padding: var(--espacio-3) var(--espacio-4);
+  border-radius: var(--radio-l);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra-1);
+  color: var(--color-acento);
+  text-decoration: none;
+}
+
+.textoProximo {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+  color: var(--color-texto);
+}
+
+.cuandoProximo {
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
+}
+
+/* Historial (GH-264): el entreno con plan lleva su icono, en vez de «Sin plan» en los que no */
+.conPlan {
+  flex: none;
+  color: var(--color-acento);
+}
+
+/* El resto de próximos, plegados bajo el primero */
+.masProximos {
+  display: grid;
+  gap: var(--espacio-2);
+}
+
+.masProximos > summary {
   min-height: var(--altura-tactil);
   padding: var(--espacio-2) 0;
   color: var(--color-acento);
+  font-size: var(--texto-sm);
   font-weight: var(--peso-medio);
   cursor: pointer;
+}
+
+/* Historial (GH-265): en la segunda línea de cada entreno, la hora y los recuentos */
+.lineaPasado {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--espacio-2);
+}
+
+/* El porcentaje y, debajo, una barra fina con la proporción de cada estado */
+.asistenciaEntreno {
+  display: grid;
+  flex: none;
+  gap: 4px;
+  width: 3.75rem;
+}
+
+.asistenciaEntreno .progreso {
+  height: 4px;
+}
+
+/* Cabecera de cada mes del historial (GH-266): su resumen, fija bajo la cabecera de la app mientras
+   se baja por el mes, y un botón que lo abre y lo cierra */
+.cabeceraMes {
+  position: sticky;
+  top: calc(var(--altura-cabecera) + env(safe-area-inset-top, 0px) + 3px);
+  z-index: 1;
+  margin: 0 0 var(--espacio-2);
+  background: var(--color-fondo);
+  font-size: var(--texto-sm);
+}
+
+.botonMes {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-1);
+  width: 100%;
+  min-height: var(--altura-tactil);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-texto-suave);
+  font: inherit;
+  font-weight: var(--peso-normal);
+  text-align: left;
+  cursor: pointer;
+}
+
+.nombreMes {
+  color: var(--color-texto);
+  font-weight: var(--peso-medio);
+}
+
+.flechaMes {
+  flex: none;
+  transition: transform var(--duracion) var(--curva);
+}
+
+[aria-expanded="false"] > .flechaMes {
+  transform: rotate(-90deg);
+}
+
+/* Un día con varias sesiones en el historial (GH-267): el día y «2 sesiones», y debajo cada sesión
+   con sangría */
+.diaConSesiones {
+  display: grid;
+}
+
+.cabeceraDia {
+  display: grid;
+  margin: 0;
+  padding: var(--espacio-2) 0 0;
+  font-weight: var(--peso-medio);
+}
+
+.sesionesDia {
+  margin: 0;
+  padding: 0 0 0 var(--espacio-4);
+  border-left: 2px solid var(--color-borde);
+  list-style: none;
+}
+
+/* Horario guardado, como resumen de solo lectura (GH-268) */
+.resumenHorario {
+  display: grid;
+  gap: var(--espacio-3);
+  padding: var(--espacio-4);
+  border-radius: var(--radio-l);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra-1);
+}
+
+/* La semana L–D, con los días de entreno marcados */
+.semana {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: var(--espacio-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.diaHorario {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  max-width: 2.75rem;
+  border-radius: var(--radio-completo);
+  background: var(--color-superficie-alterna);
+  color: var(--color-texto-suave);
+  font-weight: var(--peso-medio);
+}
+
+.diaHorario[data-entreno] {
+  background: var(--color-primario);
+  color: var(--color-sobre-primario);
+}
+
+.gruposHoras {
+  display: grid;
+  gap: var(--espacio-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Entrenos del horario hechos y por venir, para el cuerpo técnico */
+.cifrasHorario {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--espacio-2);
+  margin: 0;
+}
+
+.cifrasHorario > div {
+  display: grid;
+  gap: 2px;
+  padding: var(--espacio-2) var(--espacio-3);
+  border-radius: var(--radio-m);
+  background: var(--color-superficie-alterna);
+}
+
+.cifrasHorario dt {
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
+}
+
+.cifrasHorario dd {
+  margin: 0;
+  font-family: var(--fuente-titulos);
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Lo que cambia al guardar el horario (GH-269), una línea por cambio */
+.listaCambios {
+  display: grid;
+  gap: var(--espacio-1);
+  margin: 0 0 var(--espacio-2);
+  padding: 0;
+  list-style: none;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Formulario del horario (GH-270): una fila por día y las fechas como temporada, a 360 px sin scroll
+   horizontal */
+.grupoHorario {
+  display: grid;
+  gap: var(--espacio-2);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.grupoHorario legend {
+  margin-bottom: var(--espacio-2);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
+}
+
+.filaDia {
+  display: grid;
+  grid-template-columns: 5.25rem minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--espacio-2);
+}
+
+.nombreDiaFila {
+  font-weight: var(--peso-medio);
+}
+
+.filaTemporada {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--espacio-2);
+}
+
+.entradaHorario {
+  width: 100%;
+  min-width: 0;
+  min-height: var(--altura-tactil);
+  padding: 0 var(--espacio-2);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-m);
+  background: var(--color-superficie);
+  /* 16px como mínimo: con menos, iOS hace zoom al enfocar el campo */
+  font-size: max(16px, var(--texto-base));
+}
+
+.entradaHorario[aria-invalid="true"] {
+  border-color: var(--color-peligro);
 }

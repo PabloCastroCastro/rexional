@@ -1,14 +1,16 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   ArrowDownLeft,
+  ArrowLeftRight,
   ArrowUpRight,
+  CircleAlert,
   Goal,
   Handshake,
   ListOrdered,
   Minus,
+  Pencil,
   Plus,
   RectangleVertical,
-  Shirt,
   Trash2,
 } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
@@ -22,6 +24,7 @@ import { Selector } from '../componentes/Selector'
 import { hoy } from '../entrenos/datos'
 import { nombreCompleto, puedeGestionarJugadores } from '../jugadores/datos'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
+import { faltaResultadoSinActa, SubirActa } from './Acta'
 import { CLAVE_PARTIDOS, type Partido, textoResultado } from './datos'
 import estilos from './Partidos.module.css'
 
@@ -52,8 +55,8 @@ export function SeccionPartido({ partido }: { partido: Partido }) {
   const gestiona = puedeGestionarJugadores(plantilla)
   const [resultado, setResultado] = useState(false)
   const [evento, setEvento] = useState(false)
+  const [editando, setEditando] = useState(false)
   const convocados = partido.jugadores.filter((j) => j.convocado)
-  const conAlineacion = convocados.some((j) => j.titular !== null)
   // Goles a favor del resultado que aún no tienen autor en la línea de tiempo
   const sinAutor =
     (partido.golesFavor ?? 0) -
@@ -65,43 +68,212 @@ export function SeccionPartido({ partido }: { partido: Partido }) {
     return null
   }
 
+  const conResultado = partido.estado === 'jugado'
+  const hayAlgo = conResultado || partido.eventos.length > 0
+
+  // La vista es para leer (GH-286): la línea del partido, sin papeleras. «Editar» abre la edición
+  // del resultado y de los sucesos; «Añadir gol, tarjeta o cambio», debajo de la línea
   return (
     <section className={estilos.seccion} aria-labelledby="partido-jugado">
-      <h2 id="partido-jugado">
-        <Goal aria-hidden size={20} />
-        Partido
-      </h2>
-      {/* El resultado va en la tarjeta del partido (GH-229); aquí, solo ponerlo o cambiarlo */}
-      {gestiona && (
-        <Boton
-          variante="secundario"
-          className={estilos.botonResultado}
-          onClick={() => setResultado(true)}
-        >
-          {partido.estado === 'jugado' ? 'Cambiar resultado' : 'Poner resultado'}
-        </Boton>
-      )}
-      {gestiona && convocados.length > 0 && (
-        <div className={estilos.acciones}>
-          <Link to="alineacion" className={estilos.enlaceSecundario}>
-            <Shirt aria-hidden size={18} />
-            {conAlineacion ? 'Titulares y suplentes' : 'Indicar titulares'}
-          </Link>
-          <Boton icono={<Plus aria-hidden size={18} />} onClick={() => setEvento(true)}>
-            Añadir
+      <div className={estilos.cabeceraSeccion}>
+        <h2 id="partido-jugado">
+          <Goal aria-hidden size={20} />
+          El partido
+        </h2>
+        {gestiona && hayAlgo && (
+          <Boton
+            variante="texto"
+            icono={<Pencil aria-hidden size={16} />}
+            aria-label="Editar el partido"
+            onClick={() => setEditando(true)}
+          >
+            Editar
           </Boton>
+        )}
+      </div>
+      {/* Ya jugado y sin resultado (GH-287): subir el acta, que lo rellena todo, como acción
+          principal; ponerlo a mano, como secundaria */}
+      {gestiona && faltaResultadoSinActa(partido) ? (
+        <div className={estilos.faltaResultadoPartido}>
+          <p className={estilos.faltaResultado}>
+            <CircleAlert aria-hidden size={18} />
+            Falta el resultado
+          </p>
+          <p className={estilos.secundario}>
+            Sube el acta de la federación: se leen el resultado, los titulares, los cambios, los
+            goles y las tarjetas, y los revisas antes de guardarlos.
+          </p>
+          <div className={estilos.acciones}>
+            <SubirActa partido={partido} texto="Subir el acta" variante="primario" />
+            <Boton variante="secundario" onClick={() => setResultado(true)}>
+              Poner el resultado a mano
+            </Boton>
+          </div>
         </div>
+      ) : (
+        // El resultado va en la tarjeta del partido (GH-229); sin nada aún, aquí se pone
+        gestiona &&
+        !hayAlgo && (
+          <Boton
+            variante="secundario"
+            className={estilos.botonResultado}
+            onClick={() => setResultado(true)}
+          >
+            Poner resultado
+          </Boton>
+        )
       )}
       {gestiona && sinAutor > 0 && convocados.length > 0 && (
         <p className={estilos.avisoGoles} role="note">
           {sinAutor === 1 ? 'Falta 1 gol por asignar' : `Faltan ${sinAutor} goles por asignar`}:
-          pulsa «Añadir», elige «Gol» y quién lo marcó.
+          pulsa «Añadir gol, tarjeta o cambio», elige «Gol» y quién lo marcó.
         </p>
       )}
-      <LineaTiempo partido={partido} gestiona={gestiona} />
+      {/* Con el aviso de arriba, «Todavía no hay goles…» sobraría */}
+      {!(gestiona && faltaResultadoSinActa(partido)) && <LineaPartido partido={partido} />}
+      {gestiona && convocados.length > 0 && (
+        <Boton
+          variante="secundario"
+          className={estilos.botonResultado}
+          icono={<Plus aria-hidden size={18} />}
+          onClick={() => setEvento(true)}
+        >
+          Añadir gol, tarjeta o cambio
+        </Boton>
+      )}
+      <HojaInferior
+        abierta={editando}
+        alCerrar={() => setEditando(false)}
+        titulo="Editar el partido"
+      >
+        {/* Solo montada mientras está abierta: cerrada no pinta la lista de sucesos */}
+        {editando && (
+          <div className={estilos.edicionPartido}>
+            <Boton
+              variante="secundario"
+              onClick={() => {
+                setEditando(false)
+                setResultado(true)
+              }}
+            >
+              {conResultado ? 'Cambiar resultado' : 'Poner resultado'}
+            </Boton>
+            <LineaTiempo partido={partido} gestiona={gestiona} />
+          </div>
+        )}
+      </HojaInferior>
       <HojaResultado partido={partido} abierta={resultado} alCerrar={() => setResultado(false)} />
       <HojaEvento partido={partido} abierta={evento} alCerrar={() => setEvento(false)} />
     </section>
+  )
+}
+
+type Fila =
+  | { clase: 'suceso'; clave: string; minuto: number | null; principal: Evento; debajo: Evento[] }
+  | { clase: 'descanso'; clave: string }
+
+// Ordena los sucesos por minuto (los que no lo tienen, al final) y junta lo que va unido: cada gol
+// con su asistencia del mismo minuto y cada entrada con la salida de su cambio. Entre la 1.ª y la 2.ª
+// parte, el descanso
+export function filasDelPartido(eventos: Evento[]): Fila[] {
+  const ordenados = eventos
+    .map((e, i) => ({ e, i }))
+    .sort((a, b) => (a.e.minuto ?? 1000) - (b.e.minuto ?? 1000) || a.i - b.i)
+    .map(({ e }) => e)
+  // Primero se empareja todo (la asistencia puede llegar antes que su gol, y la salida antes que la
+  // entrada); luego se recorre en orden, saltando lo que ya va debajo de otro
+  const debajoDe = new Map<string, Evento[]>()
+  const emparejados = new Set<string>()
+  const emparejar = (tipos: Evento['tipo'][], tipoPareja: Evento['tipo']) => {
+    for (const e of ordenados) {
+      if (!tipos.includes(e.tipo) || e.minuto === null) continue
+      const otro = ordenados.find(
+        (o) => o.tipo === tipoPareja && o.minuto === e.minuto && !emparejados.has(o.id),
+      )
+      if (!otro) continue
+      emparejados.add(otro.id)
+      debajoDe.set(e.id, [otro])
+    }
+  }
+  emparejar(['gol', 'gol_propia'], 'asistencia')
+  emparejar(['entra'], 'sale')
+  const filas: Fila[] = ordenados
+    .filter((e) => !emparejados.has(e.id))
+    .map((e) => ({
+      clase: 'suceso',
+      clave: e.id,
+      minuto: e.minuto,
+      principal: e,
+      debajo: debajoDe.get(e.id) ?? [],
+    }))
+  // El descanso, si hay sucesos con minuto en las dos partes
+  const segunda = filas.findIndex((f) => f.clase === 'suceso' && (f.minuto ?? 0) > 45)
+  const hayPrimera = filas.some((f) => f.clase === 'suceso' && f.minuto !== null && f.minuto <= 45)
+  if (segunda > 0 && hayPrimera) filas.splice(segunda, 0, { clase: 'descanso', clave: 'descanso' })
+  return filas
+}
+
+// La línea del partido, para leer (GH-286): el minuto en una pastilla, el icono y el texto, con lo
+// unido junto. Los goles del rival sin minuto se resumen al final
+function LineaPartido({ partido }: { partido: Partido }) {
+  const nombres = new Map(partido.jugadores.map((j) => [j.jugadorId, nombreCompleto(j)]))
+  const nombre = (id: string | null) => (id ? (nombres.get(id) ?? 'un jugador') : '')
+  const texto = (e: Evento) =>
+    e.tipo === 'gol_rival' ? `Gol de ${partido.rival}` : textoEvento(e, nombre)
+  const rivalSinMinuto = partido.eventos.filter(
+    (e) => e.tipo === 'gol_rival' && e.minuto === null,
+  ).length
+  const filas = filasDelPartido(
+    partido.eventos.filter((e) => !(e.tipo === 'gol_rival' && e.minuto === null)),
+  )
+
+  if (filas.length === 0 && rivalSinMinuto === 0) {
+    return <p className={estilos.secundario}>Todavía no hay goles, cambios ni tarjetas.</p>
+  }
+  return (
+    <>
+      {filas.length > 0 && (
+        <ol className={estilos.lineaPartido} aria-label="Línea de tiempo">
+          {filas.map((f) => {
+            if (f.clase === 'descanso') {
+              return (
+                <li key={f.clave} className={estilos.separacionDescanso}>
+                  Descanso
+                </li>
+              )
+            }
+            const e = f.principal
+            const Icono =
+              e.tipo === 'entra' && f.debajo.length > 0 ? ArrowLeftRight : ICONOS[e.tipo]
+            return (
+              <li key={f.clave} className={estilos.suceso} data-tipo={e.tipo}>
+                <span className={estilos.pastillaMinuto}>
+                  {f.minuto === null ? '–' : `${f.minuto}'`}
+                </span>
+                <Icono aria-hidden size={18} className={estilos.iconoEvento} />
+                <span className={estilos.textoSuceso}>
+                  <span>
+                    {texto(e)}
+                    {e.origen === 'acta' && <span className={estilos.etiquetaActa}>acta</span>}
+                  </span>
+                  {f.debajo.map((d) => (
+                    <span key={d.id} className={estilos.debajoSuceso}>
+                      {texto(d)}
+                    </span>
+                  ))}
+                </span>
+              </li>
+            )
+          })}
+        </ol>
+      )}
+      {rivalSinMinuto > 0 && (
+        <p className={estilos.secundario}>
+          {partido.rival} marcó {rivalSinMinuto === 1 ? '1 gol' : `${rivalSinMinuto} goles`} sin
+          minuto
+        </p>
+      )}
+    </>
   )
 }
 
@@ -169,7 +341,7 @@ function LineaTiempo({ partido, gestiona }: { partido: Partido; gestiona: boolea
     return <p className={estilos.secundario}>Todavía no hay goles, cambios ni tarjetas.</p>
   }
   return (
-    <ol className={estilos.lineaTiempo} aria-label="Línea de tiempo">
+    <ol className={estilos.lineaTiempo} aria-label="Sucesos">
       {partido.eventos.map((e) => {
         const Icono = ICONOS[e.tipo]
         const texto = textoEvento(e, nombre)

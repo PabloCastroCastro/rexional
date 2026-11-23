@@ -2,7 +2,16 @@ import { and, eq, inArray } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { crearApp } from '../src/app.js'
 import { db, pool } from '../src/db/cliente.js'
-import { clubes, convocados, fichas, jugadores, membresias, user } from '../src/db/schema/index.js'
+import {
+  asistencias,
+  clubes,
+  convocados,
+  entrenos,
+  fichas,
+  jugadores,
+  membresias,
+  user,
+} from '../src/db/schema/index.js'
 import { textoDia } from '../src/fechas.js'
 import { crearUsuario, iniciarSesion, ORIGEN } from './utilidades.js'
 
@@ -357,5 +366,115 @@ describe('borrar y permisos', () => {
       expect((await pedir(metodo, ruta, undefined, cuerpo)).status).toBe(401)
     }
     expect((await pedir('GET', base(), 'ajeno')).status).toBe(403)
+  })
+})
+
+describe('cómo ha entrenado cada jugador desde el partido anterior (GH-288)', () => {
+  it('los entrenos entre el partido anterior y este, con la asistencia de cada uno', async () => {
+    // Una plantilla propia, para controlar qué partidos hay antes
+    const plantilla = (
+      await (
+        await pedir('POST', '/plantillas', 'admin', {
+          clubId: (
+            await db
+              .select()
+              .from(fichas)
+              .where(eq(fichas.jugadorId, ids.Brais ?? ''))
+          )[0]?.clubId,
+          nombre: 'Veteranos',
+          categoria: 'sénior',
+          temporada: '2027-28',
+        })
+      ).json()
+    ).id as string
+    const [brais] = await db
+      .select()
+      .from(fichas)
+      .where(and(eq(fichas.jugadorId, ids.Brais ?? ''), eq(fichas.plantillaId, ids.senior ?? '')))
+    await db.insert(fichas).values({
+      plantillaId: plantilla,
+      jugadorId: ids.Brais ?? '',
+      clubId: brais?.clubId ?? '',
+      temporada: '2027-28',
+      dorsal: 7,
+    })
+    await db.insert(fichas).values({
+      plantillaId: plantilla,
+      jugadorId: ids.Zoe ?? '',
+      clubId: brais?.clubId ?? '',
+      temporada: '2027-28',
+    })
+    const nuevoPartido = async (fecha: string) => {
+      const res = await pedir('POST', `/plantillas/${plantilla}/partidos`, 'admin', {
+        rival: `Rival ${fecha}`,
+        fecha,
+      })
+      expect(res.status).toBe(201)
+      return (await res.json()).id as string
+    }
+    const entreno = async (
+      fecha: string,
+      lista?: Record<string, ['asiste' | 'justificada' | 'falta', string | null]>,
+    ) => {
+      const [e] = await db.insert(entrenos).values({ plantillaId: plantilla, fecha }).returning()
+      if (lista) {
+        await db.insert(asistencias).values(
+          Object.entries(lista).map(([jugador, [estado, motivo]]) => ({
+            entrenoId: e?.id ?? '',
+            jugadorId: ids[jugador] ?? '',
+            plantillaId: plantilla,
+            estado,
+            motivo,
+          })),
+        )
+      }
+    }
+    const primero = await nuevoPartido('2030-03-01')
+    const segundo = await nuevoPartido('2030-03-08')
+    // Antes del primero (de su semana anterior), entre los dos, el día del segundo y después
+    await entreno('2030-02-20', { Brais: ['asiste', null] })
+    await entreno('2030-02-26', { Brais: ['asiste', null], Zoe: ['falta', null] })
+    await entreno('2030-03-03', { Brais: ['asiste', null], Zoe: ['justificada', 'Trabajo'] })
+    await entreno('2030-03-05')
+    await entreno('2030-03-08', { Brais: ['asiste', null] })
+
+    type Detalle = {
+      jugadores: {
+        jugadorId: string
+        entrenosPrevios: { fecha: string; estado: string | null; motivo: string | null }[] | null
+      }[]
+    }
+    const detalle = async (pid: string, quien = 'admin') =>
+      (await (
+        await pedir('GET', `/plantillas/${plantilla}/partidos/${pid}`, quien)
+      ).json()) as Detalle
+    const de = (d: Detalle, jugador: string) =>
+      d.jugadores.find((j) => j.jugadorId === ids[jugador])?.entrenosPrevios
+
+    // Entre el partido anterior y este: el 3 y el 5 (sin lista: null)
+    const delSegundo = await detalle(segundo)
+    expect(de(delSegundo, 'Brais')).toEqual([
+      { fecha: '2030-03-03', estado: 'asiste', motivo: null },
+      { fecha: '2030-03-05', estado: null, motivo: null },
+    ])
+    expect(de(delSegundo, 'Zoe')).toEqual([
+      { fecha: '2030-03-03', estado: 'justificada', motivo: 'Trabajo' },
+      { fecha: '2030-03-05', estado: null, motivo: null },
+    ])
+    // El primero de la temporada: los de la semana anterior (el 20 de febrero queda fuera)
+    expect(de(await detalle(primero), 'Brais')).toEqual([
+      { fecha: '2030-02-26', estado: 'asiste', motivo: null },
+    ])
+  })
+
+  it('solo lo ve quien gestiona', async () => {
+    const partido = await crearPartido({ rival: 'Privado', fecha: dia(30) })
+    const res = await pedir('GET', `${base()}/${partido.id}`, 'jugador')
+    const datos = (await res.json()) as { jugadores: { entrenosPrevios: unknown }[] }
+    expect(datos.jugadores.every((j) => j.entrenosPrevios === null)).toBe(true)
+    const gestor = (await (await pedir('GET', `${base()}/${partido.id}`, 'delegado')).json()) as {
+      jugadores: { entrenosPrevios: unknown }[]
+    }
+    expect(gestor.jugadores.every((j) => Array.isArray(j.entrenosPrevios))).toBe(true)
   })
 })

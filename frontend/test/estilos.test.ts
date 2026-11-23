@@ -81,17 +81,19 @@ describe('fuente de los títulos', () => {
   })
 })
 
+// Los tokens de color de cada tema, para comprobar contrastes
+const tokens = readFileSync(join(SRC, 'estilos/tokens.css'), 'utf8')
+const [claro = '', oscuro = ''] = tokens.split('@media (prefers-color-scheme: dark)')
+const TEMAS = [
+  ['claro', claro],
+  ['oscuro', oscuro],
+] as const
+const valor = (bloque: string, nombre: string) =>
+  bloque.match(new RegExp(`--${nombre}:\\s*(#[0-9a-f]{6});`))?.[1] ?? ''
+
 // GH-228: los colores del resultado se leen con su texto, en claro y en oscuro
 describe('colores del resultado', () => {
-  const tokens = readFileSync(join(SRC, 'estilos/tokens.css'), 'utf8')
-  const [claro = '', oscuro = ''] = tokens.split('@media (prefers-color-scheme: dark)')
-  const valor = (bloque: string, nombre: string) =>
-    bloque.match(new RegExp(`--${nombre}:\\s*(#[0-9a-f]{6});`))?.[1] ?? ''
-
-  for (const [modo, bloque] of [
-    ['claro', claro],
-    ['oscuro', oscuro],
-  ] as const) {
+  for (const [modo, bloque] of TEMAS) {
     for (const tipo of ['victoria', 'empate', 'derrota']) {
       it(`${tipo} en modo ${modo} cumple AA con su texto`, () => {
         const fondo = valor(bloque, `color-${tipo}`)
@@ -111,5 +113,63 @@ describe('tarjeta del partido', () => {
     const regla = css.match(/\n\.editar \{([^}]+)\}/)?.[1] ?? ''
     expect(regla).toContain('position: absolute')
     expect(regla).toMatch(/z-index: [1-9]/)
+  })
+})
+
+// GH-256: en pasar lista, sin marcar los tres botones van en gris y solo el marcado lleva su color,
+// relleno y con el icono encima. Iconos: 3:1 como mínimo (WCAG 1.4.11), en claro y en oscuro
+describe('estados de pasar lista', () => {
+  const css = readFileSync(join(SRC, 'entrenos/Entrenos.module.css'), 'utf8')
+
+  it('sin marcar, el icono es el texto suave; marcado, el color de su estado', () => {
+    expect(css.match(/\n\.estados button \{([^}]+)\}/)?.[1]).toContain(
+      'color: var(--color-texto-suave)',
+    )
+    const marcado = css.match(/\n\.estados button\[aria-pressed="true"\] \{([^}]+)\}/)?.[1]
+    expect(marcado).toContain('background: var(--color-estado)')
+    expect(marcado).toContain('color: var(--color-sobre-estado)')
+  })
+
+  for (const [modo, bloque] of TEMAS) {
+    it(`en modo ${modo}, el icono gris sobre el botón cumple 3:1`, () => {
+      expect(
+        contraste(valor(bloque, 'color-texto-suave'), valor(bloque, 'color-superficie')),
+      ).toBeGreaterThanOrEqual(3)
+    })
+
+    for (const estado of ['exito', 'aviso', 'peligro']) {
+      it(`en modo ${modo}, el icono sobre ${estado} cumple 3:1`, () => {
+        expect(
+          contraste(valor(bloque, 'color-sobre-estado'), valor(bloque, `color-${estado}`)),
+        ).toBeGreaterThanOrEqual(3)
+      })
+    }
+  }
+
+  // GH-259: pegado encima de la navegación y de la zona segura del móvil, sin salir del flujo (así
+  // no tapa la última fila)
+  it('el pie va fijo encima de la navegación, sin tapar la última fila', () => {
+    const regla = css.match(/\n\.pieLista \{([^}]+)\}/)?.[1] ?? ''
+    expect(regla).toContain('position: sticky')
+    expect(regla).toContain(
+      'bottom: calc(var(--altura-navegacion) + env(safe-area-inset-bottom, 0px))',
+    )
+  })
+})
+
+// GH-351: el selector de jugador de Multas, con un nombre largo, se ensanchaba hasta su opción más
+// larga y pisaba «Poner multa»
+describe('los campos no se salen de su hueco', () => {
+  const campo = readFileSync(join(SRC, 'componentes', 'Campo.module.css'), 'utf8')
+  const regla = (clase: string) =>
+    campo.match(new RegExp(`\\n\\.${clase} \\{([^}]+)\\}`))?.[1] ?? ''
+
+  it('la columna del campo puede encoger por debajo de su contenido', () => {
+    expect(regla('campo')).toContain('grid-template-columns: minmax(0, 1fr)')
+  })
+
+  it('la entrada (también un <select>) ocupa su hueco y no lo que mide su opción más larga', () => {
+    expect(regla('entrada')).toContain('width: 100%')
+    expect(regla('entrada')).toContain('min-width: 0')
   })
 })

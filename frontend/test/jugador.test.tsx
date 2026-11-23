@@ -134,7 +134,8 @@ describe('partidos y multas del rol jugador', () => {
     manejadores['GET /api/plantillas/p1/partidos'] = () =>
       json([partido('a', 16, true), partido('b', 16, false), partido('c', 0, false)])
     abrir('/plantillas/p1/partidos')
-    expect(await screen.findByText('Convocado')).toBeInTheDocument()
+    // El siguiente, destacado, se lo dice en segunda persona (GH-280)
+    expect(await screen.findByText('Estás convocado')).toBeInTheDocument()
     expect(screen.getByText('No convocado')).toBeInTheDocument()
     expect(screen.getByText('Sin convocatoria')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Nuevo partido' })).not.toBeInTheDocument()

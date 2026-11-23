@@ -1,5 +1,8 @@
+/* La columna puede encoger por debajo de lo que mide el contenido (GH-351): un <select> mide lo que
+   su opción más larga y, con un nombre largo, se salía de su hueco y pisaba lo de al lado */
 .campo {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--espacio-1);
 }
 
@@ -9,6 +12,8 @@
 }
 
 .entrada {
+  width: 100%;
+  min-width: 0;
   min-height: var(--altura-tactil);
   padding: 0 var(--espacio-3);
   background: var(--color-superficie);

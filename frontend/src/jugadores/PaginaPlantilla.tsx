@@ -4,10 +4,10 @@ import { Link, useSearchParams } from 'react-router'
 import { Boton } from '../componentes/Boton'
 import { Cargando } from '../componentes/Cargando'
 import { EstadoVacio } from '../componentes/EstadoVacio'
+import { IconoEstado } from '../componentes/IconoEstado'
 import { useResumenAsistencia } from '../entrenos/datos'
 import { Porcentaje } from '../entrenos/Porcentaje'
 import { euros, useDeudas } from '../multas/datos'
-import estilosMultas from '../multas/Multas.module.css'
 import { useEstadisticas } from '../partidos/datos'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
 import { useBajaYReactivacion } from './acciones'
@@ -19,10 +19,10 @@ import {
   puedeGestionarJugadores,
   useJugadores,
 } from './datos'
+import { type Estado, estadoJugador } from './estado'
 import { FormularioJugador, type ModoFormulario } from './FormularioJugador'
 import estilos from './Jugadores.module.css'
-import { MarcaLesion } from './Lesiones'
-import { MarcaSancion, type SancionesJugador, sancionesDe, useSanciones } from './Sanciones'
+import { type SancionesJugador, sancionesDe, useSanciones } from './Sanciones'
 
 // Jugadores de la plantilla activa, por dorsal y nombre (la API ya los devuelve ordenados). Activos o
 // bajas según ?ver=bajas, para que volver desde un jugador deje la misma vista. Entre los activos,
@@ -43,6 +43,15 @@ export function PaginaPlantilla() {
   // Sancionados y apercibidos (GH-231)
   const sanciones = useSanciones(plantilla.id)
   const gestiona = puedeGestionarJugadores(plantilla)
+  // Recuento de activos (sin invitados, que van aparte con el suyo) y de bajas (GH-254); las dos
+  // listas se piden siempre, la que no se ve sirve para el recuento y queda en caché para el cambio.
+  // Las bajas, solo a quien las ve
+  const activos = useJugadores(plantilla.id, true)
+  const bajas = useJugadores(plantilla.id, false, gestiona)
+  const cuantosActivos = activos.data?.filter((j) => j.tipo === 'propia').length
+  const cuantasBajas = bajas.data?.length
+  const conCuenta = (texto: string, cuenta: number | undefined) =>
+    cuenta === undefined ? texto : `${texto} · ${cuenta}`
   const [abiertos, setAbiertos] = useState(false)
   const [formulario, setFormulario] = useState<ModoFormulario | null>(null)
   const { reactivar, pendiente } = useBajaYReactivacion({
@@ -55,7 +64,8 @@ export function PaginaPlantilla() {
   return (
     <div className={estilos.pagina}>
       <div className={estilos.cabecera}>
-        <h1>Plantilla</h1>
+        {/* El rol jugador no ve los segmentos: el recuento, junto al título */}
+        <h1>{gestiona ? 'Plantilla' : conCuenta('Plantilla', cuantosActivos)}</h1>
         {gestiona && (
           <Boton icono={<UserPlus aria-hidden size={18} />} onClick={anadir}>
             Añadir
@@ -68,14 +78,14 @@ export function PaginaPlantilla() {
         <fieldset className={estilos.segmentos}>
           <legend className="solo-lectores">Ver</legend>
           <button type="button" aria-pressed={!verBajas} onClick={() => setParametros({})}>
-            Activos
+            {conCuenta('Activos', cuantosActivos)}
           </button>
           <button
             type="button"
             aria-pressed={verBajas}
             onClick={() => setParametros({ ver: 'bajas' })}
           >
-            Bajas
+            {conCuenta('Bajas', cuantasBajas)}
           </button>
         </fieldset>
       )}
@@ -124,6 +134,12 @@ export function PaginaPlantilla() {
             )
             return (
               <>
+                {/* Qué mide el porcentaje, sobre su columna (GH-253) */}
+                {gestiona && !verBajas && propios.length > 0 && (
+                  <div className={estilos.cabeceraColumnas} aria-hidden="true">
+                    <span>Asistencia</span>
+                  </div>
+                )}
                 {propios.length > 0 && lista(propios, verBajas ? 'Bajas' : 'Jugadores')}
                 {invitados.length > 0 && (
                   <details
@@ -156,6 +172,7 @@ export function PaginaPlantilla() {
               jugador={j}
               propio={propio}
               porcentaje={porcentajes.get(j.jugadorId)}
+              cargandoPorcentaje={resumen.isPending}
               deuda={deudas.get(j.jugadorId)}
               partidos={partidos.get(j.jugadorId)}
               sanciones={sancionesDe(sanciones.data, j.jugadorId)}
@@ -173,27 +190,38 @@ export function PaginaPlantilla() {
             />
           </div>
         )}
+        {/* Solo el icono, para que la fila quepa en el móvil (GH-250) */}
         {gestiona && verBajas && (
           <Boton
             variante="secundario"
+            className={estilos.botonIcono}
             icono={<RotateCcw aria-hidden size={18} />}
             disabled={pendiente}
             onClick={() => reactivar(j)}
             aria-label={`Reactivar a ${nombreCompleto(j)}`}
-          >
-            Reactivar
-          </Boton>
+            title="Reactivar"
+          />
         )}
       </li>
     )
   }
 }
 
-export function Dorsal({ dorsal }: { dorsal: number | null }) {
+// Dorsal con el color secundario del club y, si lo tiene, el estado del jugador como una señal en su
+// esquina: cruz de lesión, tarjeta roja de sanción o amarilla de apercibido (GH-251)
+export function Dorsal({ dorsal, estado }: { dorsal: number | null; estado?: Estado | null }) {
   return (
     <span className={estilos.dorsal}>
       <span aria-hidden="true">{dorsal ?? '–'}</span>
-      <span className="solo-lectores">{dorsal === null ? 'Sin dorsal' : `Dorsal ${dorsal}`}</span>
+      <span className="solo-lectores">
+        {dorsal === null ? 'Sin dorsal' : `Dorsal ${dorsal}`}
+        {estado && `. ${estado.texto}`}
+      </span>
+      {estado && (
+        <span className={estilos.senal} data-estado={estado.tipo}>
+          <IconoEstado estado={estado.tipo} size={12} />
+        </span>
+      )}
     </span>
   )
 }
@@ -202,6 +230,7 @@ function Datos({
   jugador,
   propio = false,
   porcentaje,
+  cargandoPorcentaje = false,
   deuda,
   partidos,
   sanciones,
@@ -209,55 +238,52 @@ function Datos({
   jugador: JugadorPlantilla
   propio?: boolean
   porcentaje: number | null | undefined
+  cargandoPorcentaje?: boolean
   deuda: number | undefined
   partidos: number | undefined
   sanciones?: SancionesJugador
 }) {
   const invitado = jugador.tipo === 'invitado'
+  // Debajo del nombre, solo la posición (o, en un invitado, de dónde viene y cuántos partidos lleva);
+  // la lesión y la sanción van sobre el dorsal (GH-251)
+  const detalle = invitado
+    ? [jugador.procedencia, `${partidos ?? 0} ${partidos === 1 ? 'partido' : 'partidos'}`]
+        .filter(Boolean)
+        .join(' · ')
+    : jugador.posicion
+      ? POSICIONES[jugador.posicion]
+      : null
   return (
     <>
-      <Dorsal dorsal={jugador.dorsal} />
+      <Dorsal
+        dorsal={jugador.dorsal}
+        estado={estadoJugador({ lesion: jugador.lesion, sanciones })}
+      />
       <span className={estilos.texto}>
-        <strong>
+        <strong className={estilos.nombreJugador}>
           {nombreCompleto(jugador)}
           {invitado && <MarcaInvitado />}
         </strong>
-        <span className={propio ? `${estilos.secundario} ${estilos.unaLinea}` : estilos.secundario}>
-          {propio && <span className={estilos.marcaPropia}>Tú</span>}
-          {invitado
-            ? [
-                jugador.procedencia,
-                jugador.enDinamica ? 'En la dinámica' : 'Solo partidos',
-                `${partidos ?? 0} ${partidos === 1 ? 'partido' : 'partidos'}`,
-              ]
-                .filter(Boolean)
-                .join(' · ')
-            : jugador.posicion
-              ? POSICIONES[jugador.posicion]
-              : 'Sin posición'}
-          {/* GH-230: al rol jugador solo le llega la suya */}
-          {jugador.lesion && (
-            <>
-              {' · '}
-              <MarcaLesion />
-            </>
-          )}
-          {sanciones && (sanciones.pendientes.length > 0 || sanciones.apercibido.length > 0) && (
-            <>
-              {' · '}
-              <MarcaSancion sanciones={sanciones} />
-            </>
-          )}
-        </span>
+        {(propio || detalle || deuda) && (
+          <span className={`${estilos.secundario} ${estilos.segundaLinea}`}>
+            {propio && <span className={estilos.marcaPropia}>Tú</span>}
+            {detalle}
+            {/* La multa pendiente, detrás de la posición y en gris (GH-252): no le quita sitio al
+                nombre y no se confunde con los avisos, que son los ámbar */}
+            {deuda ? (
+              <>
+                {detalle && ' · '}
+                <span className={estilos.deuda}>
+                  <Coins aria-hidden size={14} />
+                  {euros(deuda)}
+                  <span className="solo-lectores"> de multas pendientes</span>
+                </span>
+              </>
+            ) : null}
+          </span>
+        )}
       </span>
-      {deuda ? (
-        <span className={estilosMultas.deuda}>
-          <Coins aria-hidden size={14} />
-          {euros(deuda)}
-          <span className="solo-lectores"> de multas pendientes</span>
-        </span>
-      ) : null}
-      <Porcentaje valor={porcentaje} />
+      <Porcentaje valor={porcentaje} cargando={cargandoPorcentaje} />
     </>
   )
 }

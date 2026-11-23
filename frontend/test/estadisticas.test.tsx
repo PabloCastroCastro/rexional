@@ -99,7 +99,11 @@ describe('estadísticas de la temporada', () => {
     abrir('/plantillas/p1/partidos?ver=estadisticas')
     const resultados = await screen.findByRole('region', { name: 'Resultados' })
     expect(within(resultados).getByText('Ganados').nextSibling).toHaveTextContent('4')
-    expect(resultados).toHaveTextContent('Goles: 16 a favor y 7 en contra (+9)')
+    // Los goles, en casillas debajo de las de resultados (GH-282)
+    const casilla = (texto: string) => within(resultados).getByText(texto).nextSibling
+    expect(casilla('Goles a favor')).toHaveTextContent('16')
+    expect(casilla('Goles en contra')).toHaveTextContent('7')
+    expect(casilla('Diferencia')).toHaveTextContent('+9')
 
     // Un desplegable, no un botón por estadística
     expect(screen.queryByRole('button', { name: 'Minutos' })).not.toBeInTheDocument()
@@ -130,6 +134,44 @@ describe('estadísticas de la temporada', () => {
     conEstadisticas()
     abrir('/plantillas/p1/partidos?ver=estadisticas')
     const seccion = await screen.findByRole('region', { name: 'Goles por minuto' })
+    // En barras (GH-282): cada tramo lee su valor completo; en contra a la izquierda, a favor a la
+    // derecha, cada uno con su número
+    const grafico = within(seccion).getByRole('list', { name: 'Goles por tramo de 15 minutos' })
+    const tramos = within(grafico).getAllByRole('img')
+    expect(tramos.map((t) => t.getAttribute('aria-label'))).toEqual([
+      'Del minuto 0 al 15: 1 a favor y 1 en contra',
+      'Del minuto 16 al 30: 1 a favor y 1 en contra',
+      'Del minuto 31 al 45: 2 a favor y 0 en contra',
+      'Del minuto 46 al 60: 2 a favor y 1 en contra',
+      'Del minuto 61 al 75: 2 a favor y 0 en contra',
+      'Del minuto 76 al final: 3 a favor y 2 en contra',
+    ])
+    // Se puede enfocar, como al pasar por encima
+    expect(tramos[0]).toHaveAttribute('tabindex', '0')
+    const [contra, favor] = tramos[5]?.querySelectorAll('[data-serie]') ?? []
+    expect(contra).toHaveTextContent('2')
+    expect(favor).toHaveTextContent('3')
+    // El tramo más alto (3) llena su lado (menos el sitio del número); el resto, en proporción
+    expect(favor?.querySelector('[style]')).toHaveStyle({
+      width: 'calc((100% - var(--sitio-numero)) * 1)',
+    })
+    expect(contra?.querySelector('[style]')).toHaveStyle({
+      width: `calc((100% - var(--sitio-numero)) * ${2 / 3})`,
+    })
+    // Sin goles, sin barra
+    expect(tramos[2]?.querySelector('[data-serie="contra"] [style]')).toBeNull()
+    // El descanso separa la 1.ª parte de la 2.ª
+    expect(tramos[3]?.closest('li')).toHaveAttribute('data-descanso')
+    expect(within(seccion).getByRole('list', { name: 'Leyenda' })).toHaveTextContent(
+      'En contraA favor',
+    )
+    expect(seccion).toHaveTextContent(
+      '1.ª parte: 4 a favor y 2 en contra · 2.ª parte: 7 a favor y 3 en contra',
+    )
+
+    // «Ver como tabla», la de siempre
+    await userEvent.click(within(seccion).getByRole('button', { name: 'Ver como tabla' }))
+    expect(within(seccion).queryByRole('list', { name: /Goles por tramo/ })).not.toBeInTheDocument()
     // El descuento de la 1.ª parte va como 45; el 46, ya en la 2.ª
     expect(filas('Goles por partes y tramos')).toEqual([
       ['1.ª parte', '4', '2'],

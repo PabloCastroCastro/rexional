@@ -51,13 +51,17 @@
   box-shadow: var(--sombra-1);
 }
 
+/* Los partidos, filas de una lista con la misma altura (GH-278) */
 .lista {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: var(--espacio-3);
   margin: 0;
   padding: 0;
   list-style: none;
+  border-radius: var(--radio-l);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra-1);
+  overflow: hidden;
 }
 
 .tarjeta {
@@ -65,9 +69,6 @@
   align-items: center;
   gap: var(--espacio-3);
   padding: var(--espacio-3) var(--espacio-4);
-  border-radius: var(--radio-l);
-  background: var(--color-superficie);
-  box-shadow: var(--sombra-1);
   color: inherit;
   text-decoration: none;
 }
@@ -104,20 +105,57 @@
   text-transform: uppercase;
 }
 
+/* Siempre en una línea, para que todas las filas midan lo mismo (GH-278): si no cabe, se recorta la
+   competición */
 .detalles {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: var(--espacio-1) var(--espacio-3);
+  gap: var(--espacio-2);
+  min-width: 0;
   color: var(--color-texto-suave);
   font-size: var(--texto-sm);
+  white-space: nowrap;
 }
 
-.etiqueta {
-  padding: 0 var(--espacio-2);
-  border-radius: var(--radio-completo);
-  background: var(--color-superficie-alterna);
+.detalles > * {
+  flex: none;
+}
+
+/* Casa o fuera, una sola vez y con icono */
+.lado {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-1);
   color: var(--color-texto);
+  font-weight: var(--peso-medio);
+}
+
+.detalles > .competicion {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* El marcador, a la derecha, grande y en el color del resultado (GH-228) */
+.marcadorLista {
+  flex: none;
+  color: var(--resultado);
+  font-family: var(--fuente-titulos);
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.aplazadoLista {
+  flex: none;
+  padding: 0 var(--espacio-2);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-completo);
+  color: var(--color-texto-suave);
+  font-size: var(--texto-xs);
   font-weight: var(--peso-medio);
 }
 
@@ -174,6 +212,53 @@
   color: var(--color-sobre-primario);
   font-size: var(--texto-sm);
   text-align: center;
+}
+
+/* La convocatoria en la ficha (GH-284): el título con «Editar» y los convocados en dos columnas */
+.cabeceraSeccion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-2);
+}
+
+.enlaceEditar {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--espacio-1);
+  min-height: var(--altura-tactil);
+  padding: 0 var(--espacio-2);
+  color: var(--color-acento);
+  font-weight: var(--peso-medio);
+  text-decoration: none;
+}
+
+.dosColumnas {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--espacio-1) var(--espacio-3);
+  margin: 0;
+  padding: var(--espacio-3);
+  border-radius: var(--radio-l);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra-1);
+  list-style: none;
+}
+
+.dosColumnas > li {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  min-width: 0;
+  min-height: 2.25rem;
+}
+
+/* Sin cortar (GH-257): si no cabe, el apellido pasa a la línea de abajo */
+.nombreCorto {
+  min-width: 0;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
 }
 
 .convocados {
@@ -262,7 +347,8 @@
   cursor: pointer;
 }
 
-.noConvocados .convocados {
+.noConvocados .convocados,
+.noConvocados .dosColumnas {
   opacity: 0.75;
 }
 
@@ -274,16 +360,15 @@
   top: var(--altura-cabecera);
   z-index: 5;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  /* Solo «Todos los disponibles» y «Ninguno»: el recuento va en la barra fija (GH-291) */
+  justify-content: flex-end;
   gap: var(--espacio-2);
   padding: var(--espacio-2) var(--espacio-3);
   border-radius: var(--radio-m);
   background: var(--color-superficie);
   box-shadow: var(--sombra-1);
-}
-
-.barraConvocatoria p {
-  flex: 1;
 }
 
 .seleccion {
@@ -334,8 +419,18 @@
   background: var(--color-primario);
 }
 
-.seleccion li[data-convocado="false"] label {
-  opacity: 0.6;
+/* El convocado se distingue por la casilla y un fondo suave del acento; el resto se lee normal
+   (GH-289) */
+.seleccion li[data-convocado="true"] label {
+  background: color-mix(in srgb, var(--color-acento) 10%, var(--color-superficie));
+}
+
+/* Sancionado para el partido (GH-248): el nombre tachado; «Sancionado · N partidos» va debajo */
+.tachado {
+  color: var(--color-texto-suave);
+  text-decoration: line-through;
+  text-decoration-color: var(--color-peligro);
+  text-decoration-thickness: 2px;
 }
 
 .seleccion input:focus-visible + .casilla {
@@ -670,29 +765,6 @@
   font-size: var(--texto-base);
 }
 
-.resultadoLista {
-  font-family: var(--fuente-titulos);
-  justify-self: start;
-  padding: 0 var(--espacio-2);
-  border-radius: var(--radio-m);
-  background: var(--color-primario);
-  color: var(--color-sobre-primario);
-  font-size: 1rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
-.resultadoLista[data-resultado] {
-  background: var(--resultado);
-  color: var(--sobre-resultado);
-}
-
-.resultadoLista[data-estado="aplazado"] {
-  background: var(--color-fondo);
-  color: var(--color-texto-suave);
-  font-weight: var(--peso-medio);
-}
-
 .barraConvocatoria [data-error] {
   color: var(--color-peligro);
 }
@@ -818,22 +890,6 @@
   color: var(--color-texto);
   font-weight: var(--peso-medio);
   text-decoration: none;
-}
-
-/* En pantallas estrechas solo el icono, para que quepa junto a «Nuevo partido» */
-@media (max-width: 30rem) {
-  .enlaceCalendario span {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
-
-  .enlaceCalendario {
-    padding: 0;
-  }
 }
 
 .descanso {
@@ -1001,4 +1057,769 @@
 .meConvocan {
   color: var(--color-exito);
   font-weight: var(--peso-medio);
+}
+
+/* Pasados sin resultado (GH-279): el aviso en ámbar y el hueco del marcador, discontinuo */
+.faltaResultado {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-1);
+  color: var(--color-aviso);
+  font-weight: var(--peso-medio);
+}
+
+.marcadorVacio {
+  flex: none;
+  width: 2.5rem;
+  height: 1.75rem;
+  border: 2px dashed var(--color-borde);
+  border-radius: var(--radio-m);
+}
+
+/* «Últimos 5» (GH-279): bolas de color con su letra, del más antiguo al último */
+.racha {
+  display: grid;
+  gap: var(--espacio-2);
+  padding: var(--espacio-3) var(--espacio-4);
+  border-radius: var(--radio-l);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra-1);
+}
+
+.racha h2 {
+  font-size: var(--texto-base);
+}
+
+.bolas {
+  display: flex;
+  gap: var(--espacio-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.racha .bolas li {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--radio-completo);
+  background: var(--resultado);
+  color: var(--sobre-resultado);
+  font-family: var(--fuente-titulos);
+  font-size: var(--texto-base);
+  font-weight: 700;
+}
+
+.resumenRacha {
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
+}
+
+/* El siguiente partido, destacado (GH-280) */
+.siguiente {
+  display: grid;
+  border-radius: var(--radio-l);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra-1);
+  overflow: hidden;
+}
+
+.enlaceSiguiente {
+  display: grid;
+  gap: var(--espacio-2);
+  padding: var(--espacio-4);
+  color: inherit;
+  text-decoration: none;
+}
+
+.enlaceSiguiente:hover {
+  background: var(--color-superficie-alterna);
+}
+
+.cuandoSiguiente {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--espacio-2);
+  font-family: var(--fuente-titulos);
+  font-size: var(--texto-lg);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.falta {
+  padding: 0 var(--espacio-2);
+  border-radius: var(--radio-completo);
+  background: color-mix(in srgb, var(--color-primario) 14%, var(--color-superficie));
+  color: var(--color-acento);
+  font-family: var(--fuente);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
+}
+
+.rivalSiguiente {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  min-width: 0;
+}
+
+.rivalSiguiente strong {
+  flex: 1;
+  min-width: 0;
+  font-size: 1.5rem;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+/* Las iniciales del rival, a falta de su escudo */
+.iniciales {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: var(--radio-completo);
+  background: var(--color-superficie-alterna);
+  color: var(--color-texto);
+  font-family: var(--fuente-titulos);
+  font-size: var(--texto-lg);
+  font-weight: 700;
+}
+
+.pieSiguiente {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-2) var(--espacio-3);
+  padding: var(--espacio-3) var(--espacio-4);
+  border-top: 1px solid var(--color-borde);
+  font-size: var(--texto-sm);
+}
+
+.accionSecundaria {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--altura-tactil);
+  padding: 0 var(--espacio-3);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-m);
+  color: var(--color-texto);
+  font-weight: var(--peso-medio);
+  text-decoration: none;
+}
+
+.tituloDespues {
+  margin-top: var(--espacio-2);
+  color: var(--color-texto-suave);
+  font-size: var(--texto-base);
+}
+
+/* «Nuevo partido» (GH-281): crear uno o importar el calendario, cada opción con su explicación */
+.opcionesNuevo {
+  display: grid;
+  gap: var(--espacio-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.opcionNuevo {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  width: 100%;
+  min-height: calc(var(--altura-tactil) + var(--espacio-4));
+  padding: var(--espacio-3) var(--espacio-4);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-l);
+  background: var(--color-superficie);
+  color: var(--color-texto);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.iconoOpcion {
+  flex: none;
+  color: var(--color-acento);
+}
+
+.textoOpcion {
+  display: grid;
+  gap: 2px;
+}
+
+.explicacionOpcion {
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
+}
+
+/* Goles por minuto en barras (GH-282): en contra a la izquierda y a favor a la derecha de cada
+   tramo, con su número junto a la barra. Barras finas (16 px), redondeadas solo en el extremo del
+   dato; el texto, siempre en los colores de texto */
+.cabeceraGrafico {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-2);
+}
+
+.marcoGrafico {
+  display: grid;
+  gap: var(--espacio-3);
+  padding: var(--espacio-3) var(--espacio-4);
+  border-radius: var(--radio-l);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra-1);
+}
+
+.leyenda {
+  display: flex;
+  justify-content: center;
+  gap: var(--espacio-4);
+  margin: 0;
+  padding: 0;
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
+  list-style: none;
+}
+
+.claveLeyenda {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-2);
+}
+
+.claveLeyenda::before {
+  content: "";
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 3px;
+  background: var(--serie);
+}
+
+.grafico {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+[data-serie="favor"] {
+  --serie: var(--color-serie-favor);
+}
+
+[data-serie="contra"] {
+  --serie: var(--color-serie-contra);
+}
+
+/* El descanso, entre la 1.ª y la 2.ª parte */
+.filaTramo[data-descanso] {
+  margin-top: var(--espacio-2);
+  padding-top: var(--espacio-2);
+  border-top: 1px solid var(--color-borde);
+}
+
+.tramo {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 4rem minmax(0, 1fr);
+  align-items: center;
+  min-height: 2.25rem;
+  border-radius: var(--radio-s);
+  cursor: default;
+}
+
+.tramo:hover {
+  background: var(--color-superficie-alterna);
+}
+
+.tramo:focus-visible {
+  outline: 2px solid var(--color-foco);
+  outline-offset: 2px;
+}
+
+/* Cada lado crece desde el tramo: en contra, hacia la izquierda; el número, junto al extremo */
+.ladoGrafico {
+  --sitio-numero: 1.75rem;
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-1);
+  min-width: 0;
+}
+
+.ladoGrafico[data-serie="contra"] {
+  justify-content: flex-end;
+}
+
+.barra {
+  flex: none;
+  height: 1rem;
+  background: var(--serie);
+}
+
+/* Redondeada en el extremo del dato, recta junto al tramo */
+.ladoGrafico[data-serie="contra"] .barra {
+  border-radius: 4px 0 0 4px;
+}
+
+.ladoGrafico[data-serie="favor"] .barra {
+  border-radius: 0 4px 4px 0;
+}
+
+.numeroBarra {
+  flex: none;
+  color: var(--color-texto);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-fuerte);
+  font-variant-numeric: tabular-nums;
+}
+
+.numeroBarra[data-cero] {
+  color: var(--color-texto-suave);
+  font-weight: var(--peso-normal);
+}
+
+.etiquetaTramo {
+  color: var(--color-texto-suave);
+  font-size: var(--texto-xs);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* El valor completo del tramo, al pasar por encima o enfocar */
+.valorTramo {
+  position: absolute;
+  z-index: 1;
+  bottom: calc(100% + var(--espacio-1));
+  left: 50%;
+  display: none;
+  gap: 2px;
+  padding: var(--espacio-2) var(--espacio-3);
+  border-radius: var(--radio-m);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra-2);
+  color: var(--color-texto-suave);
+  font-size: var(--texto-xs);
+  white-space: nowrap;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.valorTramo strong {
+  color: var(--color-texto);
+  font-size: var(--texto-sm);
+}
+
+.tramo:hover .valorTramo,
+.tramo:focus-visible .valorTramo {
+  display: grid;
+}
+
+.resumenPartes {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  column-gap: var(--espacio-1);
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
+  text-align: center;
+}
+
+/* Ficha del partido en dos pestañas, Previa y Partido (GH-283) */
+.pestanas {
+  display: flex;
+  border-bottom: 1px solid var(--color-borde);
+}
+
+.pestanas [role="tab"] {
+  position: relative;
+  display: inline-flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: var(--espacio-2);
+  min-height: var(--altura-tactil);
+  margin-bottom: -1px;
+  padding: 0 var(--espacio-3);
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: none;
+  color: var(--color-texto-suave);
+  font: inherit;
+  font-weight: var(--peso-medio);
+  cursor: pointer;
+}
+
+.pestanas [role="tab"][aria-selected="true"] {
+  border-bottom-color: var(--color-acento);
+  color: var(--color-texto);
+  font-weight: var(--peso-fuerte);
+}
+
+/* Le falta algo a la pestaña que no está abierta */
+.puntoAviso {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: var(--radio-completo);
+  background: var(--color-aviso);
+}
+
+.panelPestana {
+  display: grid;
+  gap: var(--espacio-5);
+}
+
+/* La planificación, separada y avisando de que no la ve el rol jugador */
+.soloCuerpoTecnico {
+  display: grid;
+  gap: var(--espacio-2);
+  padding-top: var(--espacio-4);
+  border-top: 1px solid var(--color-borde);
+}
+
+.avisoCuerpoTecnico {
+  color: var(--color-texto-suave);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-fuerte);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.subtitulo {
+  margin: 0;
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-fuerte);
+}
+
+/* Secciones vacías de la ficha del partido (GH-285): una fila de una línea con icono, nombre, una
+   frase y la acción. Las que van seguidas forman una sola tarjeta: se anula el hueco del panel y
+   se separan con una línea */
+.filaVacia {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  min-height: calc(var(--altura-tactil) + var(--espacio-4));
+  padding: var(--espacio-2) var(--espacio-3) var(--espacio-2) var(--espacio-4);
+  border-radius: var(--radio-l);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra-1);
+}
+
+.filaVacia + .filaVacia {
+  margin-top: calc(-1 * var(--espacio-5));
+  border-top: 1px solid var(--color-borde);
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+.filaVacia:has(+ .filaVacia) {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+/* La acción, compacta y solo con su texto, para que la fila quepa en una línea */
+.accionFilaVacia {
+  display: flex;
+  flex: none;
+}
+
+.filaVacia .accionFilaVacia button {
+  padding: 0 var(--espacio-2);
+  border-color: transparent;
+  background: transparent;
+  color: var(--color-acento);
+}
+
+.filaVacia .accionFilaVacia svg {
+  display: none;
+}
+
+.iconoFilaVacia {
+  display: grid;
+  flex: none;
+  color: var(--color-texto-suave);
+}
+
+.textoFilaVacia {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
+}
+
+.textoFilaVacia h2 {
+  margin: 0;
+  color: var(--color-texto);
+  font-family: var(--fuente);
+  font-size: var(--texto-base);
+  font-weight: var(--peso-fuerte);
+}
+
+/* La línea del partido (GH-286): el minuto en una pastilla, el icono y el texto; lo unido (gol y
+   asistencia, entrada y salida) en la misma fila; el descanso separa las partes */
+.lineaPartido {
+  display: grid;
+  margin: 0;
+  padding: var(--espacio-2) 0;
+  border-radius: var(--radio-l);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra-1);
+  list-style: none;
+}
+
+.suceso {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espacio-3);
+  padding: var(--espacio-2) var(--espacio-4);
+}
+
+.pastillaMinuto {
+  flex: none;
+  min-width: 2.75rem;
+  padding: 1px var(--espacio-2);
+  border-radius: var(--radio-completo);
+  background: var(--color-superficie-alterna);
+  color: var(--color-texto);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-fuerte);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.textoSuceso {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+}
+
+.debajoSuceso {
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
+}
+
+.separacionDescanso {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  padding: var(--espacio-2) var(--espacio-4);
+  color: var(--color-texto-suave);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-fuerte);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.separacionDescanso::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--color-borde);
+}
+
+.edicionPartido {
+  display: grid;
+  gap: var(--espacio-4);
+}
+
+/* La alineación en dos columnas, titulares y suplentes, con los minutos de cada uno */
+.alineacion {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--espacio-3);
+  padding: var(--espacio-3);
+  border-radius: var(--radio-l);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra-1);
+}
+
+.columnaAlineacion {
+  display: grid;
+  align-content: start;
+  gap: var(--espacio-2);
+  min-width: 0;
+}
+
+.listaAlineacion {
+  display: grid;
+  gap: var(--espacio-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.jugadorAlineacion {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  min-width: 0;
+  min-height: 2.25rem;
+}
+
+.nombreAlineacion {
+  display: grid;
+  min-width: 0;
+  line-height: 1.2;
+  overflow-wrap: break-word;
+}
+
+.minutosJugador {
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Partido ya jugado sin resultado (GH-287): el aviso, qué se lee del acta y las dos acciones */
+.faltaResultadoPartido {
+  display: grid;
+  gap: var(--espacio-2);
+  padding: var(--espacio-4);
+  border-radius: var(--radio-l);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra-1);
+}
+
+/* Cómo ha entrenado desde el partido anterior (GH-288): puntos por sesión o la fracción, a la
+   derecha de la fila de la convocatoria */
+.puntosEntrenos {
+  display: inline-flex;
+  flex: none;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.puntosEntrenos > [data-estado] {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: var(--radio-completo);
+  background: var(--color-borde);
+}
+
+.puntosEntrenos > [data-estado="fue"] {
+  background: var(--color-exito);
+}
+
+.puntosEntrenos > [data-estado="falto"] {
+  background: var(--color-peligro);
+}
+
+.fraccionEntrenos {
+  flex: none;
+  margin-left: auto;
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-fuerte);
+  font-variant-numeric: tabular-nums;
+}
+
+.fraccionEntrenos[data-nivel="alto"] {
+  color: var(--color-exito);
+}
+
+.fraccionEntrenos[data-nivel="medio"] {
+  color: var(--color-aviso);
+}
+
+.fraccionEntrenos[data-nivel="bajo"] {
+  color: var(--color-peligro);
+}
+
+.fraccionEntrenos[data-nivel="pendiente"] {
+  color: var(--color-texto-suave);
+}
+
+/* La convocatoria por líneas (GH-290): cada grupo con su encabezado y cuántos van convocados */
+.lineasConvocatoria {
+  display: grid;
+  gap: var(--espacio-4);
+}
+
+.lineasConvocatoria > section {
+  display: grid;
+  gap: var(--espacio-2);
+}
+
+.cabeceraLinea {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--espacio-2);
+  margin: 0;
+  padding-inline: var(--espacio-1);
+  font-size: var(--texto-base);
+}
+
+.cuentaLinea {
+  color: var(--color-texto-suave);
+  font-family: var(--fuente);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
+  font-variant-numeric: tabular-nums;
+}
+
+/* La barra fija de la convocatoria (GH-291): cuántos van y su reparto, y Guardar */
+.pieConvocatoria {
+  align-items: center;
+  justify-content: space-between;
+}
+
+.resumenConvocatoria {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.repartoLineas {
+  color: var(--color-texto-suave);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-fuerte);
+  letter-spacing: 0.04em;
+}
+
+.sinPortero {
+  color: var(--color-aviso);
+  font-weight: var(--peso-fuerte);
+}
+
+.resumenConvocatoria > p:first-child,
+.sinCortar {
+  white-space: nowrap;
+}
+
+/* «Convocar a alguien de otra plantilla» (GH-292) */
+.botonOtraPlantilla {
+  justify-self: start;
+}
+
+/* Titulares y suplentes en dos grupos (GH-293): cada fila con su botón para pasar al otro */
+.grupoAlineacion {
+  display: grid;
+  gap: var(--espacio-2);
+}
+
+.filaAlineacion {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  min-height: calc(var(--altura-tactil) + var(--espacio-3));
+  padding: var(--espacio-2) var(--espacio-2) var(--espacio-2) var(--espacio-4);
+}
+
+.cuentaLinea[data-error] {
+  color: var(--color-peligro);
+  font-weight: var(--peso-fuerte);
+}
+
+/* Separador entre las filas de la lista de partidos (GH-278) */
+.lista > li:not(:first-child) {
+  border-top: 1px solid var(--color-borde);
 }

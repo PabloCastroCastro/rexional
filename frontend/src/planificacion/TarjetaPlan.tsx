@@ -6,20 +6,31 @@ import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
 import { resumenPlan, rutaPlan } from './datos'
 import estilos from './Planificacion.module.css'
 
-// El plan del entreno elegido en pasar lista: su resumen y el acceso a verlo o planificarlo
+// El plan del entreno elegido en pasar lista: su resumen y el acceso a verlo. Sin plan no ocupa sitio:
+// se planifica desde el enlace de la fila de la sesión (GH-258)
 export function TarjetaPlan({ entreno }: { entreno: ResumenEntreno }) {
   const plantilla = usePlantillaActiva()
   const resumen = resumenPlan(entreno)
-  if (!resumen && !puedeGestionarJugadores(plantilla)) return null
+  if (!resumen) return null
   return (
     <Link to={rutaPlan(plantilla.id, entreno.id)} className={estilos.tarjetaPlan}>
       <ClipboardList aria-hidden size={22} />
       <span>
-        <strong>{resumen ? 'Plan del entreno' : 'Planificar el entreno'}</strong>
-        <span className={estilos.secundario}>
-          {resumen ?? 'Añade los ejercicios de la biblioteca y el objetivo de la sesión'}
-        </span>
+        <strong>Plan del entreno</strong>
+        <span className={estilos.secundario}>{resumen}</span>
       </span>
+    </Link>
+  )
+}
+
+// Entreno sin plan, para quien puede planificarlo: un enlace en la fila de la sesión (GH-258)
+export function EnlacePlanificar({ entreno }: { entreno: ResumenEntreno }) {
+  const plantilla = usePlantillaActiva()
+  if (resumenPlan(entreno) || !puedeGestionarJugadores(plantilla)) return null
+  return (
+    <Link to={rutaPlan(plantilla.id, entreno.id)} className={estilos.enlacePlanificar}>
+      <ClipboardList aria-hidden size={18} />
+      Planificar
     </Link>
   )
 }

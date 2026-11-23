@@ -95,7 +95,8 @@ jobs:
       - name: Tipos
         run: npm run typecheck
       - name: Dependencias de producción sin vulnerabilidades altas ni críticas
-        run: npm audit --omit=dev --audit-level=high
+        # Con las excepciones justificadas de scripts/auditar.mjs (GH-317)
+        run: node scripts/auditar.mjs
       - name: Compilación
         run: npm run build
 

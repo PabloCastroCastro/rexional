@@ -63,7 +63,7 @@ async function abrirAlta() {
 }
 
 describe('invitados en Jugadores', () => {
-  it('van aparte, en un apartado plegado, con su procedencia, su dinámica y sus partidos', async () => {
+  it('van aparte, en un apartado plegado, con su procedencia y sus partidos', async () => {
     conJugadores([BRAIS, MATEO, HUGO])
     manejadores['GET /api/plantillas/p1/estadisticas'] = () =>
       json({ jugadores: [{ jugadorId: 'j2', partidos: 3 }] })
@@ -77,12 +77,14 @@ describe('invitados en Jugadores', () => {
     const invitados = screen.getByRole('list', { name: 'Invitados' })
     await waitFor(() =>
       expect(within(invitados).getAllByRole('listitem')[0]).toHaveTextContent(
-        /Mateo.*Invitado.*Juvenil A · Solo partidos · 3 partidos/,
+        /Mateo.*Invitado.*Juvenil A · 3 partidos/,
       ),
     )
+    // La dinámica se ve en su ficha, no en la lista (GH-251)
     expect(within(invitados).getAllByRole('listitem')[1]).toHaveTextContent(
-      /Hugo.*A prueba · En la dinámica · 0 partidos/,
+      /Hugo.*A prueba · 0 partidos/,
     )
+    expect(invitados).not.toHaveTextContent(/En la dinámica|Solo partidos/)
   })
 })
 
@@ -198,6 +200,7 @@ describe('convocar a jugadores de otras plantillas', () => {
     lesion: null,
     convocado: true,
     sancion: null,
+    entrenosPrevios: null,
     titular: null,
     minutos: null,
     ...extra,
@@ -229,15 +232,25 @@ describe('convocar a jugadores de otras plantillas', () => {
     manejadores['PUT /api/plantillas/p1/partidos/p1/convocados'] = () => json(PARTIDO)
     abrir('/plantillas/p1/partidos/p1/convocatoria')
 
-    const lista = await screen.findByRole('list', { name: 'Jugadores' })
-    expect(within(lista).getAllByRole('listitem')[1]).toHaveTextContent(
-      /Mateo.*Invitado.*Invitado · Juvenil A/,
-    )
+    // Sin posición, en su grupo (GH-290); marcado como invitado junto al nombre y en una línea
+    const lista = await screen.findByRole('list', { name: 'Sin posición' })
+    expect(within(lista).getByText('Mateo').closest('li')).toHaveTextContent(/^.*Mateo.*Invitado$/)
 
-    await userEvent.click(await screen.findByRole('button', { name: /Xoel/ }))
+    // Plegado tras un botón (GH-292); al abrirlo, el foco va al buscador
+    expect(
+      screen.queryByRole('list', { name: 'Jugadores de otras plantillas' }),
+    ).not.toBeInTheDocument()
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Convocar a alguien de otra plantilla' }),
+    )
+    expect(screen.getByLabelText('Buscar en otras plantillas del club')).toHaveFocus()
+    const sugerencia = await screen.findByRole('button', { name: /Xoel/ })
+    // Con su plantilla, la marca «Invitado» y «Convocar»
+    expect(sugerencia).toHaveTextContent(/Xoel.*Invitado.*Senior B.*Convocar/)
+    await userEvent.click(sugerencia)
     const externos = screen.getByRole('list', { name: 'Convocados de otras plantillas' })
     expect(externos).toHaveTextContent(/Xoel.*Senior B/)
-    expect(screen.getByRole('status')).toHaveTextContent('3 convocados de 3')
+    expect(screen.getByRole('status')).toHaveTextContent('3 convocados')
     // Ya elegido, no vuelve a salir en el buscador
     expect(
       within(screen.getByRole('list', { name: 'Jugadores de otras plantillas' })).queryByText(

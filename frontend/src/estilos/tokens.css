@@ -27,6 +27,8 @@
   --color-exito: #1a7a4f;
   --color-aviso: #9a5b00;
   --color-informacion: #1d5fb8;
+  /* Icono sobre un estado marcado (pasar lista, GH-256): blanco; en oscuro, el color del fondo */
+  --color-sobre-estado: #ffffff;
   --color-foco: #1d6fd1;
   /* Resultado de un partido (GH-228): propios, para ajustarlos sin tocar los estados ni el peligro */
   --color-victoria: #1a7a4f;
@@ -35,6 +37,23 @@
   --color-sobre-empate: #ffffff;
   --color-derrota: #b42323;
   --color-sobre-derrota: #ffffff;
+  /* Tarjetas de fútbol (GH-251): la amarilla es la misma en los dos temas; la roja usa el peligro */
+  --color-tarjeta-amarilla: #f2c230;
+  --color-borde-tarjeta-amarilla: #b8860b;
+  /* Categorías de ejercicio (GH-272, GH-273): al menos 4.5:1 sobre la superficie y el fondo */
+  --color-cat-calentamiento: #c2410c;
+  --color-cat-tecnica: #1d6fb8;
+  --color-cat-tactica: #7c3aed;
+  --color-cat-fisico: #a16207;
+  --color-cat-finalizacion: #be123c;
+  --color-cat-porteros: #0f766e;
+  --color-cat-partido: #15803d;
+  --color-cat-vuelta_calma: #4f46e5;
+  --color-cat-ninguna: var(--color-texto-suave);
+  /* Series de los gráficos de goles (GH-282): a favor y en contra. Validadas con el validador de
+     dataviz (CVD y contraste ≥ 3:1) contra la superficie, en claro y en oscuro */
+  --color-serie-favor: #2a78d6;
+  --color-serie-contra: #eb6834;
   /* Texto de enlaces y acentos sobre la superficie: el primario del club, oscurecido si hace falta
      para leerse (en oscuro, aclarado) */
   --color-acento: var(--acento-claro, var(--color-primario));
@@ -102,6 +121,7 @@
     --color-exito: #5fcf98;
     --color-aviso: #f0b04a;
     --color-informacion: #7fb2f5;
+    --color-sobre-estado: #0f1311;
     --color-foco: #7fb2f5;
     --color-victoria: #5fcf98;
     --color-sobre-victoria: #0f1311;
@@ -110,6 +130,16 @@
     --color-derrota: #f07167;
     --color-sobre-derrota: #0f1311;
     --color-acento: var(--acento-oscuro, #7fd1aa);
+    --color-cat-calentamiento: #fb923c;
+    --color-cat-tecnica: #60a5fa;
+    --color-cat-tactica: #a78bfa;
+    --color-cat-fisico: #facc15;
+    --color-cat-finalizacion: #fb7185;
+    --color-cat-porteros: #2dd4bf;
+    --color-cat-partido: #4ade80;
+    --color-cat-vuelta_calma: #818cf8;
+    --color-serie-favor: #3987e5;
+    --color-serie-contra: #d95926;
     --sombra-2: 0 8px 24px rgb(0 0 0 / 50%);
   }
 }

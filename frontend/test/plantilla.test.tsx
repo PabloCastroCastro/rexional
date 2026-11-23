@@ -76,8 +76,10 @@ describe('lista de la plantilla', () => {
     const lista = await screen.findByRole('list', { name: 'Jugadores' })
     expect(filas(lista)).toEqual([
       expect.stringMatching(/Dorsal 7.*Brais.*Delantero/),
-      expect.stringMatching(/Sin dorsal.*Zoe.*Sin posición/),
+      expect.stringMatching(/Sin dorsal.*Zoe/),
     ])
+    // Sin posición, la fila queda en una sola línea (GH-251)
+    expect(filas(lista)[1]).not.toMatch(/Sin posición/)
     expect(within(lista).getByRole('link', { name: /Brais/ })).toHaveAttribute(
       'href',
       '/plantillas/p1/jugadores/j1',
@@ -105,7 +107,7 @@ describe('lista de la plantilla', () => {
     expect(within(enlaces[0] as HTMLElement).getByText('Tú')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Añadir' })).not.toBeInTheDocument()
     // Las bajas son cosa del cuerpo técnico
-    expect(screen.queryByRole('button', { name: 'Bajas' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Bajas/ })).not.toBeInTheDocument()
   })
 
   it('el estado vacío del rol jugador no invita a añadir', async () => {
@@ -302,10 +304,14 @@ describe('bajas', () => {
     conJugadores([BRAIS, HUGO])
     manejadores['PATCH /api/plantillas/p1/jugadores/j3'] = () => json({ ...HUGO, activo: true })
     abrir('/plantillas/p1/jugadores')
-    await userEvent.click(await screen.findByRole('button', { name: 'Bajas' }))
+    await userEvent.click(await screen.findByRole('button', { name: /^Bajas/ }))
     const lista = await screen.findByRole('list', { name: 'Bajas' })
     expect(filas(lista)).toEqual([expect.stringMatching(/Hugo/)])
-    await userEvent.click(within(lista).getByRole('button', { name: 'Reactivar a Hugo' }))
+    // Solo el icono, para que la fila quepa en el móvil (GH-250)
+    const boton = within(lista).getByRole('button', { name: 'Reactivar a Hugo' })
+    expect(boton).toHaveTextContent(/^$/)
+    expect(boton).toHaveAttribute('title', 'Reactivar')
+    await userEvent.click(boton)
 
     expect(await screen.findByText('Hugo vuelve a la plantilla')).toBeInTheDocument()
     expect(enviado('PATCH /api/plantillas/p1/jugadores/j3')).toEqual([{ activo: true }])
@@ -335,5 +341,47 @@ describe('bajas', () => {
       { activo: true },
       { dorsal: 11, posicion: 'defensa', activo: true },
     ])
+  })
+})
+
+describe('recuento de activos y bajas (GH-254)', () => {
+  const INVITADO: JugadorPlantilla = {
+    ...ZOE,
+    jugadorId: 'j9',
+    nombre: 'Iago',
+    tipo: 'invitado',
+    procedencia: 'Juvenil A',
+  }
+
+  it('los segmentos dicen cuántos hay: los invitados no cuentan como activos', async () => {
+    conJugadores([BRAIS, ZOE, HUGO, INVITADO])
+    abrir('/plantillas/p1/jugadores')
+    expect(await screen.findByRole('button', { name: 'Activos · 2' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    expect(await screen.findByRole('button', { name: 'Bajas · 1' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/^Plantilla$/)
+  })
+
+  it('el rol jugador ve el recuento junto al título y no se le piden las bajas', async () => {
+    conJugadores(
+      [BRAIS, ZOE, HUGO],
+      plantilla('p1', 'Senior', '2026-27', { rol: 'jugador', esAdminClub: false, jugadorId: 'j2' }),
+    )
+    let pedidasBajas = 0
+    const activos = [BRAIS, ZOE]
+    manejadores['GET /api/plantillas/p1/jugadores'] = (peticion) => {
+      if (new URL(peticion.url).searchParams.get('activos') === 'false') {
+        pedidasBajas++
+        return json([HUGO])
+      }
+      return json(activos)
+    }
+    abrir('/plantillas/p1/jugadores')
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Plantilla · 2' }),
+    ).toBeInTheDocument()
+    expect(pedidasBajas).toBe(0)
   })
 })

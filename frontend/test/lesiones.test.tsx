@@ -200,10 +200,15 @@ describe('lesiones en la ficha del jugador', () => {
 })
 
 describe('lesionados en la plantilla', () => {
-  it('llevan su marca junto a la posición', async () => {
+  it('llevan la señal sobre el dorsal y, debajo del nombre, solo la posición (GH-251)', async () => {
     conFicha({ actual: LESION, historial: [] })
     abrir('/plantillas/p1/jugadores')
     const lista = await screen.findByRole('list', { name: 'Jugadores' })
-    expect(within(lista).getByRole('listitem')).toHaveTextContent('Delantero · Lesionado')
+    const fila = within(lista).getByRole('listitem')
+    // El lector de pantalla lo lee con el dorsal; a la vista, la cruz
+    expect(fila).toHaveTextContent(/Dorsal \d+\. Lesionado · /)
+    expect(fila.querySelector('[data-estado="lesion"]')).toBeInTheDocument()
+    expect(fila).not.toHaveTextContent('Delantero · Lesionado')
+    expect(fila).toHaveTextContent('Delantero')
   })
 })

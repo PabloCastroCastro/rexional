@@ -91,7 +91,7 @@ function conSanciones(p = senior26) {
 }
 
 describe('sanciones', () => {
-  it('en la plantilla, la marca de sancionado o apercibido junto a la posición', async () => {
+  it('en la plantilla, la tarjeta de sancionado o apercibido sobre el dorsal (GH-251)', async () => {
     conSanciones()
     abrir('/plantillas/p1/jugadores')
     const lista = await screen.findByRole('list', { name: 'Jugadores' })
@@ -101,11 +101,15 @@ describe('sanciones', () => {
           .getAllByRole('listitem')
           .map((li) => li.textContent),
       ).toEqual([
-        expect.stringContaining('Defensa · Sancionado'),
-        expect.stringContaining('Defensa · Apercibido'),
+        expect.stringMatching(/\. Sancionado · 1 partido.*Defensa/),
+        expect.stringMatching(/\. Apercibido.*Defensa/),
         expect.not.stringMatching(/Sancionado|Apercibido/),
       ]),
     )
+    const [sancionado, apercibido, limpio] = within(lista).getAllByRole('listitem')
+    expect(sancionado?.querySelector('[data-estado="sancion"]')).toBeInTheDocument()
+    expect(apercibido?.querySelector('[data-estado="apercibido"]')).toBeInTheDocument()
+    expect(limpio?.querySelector('[data-estado]')).not.toBeInTheDocument()
   })
 
   it('en la ficha, lo que le queda y por qué; el cuerpo técnico lo corrige', async () => {

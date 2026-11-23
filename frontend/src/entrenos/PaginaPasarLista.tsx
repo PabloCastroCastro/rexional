@@ -1,20 +1,25 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
+  CalendarClock,
   CalendarPlus,
   CalendarX,
   Check,
   ChevronLeft,
   ChevronRight,
   CircleAlert,
+  ClipboardList,
   Clock,
+  Cloud,
   CloudCheck,
-  FileText,
+  Ellipsis,
+  Hand,
   LoaderCircle,
   Plus,
+  Share2,
   X,
 } from 'lucide-react'
-import { useState } from 'react'
-import { useSearchParams } from 'react-router'
+import { useEffect, useId, useRef, useState } from 'react'
+import { Link, useSearchParams } from 'react-router'
 import { api, datos, ErrorApi, enviar, erroresPorCampo } from '../api/cliente'
 import { useAvisos } from '../componentes/Avisos'
 import { Boton } from '../componentes/Boton'
@@ -24,15 +29,17 @@ import { useConfirmacion } from '../componentes/Confirmacion'
 import { EstadoVacio } from '../componentes/EstadoVacio'
 import { HojaInferior } from '../componentes/HojaInferior'
 import { MarcaInvitado } from '../jugadores/BuscadorInvitables'
-import { nombreCompleto, puedeGestionarJugadores } from '../jugadores/datos'
-import { MarcaLesion } from '../jugadores/Lesiones'
+import { nombreCompleto, nombresCortos, puedeGestionarJugadores } from '../jugadores/datos'
+import { estadoJugador } from '../jugadores/estado'
+import { textoVuelta } from '../jugadores/Lesiones'
 import { Dorsal } from '../jugadores/PaginaPlantilla'
-import { resumenPlan } from '../planificacion/datos'
-import { TarjetaPlan } from '../planificacion/TarjetaPlan'
+import { resumenPlan, rutaPlan } from '../planificacion/datos'
+import { EnlacePlanificar, TarjetaPlan } from '../planificacion/TarjetaPlan'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
 import {
   CLAVE_ENTRENOS,
   type Entreno,
+  type EntrenoListado,
   type Estado,
   esFechaValida,
   hoy,
@@ -42,14 +49,16 @@ import {
   textoHoras,
   useEntreno,
   useEntrenosDelDia,
+  useSiguienteEntreno,
 } from './datos'
 import estilos from './Entrenos.module.css'
 import { type Asistencia, type EstadoGuardado, useGuardadoAutomatico } from './guardado'
-import { PistaRespuesta, RespuestasDeHoy, RespuestasEntreno } from './Respuestas'
+import { HojaRespuestas, PistaRespuesta, RespuestasDeHoy, RespuestasEntreno } from './Respuestas'
 
 const ESTADOS: { estado: Estado; texto: string; icono: typeof Check }[] = [
   { estado: 'asiste', texto: 'Asiste', icono: Check },
-  { estado: 'justificada', texto: 'Justificada', icono: FileText },
+  // La mano levantada: avisó de que no venía (GH-256)
+  { estado: 'justificada', texto: 'Justificada', icono: Hand },
   { estado: 'falta', texto: 'Falta', icono: X },
 ]
 
@@ -70,13 +79,15 @@ export function PaginaPasarLista() {
   const entreno = useEntreno(plantilla.id, elegida && !futuro ? elegida.id : undefined)
   const [creando, setCreando] = useState(false)
   const [cambiandoHora, setCambiandoHora] = useState(false)
+  const [opciones, setOpciones] = useState(false)
+  const [compartiendo, setCompartiendo] = useState(false)
 
   const irA = (nueva: string) => setParametros(nueva === actual ? {} : { fecha: nueva })
   const elegir = (id: string) =>
     setParametros(fecha === actual ? { entreno: id } : { fecha, entreno: id })
 
   return (
-    <div className={estilos.pagina}>
+    <div className={`${estilos.pagina} ${estilos.compacta}`}>
       <nav className={estilos.fecha} aria-label="Fecha del entreno">
         <button
           type="button"
@@ -109,31 +120,47 @@ export function PaginaPasarLista() {
       </nav>
 
       {sesiones.length > 0 && (
-        <fieldset className={estilos.sesiones}>
-          <legend className="solo-lectores">Sesiones del día</legend>
-          {sesiones.map((s) => (
-            <button
-              key={s.id}
-              type="button"
-              aria-pressed={s.id === elegida?.id}
-              onClick={() => elegir(s.id)}
-            >
-              <Clock aria-hidden size={16} />
-              {textoHoras(s) ?? 'Sin hora'}
-            </button>
-          ))}
-          {gestiona && (
-            <button
-              type="button"
-              className={estilos.anadirSesion}
-              onClick={() => setCreando(true)}
-              aria-label="Añadir sesión"
-              title="Añadir sesión"
-            >
-              <Plus aria-hidden size={18} />
-            </button>
-          )}
-        </fieldset>
+        <div className={estilos.filaSesiones}>
+          <fieldset className={estilos.sesiones}>
+            <legend className="solo-lectores">Sesiones del día</legend>
+            {sesiones.map((s) => (
+              <span key={s.id} className={estilos.sesion}>
+                <button
+                  type="button"
+                  aria-pressed={s.id === elegida?.id}
+                  onClick={() => elegir(s.id)}
+                >
+                  <Clock aria-hidden size={16} />
+                  {textoHoras(s) ?? 'Sin hora'}
+                </button>
+                {/* Las opciones de la sesión elegida, pegadas a su pastilla (GH-261) */}
+                {gestiona && s.id === elegida?.id && (
+                  <button
+                    type="button"
+                    className={estilos.opcionesSesion}
+                    aria-label="Opciones del entreno"
+                    title="Opciones del entreno"
+                    onClick={() => setOpciones(true)}
+                  >
+                    <Ellipsis aria-hidden size={20} />
+                  </button>
+                )}
+              </span>
+            ))}
+            {gestiona && (
+              <button
+                type="button"
+                className={estilos.anadirSesion}
+                onClick={() => setCreando(true)}
+                aria-label="Añadir sesión"
+                title="Añadir sesión"
+              >
+                <Plus aria-hidden size={18} />
+              </button>
+            )}
+          </fieldset>
+          {elegida && <EnlacePlanificar entreno={elegida} />}
+        </div>
       )}
 
       {elegida && <TarjetaPlan entreno={elegida} />}
@@ -145,34 +172,13 @@ export function PaginaPasarLista() {
           {delDia.error.message}
         </p>
       ) : !elegida ? (
-        <EstadoVacio
-          icono={<CalendarPlus size={32} />}
-          titulo="No hay entreno este día"
-          descripcion={
-            gestiona
-              ? 'Crea un entreno para pasar lista o planificarlo. Los entrenos habituales se crean con el horario.'
-              : 'Solo se pasa lista de los entrenos del calendario de la plantilla.'
-          }
-          accion={
-            gestiona && (
-              <Boton
-                icono={<CalendarPlus aria-hidden size={18} />}
-                onClick={() => setCreando(true)}
-              >
-                Crear entreno
-              </Boton>
-            )
-          }
-        />
+        <SinEntreno fecha={fecha} gestiona={gestiona} alCrear={() => setCreando(true)} />
       ) : futuro ? (
         <>
           <p className={estilos.aviso}>
             Este entreno aún no ha llegado: la lista se pasa el mismo día.
           </p>
           {gestiona && <RespuestasEntreno entreno={elegida} />}
-          {gestiona && (
-            <AccionesEntreno entreno={elegida} alCambiarHora={() => setCambiandoHora(true)} />
-          )}
         </>
       ) : entreno.isPending ? (
         <Cargando />
@@ -188,7 +194,6 @@ export function PaginaPasarLista() {
           )}
           {/* Cada entreno empieza con su propio estado local y su propio guardado */}
           <Lista key={entreno.data.id} entreno={entreno.data} />
-          <AccionesEntreno entreno={elegida} alCambiarHora={() => setCambiandoHora(true)} />
         </>
       ) : (
         <SoloLectura entreno={entreno.data} />
@@ -204,13 +209,39 @@ export function PaginaPasarLista() {
         }}
       />
       {elegida && (
-        <CrearEntreno
-          abierta={cambiandoHora}
-          fecha={fecha}
-          entreno={elegida}
-          alCerrar={() => setCambiandoHora(false)}
-          alCrear={() => setCambiandoHora(false)}
-        />
+        <>
+          <CrearEntreno
+            abierta={cambiandoHora}
+            fecha={fecha}
+            entreno={elegida}
+            alCerrar={() => setCambiandoHora(false)}
+            alCrear={() => setCambiandoHora(false)}
+          />
+          <OpcionesEntreno
+            entreno={elegida}
+            abierta={opciones}
+            // «Pedir confirmación», mientras se muestra «¿Quién va?» (antes de pasar lista) y se
+            // puede responder (GH-213)
+            conResumen={
+              elegida.respuestasAbiertas &&
+              (futuro || elegida.asiste + elegida.justificada + elegida.falta === 0)
+            }
+            alCerrar={() => setOpciones(false)}
+            alCambiarHora={() => {
+              setOpciones(false)
+              setCambiandoHora(true)
+            }}
+            alCompartir={() => {
+              setOpciones(false)
+              setCompartiendo(true)
+            }}
+          />
+          <HojaRespuestas
+            entreno={elegida}
+            abierta={compartiendo}
+            alCerrar={() => setCompartiendo(false)}
+          />
+        </>
       )}
     </div>
   )
@@ -244,21 +275,147 @@ function CrearEntreno({
   )
 }
 
-// Cambiar la hora y cancelar el entreno elegido
-function AccionesEntreno({
-  entreno,
-  alCambiarHora,
+// Día sin entreno: el siguiente, a un toque, y crear uno ese día como acción secundaria (GH-263). Sin
+// ninguno por delante, el estado vacío de siempre
+function SinEntreno({
+  fecha,
+  gestiona,
+  alCrear,
 }: {
-  entreno: ResumenEntreno
-  alCambiarHora: () => void
+  fecha: string
+  gestiona: boolean
+  alCrear: () => void
 }) {
+  const plantilla = usePlantillaActiva()
+  const siguiente = useSiguienteEntreno(plantilla.id, fecha)
+  const textoCrear = fecha === hoy() ? 'Crear un entreno hoy' : 'Crear un entreno este día'
+  const proximo = siguiente.data
+
+  if (proximo) {
+    const horas = textoHoras(proximo)
+    return (
+      <EstadoVacio
+        titulo="No hay entreno este día"
+        accion={
+          <div className={estilos.sinEntreno}>
+            <Link
+              to={{ search: proximo.fecha === hoy() ? '' : `?fecha=${proximo.fecha}` }}
+              className={estilos.tarjetaProximo}
+            >
+              <CalendarClock aria-hidden size={22} />
+              <span className={estilos.textoProximo}>
+                <strong>Próximo entreno</strong>
+                <span className={estilos.cuandoProximo}>
+                  {mayuscula(textoFecha(proximo.fecha))}
+                  {horas && ` · ${horas}`}
+                </span>
+              </span>
+              <ChevronRight aria-hidden size={20} />
+            </Link>
+            {gestiona && (
+              <Boton
+                variante="secundario"
+                icono={<CalendarPlus aria-hidden size={18} />}
+                onClick={alCrear}
+              >
+                {textoCrear}
+              </Boton>
+            )}
+          </div>
+        }
+      />
+    )
+  }
+
   return (
-    <div className={estilos.acciones}>
-      <Boton variante="texto" icono={<Clock aria-hidden size={18} />} onClick={alCambiarHora}>
-        Cambiar hora
-      </Boton>
-      <CancelarEntreno entreno={entreno} />
-    </div>
+    <EstadoVacio
+      icono={<CalendarPlus size={32} />}
+      titulo="No hay entreno este día"
+      descripcion={
+        gestiona
+          ? 'Crea un entreno para pasar lista o planificarlo. Los entrenos habituales se crean con el horario.'
+          : 'Solo se pasa lista de los entrenos del calendario de la plantilla.'
+      }
+      accion={
+        // Mientras se busca el siguiente, sin acción: así no cambia de botón al llegar
+        gestiona &&
+        !siguiente.isPending && (
+          <Boton icono={<CalendarPlus aria-hidden size={18} />} onClick={alCrear}>
+            Crear entreno
+          </Boton>
+        )
+      }
+    />
+  )
+}
+
+// Opciones de la sesión elegida, desde el «⋯» de su pastilla (GH-261): el día y la hora, y las
+// acciones; cancelar va al final, en rojo y con confirmación
+function OpcionesEntreno({
+  entreno,
+  abierta,
+  conResumen,
+  alCerrar,
+  alCambiarHora,
+  alCompartir,
+}: {
+  entreno: EntrenoListado
+  abierta: boolean
+  conResumen: boolean
+  alCerrar: () => void
+  alCambiarHora: () => void
+  alCompartir: () => void
+}) {
+  const plantilla = usePlantillaActiva()
+  const cancelar = useCancelarEntreno(entreno)
+  const horas = textoHoras(entreno)
+  return (
+    <HojaInferior abierta={abierta} alCerrar={alCerrar} titulo="Opciones del entreno">
+      {abierta && (
+        <>
+          <p className={estilos.cuandoEntreno}>
+            {mayuscula(textoFecha(entreno.fecha))}
+            {horas && ` · ${horas}`}
+          </p>
+          <ul className={estilos.opciones}>
+            <li>
+              <button type="button" onClick={alCambiarHora}>
+                <Clock aria-hidden size={20} />
+                Cambiar la hora
+              </button>
+            </li>
+            <li>
+              <Link to={rutaPlan(plantilla.id, entreno.id)}>
+                <ClipboardList aria-hidden size={20} />
+                {resumenPlan(entreno) ? 'Ver el plan del entreno' : 'Planificar el entreno'}
+              </Link>
+            </li>
+            {conResumen && (
+              <li>
+                <button type="button" onClick={alCompartir}>
+                  <Share2 aria-hidden size={20} />
+                  Pedir confirmación
+                </button>
+              </li>
+            )}
+            <li>
+              <button
+                type="button"
+                className={estilos.opcionPeligrosa}
+                disabled={cancelar.pendiente}
+                onClick={() => {
+                  alCerrar()
+                  void cancelar.pedir()
+                }}
+              >
+                <CalendarX aria-hidden size={20} />
+                Cancelar entreno
+              </button>
+            </li>
+          </ul>
+        </>
+      )}
+    </HojaInferior>
   )
 }
 
@@ -373,8 +530,9 @@ function FormularioCrear({
   )
 }
 
-// Cancelar el entreno elegido: lo borra con su asistencia, si la tiene, tras confirmarlo
-function CancelarEntreno({ entreno }: { entreno: ResumenEntreno }) {
+// Cancelar el entreno elegido: lo borra con su asistencia, si la tiene, tras confirmarlo. Devuelve la
+// acción para el menú de opciones (GH-261)
+function useCancelarEntreno(entreno: ResumenEntreno) {
   const plantilla = usePlantillaActiva()
   const cliente = useQueryClient()
   const { avisar } = useAvisos()
@@ -403,43 +561,111 @@ function CancelarEntreno({ entreno }: { entreno: ResumenEntreno }) {
       }),
   })
 
-  return (
-    <Boton
-      variante="texto"
-      icono={<CalendarX aria-hidden size={18} />}
-      cargando={cancelar.isPending}
-      onClick={async () => {
-        const confirmado = await confirmar({
-          titulo: `¿Cancelar el entreno del ${cuando}?`,
-          mensaje: [
-            conAsistencia
-              ? 'Ya tiene la lista pasada: se borrará también su asistencia.'
-              : 'Desaparece del calendario. Si sale del horario, al cambiar el horario puede volver a crearse.',
-            resumenPlan(entreno) && 'También se pierde su plan.',
-          ]
-            .filter(Boolean)
-            .join(' '),
-          textoConfirmar: 'Cancelar entreno',
-          textoCancelar: 'Volver',
-          peligrosa: true,
-        })
-        if (confirmado) cancelar.mutate()
-      }}
-    >
-      Cancelar entreno
-    </Boton>
-  )
+  const pedir = async () => {
+    const confirmado = await confirmar({
+      titulo: `¿Cancelar el entreno del ${cuando}?`,
+      mensaje: [
+        conAsistencia
+          ? 'Ya tiene la lista pasada: se borrará también su asistencia.'
+          : 'Desaparece del calendario. Si sale del horario, al cambiar el horario puede volver a crearse.',
+        resumenPlan(entreno) && 'También se pierde su plan.',
+      ]
+        .filter(Boolean)
+        .join(' '),
+      textoConfirmar: 'Cancelar entreno',
+      textoCancelar: 'Volver',
+      peligrosa: true,
+    })
+    if (confirmado) cancelar.mutate()
+  }
+
+  return { pedir, pendiente: cancelar.isPending }
 }
 
 type Marca = { estado: Estado | null; motivo: string }
 
 const MOTIVO_LESION = 'Lesión'
 
+// Motivos frecuentes de una falta justificada, a un toque (GH-262); cualquier otro va en «Otro»
+const MOTIVOS = [MOTIVO_LESION, 'Trabajo', 'Estudios', 'Enfermo']
+
+// Chips con los motivos frecuentes: tocar uno lo guarda y tocarlo otra vez lo quita. «Otro» abre un
+// campo con etiqueta; un motivo guardado que no es de la lista sale ahí
+function MotivoJustificada({
+  nombre,
+  motivo,
+  alCambiar,
+}: {
+  nombre: string
+  motivo: string
+  alCambiar: (motivo: string) => void
+}) {
+  const [otro, setOtro] = useState(motivo.trim() !== '' && !MOTIVOS.includes(motivo))
+  const idCampo = useId()
+  const campo = useRef<HTMLInputElement>(null)
+  // El campo recibe el foco al abrirlo, no al pintar la lista con un motivo ya guardado
+  const enfocar = useRef(false)
+  useEffect(() => {
+    if (otro && enfocar.current) campo.current?.focus()
+    enfocar.current = false
+  }, [otro])
+
+  return (
+    <fieldset className={estilos.motivos}>
+      <legend className="solo-lectores">Motivo de {nombre}</legend>
+      <div className={estilos.chips}>
+        {MOTIVOS.map((m) => (
+          <button
+            key={m}
+            type="button"
+            aria-pressed={!otro && motivo === m}
+            onClick={() => {
+              setOtro(false)
+              alCambiar(!otro && motivo === m ? '' : m)
+            }}
+          >
+            <span className={estilos.chip}>{m}</span>
+          </button>
+        ))}
+        <button
+          type="button"
+          aria-pressed={otro}
+          onClick={() => {
+            enfocar.current = !otro
+            setOtro(!otro)
+            alCambiar('')
+          }}
+        >
+          <span className={estilos.chip}>Otro</span>
+        </button>
+      </div>
+      {otro && (
+        <div className={estilos.otroMotivo}>
+          <label htmlFor={idCampo}>Otro motivo</label>
+          <input
+            ref={campo}
+            id={idCampo}
+            maxLength={200}
+            value={motivo}
+            onChange={(e) => alCambiar(e.target.value)}
+          />
+        </div>
+      )}
+    </fieldset>
+  )
+}
+
+const mayuscula = (texto: string) => texto.charAt(0).toUpperCase() + texto.slice(1)
+
 function Lista({ entreno }: { entreno: Entreno }) {
   const plantilla = usePlantillaActiva()
-  const guardado = useGuardadoAutomatico(plantilla.id, entreno.id)
+  const guardado = useGuardadoAutomatico(
+    plantilla.id,
+    entreno.id,
+    entreno.jugadores.some((j) => j.estado !== null),
+  )
   // El lesionado ese día sale ya como justificada por lesión (GH-230): se guarda con el resto de la
-  // lista y se puede cambiar. Si nadie pasa lista, no se guarda nada
+  // lista y se puede cambiar. Si nadie pasa lista, no se guarda nada y el indicador dice «Sin guardar»
   const [marcas, setMarcas] = useState<Record<string, Marca>>(() =>
     Object.fromEntries(
       entreno.jugadores.map((j) => [
@@ -477,6 +703,8 @@ function Lista({ entreno }: { entreno: Entreno }) {
   const sinMarcar = entreno.jugadores.filter((j) => j.activo && !marcas[j.jugadorId]?.estado)
   const recuentos = { asiste: 0, justificada: 0, falta: 0 }
   for (const m of Object.values(marcas)) if (m.estado) recuentos[m.estado] += 1
+  // Nombre y primer apellido, para que no se corten; la leyenda de cada fila lleva el completo (GH-257)
+  const nombres = nombresCortos(entreno.jugadores)
 
   if (entreno.jugadores.length === 0) {
     return (
@@ -489,25 +717,21 @@ function Lista({ entreno }: { entreno: Entreno }) {
 
   return (
     <>
-      <div className={estilos.barra}>
-        <Recuentos recuentos={recuentos} sinMarcar={sinMarcar.length} />
-        <IndicadorGuardado estado={guardado.estado} alReintentar={guardado.reintentar} />
-      </div>
-
       <ul className={estilos.lista} aria-label="Jugadores">
         {entreno.jugadores.map((j) => {
           const marca = marcas[j.jugadorId] ?? { estado: null, motivo: '' }
           return (
             <li key={j.jugadorId}>
               <div className={estilos.fila}>
-                <Dorsal dorsal={j.dorsal} />
-                <span className={estilos.nombre}>
-                  {nombreCompleto(j)}
+                <Dorsal dorsal={j.dorsal} estado={estadoJugador({ lesion: j.lesion })} />
+                <span className={`${estilos.nombre} ${estilos.entero}`}>
+                  {nombres.get(j.jugadorId)}
                   {j.tipo === 'invitado' && <MarcaInvitado />}
                   {!j.activo && <span className={estilos.baja}> baja</span>}
+                  {/* La lesión va sobre el dorsal; debajo, solo cuándo vuelve (GH-251) */}
                   {j.lesion && (
                     <span className={estilos.lesion}>
-                      <MarcaLesion lesion={j.lesion} />
+                      {mayuscula(textoVuelta(j.lesion.vueltaPrevista))}
                     </span>
                   )}
                   <PistaRespuesta jugador={j} />
@@ -530,14 +754,11 @@ function Lista({ entreno }: { entreno: Entreno }) {
                 </fieldset>
               </div>
               {marca.estado === 'justificada' && (
-                <input
-                  className={estilos.motivo}
-                  aria-label={`Motivo de ${nombreCompleto(j)}`}
-                  placeholder="Motivo (opcional)"
-                  maxLength={200}
-                  value={marca.motivo}
-                  onChange={(e) =>
-                    cambiar({ ...marcas, [j.jugadorId]: { ...marca, motivo: e.target.value } })
+                <MotivoJustificada
+                  nombre={nombreCompleto(j)}
+                  motivo={marca.motivo}
+                  alCambiar={(motivo) =>
+                    cambiar({ ...marcas, [j.jugadorId]: { ...marca, motivo } })
                   }
                 />
               )}
@@ -546,45 +767,95 @@ function Lista({ entreno }: { entreno: Entreno }) {
         })}
       </ul>
 
-      {sinMarcar.length > 0 && (
-        <Boton
-          variante="secundario"
-          anchoCompleto
-          icono={<Check aria-hidden size={18} />}
-          onClick={() => {
-            const nuevas = { ...marcas }
-            for (const j of sinMarcar) nuevas[j.jugadorId] = { estado: 'asiste', motivo: '' }
-            cambiar(nuevas)
-          }}
-        >
-          Marcar el resto como asiste ({sinMarcar.length})
-        </Boton>
-      )}
+      <PieLista
+        recuentos={recuentos}
+        sinMarcar={sinMarcar.length}
+        guardado={guardado}
+        alMarcarResto={() => {
+          const nuevas = { ...marcas }
+          for (const j of sinMarcar) nuevas[j.jugadorId] = { estado: 'asiste', motivo: '' }
+          cambiar(nuevas)
+        }}
+      />
     </>
   )
 }
 
-function Recuentos({
+const partesRecuento = (recuentos: Entreno['recuentos']) => [
+  `${recuentos.asiste} ${recuentos.asiste === 1 ? 'asiste' : 'asisten'}`,
+  `${recuentos.justificada} ${recuentos.justificada === 1 ? 'justificada' : 'justificadas'}`,
+  `${recuentos.falta} ${recuentos.falta === 1 ? 'falta' : 'faltan'}`,
+]
+
+function Recuentos({ recuentos }: { recuentos: Entreno['recuentos'] }) {
+  return <p className={estilos.recuentos}>{partesRecuento(recuentos).join(' · ')}</p>
+}
+
+// Siempre a mano encima de la navegación (GH-259): el progreso de la lista con los colores de cada
+// estado, el guardado y marcar como asiste a los que quedan
+function PieLista({
   recuentos,
   sinMarcar,
+  guardado,
+  alMarcarResto,
 }: {
   recuentos: Entreno['recuentos']
-  sinMarcar?: number
+  sinMarcar: number
+  guardado: { estado: EstadoGuardado; reintentar: () => void }
+  alMarcarResto: () => void
 }) {
-  const partes = [
-    `${recuentos.asiste} ${recuentos.asiste === 1 ? 'asiste' : 'asisten'}`,
-    `${recuentos.justificada} ${recuentos.justificada === 1 ? 'justificada' : 'justificadas'}`,
-    `${recuentos.falta} ${recuentos.falta === 1 ? 'falta' : 'faltan'}`,
-  ]
-  if (sinMarcar) partes.push(`${sinMarcar} sin marcar`)
-  return <p className={estilos.recuentos}>{partes.join(' · ')}</p>
+  const marcados = recuentos.asiste + recuentos.justificada + recuentos.falta
+  const total = marcados + sinMarcar
+  const ancho = (n: number) => `${total ? (n / total) * 100 : 0}%`
+  return (
+    <div className={estilos.pieLista}>
+      <div className={estilos.progreso} aria-hidden="true">
+        <span className={estilos.asiste} style={{ width: ancho(recuentos.asiste) }} />
+        <span className={estilos.justificada} style={{ width: ancho(recuentos.justificada) }} />
+        <span className={estilos.falta} style={{ width: ancho(recuentos.falta) }} />
+      </div>
+      {/* En una sola fila, para que quepan más jugadores encima (GH-258) */}
+      <div className={estilos.pieFila}>
+        <div className={estilos.pieTexto}>
+          <p className={estilos.recuentos}>
+            <strong>
+              {marcados} de {total} marcados
+            </strong>
+            {marcados > 0 && (
+              <span className="solo-lectores">: {partesRecuento(recuentos).join(', ')}</span>
+            )}
+          </p>
+          <IndicadorGuardado estado={guardado.estado} alReintentar={guardado.reintentar} />
+        </div>
+        {sinMarcar > 0 ? (
+          <Boton icono={<Check aria-hidden size={18} />} onClick={alMarcarResto}>
+            El resto asiste ({sinMarcar})
+          </Boton>
+        ) : (
+          <p className={estilos.listaCompleta}>
+            <Check aria-hidden size={18} />
+            Lista completa
+          </p>
+        )}
+      </div>
+    </div>
+  )
 }
 
 const TEXTOS_GUARDADO: Record<EstadoGuardado, string> = {
+  sinGuardar: 'Sin guardar',
   guardado: 'Guardado',
   pendiente: 'Guardando…',
   guardando: 'Guardando…',
   error: 'No se ha guardado',
+}
+
+const ICONOS_GUARDADO: Record<EstadoGuardado, typeof Cloud> = {
+  sinGuardar: Cloud,
+  guardado: CloudCheck,
+  pendiente: LoaderCircle,
+  guardando: LoaderCircle,
+  error: CircleAlert,
 }
 
 function IndicadorGuardado({
@@ -594,7 +865,7 @@ function IndicadorGuardado({
   estado: EstadoGuardado
   alReintentar: () => void
 }) {
-  const Icono = estado === 'error' ? CircleAlert : estado === 'guardado' ? CloudCheck : LoaderCircle
+  const Icono = ICONOS_GUARDADO[estado]
   return (
     <div className={estilos.guardado} data-estado={estado} role="status">
       <Icono aria-hidden size={16} className={estado === 'guardando' ? estilos.girando : ''} />

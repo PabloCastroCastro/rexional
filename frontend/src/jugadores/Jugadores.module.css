@@ -93,6 +93,7 @@ a.fila:hover {
 }
 
 .dorsal {
+  position: relative;
   font-size: 1.15rem;
   font-family: var(--fuente-titulos);
   display: grid;
@@ -109,6 +110,29 @@ a.fila:hover {
   font-variant-numeric: tabular-nums;
 }
 
+/* El estado del jugador, en la esquina del dorsal (GH-251): un círculo de la superficie con el icono */
+.senal {
+  position: absolute;
+  right: -5px;
+  bottom: -4px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radio-completo);
+  background: var(--color-superficie);
+  box-shadow: 0 0 0 1.5px currentColor;
+  color: var(--color-aviso);
+}
+
+.senal[data-estado="sancion"] {
+  color: var(--color-peligro);
+}
+
+.senal[data-estado="apercibido"] {
+  color: var(--color-borde-tarjeta-amarilla);
+}
+
 .texto {
   display: grid;
   flex: 1;
@@ -122,11 +146,11 @@ a.fila:hover {
   white-space: nowrap;
 }
 
-/* La fila propia, en una sola línea con la marca «Tú» (GH-52) */
-.unaLinea {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+/* Debajo del nombre: la marca «Tú» (GH-52), la posición y la multa (GH-252); si no cabe, pasa a
+   otra línea en vez de cortarse */
+.segundaLinea {
+  overflow-wrap: break-word;
+  hyphens: auto;
 }
 
 .secundario {
@@ -395,6 +419,25 @@ a.fila:hover {
   cursor: pointer;
 }
 
+/* Con acción (en la convocatoria, GH-292): los datos a la izquierda y «Convocar» a la derecha */
+.resultados .conAccion {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+}
+
+.datosInvitable {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+
+.accionInvitable {
+  flex: none;
+  color: var(--color-acento);
+  font-weight: var(--peso-medio);
+}
+
 .resultados button:not(:disabled):hover {
   background: var(--color-superficie-alterna);
 }
@@ -579,4 +622,42 @@ a.fila:hover {
   font-weight: var(--peso-medio);
   line-height: 1.5rem;
   vertical-align: middle;
+}
+
+/* La multa pendiente, en la segunda línea, en gris y con el icono de monedas (GH-252) */
+.deuda {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+
+/* El nombre en la lista de la plantilla, entero: en pantallas muy estrechas pasa a dos líneas en vez
+   de cortarse (GH-252) */
+.texto .nombreJugador {
+  overflow: visible;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* Cabecera de la columna del porcentaje (GH-253): «Asistencia», centrada sobre la pastilla. A la
+   derecha deja lo mismo que la fila: el relleno del elemento de la lista y el de la fila, la flecha
+   y el hueco entre ambas */
+.cabeceraColumnas {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: calc(-1 * var(--espacio-2));
+  padding-right: calc(var(--espacio-3) + var(--espacio-4) + 20px + var(--espacio-3));
+  color: var(--color-texto-suave);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-medio);
+}
+
+.cabeceraColumnas > span {
+  display: flex;
+  justify-content: center;
+  width: 3.25rem;
+  white-space: nowrap;
 }

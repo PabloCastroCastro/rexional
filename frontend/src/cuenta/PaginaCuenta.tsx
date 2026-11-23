@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ChevronLeft, LogOut, Monitor, Smartphone, Tablet } from 'lucide-react'
+import { ChevronDown, ChevronLeft, LogOut, Monitor, Smartphone, Tablet } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
 import { Link } from 'react-router'
 import { api, datos, ErrorApi, enviar } from '../api/cliente'
@@ -69,8 +69,12 @@ const formatoUso = new Intl.DateTimeFormat('es-ES', {
   timeZone: 'Europe/Madrid',
 })
 
+// Sesiones que se ven sin desplegar: la actual y las 4 más recientes (GH-297)
+const VISIBLES = 5
+
 function Sesiones() {
   const cliente = useQueryClient()
+  const [verTodas, setVerTodas] = useState(false)
   const { avisar } = useAvisos()
   const confirmar = useConfirmacion()
   const sesiones = useQuery({
@@ -143,37 +147,46 @@ function Sesiones() {
     )
   }
 
-  const lista = sesiones.data
+  // La actual primero y las demás de la más reciente a la más antigua
+  const lista = [...sesiones.data].sort(
+    (a, b) => Number(b.actual) - Number(a.actual) || b.ultimoUso.localeCompare(a.ultimoUso),
+  )
   const otras = lista.filter((s) => !s.actual)
+  const recientes = lista.slice(0, VISIBLES)
+  const restantes = lista.slice(VISIBLES)
+
+  const fila = (s: Sesion) => (
+    <li key={s.id}>
+      <IconoDispositivo sistema={s.sistema} />
+      <span className={estilos.fila}>
+        <strong>{nombreDispositivo(s)}</strong>
+        <span className={estilos.secundario}>
+          {s.actual
+            ? 'Este dispositivo'
+            : `Último uso: ${formatoUso.format(new Date(s.ultimoUso))}`}
+        </span>
+        {s.ip && <span className={estilos.secundario}>IP {s.ip}</span>}
+      </span>
+      {!s.actual && (
+        <button
+          type="button"
+          className={`${estilos.iconoAccion} ${estilos.peligro}`}
+          onClick={() => pedirCierre(s)}
+          aria-label={`Cerrar la sesión en ${nombreDispositivo(s)}`}
+          disabled={cerrarUna.isPending}
+        >
+          <LogOut aria-hidden size={18} />
+        </button>
+      )}
+    </li>
+  )
+
   return (
     <>
-      <ul className={estilos.lista}>
-        {lista.map((s) => (
-          <li key={s.id}>
-            <IconoDispositivo sistema={s.sistema} />
-            <span className={estilos.fila}>
-              <strong>{nombreDispositivo(s)}</strong>
-              <span className={estilos.secundario}>
-                {s.actual
-                  ? 'Este dispositivo'
-                  : `Último uso: ${formatoUso.format(new Date(s.ultimoUso))}`}
-              </span>
-              {s.ip && <span className={estilos.secundario}>IP {s.ip}</span>}
-            </span>
-            {!s.actual && (
-              <button
-                type="button"
-                className={`${estilos.iconoAccion} ${estilos.peligro}`}
-                onClick={() => pedirCierre(s)}
-                aria-label={`Cerrar la sesión en ${nombreDispositivo(s)}`}
-                disabled={cerrarUna.isPending}
-              >
-                <LogOut aria-hidden size={18} />
-              </button>
-            )}
-          </li>
-        ))}
+      <ul className={estilos.lista} aria-label="Sesiones recientes">
+        {recientes.map(fila)}
       </ul>
+      {/* Justo debajo de las recientes, siempre a la vista (GH-297) */}
       {otras.length > 0 ? (
         <div className={estilos.acciones}>
           <Boton
@@ -190,6 +203,22 @@ function Sesiones() {
           No tienes la sesión abierta en ningún otro dispositivo.
         </p>
       )}
+      {restantes.length > 0 &&
+        (verTodas ? (
+          <ul className={estilos.lista} aria-label="Sesiones más antiguas">
+            {restantes.map(fila)}
+          </ul>
+        ) : (
+          <div className={estilos.acciones}>
+            <Boton
+              variante="texto"
+              icono={<ChevronDown aria-hidden size={18} />}
+              onClick={() => setVerTodas(true)}
+            >
+              {restantes.length === 1 ? 'Ver la restante' : `Ver las ${restantes.length} restantes`}
+            </Boton>
+          </div>
+        ))}
     </>
   )
 }

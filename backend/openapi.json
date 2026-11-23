@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "API de Vestuario",
-    "version": "1.11.1",
+    "version": "1.12.0",
     "description": "API REST de Vestuario. Todas las rutas cuelgan de /api. Errores con el formato { error: { codigo, mensaje, detalles? } }."
   },
   "components": {
@@ -1309,6 +1309,101 @@
           "hora"
         ]
       },
+      "SimulacionHorario": {
+        "type": "object",
+        "properties": {
+          "guardado": {
+            "type": "boolean",
+            "description": "Si la plantilla ya tiene horario"
+          },
+          "igualAlGuardado": {
+            "type": "boolean",
+            "description": "Si es exactamente el horario guardado"
+          },
+          "creados": {
+            "type": "integer",
+            "description": "Entrenos que se crearían"
+          },
+          "anadidos": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "dia": {
+                  "type": "integer"
+                },
+                "franja": {
+                  "type": "string"
+                },
+                "cuantos": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "dia",
+                "franja",
+                "cuantos"
+              ]
+            }
+          },
+          "quitados": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "dia": {
+                  "type": "integer"
+                },
+                "franja": {
+                  "type": "string"
+                },
+                "cuantos": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "dia",
+                "franja",
+                "cuantos"
+              ]
+            }
+          },
+          "cambios": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "dia": {
+                  "type": "integer"
+                },
+                "de": {
+                  "type": "string"
+                },
+                "a": {
+                  "type": "string"
+                },
+                "cuantos": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "dia",
+                "de",
+                "a",
+                "cuantos"
+              ]
+            }
+          }
+        },
+        "required": [
+          "guardado",
+          "igualAlGuardado",
+          "creados",
+          "anadidos",
+          "quitados",
+          "cambios"
+        ]
+      },
       "EntrenoListado": {
         "allOf": [
           {
@@ -2183,6 +2278,16 @@
           "lesion": {
             "$ref": "#/components/schemas/LesionActual"
           },
+          "entrenosPrevios": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/EntrenoPrevio"
+            },
+            "description": "Su asistencia a los entrenos entre el partido anterior y este, en orden (GH-288); en el primero de la temporada, los de la semana anterior. Solo la ve quien gestiona y el propio jugador; si no, null"
+          },
           "sancion": {
             "type": [
               "object",
@@ -2213,7 +2318,42 @@
           "titular",
           "minutos",
           "lesion",
+          "entrenosPrevios",
           "sancion"
+        ]
+      },
+      "EntrenoPrevio": {
+        "type": "object",
+        "properties": {
+          "fecha": {
+            "type": "string",
+            "example": "2026-10-13"
+          },
+          "estado": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "asiste",
+              "justificada",
+              "falta",
+              null
+            ],
+            "description": "null si aún no se ha pasado lista (o no está en ella)"
+          },
+          "motivo": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "De la falta justificada"
+          }
+        },
+        "required": [
+          "fecha",
+          "estado",
+          "motivo"
         ]
       },
       "EventoPartido": {
@@ -3193,6 +3333,30 @@
             "type": "integer",
             "description": "Planes de entreno y modelos que lo usan"
           },
+          "enPlantilla": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "entrenos": {
+                "type": "integer",
+                "description": "Entrenos de la plantilla con el ejercicio en su plan"
+              },
+              "ultimo": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Fecha del último de esos entrenos hasta hoy; null si aún no ha habido ninguno"
+              }
+            },
+            "required": [
+              "entrenos",
+              "ultimo"
+            ],
+            "description": "Uso en la plantilla pedida con ?plantilla= (GH-277); null sin ella"
+          },
           "medios": {
             "type": "array",
             "items": {
@@ -3211,6 +3375,7 @@
           "jugadores",
           "material",
           "usos",
+          "enPlantilla",
           "medios"
         ]
       },
@@ -7684,6 +7849,112 @@
         }
       }
     },
+    "/api/plantillas/{id}/horario/simulacion": {
+      "post": {
+        "tags": [
+          "Entrenos"
+        ],
+        "summary": "Simular un cambio de horario",
+        "description": "Delegado o superior. Lo que haría guardar este horario, sin guardarlo: los entrenos que se añaden, que se quitan y que cambian de hora, por día de la semana y franja. No cuenta los que tienen lista pasada, plan o respuestas ni los sueltos, que no se tocan.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "desde": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "example": "2026-10-13"
+                  },
+                  "hasta": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "example": "2026-10-13"
+                  },
+                  "sesiones": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/SesionHorario"
+                    },
+                    "minItems": 1,
+                    "maxItems": 14
+                  }
+                },
+                "required": [
+                  "desde",
+                  "hasta",
+                  "sesiones"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Simulación",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SimulacionHorario"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos no válidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/plantillas/{id}/entrenos": {
       "get": {
         "tags": [
@@ -8734,8 +9005,8 @@
         "tags": [
           "Entrenos"
         ],
-        "summary": "Resumen de respuestas para WhatsApp",
-        "description": "Delegado o superior. Quién va, quién está en duda, quién no y quién no ha respondido (de los jugadores activos en la dinámica), con el enlace para responder en la app, y el enlace wa.me para compartirlo.",
+        "summary": "Mensaje para pedir que confirmen la asistencia",
+        "description": "Delegado o superior. Para el grupo del equipo: el entreno, el plazo para responder y el enlace para hacerlo en la app, y el enlace wa.me para compartirlo. 409 si el plazo ya se ha cerrado.",
         "parameters": [
           {
             "schema": {
@@ -8789,6 +9060,16 @@
           },
           "404": {
             "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Respuestas cerradas",
             "content": {
               "application/json": {
                 "schema": {
@@ -12397,6 +12678,7 @@
           "Ejercicios"
         ],
         "summary": "Un ejercicio con sus fotos, vídeos y enlaces",
+        "description": "Con ?plantilla=, también en cuántos entrenos de esa plantilla se ha usado y cuándo fue el último. La plantilla tiene que ser del club y de quien pregunta (o administrar el club).",
         "parameters": [
           {
             "schema": {
@@ -12415,6 +12697,15 @@
             "required": true,
             "name": "eid",
             "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "plantilla",
+            "in": "query"
           }
         ],
         "responses": {

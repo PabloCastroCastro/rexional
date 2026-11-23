@@ -1,5 +1,5 @@
 import { Search } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Campo } from '../componentes/Campo'
 import { type JugadorInvitable, nombreCompleto, useInvitables } from './datos'
 import estilos from './Jugadores.module.css'
@@ -11,13 +11,28 @@ export function BuscadorInvitables({
   plantillaId,
   alElegir,
   excluir,
+  enfocar = false,
+  accion,
 }: {
   plantillaId: string
   alElegir: (jugador: JugadorInvitable) => void
   excluir?: Set<string>
+  // Con el foco en el campo al aparecer (al desplegarlo en la convocatoria, GH-292)
+  enfocar?: boolean
+  // El texto de la acción de cada sugerencia («Convocar»); con él, también la marca «Invitado»
+  accion?: string
 }) {
   const [texto, setTexto] = useState('')
   const [busqueda, setBusqueda] = useState('')
+  const caja = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!enfocar) return
+    const campo = caja.current?.querySelector('input')
+    // Al centro: abajo puede haber una barra fija que lo taparía
+    campo?.focus({ preventScroll: true })
+    campo?.scrollIntoView?.({ block: 'center' })
+  }, [enfocar])
 
   useEffect(() => {
     const espera = setTimeout(() => setBusqueda(texto.trim()), 250)
@@ -28,7 +43,7 @@ export function BuscadorInvitables({
   const lista = resultados.data?.filter((j) => !excluir?.has(j.jugadorId))
 
   return (
-    <div className={estilos.buscador}>
+    <div className={estilos.buscador} ref={caja}>
       <Campo
         etiqueta="Buscar en otras plantillas del club"
         type="search"
@@ -52,9 +67,19 @@ export function BuscadorInvitables({
         <ul className={estilos.resultados} aria-label="Jugadores de otras plantillas">
           {lista?.map((j) => (
             <li key={j.jugadorId}>
-              <button type="button" onClick={() => alElegir(j)}>
-                <strong>{nombreCompleto(j)}</strong>
-                <span className={estilos.secundario}>{j.plantilla}</span>
+              <button
+                type="button"
+                className={accion ? estilos.conAccion : undefined}
+                onClick={() => alElegir(j)}
+              >
+                <span className={estilos.datosInvitable}>
+                  <strong>
+                    {nombreCompleto(j)}
+                    {accion && <MarcaInvitado />}
+                  </strong>
+                  <span className={estilos.secundario}>{j.plantilla}</span>
+                </span>
+                {accion && <span className={estilos.accionInvitable}>{accion}</span>}
               </button>
             </li>
           ))}

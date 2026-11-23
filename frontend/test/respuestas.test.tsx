@@ -209,7 +209,11 @@ describe('el cuerpo técnico', () => {
         ]),
       )
     manejadores['GET /api/plantillas/p1/entrenos/e1/respuestas/mensaje'] = () =>
-      json({ texto: '✅ *Van (1)*\n7 · Brais', whatsapp: 'https://wa.me/?text=x' })
+      json({
+        texto:
+          '🏃 *CD Rexional · Senior*\n¿Vienes? Confirma en la app antes del jueves a las 20:00:',
+        whatsapp: 'https://wa.me/?text=x',
+      })
     manejadores['PUT /api/plantillas/p1/entrenos/e1/respuestas/j3'] = async (peticion) =>
       json({ jugadorId: 'j3', motivo: null, ...((await peticion.json()) as object) })
   }
@@ -218,23 +222,67 @@ describe('el cuerpo técnico', () => {
     conEntrenoFuturo()
     abrir(`/plantillas/p1/entrenos?fecha=${MANANA}`)
     const seccion = await screen.findByRole('region', { name: 'Respuestas' })
+    // Una sección con título, el plazo y el recuento en pastillas (GH-260)
+    expect(within(seccion).getByRole('heading', { name: '¿Quién va?' })).toBeInTheDocument()
+    expect(within(seccion).getByText(/^Pueden responder hasta el /)).toBeInTheDocument()
+    const recuento = within(seccion).getByRole('list', { name: 'Recuento de respuestas' })
     expect(
-      within(seccion).getByText('1 va · 0 dudan · 1 no va · 1 sin responder'),
-    ).toBeInTheDocument()
+      within(recuento)
+        .getAllByRole('listitem')
+        .map((li) => li.textContent),
+    ).toEqual(['1 va', '0 dudan', '1 no va', '1 sin responder'])
+
+    // Las respuestas, en pastillas de texto «Va / Duda / No va», sin los iconos de pasar lista
     const lista = await within(seccion).findByRole('list', { name: 'Respuestas de los jugadores' })
     expect(within(lista).getByText('Trabajo')).toBeInTheDocument()
     const zoe = within(lista).getByRole('group', { name: 'Respuesta de Zoe' })
-    expect(within(zoe).getByRole('button', { name: 'No voy' })).toHaveAttribute(
+    expect(
+      within(zoe)
+        .getAllByRole('button')
+        .map((b) => b.textContent),
+    ).toEqual(['Va', 'Duda', 'No va'])
+    expect(zoe.querySelector('svg')).toBeNull()
+    expect(within(zoe).getByRole('button', { name: 'No va' })).toHaveAttribute(
       'aria-pressed',
       'true',
     )
 
     const iker = within(lista).getByRole('group', { name: 'Respuesta de Íker' })
-    await userEvent.click(within(iker).getByRole('button', { name: 'Voy' }))
+    await userEvent.click(within(iker).getByRole('button', { name: 'Va' }))
     expect(enviado('PUT /api/plantillas/p1/entrenos/e1/respuestas/j3')).toEqual([
       { respuesta: 'voy' },
     ])
-    expect(await within(seccion).findByText(/7 · Brais/)).toBeInTheDocument()
+
+    // «Pedir confirmación», desde la cabecera de la sección
+    await userEvent.click(within(seccion).getByRole('button', { name: 'Pedir confirmación' }))
+    const hoja = await screen.findByRole('dialog', { name: 'Pedir confirmación' })
+    expect(await within(hoja).findByText(/¿Vienes\? Confirma en la app/)).toBeInTheDocument()
+  })
+
+  it('con el plazo cerrado, lo dice', async () => {
+    conEntrenoFuturo()
+    const entreno = proximo({ cierreRespuestas: '2026-10-14T08:00:00Z' })
+    manejadores['GET /api/plantillas/p1/entrenos'] = () => json([entreno])
+    abrir(`/plantillas/p1/entrenos?fecha=${MANANA}`)
+    const seccion = await screen.findByRole('region', { name: 'Respuestas' })
+    expect(within(seccion).getByText(/el plazo se ha cerrado/)).toBeInTheDocument()
+  })
+
+  it('con el plazo cerrado no se ofrece «Pedir confirmación» (GH-213)', async () => {
+    conEntrenoFuturo()
+    manejadores['GET /api/plantillas/p1/entrenos'] = () =>
+      json([proximo({ cierreRespuestas: '2026-10-14T08:00:00Z', respuestasAbiertas: false })])
+    abrir(`/plantillas/p1/entrenos?fecha=${MANANA}`)
+    const seccion = await screen.findByRole('region', { name: 'Respuestas' })
+    expect(
+      within(seccion).queryByRole('button', { name: 'Pedir confirmación' }),
+    ).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Opciones del entreno' }))
+    expect(
+      within(screen.getByRole('dialog', { name: 'Opciones del entreno' })).queryByRole('button', {
+        name: 'Pedir confirmación',
+      }),
+    ).not.toBeInTheDocument()
   })
 
   it('el historial muestra el recuento de los próximos', async () => {
@@ -246,9 +294,7 @@ describe('el cuerpo técnico', () => {
           : [],
       )
     abrir('/plantillas/p1/entrenos/historial')
-    expect(
-      await screen.findByText('2 van · 0 dudan · 0 no van · 4 sin responder'),
-    ).toBeInTheDocument()
+    expect(await screen.findByText('2 van')).toBeInTheDocument()
   })
 
   it('al pasar lista, lo que dijo cada jugador es solo una pista', async () => {
@@ -261,12 +307,15 @@ describe('el cuerpo técnico', () => {
     // No rellena el estado
     expect(within(lista).queryAllByRole('button', { pressed: true })).toHaveLength(0)
 
-    // Antes de pasar lista, encima, quién va y el resumen para WhatsApp (GH-215)
+    // Antes de pasar lista, encima, quién va (GH-215); el resumen para WhatsApp, con un botón que se
+    // ve sin desplegar «¿Quién va?» y abre el mensaje en una hoja (GH-258)
     const respuestas = screen.getByRole('region', { name: 'Respuestas' })
     expect(
       within(respuestas).getByText('1 va · 0 dudan · 1 no va · 1 sin responder'),
     ).toBeInTheDocument()
-    expect(await within(respuestas).findByText('Resumen para WhatsApp')).toBeInTheDocument()
+    await userEvent.click(within(respuestas).getByRole('button', { name: 'Pedir confirmación' }))
+    const hoja = await screen.findByRole('dialog', { name: 'Pedir confirmación' })
+    expect(await within(hoja).findByText(/¿Vienes\? Confirma en la app/)).toBeInTheDocument()
   })
 
   it('en el historial, el entreno de hoy sin lista va en los próximos con su recuento (GH-215)', async () => {
@@ -281,9 +330,7 @@ describe('el cuerpo técnico', () => {
     abrir('/plantillas/p1/entrenos/historial')
     const proximos = await screen.findByRole('region', { name: 'Próximos' })
     expect(within(proximos).getByText(/^Hoy/)).toBeInTheDocument()
-    expect(
-      within(proximos).getByText('0 van · 0 dudan · 1 no va · 2 sin responder'),
-    ).toBeInTheDocument()
+    expect(within(proximos).getByText('1 no va')).toBeInTheDocument()
   })
 })
 

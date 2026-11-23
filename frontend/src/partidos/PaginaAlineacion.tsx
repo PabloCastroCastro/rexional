@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Check, ChevronLeft, Save } from 'lucide-react'
+import { ArrowDown, ArrowUp, ChevronLeft, Save } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { api, datos } from '../api/cliente'
@@ -37,6 +37,8 @@ function Alineacion({ partido }: { partido: Partido }) {
   const navegar = useNavigate()
   const { avisar } = useAvisos()
   const ficha = `/plantillas/${plantilla.id}/partidos/${partido.id}`
+  // Se vuelve a la pestaña Partido de la ficha, donde está la alineación (GH-283)
+  const volverA = `${ficha}?pestana=partido`
   const convocados = partido.jugadores.filter((j) => j.convocado)
   const [titulares, setTitulares] = useState<Set<string>>(
     () => new Set(convocados.filter((j) => j.titular).map((j) => j.jugadorId)),
@@ -70,7 +72,7 @@ function Alineacion({ partido }: { partido: Partido }) {
         tipo: 'exito',
         mensaje: `Guardado: ${titulares.size} ${titulares.size === 1 ? 'titular' : 'titulares'} y ${suplentes} ${suplentes === 1 ? 'suplente' : 'suplentes'}`,
       })
-      navegar(ficha)
+      navegar(volverA)
     },
     onError: (error) =>
       avisar({
@@ -81,7 +83,7 @@ function Alineacion({ partido }: { partido: Partido }) {
 
   return (
     <div className={estilos.pagina}>
-      <Link to={ficha} className={estilos.volver}>
+      <Link to={volverA} className={estilos.volver}>
         <ChevronLeft aria-hidden size={20} />
         {partido.local === false ? 'en ' : 'vs '}
         {partido.rival}
@@ -99,48 +101,76 @@ function Alineacion({ partido }: { partido: Partido }) {
         />
       ) : (
         <>
-          <div className={estilos.barraConvocatoria}>
-            <p role="status" aria-live="polite" data-error={demasiados || undefined}>
-              <strong>{titulares.size}</strong> de {MAXIMO} titulares ·{' '}
-              {convocados.length - titulares.size} suplentes
-            </p>
-          </div>
-          <ul className={estilos.seleccion} aria-label="Convocados">
-            {convocados.map((j) => {
-              const titular = titulares.has(j.jugadorId)
-              return (
-                <li key={j.jugadorId} data-convocado={titular}>
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={titular}
-                      onChange={() => alternar(j.jugadorId)}
-                    />
-                    <span className={estilos.casilla} aria-hidden="true">
-                      {titular && <Check size={20} />}
-                    </span>
-                    <Dorsal dorsal={j.dorsal} />
-                    <span className={estilos.texto}>
-                      <span className={estilos.nombre}>
-                        {nombreCompleto(j)}
-                        {j.tipo === 'invitado' && <MarcaInvitado />}
-                      </span>
-                      <span className={estilos.secundario}>{titular ? 'Titular' : 'Suplente'}</span>
-                    </span>
-                  </label>
-                </li>
-              )
-            })}
-          </ul>
-          {demasiados && (
-            <p className={estilos.error} role="alert">
-              No puede haber más de {MAXIMO} titulares.
-            </p>
-          )}
-          <div className={estilos.pieFijo}>
-            <Boton variante="secundario" onClick={() => navegar(ficha)}>
-              Cancelar
-            </Boton>
+          {/* Dos grupos (GH-293): cada jugador pasa al otro con su botón; nadie en gris */}
+          {(
+            [
+              { titulo: 'Titulares', deTitulares: true },
+              { titulo: 'Suplentes', deTitulares: false },
+            ] as const
+          ).map(({ titulo, deTitulares }) => {
+            const grupo = convocados.filter((j) => titulares.has(j.jugadorId) === deTitulares)
+            const idTitulo = `grupo-${titulo.toLowerCase()}`
+            return (
+              <section key={titulo} aria-labelledby={idTitulo} className={estilos.grupoAlineacion}>
+                <h2 id={idTitulo} className={estilos.cabeceraLinea}>
+                  {titulo}{' '}
+                  <span
+                    className={estilos.cuentaLinea}
+                    data-error={(deTitulares && demasiados) || undefined}
+                  >
+                    {deTitulares ? `${grupo.length} de ${MAXIMO}` : grupo.length}
+                  </span>
+                </h2>
+                {grupo.length === 0 ? (
+                  <p className={estilos.secundario}>
+                    {deTitulares ? 'Ningún titular todavía.' : 'Ningún suplente.'}
+                  </p>
+                ) : (
+                  <ul className={estilos.seleccion} aria-label={titulo}>
+                    {grupo.map((j) => (
+                      <li key={j.jugadorId}>
+                        <div className={estilos.filaAlineacion}>
+                          <Dorsal dorsal={j.dorsal} />
+                          <span className={estilos.texto}>
+                            <span className={estilos.nombre}>
+                              {nombreCompleto(j)}
+                              {j.tipo === 'invitado' && <MarcaInvitado />}
+                            </span>
+                          </span>
+                          <Boton
+                            variante="texto"
+                            icono={
+                              deTitulares ? (
+                                <ArrowDown aria-hidden size={18} />
+                              ) : (
+                                <ArrowUp aria-hidden size={18} />
+                              )
+                            }
+                            aria-label={`Pasar a ${nombreCompleto(j)} a ${deTitulares ? 'suplentes' : 'titulares'}`}
+                            onClick={() => alternar(j.jugadorId)}
+                          >
+                            {deTitulares ? 'Suplente' : 'Titular'}
+                          </Boton>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            )
+          })}
+          {/* La barra fija: el recuento y Guardar; con más de 11 titulares, el aviso */}
+          <div className={`${estilos.pieFijo} ${estilos.pieConvocatoria}`}>
+            <div className={estilos.resumenConvocatoria} role="status" aria-live="polite">
+              <p>
+                <strong>{titulares.size}</strong> {titulares.size === 1 ? 'titular' : 'titulares'} ·{' '}
+                <strong>{convocados.length - titulares.size}</strong>{' '}
+                {convocados.length - titulares.size === 1 ? 'suplente' : 'suplentes'}
+              </p>
+              {demasiados && (
+                <p className={estilos.sinPortero}>No puede haber más de {MAXIMO} titulares.</p>
+              )}
+            </div>
             <Boton
               cargando={guardar.isPending}
               disabled={demasiados}

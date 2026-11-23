@@ -271,3 +271,53 @@ describe('borrar y duplicar', () => {
     expect((await pedir('POST', `${base()}/${e.id}/duplicar`, 'jugador')).status).toBe(403)
   })
 })
+
+describe('uso en la plantilla (GH-277)', () => {
+  it('cuenta los entrenos de la plantilla con el ejercicio y da el último hasta hoy', async () => {
+    const e = await crear({ nombre: 'Rondo de uso' })
+    const otra = await (
+      await pedir('POST', '/plantillas', 'admin', {
+        clubId: ids.club,
+        nombre: 'Juvenil',
+        categoria: 'juvenil',
+        temporada: '2026-27',
+      })
+    ).json()
+    const enPlan = async (plantillaId: string, fecha: string) => {
+      const [entreno] = await db.insert(entrenos).values({ plantillaId, fecha }).returning()
+      await db
+        .insert(entrenoEjercicios)
+        .values({ entrenoId: entreno?.id ?? '', ejercicioId: e.id, orden: 0 })
+    }
+    await enPlan(ids.plantilla ?? '', '2026-10-08')
+    await enPlan(ids.plantilla ?? '', '2026-10-15')
+    // Uno planificado más adelante cuenta, pero no es «el último»
+    await enPlan(ids.plantilla ?? '', '2099-01-01')
+    // Los de otra plantilla del club no cuentan
+    await enPlan(otra.id, '2026-11-01')
+
+    const uso = async (quien: string, consulta = `?plantilla=${ids.plantilla}`) =>
+      pedir('GET', `${base()}/${e.id}${consulta}`, quien)
+    const res = await uso('jugador')
+    expect(res.status).toBe(200)
+    const ejercicio = await res.json()
+    expect(ejercicio.enPlantilla).toEqual({ entrenos: 3, ultimo: '2026-10-15' })
+    expect(ejercicio.usos).toBe(4)
+
+    // Sin plantilla, no se calcula
+    expect((await (await uso('jugador', '')).json()).enPlantilla).toBeNull()
+
+    // Nunca usado en la plantilla
+    const nuevo = await crear({ nombre: 'Sin estrenar' })
+    const sinUso = await pedir('GET', `${base()}/${nuevo.id}?plantilla=${otra.id}`, 'admin')
+    expect((await sinUso.json()).enPlantilla).toEqual({ entrenos: 0, ultimo: null })
+
+    // Solo una plantilla del club a la que se pertenece (o si se administra el club)
+    expect((await uso('jugador', `?plantilla=${otra.id}`)).status).toBe(404)
+    expect((await (await uso('admin', `?plantilla=${otra.id}`)).json()).enPlantilla).toEqual({
+      entrenos: 1,
+      ultimo: '2026-11-01',
+    })
+    expect((await uso('ajeno')).status).toBe(403)
+  })
+})

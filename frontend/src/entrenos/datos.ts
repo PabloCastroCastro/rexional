@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { useEffect, useState } from 'react'
 import { api, datos } from '../api/cliente'
 import type { components } from '../api/esquema'
 
@@ -138,6 +139,85 @@ export const useProximos = (plantillaId: string, cuantos = 5) =>
           (a, b) => a.fecha.localeCompare(b.fecha) || (a.hora ?? '').localeCompare(b.hora ?? ''),
         )
         .slice(0, cuantos)
+    },
+  })
+
+// Hasta dónde se busca el siguiente entreno de un día sin entreno: lo bastante para cubrir vacaciones
+// sin traer la temporada entera
+const DIAS_BUSCAR_SIGUIENTE = 60
+
+// El primer entreno después de un día (GH-263), o null si no hay ninguno en los próximos dos meses
+export const useSiguienteEntreno = (plantillaId: string, fecha: string) =>
+  useQuery({
+    queryKey: [...CLAVE_ENTRENOS, plantillaId, 'siguiente', fecha],
+    queryFn: async () => {
+      const despues = await datos(
+        api.GET('/api/plantillas/{id}/entrenos', {
+          params: {
+            path: { id: plantillaId },
+            query: {
+              desde: sumarDias(fecha, 1),
+              hasta: sumarDias(fecha, DIAS_BUSCAR_SIGUIENTE),
+            },
+          },
+        }),
+      )
+      // La API los da del más lejano al más cercano y, dentro de un día, por hora
+      const [primero] = [...despues].sort(
+        (a, b) => a.fecha.localeCompare(b.fecha) || (a.hora ?? '').localeCompare(b.hora ?? ''),
+      )
+      return primero ?? null
+    },
+  })
+
+export type SimulacionHorario = components['schemas']['SimulacionHorario']
+
+// Espera desde el último cambio del formulario antes de pedir la simulación
+export const ESPERA_SIMULACION = 400
+
+// Lo que haría guardar el horario del formulario (GH-269), sin guardarlo. Se pide un poco después del
+// último cambio, para no llamar al servidor en cada tecla; mientras, se mantiene la anterior. null si
+// el horario aún no es válido
+export function useSimulacionHorario(plantillaId: string, horario: Horario | null) {
+  const clave = horario && JSON.stringify(horario)
+  const [pedida, setPedida] = useState(clave)
+  useEffect(() => {
+    const espera = setTimeout(() => setPedida(clave), ESPERA_SIMULACION)
+    return () => clearTimeout(espera)
+  }, [clave])
+  return useQuery({
+    queryKey: [...CLAVE_ENTRENOS, plantillaId, 'simulacion-horario', pedida],
+    queryFn: () =>
+      datos(
+        api.POST('/api/plantillas/{id}/horario/simulacion', {
+          params: { path: { id: plantillaId } },
+          body: JSON.parse(pedida ?? 'null') as Horario,
+        }),
+      ),
+    enabled: pedida !== null,
+    placeholderData: keepPreviousData,
+  })
+}
+
+// Entrenos del horario en su temporada (GH-268): los ya hechos (hasta ayer) y los que quedan
+export const useCifrasHorario = (plantillaId: string, horario: { desde: string; hasta: string }) =>
+  useQuery({
+    queryKey: [...CLAVE_ENTRENOS, plantillaId, 'cifras-horario', horario.desde, horario.hasta],
+    queryFn: async () => {
+      const entrenos = await datos(
+        api.GET('/api/plantillas/{id}/entrenos', {
+          params: {
+            path: { id: plantillaId },
+            query: { desde: horario.desde, hasta: horario.hasta },
+          },
+        }),
+      )
+      const delHorario = entrenos.filter((e) => e.deHorario)
+      const actual = hoy()
+      return {
+        hechos: delHorario.filter((e) => e.fecha < actual).length,
+        porVenir: delHorario.filter((e) => e.fecha >= actual).length,
+      }
     },
   })
 

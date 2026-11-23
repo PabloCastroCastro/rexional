@@ -10,6 +10,7 @@ import { HojaInferior } from '../componentes/HojaInferior'
 import { puedeGestionarJugadores } from '../jugadores/datos'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
 import type { Partido } from './datos'
+import { FilaVacia } from './FilaVacia'
 import { useCambioPartido } from './Jugado'
 import estilos from './Partidos.module.css'
 
@@ -34,6 +35,44 @@ export function SeccionVideos({ partido }: { partido: Partido }) {
   // undefined: hoja cerrada; null: vídeo nuevo
   const [editando, setEditando] = useState<VideoPartido | null | undefined>(undefined)
   if (partido.videos.length === 0 && !gestiona) return null
+  const hoja = (
+    <HojaInferior
+      abierta={editando !== undefined}
+      alCerrar={() => setEditando(undefined)}
+      titulo={editando ? 'Cambiar vídeo' : 'Añadir vídeo'}
+    >
+      {editando !== undefined && (
+        <FormularioVideo
+          partido={partido}
+          video={editando}
+          alCerrar={() => setEditando(undefined)}
+        />
+      )}
+    </HojaInferior>
+  )
+  // Sin vídeos, una fila de una línea (GH-285)
+  if (partido.videos.length === 0) {
+    return (
+      <FilaVacia
+        id="videos"
+        icono={<Video size={20} />}
+        titulo="Vídeos"
+        frase="YouTube, Drive… uno por parte"
+        accion={
+          <Boton
+            variante="secundario"
+            icono={<Plus aria-hidden size={18} />}
+            aria-label="Añadir vídeo"
+            onClick={() => setEditando(null)}
+          >
+            Añadir
+          </Boton>
+        }
+      >
+        {hoja}
+      </FilaVacia>
+    )
+  }
 
   return (
     <section className={estilos.seccion} aria-labelledby="videos">
@@ -41,23 +80,17 @@ export function SeccionVideos({ partido }: { partido: Partido }) {
         <Video aria-hidden size={20} />
         Vídeos
       </h2>
-      {partido.videos.length === 0 ? (
-        <p className={estilos.secundario}>
-          Enlaza el vídeo del partido (YouTube, Drive…), por ejemplo uno por cada parte.
-        </p>
-      ) : (
-        <ul className={estilos.lineaTiempo} aria-label="Vídeos">
-          {partido.videos.map((v) => (
-            <FilaVideo
-              key={v.id}
-              partido={partido}
-              video={v}
-              gestiona={gestiona}
-              alEditar={() => setEditando(v)}
-            />
-          ))}
-        </ul>
-      )}
+      <ul className={estilos.lineaTiempo} aria-label="Vídeos">
+        {partido.videos.map((v) => (
+          <FilaVideo
+            key={v.id}
+            partido={partido}
+            video={v}
+            gestiona={gestiona}
+            alEditar={() => setEditando(v)}
+          />
+        ))}
+      </ul>
       {gestiona && (
         <div className={estilos.acciones}>
           <Boton
@@ -69,19 +102,7 @@ export function SeccionVideos({ partido }: { partido: Partido }) {
           </Boton>
         </div>
       )}
-      <HojaInferior
-        abierta={editando !== undefined}
-        alCerrar={() => setEditando(undefined)}
-        titulo={editando ? 'Cambiar vídeo' : 'Añadir vídeo'}
-      >
-        {editando !== undefined && (
-          <FormularioVideo
-            partido={partido}
-            video={editando}
-            alCerrar={() => setEditando(undefined)}
-          />
-        )}
-      </HojaInferior>
+      {hoja}
     </section>
   )
 }

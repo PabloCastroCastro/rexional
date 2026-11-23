@@ -2,8 +2,15 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { components } from '../src/api/esquema'
-import { type Partido, type ResumenPartido, tipoResultado } from '../src/partidos/datos'
+import {
+  competicionHabitual,
+  nombreCompeticion,
+  type Partido,
+  type ResumenPartido,
+  tipoResultado,
+} from '../src/partidos/datos'
 import { minutoPropuesto } from '../src/partidos/Notas'
+import { cuantoFalta, iniciales } from '../src/partidos/PaginaPartidos'
 import { type ArchivoPartido, MAXIMO_ARCHIVOS } from '../src/partidos/Planificacion'
 import { cuandoSeJuega } from '../src/partidos/TarjetaPartido'
 import {
@@ -80,6 +87,7 @@ const detalle = (r: ResumenPartido, convocados: string[] = []): Partido => {
       lesion: null,
       convocado: convocados.includes(jugadorId as string),
       sancion: null,
+      entrenosPrevios: null,
       titular: null,
       minutos: null,
     })),
@@ -105,24 +113,35 @@ function conPartidos(p = senior26, proximos = PROXIMOS, pasados = PASADOS) {
   }
 }
 
+// «Nuevo partido» abre las opciones; «Crear un partido», el formulario (GH-281)
+async function crearUnPartido() {
+  await userEvent.click(await screen.findByRole('button', { name: 'Nuevo partido' }))
+  await userEvent.click(
+    within(screen.getByRole('dialog', { name: 'Nuevo partido' })).getByRole('button', {
+      name: 'Crear un partido',
+    }),
+  )
+}
+
 describe('lista de partidos', () => {
   it('muestra los próximos con su convocatoria y cambia a los pasados', async () => {
     conPartidos()
     abrir('/plantillas/p1/partidos')
-    const lista = await screen.findByRole('list', { name: 'Próximos partidos' })
-    expect(
-      within(lista)
-        .getAllByRole('link')
-        .map((a) => a.textContent),
-    ).toEqual([
-      expect.stringMatching(
-        /domingo, 18 oct · 17:00.*en SD Compostela.*Fuera.*Preferente.*10 convocados/,
-      ),
-      expect.stringMatching(/domingo, 25 oct.*vs CD Lalín.*Casa.*Sin convocatoria/),
-    ])
+    // El siguiente, destacado (GH-280); el resto, bajo «Después»
+    const siguiente = await screen.findByRole('region', { name: 'Siguiente partido' })
+    expect(siguiente).toHaveTextContent('SD Compostela')
+    const lista = screen.getByRole('list', { name: 'Después' })
+    // El lector de pantalla lee el partido completo (GH-278); «Preferente» es la habitual: no se repite
+    const [lalin] = within(lista).getAllByRole('link')
+    expect(lalin).toHaveAccessibleName('Domingo, 25 oct, CD Lalín, en casa, sin convocatoria')
+    // En pantalla, el rival sin «vs / en» y casa o fuera una sola vez
+    expect(lalin).toHaveTextContent('Domingo, 25 octCD LalínEn casaSin convocatoria')
     await userEvent.click(screen.getByRole('button', { name: 'Pasados' }))
     const pasados = await screen.findByRole('list', { name: 'Partidos pasados' })
-    expect(within(pasados).getByRole('link')).toHaveTextContent(/vs Arosa SC.*11 convocados/)
+    // Ya pasó y no tiene resultado: eso, en lugar de la convocatoria (GH-279)
+    expect(within(pasados).getByRole('link')).toHaveAccessibleName(
+      'Domingo, 11 oct, Arosa SC, en casa, falta el resultado',
+    )
   })
 
   it('el resultado de los pasados, con el color de victoria, empate o derrota (GH-228)', async () => {
@@ -139,32 +158,253 @@ describe('lista de partidos', () => {
     abrir('/plantillas/p1/partidos?ver=pasados')
     const pasados = await screen.findByRole('list', { name: 'Partidos pasados' })
     const [ganado, empatado, perdido, aplazado] = within(pasados).getAllByRole('link')
-    const resultado = (enlace?: HTMLElement) => enlace?.querySelector('[data-estado]')
-    expect(resultado(ganado)).toHaveAttribute('data-resultado', 'victoria')
-    expect(resultado(ganado)).toHaveTextContent('Victoria, 2–1')
-    expect(resultado(empatado)).toHaveAttribute('data-resultado', 'empate')
-    expect(resultado(empatado)).toHaveTextContent('Empate, 1–1')
-    expect(resultado(perdido)).toHaveAttribute('data-resultado', 'derrota')
-    expect(resultado(perdido)).toHaveTextContent('Derrota, 0–3')
-    // El aplazado, como antes: sin color de resultado
-    expect(resultado(aplazado)).not.toHaveAttribute('data-resultado')
-    expect(resultado(aplazado)).toHaveTextContent('Aplazado')
+    // El marcador, a la derecha (antes de la flecha) y en su color
+    const marcador = (enlace?: HTMLElement) => enlace?.querySelector('[data-resultado]')
+    expect(marcador(ganado)).toHaveAttribute('data-resultado', 'victoria')
+    expect(marcador(ganado)).toHaveTextContent('2–1')
+    expect(marcador(ganado)?.nextElementSibling?.tagName).toBe('svg')
+    expect(ganado).toHaveAccessibleName(
+      'Domingo, 11 oct, Arosa SC, 2 a 1, victoria, sin convocatoria',
+    )
+    expect(marcador(empatado)).toHaveAttribute('data-resultado', 'empate')
+    expect(empatado).toHaveAccessibleName(/1 a 1, empate/)
+    expect(marcador(perdido)).toHaveAttribute('data-resultado', 'derrota')
+    expect(perdido).toHaveAccessibleName(/0 a 3, derrota/)
+    // El aplazado, sin color de resultado
+    expect(marcador(aplazado)).toBeNull()
+    expect(aplazado).toHaveTextContent('Aplazado')
+    expect(aplazado).toHaveAccessibleName(/Silva SD, aplazado/)
+    // Todas las filas con las mismas tres líneas, tengan o no resultado
+    for (const enlace of [ganado, empatado, perdido, aplazado]) {
+      expect(enlace?.firstElementChild?.children).toHaveLength(3)
+    }
+  })
+
+  it('pasados: primero los que faltan por resultado, que lo dicen en vez de la convocatoria (GH-279)', async () => {
+    const jugado = (id: string, fecha: string, gf: number, gc: number) =>
+      resumen(id, fecha, `Rival ${id}`, {
+        estado: 'jugado',
+        golesFavor: gf,
+        golesContra: gc,
+        convocados: 11,
+      })
+    conPartidos(senior26, PROXIMOS, [
+      resumen('s1', '2026-10-11', 'Silva SD', { convocados: 0 }),
+      jugado('j1', '2026-10-04', 2, 0),
+      resumen('s2', '2026-09-27', 'CD Barco', { convocados: 12 }),
+      resumen('a', '2026-09-20', 'Arosa SC', { estado: 'aplazado' }),
+      jugado('j2', '2026-09-13', 1, 1),
+    ])
+    abrir('/plantillas/p1/partidos?ver=pasados')
+    const pasados = await screen.findByRole('list', { name: 'Partidos pasados' })
+    const enlaces = within(pasados).getAllByRole('link')
+    expect(enlaces.map((a) => a.querySelector('strong')?.textContent)).toEqual([
+      'Silva SD',
+      'CD Barco',
+      'Rival j1',
+      'Arosa SC',
+      'Rival j2',
+    ])
+    const [silva, barco] = enlaces
+    expect(silva).toHaveTextContent('Falta el resultado')
+    expect(silva).not.toHaveTextContent('Sin convocatoria')
+    expect(barco).not.toHaveTextContent('convocados')
+    expect(barco).toHaveAccessibleName(/CD Barco, falta el resultado$/)
+    // El hueco del marcador, por rellenar, en el sitio del marcador
+    expect(silva?.querySelector('[data-resultado]')).toBeNull()
+    expect(silva?.lastElementChild?.previousElementSibling).toHaveAttribute('aria-hidden', 'true')
+    // Los que tienen resultado o están aplazados, como siempre
+    expect(enlaces[2]).toHaveTextContent('11 convocados')
+    expect(enlaces[3]).toHaveTextContent('Aplazado')
+  })
+
+  it('«Últimos 5»: los cinco últimos resultados, del más antiguo al último, y el resumen (GH-279)', async () => {
+    const jugado = (id: string, fecha: string, gf: number, gc: number) =>
+      resumen(id, fecha, `Rival ${id}`, { estado: 'jugado', golesFavor: gf, golesContra: gc })
+    conPartidos(senior26, PROXIMOS, [
+      resumen('s1', '2026-10-11', 'Silva SD'),
+      jugado('j6', '2026-10-04', 2, 0),
+      jugado('j5', '2026-09-27', 1, 1),
+      resumen('s2', '2026-09-20', 'CD Barco'),
+      jugado('j4', '2026-09-13', 0, 2),
+      jugado('j3', '2026-09-06', 3, 1),
+      jugado('j2', '2026-08-30', 1, 0),
+      // El sexto ya no entra
+      jugado('j1', '2026-08-23', 0, 4),
+    ])
+    abrir('/plantillas/p1/partidos?ver=pasados')
+    const racha = await screen.findByRole('region', { name: 'Últimos 5' })
+    expect([...racha.querySelectorAll('li')].map((b) => b.textContent)).toEqual([
+      'V',
+      'V',
+      'D',
+      'E',
+      'V',
+    ])
+    expect(racha.querySelector('li')).toHaveAttribute('data-resultado', 'victoria')
+    expect(racha).toHaveTextContent('3 victorias, 1 empate y 1 derrota · 2 partidos sin resultado')
+    // El lector de pantalla lee la racha completa, no las letras
+    expect(racha.querySelector('ol')).toHaveAttribute('aria-hidden', 'true')
+    expect(racha).toHaveTextContent(
+      'Del más antiguo al último: victoria, victoria, derrota, empate, victoria.',
+    )
+  })
+
+  it('con menos de cinco jugados, los que haya; sin ninguno, no hay racha (GH-279)', async () => {
+    conPartidos(senior26, PROXIMOS, [
+      resumen('j2', '2026-10-04', 'Silva SD', { estado: 'jugado', golesFavor: 1, golesContra: 1 }),
+      resumen('j1', '2026-09-27', 'CD Barco', { estado: 'jugado', golesFavor: 2, golesContra: 1 }),
+    ])
+    abrir('/plantillas/p1/partidos?ver=pasados')
+    const racha = await screen.findByRole('region', { name: 'Últimos 2' })
+    expect([...racha.querySelectorAll('li')].map((b) => b.textContent)).toEqual(['V', 'E'])
+    expect(racha).toHaveTextContent('1 victoria y 1 empate')
+    expect(racha).not.toHaveTextContent('sin resultado')
+  })
+
+  it('sin partidos jugados no hay racha (GH-279)', async () => {
+    conPartidos()
+    abrir('/plantillas/p1/partidos?ver=pasados')
+    await screen.findByRole('list', { name: 'Partidos pasados' })
+    expect(screen.queryByRole('region', { name: /^Últimos/ })).not.toBeInTheDocument()
+  })
+
+  it('la competición solo si no es la habitual, con su nombre arreglado (GH-278)', async () => {
+    conPartidos(
+      senior26,
+      [
+        resumen('c1', '2026-10-18', 'SD Compostela', { competicion: 'PREFERENTE GALICIA' }),
+        resumen('c2', '2026-10-21', 'Silva SD', {
+          competicion: 'COPA DA DEPUTACIÓN · Jornada 3',
+        }),
+        resumen('c3', '2026-10-25', 'CD Barco', { competicion: 'PREFERENTE GALICIA' }),
+      ],
+      [
+        resumen('c0', '2026-10-11', 'Arosa SC', { competicion: 'PREFERENTE GALICIA' }),
+        resumen('c00', '2026-10-04', 'CD Lalín', { competicion: 'PREFERENTE GALICIA' }),
+      ],
+    )
+    abrir('/plantillas/p1/partidos')
+    const lista = await screen.findByRole('list', { name: 'Después' })
+    expect(within(lista).getAllByRole('link')[0]).toHaveTextContent('Copa da deputación · J3')
+    await waitFor(() =>
+      expect(within(lista).getAllByRole('link')[1]).not.toHaveTextContent(/preferente/i),
+    )
+    // En la tarjeta del siguiente, la competición siempre, aunque sea la habitual (GH-280)
+    expect(screen.getByRole('region', { name: 'Siguiente partido' })).toHaveTextContent(
+      'Preferente galicia',
+    )
   })
 
   it('sin partidos invita a crear el próximo solo a quien puede', async () => {
     conPartidos(senior26, [], [])
     abrir('/plantillas/p1/partidos')
     expect(await screen.findByText('No hay partidos próximos')).toBeInTheDocument()
-    expect(screen.getAllByRole('button', { name: 'Nuevo partido' })).toHaveLength(2)
+    // En el estado vacío, las dos acciones a la vista (GH-281)
+    expect(screen.getByRole('button', { name: 'Crear un partido' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Importar el calendario' })).toHaveAttribute(
+      'href',
+      '/plantillas/p1/partidos/calendario',
+    )
     await userEvent.click(screen.getByRole('button', { name: 'Pasados' }))
     expect(await screen.findByText('Todavía no hay partidos jugados')).toBeInTheDocument()
+  })
+
+  it('«Nuevo partido» deja elegir entre crear uno o importar el calendario, con su explicación (GH-281)', async () => {
+    conPartidos()
+    const router = abrir('/plantillas/p1/partidos')
+    await screen.findByRole('region', { name: 'Siguiente partido' })
+    // En la cabecera, solo «Nuevo partido»
+    expect(screen.queryByRole('link', { name: /Importar/ })).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Nuevo partido' }))
+    const opciones = screen.getByRole('dialog', { name: 'Nuevo partido' })
+    expect(
+      within(opciones).getByRole('button', { name: 'Crear un partido' }),
+    ).toHaveAccessibleDescription('Rival, fecha, hora y si es en casa')
+    const importar = within(opciones).getByRole('link', { name: 'Importar el calendario' })
+    expect(importar).toHaveAccessibleDescription(
+      'El PDF de la federación, con todos los partidos de la temporada',
+    )
+    await userEvent.click(importar)
+    await waitFor(() => expect(ruta(router)).toBe('/plantillas/p1/partidos/calendario'))
   })
 
   it('el rol jugador ve los partidos sin crear', async () => {
     conPartidos(plantilla('p1', 'Senior', '2026-27', { rol: 'jugador', esAdminClub: false }))
     abrir('/plantillas/p1/partidos')
-    expect(await screen.findByRole('list', { name: 'Próximos partidos' })).toBeInTheDocument()
+    expect(await screen.findByRole('region', { name: 'Siguiente partido' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Nuevo partido' })).not.toBeInTheDocument()
+  })
+
+  it('el siguiente partido, destacado: cuánto falta, iniciales y qué hacer con la convocatoria (GH-280)', async () => {
+    conPartidos(senior26, [
+      resumen('p1', '2026-10-16', 'CD Lalín', {
+        hora: '17:00',
+        local: true,
+        competicion: 'Preferente · Jornada 7',
+      }),
+      resumen('p2', '2026-10-25', 'Racing Villalbés', { convocados: 16 }),
+    ])
+    const router = abrir('/plantillas/p1/partidos')
+    const siguiente = await screen.findByRole('region', { name: 'Siguiente partido' })
+    // Hoy es miércoles 14: el viernes 16 es «en 2 días»
+    expect(siguiente).toHaveTextContent('Viernes, 16 oct · 17:00en 2 días')
+    expect(siguiente).toHaveTextContent('LACD Lalín')
+    expect(siguiente).toHaveTextContent('En casaPreferente · J7')
+    expect(siguiente).toHaveTextContent('Todavía sin convocatoria')
+    // El resto, bajo «Después», en filas compactas
+    expect(
+      within(screen.getByRole('list', { name: 'Después' }))
+        .getAllByRole('link')
+        .map((a) => a.querySelector('strong')?.textContent),
+    ).toEqual(['Racing Villalbés'])
+    await userEvent.click(within(siguiente).getByRole('link', { name: 'Hacer la convocatoria' }))
+    await waitFor(() => expect(ruta(router)).toBe('/plantillas/p1/partidos/p1/convocatoria'))
+  })
+
+  it.each([
+    ['2026-10-14', 'hoy'],
+    ['2026-10-15', 'mañana'],
+    ['2026-10-21', 'en 7 días'],
+  ])('el %s es «%s»', (fecha, texto) => {
+    expect(cuantoFalta(fecha, '2026-10-14')).toBe(texto)
+  })
+
+  it.each([
+    ['CD Lalín', 'LA'],
+    ['Racing Villalbés', 'RV'],
+    ['S.D. Compostela', 'CO'],
+    ['Bergantiños FC', 'BE'],
+    ['Arosa', 'AR'],
+  ])('las iniciales de %s son %s', (rival, esperado) => {
+    expect(iniciales(rival)).toBe(esperado)
+  })
+})
+
+describe('siguiente partido con convocatoria (GH-280)', () => {
+  it('quien gestiona la ve; el rol jugador, si está convocado', async () => {
+    conPartidos(senior26, [resumen('p1', '2026-10-18', 'SD Compostela', { convocados: 16 })])
+    abrir('/plantillas/p1/partidos')
+    const siguiente = await screen.findByRole('region', { name: 'Siguiente partido' })
+    expect(siguiente).toHaveTextContent('16 convocados')
+    // A la pestaña Previa de la ficha, donde está la convocatoria (GH-283)
+    expect(within(siguiente).getByRole('link', { name: 'Ver la convocatoria' })).toHaveAttribute(
+      'href',
+      '/plantillas/p1/partidos/p1?pestana=previa',
+    )
+    // Uno solo: no hay «Después»
+    expect(screen.queryByRole('heading', { name: 'Después' })).not.toBeInTheDocument()
+  })
+
+  it('el rol jugador con ficha ve si está convocado, sin acción', async () => {
+    conPartidos(
+      plantilla('p1', 'Senior', '2026-27', { rol: 'jugador', esAdminClub: false, jugadorId: 'j1' }),
+      [resumen('p1', '2026-10-18', 'SD Compostela', { convocados: 16, meConvocan: true })],
+    )
+    abrir('/plantillas/p1/partidos')
+    const siguiente = await screen.findByRole('region', { name: 'Siguiente partido' })
+    expect(siguiente).toHaveTextContent('Estás convocado')
+    expect(within(siguiente).queryByRole('link', { name: /convocatoria/ })).not.toBeInTheDocument()
   })
 })
 
@@ -177,7 +417,7 @@ describe('crear y editar', () => {
       return json(detalle(nuevo), 201)
     }
     const router = abrir('/plantillas/p1/partidos')
-    await userEvent.click(await screen.findByRole('button', { name: 'Nuevo partido' }))
+    await crearUnPartido()
     const hoja = screen.getByRole('dialog', { name: 'Nuevo partido' })
     expect(within(hoja).getByLabelText(/Fecha/)).toHaveValue('2026-10-14')
 
@@ -216,7 +456,7 @@ describe('crear y editar', () => {
       )
     }
     abrir('/plantillas/p1/partidos')
-    await userEvent.click(await screen.findByRole('button', { name: 'Nuevo partido' }))
+    await crearUnPartido()
     const hoja = screen.getByRole('dialog', { name: 'Nuevo partido' })
     await userEvent.click(within(hoja).getByRole('button', { name: 'Crear partido' }))
     expect(within(hoja).getByText('El rival es obligatorio')).toBeInTheDocument()
@@ -273,16 +513,120 @@ describe('ficha del partido', () => {
     ).toEqual([expect.stringMatching(/Brais Iglesias/), expect.stringMatching(/Zoe/)])
   })
 
+  it('dos pestañas: abre en Previa hasta el día del partido y en Partido desde ese día (GH-283)', async () => {
+    conPartidos()
+    // El 18 de octubre todavía no ha llegado (hoy es 14): Previa
+    const router = abrir('/plantillas/p1/partidos/p1')
+    const previa = await screen.findByRole('tab', { name: 'Previa' })
+    expect(previa).toHaveAttribute('aria-selected', 'true')
+    const panel = screen.getByRole('tabpanel', { name: 'Previa' })
+    expect(within(panel).getByRole('heading', { name: /Convocatoria/ })).toBeInTheDocument()
+    expect(
+      within(panel).getByRole('heading', { name: /Mensaje para WhatsApp/ }),
+    ).toBeInTheDocument()
+    // La planificación, bajo «Solo para el cuerpo técnico»
+    expect(within(panel).getByText('Solo para el cuerpo técnico')).toBeInTheDocument()
+    // La elegida va en la dirección
+    await userEvent.click(screen.getByRole('tab', { name: 'Partido' }))
+    expect(router.state.location.search).toBe('?pestana=partido')
+    expect(
+      within(screen.getByRole('tabpanel', { name: 'Partido' })).getByRole('button', {
+        name: 'Borrar partido',
+      }),
+    ).toBeInTheDocument()
+  })
+
+  it('un partido que ya pasó abre en Partido; si le falta el resultado, lo dice (GH-283)', async () => {
+    conPartidos()
+    abrir('/plantillas/p1/partidos/p0')
+    expect(await screen.findByRole('tab', { name: 'Partido' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
+    await userEvent.click(screen.getByRole('tab', { name: 'Previa' }))
+    // Desde Previa, el punto ámbar en Partido: falta el resultado
+    expect(screen.getByRole('tab', { name: 'Partido, falta el resultado' })).toBeInTheDocument()
+  })
+
+  it('antes del partido, sin convocatoria, el punto está en Previa (GH-283)', async () => {
+    conPartidos()
+    abrir('/plantillas/p1/partidos/p2?pestana=partido')
+    expect(
+      await screen.findByRole('tab', { name: 'Previa, falta la convocatoria' }),
+    ).toBeInTheDocument()
+    // La pestaña abierta no lleva punto
+    expect(screen.getByRole('tab', { name: 'Partido' })).toHaveAttribute('aria-selected', 'true')
+  })
+
+  it('las pestañas se recorren con las flechas, Inicio y Fin (GH-283)', async () => {
+    conPartidos()
+    abrir('/plantillas/p1/partidos/p1')
+    const previa = await screen.findByRole('tab', { name: 'Previa' })
+    const partido = screen.getByRole('tab', { name: 'Partido' })
+    // Solo la abierta está en el orden de tabulación
+    expect(previa).toHaveAttribute('tabindex', '0')
+    expect(partido).toHaveAttribute('tabindex', '-1')
+    previa.focus()
+    await userEvent.keyboard('{ArrowRight}')
+    expect(partido).toHaveFocus()
+    expect(partido).toHaveAttribute('aria-selected', 'true')
+    await userEvent.keyboard('{ArrowRight}')
+    expect(previa).toHaveFocus()
+    await userEvent.keyboard('{End}')
+    expect(partido).toHaveFocus()
+    await userEvent.keyboard('{Home}')
+    expect(previa).toHaveAttribute('aria-selected', 'true')
+  })
+
+  it('el rol jugador ve las mismas pestañas, sin lo del cuerpo técnico (GH-283)', async () => {
+    conPartidos(plantilla('p1', 'Senior', '2026-27', { rol: 'jugador', esAdminClub: false }))
+    abrir('/plantillas/p1/partidos/p1')
+    const panel = await screen.findByRole('tabpanel', { name: 'Previa' })
+    expect(within(panel).getByRole('heading', { name: /Convocatoria/ })).toBeInTheDocument()
+    expect(within(panel).queryByText('Solo para el cuerpo técnico')).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('tab', { name: 'Partido' }))
+    expect(screen.queryByRole('button', { name: 'Borrar partido' })).not.toBeInTheDocument()
+  })
+
+  it('acta, vídeos y notas vacíos son filas de una línea, juntas en una tarjeta (GH-285)', async () => {
+    conPartidos()
+    manejadores['GET /api/plantillas/p1/partidos/p1/notas'] = () => json([])
+    abrir('/plantillas/p1/partidos/p1?pestana=partido')
+    const notas = await screen.findByRole('region', { name: 'Notas' })
+    const acta = screen.getByRole('region', { name: 'Acta del partido' })
+    const videos = screen.getByRole('region', { name: 'Vídeos' })
+    // Cada una: su nombre, una frase corta y la acción a la derecha
+    expect(acta).toHaveTextContent('Acta del partidoEl PDF de la federaciónSubir')
+    expect(within(acta).getByRole('button', { name: 'Subir acta' })).toBeInTheDocument()
+    expect(videos).toHaveTextContent('VídeosYouTube, Drive… uno por parteAñadir')
+    expect(within(videos).getByRole('button', { name: 'Añadir vídeo' })).toBeInTheDocument()
+    expect(notas).toHaveTextContent('NotasSolo para el cuerpo técnicoAnotar')
+    // Seguidas, para verse como una sola tarjeta
+    expect(acta.nextElementSibling).toBe(videos)
+    expect(videos.nextElementSibling).toBe(notas)
+    for (const fila of [acta, videos, notas]) expect(fila).toHaveClass('filaVacia')
+  })
+
+  it('la planificación vacía, una fila en Previa (GH-285)', async () => {
+    conPartidos()
+    manejadores['GET /api/plantillas/p1/partidos/p1/archivos'] = () => json([])
+    abrir('/plantillas/p1/partidos/p1?pestana=previa')
+    const fila = await screen.findByRole('region', { name: 'Planificación' })
+    expect(fila).toHaveTextContent('PlanificaciónCharla, plan táctico o análisis del rivalSubir')
+    await userEvent.click(within(fila).getByRole('button', { name: 'Subir archivo' }))
+    expect(screen.getByRole('dialog', { name: 'Subir archivo' })).toBeInTheDocument()
+  })
+
   it('un partido sin convocatoria lo dice', async () => {
     conPartidos()
     abrir('/plantillas/p1/partidos/p2')
-    expect(await screen.findByText('Todavía no hay convocatoria.')).toBeInTheDocument()
+    expect(await screen.findByText('Todavía sin convocatoria')).toBeInTheDocument()
   })
 
   it('borrar pide confirmación, avisa de la convocatoria y vuelve a la lista', async () => {
     conPartidos()
     manejadores['DELETE /api/plantillas/p1/partidos/p1'] = () => new Response(null, { status: 204 })
-    const router = abrir('/plantillas/p1/partidos/p1')
+    const router = abrir('/plantillas/p1/partidos/p1?pestana=partido')
     await userEvent.click(await screen.findByRole('button', { name: 'Borrar partido' }))
     const confirmacion = screen.getByRole('alertdialog', {
       name: '¿Borrar el partido contra SD Compostela?',
@@ -321,7 +665,7 @@ describe('vídeos del partido', () => {
 
   it('se abren fuera de la app; sin título se ve el dominio', async () => {
     conVideos(plantilla('p1', 'Senior', '2026-27', { rol: 'jugador', esAdminClub: false }))
-    abrir('/plantillas/p1/partidos/p1')
+    abrir('/plantillas/p1/partidos/p1?pestana=partido')
     const lista = await screen.findByRole('list', { name: 'Vídeos' })
     const enlaces = within(lista).getAllByRole('link')
     expect(enlaces.map((a) => a.textContent)).toEqual(['1ª parte', 'drive.google.com'])
@@ -345,7 +689,7 @@ describe('vídeos del partido', () => {
       actuales = [...actuales, { id: 'v9', ...(await peticion.json()) }]
       return json(conVideo(), 201)
     }
-    abrir('/plantillas/p1/partidos/p1')
+    abrir('/plantillas/p1/partidos/p1?pestana=partido')
     await userEvent.click(await screen.findByRole('button', { name: 'Añadir vídeo' }))
     const hoja = screen.getByRole('dialog', { name: 'Añadir vídeo' })
     await userEvent.type(within(hoja).getByLabelText(/Dirección del vídeo/), 'youtube')
@@ -371,7 +715,7 @@ describe('vídeos del partido', () => {
       actuales = actuales.map((v) => (v.id === 'v2' ? { ...v, ...cambios } : v))
       return json(conVideo())
     }
-    abrir('/plantillas/p1/partidos/p1')
+    abrir('/plantillas/p1/partidos/p1?pestana=partido')
     await userEvent.click(await screen.findByRole('button', { name: 'Cambiar: drive.google.com' }))
     const hoja = screen.getByRole('dialog', { name: 'Cambiar vídeo' })
     expect(within(hoja).getByLabelText(/Dirección del vídeo/)).toHaveValue(
@@ -392,7 +736,7 @@ describe('vídeos del partido', () => {
       actuales = actuales.filter((v) => v.id !== 'v1')
       return json(conVideo())
     }
-    abrir('/plantillas/p1/partidos/p1')
+    abrir('/plantillas/p1/partidos/p1?pestana=partido')
     await userEvent.click(await screen.findByRole('button', { name: 'Quitar: 1ª parte' }))
     const confirmacion = screen.getByRole('alertdialog', { name: '¿Quitar este vídeo?' })
     await userEvent.click(within(confirmacion).getByRole('button', { name: 'Quitar' }))
@@ -436,7 +780,7 @@ describe('notas del partido', () => {
       nota('n1', { tipo: 'incidencia', texto: 'Golpe del 7', minuto: 12 }),
       nota('n2', { texto: 'Revisar el calentamiento', tipo: 'otra', autor: null }),
     ])
-    abrir('/plantillas/p1/partidos/p1')
+    abrir('/plantillas/p1/partidos/p1?pestana=partido')
     const lista = await screen.findByRole('list', { name: 'Notas' })
     const filas = within(lista).getAllByRole('listitem')
     expect(filas.map((f) => f.textContent)).toEqual([
@@ -452,7 +796,7 @@ describe('notas del partido', () => {
       actuales = [...actuales, nota('n9', await peticion.json())]
       return json(actuales, 201)
     }
-    abrir('/plantillas/p1/partidos/p1')
+    abrir('/plantillas/p1/partidos/p1?pestana=partido')
     await userEvent.click(await screen.findByRole('button', { name: 'Anotar' }))
     const hoja = screen.getByRole('dialog', { name: 'Anotar' })
     // Sin texto no se envía
@@ -483,7 +827,7 @@ describe('notas del partido', () => {
       actuales = []
       return json(actuales)
     }
-    abrir('/plantillas/p1/partidos/p1')
+    abrir('/plantillas/p1/partidos/p1?pestana=partido')
     await userEvent.click(
       await screen.findByRole('button', { name: 'Cambiar la nota: Presionar arriba' }),
     )
@@ -748,5 +1092,24 @@ describe('tarjeta del partido (GH-229)', () => {
     expect(within(tarjeta).getByText('Derrota')).toHaveAttribute('data-resultado', 'derrota')
     expect(tarjeta).not.toHaveTextContent('17:00')
     expect(tarjeta).toHaveTextContent('Fuera')
+  })
+})
+
+describe('nombres de competición (GH-278)', () => {
+  it('la habitual es la de más de la mitad de los partidos', () => {
+    const p = (competicion: string | null) => ({ competicion })
+    expect(competicionHabitual([p('Liga'), p('Liga'), p('Copa')])).toBe('Liga')
+    expect(competicionHabitual([p('Liga'), p('Copa')])).toBeNull()
+    expect(competicionHabitual([p('Liga'), p(null), p(null)])).toBeNull()
+    expect(competicionHabitual([])).toBeNull()
+  })
+
+  it('las mayúsculas, en minúsculas con la primera en mayúscula, y «Jornada N», «JN»', () => {
+    expect(nombreCompeticion('TERCEIRA PROBA (GRUPO 1)')).toBe('Terceira proba (grupo 1)')
+    expect(nombreCompeticion('Preferente · Jornada 12')).toBe('Preferente · J12')
+    expect(nombreCompeticion('Copa Diputación')).toBe('Copa Diputación')
+    expect(nombreCompeticion('U19')).toBe('U19')
+    expect(nombreCompeticion('COPA DA DEPUTACIÓN · Jornada 3')).toBe('Copa da deputación · J3')
+    expect(nombreCompeticion('PRIMERA INVENTADA | GRUPO 9')).toBe('Primera inventada | Grupo 9')
   })
 })

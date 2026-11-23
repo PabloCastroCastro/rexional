@@ -7,16 +7,34 @@ export type Ejercicio = components['schemas']['Ejercicio']
 export type Medio = components['schemas']['Medio']
 export type Categoria = NonNullable<Ejercicio['categoria']>
 
+// En el orden de una sesión (GH-274): así salen los chips, el formulario y los grupos de la biblioteca
 export const CATEGORIAS: Record<Categoria, string> = {
   calentamiento: 'Calentamiento',
   tecnica: 'Técnica',
   tactica: 'Táctica',
-  fisico: 'Físico',
   finalizacion: 'Finalización',
+  fisico: 'Físico',
   porteros: 'Porteros',
   partido: 'Partido',
   vuelta_calma: 'Vuelta a la calma',
 }
+
+// Agrupa por categoría en el orden de CATEGORIAS, y al final los que no tienen. Conserva el orden
+// de cada grupo (el servidor los manda por nombre) y deja fuera los grupos vacíos.
+export function agruparPorCategoria<T extends { categoria: Categoria | null }>(lista: T[]) {
+  const orden = [...(Object.keys(CATEGORIAS) as Categoria[]), null]
+  return orden
+    .map((categoria) => ({
+      categoria,
+      nombre: categoria ? CATEGORIAS[categoria] : 'Sin categoría',
+      ejercicios: lista.filter((e) => e.categoria === categoria),
+    }))
+    .filter((g) => g.ejercicios.length > 0)
+}
+
+// Color de cada categoría (tokens --color-cat-*, en claro y en oscuro)
+export const colorCategoria = (categoria: Categoria | null) =>
+  `var(--color-cat-${categoria ?? 'ninguna'})`
 
 // La biblioteca es del club: sus consultas cuelgan de esta clave
 export const CLAVE_EJERCICIOS = ['ejercicios'] as const
@@ -50,13 +68,25 @@ export const useEtiquetas = (clubId: string) =>
       ),
   })
 
-export const useEjercicio = (clubId: string, ejercicioId: string) =>
+// Con plantilla, también en cuántos de sus entrenos se ha usado y cuándo fue el último (GH-277)
+export const claveEjercicio = (clubId: string, ejercicioId: string, plantillaId?: string) => [
+  ...CLAVE_EJERCICIOS,
+  clubId,
+  'ejercicio',
+  ejercicioId,
+  plantillaId ?? null,
+]
+
+export const useEjercicio = (clubId: string, ejercicioId: string, plantillaId?: string) =>
   useQuery({
-    queryKey: [...CLAVE_EJERCICIOS, clubId, 'ejercicio', ejercicioId],
+    queryKey: claveEjercicio(clubId, ejercicioId, plantillaId),
     queryFn: () =>
       datos(
         api.GET('/api/clubes/{cid}/ejercicios/{eid}', {
-          params: { path: { cid: clubId, eid: ejercicioId } },
+          params: {
+            path: { cid: clubId, eid: ejercicioId },
+            query: plantillaId ? { plantilla: plantillaId } : {},
+          },
         }),
       ),
     // Mientras un vídeo se procesa, se vuelve a mirar cada pocos segundos

@@ -6,12 +6,22 @@
   gap: var(--espacio-4);
 }
 
-.biblioteca > button {
-  justify-self: start;
+/* El buscador ocupa la fila, con «＋» al lado para quien gestiona (GH-272) */
+.filaBuscador {
+  display: flex;
+  gap: var(--espacio-2);
+}
+
+.botonNuevo {
+  flex: none;
+  width: var(--altura-tactil);
+  padding: 0;
 }
 
 .buscador {
   display: flex;
+  flex: 1;
+  min-width: 0;
   align-items: center;
   gap: var(--espacio-2);
   min-height: var(--altura-tactil);
@@ -34,32 +44,141 @@
   outline: none;
 }
 
-.filtros {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-items: center;
-  gap: var(--espacio-2);
+/* «Filtros» junto al buscador: con filtros puestos, relleno y con cuántos hay */
+.botonFiltros {
+  flex: none;
+  min-width: var(--altura-tactil);
+  padding: 0 var(--espacio-3);
+  gap: var(--espacio-1);
 }
 
-.filtros select {
-  width: 100%;
-  min-width: 0;
-  min-height: 2.5rem;
-  padding: 0 var(--espacio-2);
+/* Los filtros puestos, debajo: cada uno se quita con un toque */
+.filtrosPuestos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chip {
+  --color-chip: var(--color-acento);
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--espacio-2);
+  min-height: var(--altura-tactil);
+  padding: 0 var(--espacio-3);
   border: 1px solid var(--color-borde);
-  border-radius: var(--radio-m);
+  border-radius: var(--radio-completo);
   background: var(--color-superficie);
   color: var(--color-texto);
   font: inherit;
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
+  white-space: nowrap;
+  cursor: pointer;
 }
 
-.archivados {
-  display: inline-flex;
+.chip[aria-pressed="true"] {
+  border-color: var(--color-chip);
+  background: color-mix(in srgb, var(--color-chip) 14%, var(--color-superficie));
+}
+
+.puntoCategoria {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: var(--radio-completo);
+  background: var(--color-chip);
+}
+
+.cuentaFiltros {
+  display: grid;
+  place-items: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 var(--espacio-1);
+  border-radius: var(--radio-completo);
+  background: var(--color-sobre-primario);
+  color: var(--color-primario);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-fuerte);
+}
+
+/* Hoja «Filtros»: etiquetas en chips y el interruptor de archivados */
+.hojaFiltros {
+  display: grid;
+  gap: var(--espacio-5);
+}
+
+.grupoFiltro {
+  display: grid;
+  gap: var(--espacio-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.grupoFiltro legend {
+  margin-bottom: var(--espacio-2);
+  padding: 0;
+  font-weight: var(--peso-medio);
+}
+
+.chipsEtiquetas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-2);
+}
+
+.interruptor {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  min-height: var(--altura-tactil);
+  font-weight: var(--peso-medio);
+  cursor: pointer;
+}
+
+.interruptor input {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+  accent-color: var(--color-primario);
+}
+
+/* Un grupo por categoría (GH-274): encabezado con su color, nombre y cuántos tiene */
+.grupos,
+.grupo {
+  display: grid;
+  gap: var(--espacio-2);
+}
+
+.grupos {
+  gap: var(--espacio-5);
+}
+
+.cabeceraGrupo {
+  display: flex;
   align-items: center;
   gap: var(--espacio-2);
-  min-height: 2.5rem;
-  color: var(--color-texto-suave);
-  font-size: var(--texto-sm);
+  margin: 0;
+  padding-inline: var(--espacio-1);
+  font-size: var(--texto-base);
+}
+
+.cuentaGrupo {
+  min-width: 1.5rem;
+  padding: 0 var(--espacio-2);
+  border-radius: var(--radio-completo);
+  background: color-mix(in srgb, var(--color-chip) 14%, var(--color-superficie));
+  color: var(--color-texto);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-fuerte);
+  line-height: 1.5rem;
+  text-align: center;
 }
 
 .lista {
@@ -84,15 +203,8 @@
 }
 
 .miniatura {
-  display: grid;
-  flex: none;
-  place-items: center;
   width: 4rem;
   height: 3rem;
-  border-radius: var(--radio-s);
-  background: var(--color-superficie-alterna);
-  color: var(--color-texto-suave);
-  object-fit: cover;
 }
 
 .textoTarjeta {
@@ -102,10 +214,13 @@
   min-width: 0;
 }
 
+/* Hasta dos líneas antes de cortarse (GH-273) */
 .textoTarjeta strong {
+  display: -webkit-box;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 .secundario {
@@ -155,27 +270,76 @@
 }
 
 .cabecera h2 {
+  flex: 1;
+  min-width: 0;
   margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* El título con el lápiz y «⋯» al lado (GH-275) */
+.filaTitulo {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espacio-2);
+}
+
+.botonIcono {
+  flex: none;
+  width: var(--altura-tactil);
+  padding: 0;
+}
+
+/* Debajo del título: la categoría con su color e icono, y las etiquetas */
+.chipsFicha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-2);
+  margin: var(--espacio-1) 0 0;
+}
+
+.chipCategoria,
+.marcaArchivado,
+.etiquetaFicha {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-1);
+  min-height: 1.75rem;
+  padding: 0 var(--espacio-3);
+  border-radius: var(--radio-completo);
+  font-size: var(--texto-sm);
+}
+
+.chipCategoria {
+  background: color-mix(in srgb, var(--color-chip) 14%, var(--color-superficie));
+  color: var(--color-texto);
+  font-weight: var(--peso-medio);
+}
+
+.chipCategoria svg {
+  color: var(--color-chip);
+}
+
+.marcaArchivado {
+  border: 1px solid var(--color-borde);
+  color: var(--color-texto-suave);
+}
+
+.etiquetaFicha {
+  background: var(--color-superficie-alterna);
+  color: var(--color-texto-suave);
+}
+
+/* En cuántos entrenos de la plantilla se ha usado (GH-277) */
+.usoEjercicio {
+  margin: 0;
+  color: var(--color-texto-suave);
+  font-size: var(--texto-sm);
 }
 
 .descripcion {
   margin: 0;
   white-space: pre-line;
-}
-
-.datosFicha {
-  display: grid;
-  gap: var(--espacio-2);
-  margin: 0;
-}
-
-.datosFicha dt {
-  color: var(--color-texto-suave);
-  font-size: var(--texto-sm);
-}
-
-.datosFicha dd {
-  margin: 0;
 }
 
 .seccion {
@@ -187,8 +351,7 @@
   margin: 0;
 }
 
-.acciones,
-.accionesMedios {
+.acciones {
   display: flex;
   flex-wrap: wrap;
   gap: var(--espacio-2);
@@ -260,29 +423,26 @@
   }
 }
 
-.pieMedio {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
+/* Primero ver (GH-276): la foto o el vídeo con su «⋯» en la esquina y el título debajo */
+.medio {
+  display: grid;
   gap: var(--espacio-2);
+  margin: 0;
 }
 
-.pieMedio p {
-  margin: 0;
+.medio figcaption {
   color: var(--color-texto-suave);
   font-size: var(--texto-sm);
 }
 
-.controles {
-  display: flex;
-  gap: var(--espacio-1);
-  margin-left: auto;
+.marcoMedio {
+  position: relative;
 }
 
-.controles button,
-.subidas button {
+/* El «⋯» de cada foto, vídeo o enlace */
+.masMedio {
   display: grid;
+  flex: none;
   place-items: center;
   width: var(--altura-tactil);
   height: var(--altura-tactil);
@@ -293,9 +453,45 @@
   cursor: pointer;
 }
 
-.controles button:disabled {
-  opacity: 0.35;
-  cursor: default;
+.marcoMedio .masMedio {
+  position: absolute;
+  top: var(--espacio-2);
+  right: var(--espacio-2);
+  border-radius: var(--radio-completo);
+  background: rgb(0 0 0 / 55%);
+  color: #ffffff;
+}
+
+/* El enlace: su tarjeta a lo ancho y el «⋯» al lado */
+.filaEnlace {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+}
+
+.filaEnlace .enlace {
+  flex: 1;
+  min-width: 0;
+}
+
+.enlace strong {
+  overflow-wrap: anywhere;
+}
+
+.botonAnadir {
+  justify-self: start;
+}
+
+.subidas button {
+  display: grid;
+  place-items: center;
+  width: var(--altura-tactil);
+  height: var(--altura-tactil);
+  border: 0;
+  border-radius: var(--radio-m);
+  background: none;
+  color: var(--color-texto-suave);
+  cursor: pointer;
 }
 
 .subidas {
@@ -378,4 +574,46 @@
 /* Al final: separador entre ejercicios de la lista (más específico que las reglas de li) */
 .lista li + li {
   border-top: 1px solid var(--color-borde);
+}
+
+/* Hoja «⋯» de la ficha */
+.opciones {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.opciones > li + li {
+  border-top: 1px solid var(--color-borde);
+}
+
+.opciones > li > button {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  width: 100%;
+  min-height: calc(var(--altura-tactil) + var(--espacio-2));
+  padding: 0 var(--espacio-1);
+  border: 0;
+  background: transparent;
+  color: var(--color-texto);
+  font: inherit;
+  font-weight: var(--peso-medio);
+  text-align: left;
+  cursor: pointer;
+}
+
+.opciones svg {
+  color: var(--color-acento);
+}
+
+.opciones .opcionPeligrosa,
+.opciones .opcionPeligrosa svg {
+  color: var(--color-peligro);
+}
+
+.opciones > li > button:disabled {
+  opacity: 0.4;
+  cursor: default;
 }

@@ -119,10 +119,15 @@ describe('acta del partido', () => {
   it('se sube el PDF, se revisa lo leído y se registra', async () => {
     conActa()
     const router = abrir('/plantillas/p1/partidos/p1')
-    const seccion = (await screen.findByRole('heading', { name: 'Acta del partido' })).closest(
-      'section',
-    )
-    if (!seccion) throw new Error('Sin sección del acta')
+    // Ya jugado y sin resultado: «Subir el acta», la acción principal de «El partido» (GH-287)
+    const seccion = await screen.findByRole('region', { name: 'El partido' })
+    expect(within(seccion).getByText('Falta el resultado')).toBeInTheDocument()
+    expect(within(seccion).getByRole('button', { name: 'Subir el acta' })).toBeInTheDocument()
+    expect(
+      within(seccion).getByRole('button', { name: 'Poner el resultado a mano' }),
+    ).toBeInTheDocument()
+    // Sin el botón repetido en la sección del acta
+    expect(screen.queryByRole('region', { name: 'Acta del partido' })).not.toBeInTheDocument()
     const pdf = new File(['%PDF-1.4'], 'FichaPartido.pdf', { type: 'application/pdf' })
     await userEvent.upload(within(seccion).getByLabelText('Archivo del acta en PDF'), pdf)
 
@@ -211,8 +216,8 @@ describe('acta del partido', () => {
 
   it('sin acta, el jugador no ve la sección', async () => {
     conActa(plantilla('p1', 'Senior', '2026-27', { rol: 'jugador', esAdminClub: false }))
-    abrir('/plantillas/p1/partidos/p1')
-    expect(await screen.findByRole('heading', { name: /Convocatoria/ })).toBeInTheDocument()
+    abrir('/plantillas/p1/partidos/p1?pestana=partido')
+    expect(await screen.findByRole('tab', { name: 'Partido', selected: true })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Acta del partido' })).not.toBeInTheDocument()
   })
 })
@@ -238,5 +243,51 @@ describe('jugadores de otras plantillas en el acta (GH-189)', () => {
         jugadores: expect.arrayContaining([{ nombre: 'NDONG, ISSA', jugadorId: 'j9' }]),
       }),
     )
+  })
+})
+
+describe('la revisión no espera a los de otras plantillas (GH-294)', () => {
+  it('se muestra en cuanto llega lo suyo y los de otras plantillas se añaden después', async () => {
+    // Issa, ya emparejado con un jugador de otra plantilla
+    conActa(senior26, PARTIDO, {
+      ...LEIDA,
+      lectura: {
+        ...LECTURA,
+        titulares: [persona(8, 'GÓMEZ GARCÍA, DANIEL', 'j1'), persona(4, 'NDONG, ISSA', 'j9')],
+      },
+    })
+    let soltar: (r: Response) => void = () => {}
+    manejadores['GET /api/plantillas/p1/invitables'] = () =>
+      new Promise<Response>((resolver) => {
+        soltar = resolver
+      })
+    abrir('/plantillas/p1/partidos/p1/acta')
+    // Sin esperar a la lista de otras plantillas
+    expect(await screen.findByRole('heading', { name: 'Revisar el acta' })).toBeInTheDocument()
+    const selector = screen.getByLabelText('NDONG, ISSA') as HTMLSelectElement
+    // El emparejado se ve con el nombre del acta, no como «No cuenta»
+    expect(selector).toHaveValue('j9')
+    expect(selector.selectedOptions[0]).toHaveTextContent('NDONG, ISSA · de otra plantilla')
+    expect(
+      within(within(selector).getByRole('group', { name: 'De otras plantillas' })).getByRole(
+        'option',
+      ),
+    ).toHaveTextContent('Cargando…')
+
+    // Cuando llega, se añaden y el emparejado se ve con su nombre de la app
+    soltar(json([{ jugadorId: 'j9', nombre: 'Issa', apellidos: 'Ndong', plantilla: 'Juvenil A' }]))
+    await waitFor(() =>
+      expect(selector.selectedOptions[0]).toHaveTextContent('Issa Ndong · Juvenil A'),
+    )
+    expect(within(selector).queryByText('Cargando…')).not.toBeInTheDocument()
+  })
+
+  it('si falla la lista de otras plantillas, la revisión se puede hacer igual', async () => {
+    conActa()
+    manejadores['GET /api/plantillas/p1/invitables'] = () =>
+      json({ error: { codigo: 'x', mensaje: 'Caída' } }, 500)
+    abrir('/plantillas/p1/partidos/p1/acta')
+    expect(await screen.findByRole('heading', { name: 'Revisar el acta' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Registrar el acta' })).toBeInTheDocument()
   })
 })
