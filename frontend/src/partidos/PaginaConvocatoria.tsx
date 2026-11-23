@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Check, ChevronLeft, Save, X } from 'lucide-react'
+import { Check, ChevronLeft, Plus, Save, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useBlocker, useNavigate, useParams } from 'react-router'
 import { api, datos } from '../api/cliente'
@@ -66,6 +66,7 @@ function Seleccion({ partido }: { partido: Partido }) {
   const ficha = `/plantillas/${plantilla.id}/partidos/${partido.id}?pestana=previa`
   const inicial = partido.jugadores.filter((j) => j.convocado).map((j) => j.jugadorId)
   const [elegidos, setElegidos] = useState<Set<string>>(() => new Set(inicial))
+  const [buscandoFuera, setBuscandoFuera] = useState(false)
   const [guardado, setGuardado] = useState(false)
   // De otras plantillas, todavía sin ficha en esta
   const [externos, setExternos] = useState<JugadorInvitable[]>([])
@@ -253,8 +254,10 @@ function Seleccion({ partido }: { partido: Partido }) {
         </div>
       )}
 
-      <section className={estilos.otrasPlantillas} aria-labelledby="otras-plantillas">
-        <h2 id="otras-plantillas">De otras plantillas</h2>
+      {/* Plegado tras un botón (GH-292): las sugerencias no parecen de la plantilla. Los ya añadidos
+          se ven siempre */}
+      <section className={estilos.otrasPlantillas} aria-label="De otras plantillas">
+        {(externos.length > 0 || buscandoFuera) && <h2>De otras plantillas</h2>}
         {externos.length > 0 && (
           <ul className={estilos.seleccion} aria-label="Convocados de otras plantillas">
             {externos.map((j) => (
@@ -280,11 +283,24 @@ function Seleccion({ partido }: { partido: Partido }) {
             ))}
           </ul>
         )}
-        <BuscadorInvitables
-          plantillaId={plantilla.id}
-          excluir={new Set(externos.map((j) => j.jugadorId))}
-          alElegir={(j) => setExternos([...externos, j])}
-        />
+        {buscandoFuera ? (
+          <BuscadorInvitables
+            plantillaId={plantilla.id}
+            excluir={new Set(externos.map((j) => j.jugadorId))}
+            alElegir={(j) => setExternos([...externos, j])}
+            enfocar
+            accion="Convocar"
+          />
+        ) : (
+          <Boton
+            variante="secundario"
+            className={estilos.botonOtraPlantilla}
+            icono={<Plus aria-hidden size={18} />}
+            onClick={() => setBuscandoFuera(true)}
+          >
+            Convocar a alguien de otra plantilla
+          </Boton>
+        )}
       </section>
 
       {/* La barra fija (GH-291): cuántos van y su reparto por líneas, a la vista al bajar. Para

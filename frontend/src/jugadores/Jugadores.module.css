@@ -419,6 +419,25 @@ a.fila:hover {
   cursor: pointer;
 }
 
+/* Con acción (en la convocatoria, GH-292): los datos a la izquierda y «Convocar» a la derecha */
+.resultados .conAccion {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+}
+
+.datosInvitable {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+
+.accionInvitable {
+  flex: none;
+  color: var(--color-acento);
+  font-weight: var(--peso-medio);
+}
+
 .resultados button:not(:disabled):hover {
   background: var(--color-superficie-alterna);
 }
