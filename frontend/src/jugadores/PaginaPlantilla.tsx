@@ -43,6 +43,15 @@ export function PaginaPlantilla() {
   // Sancionados y apercibidos (GH-231)
   const sanciones = useSanciones(plantilla.id)
   const gestiona = puedeGestionarJugadores(plantilla)
+  // Recuento de activos (sin invitados, que van aparte con el suyo) y de bajas (GH-254); las dos
+  // listas se piden siempre, la que no se ve sirve para el recuento y queda en caché para el cambio.
+  // Las bajas, solo a quien las ve
+  const activos = useJugadores(plantilla.id, true)
+  const bajas = useJugadores(plantilla.id, false, gestiona)
+  const cuantosActivos = activos.data?.filter((j) => j.tipo === 'propia').length
+  const cuantasBajas = bajas.data?.length
+  const conCuenta = (texto: string, cuenta: number | undefined) =>
+    cuenta === undefined ? texto : `${texto} · ${cuenta}`
   const [abiertos, setAbiertos] = useState(false)
   const [formulario, setFormulario] = useState<ModoFormulario | null>(null)
   const { reactivar, pendiente } = useBajaYReactivacion({
@@ -55,7 +64,8 @@ export function PaginaPlantilla() {
   return (
     <div className={estilos.pagina}>
       <div className={estilos.cabecera}>
-        <h1>Plantilla</h1>
+        {/* El rol jugador no ve los segmentos: el recuento, junto al título */}
+        <h1>{gestiona ? 'Plantilla' : conCuenta('Plantilla', cuantosActivos)}</h1>
         {gestiona && (
           <Boton icono={<UserPlus aria-hidden size={18} />} onClick={anadir}>
             Añadir
@@ -68,14 +78,14 @@ export function PaginaPlantilla() {
         <fieldset className={estilos.segmentos}>
           <legend className="solo-lectores">Ver</legend>
           <button type="button" aria-pressed={!verBajas} onClick={() => setParametros({})}>
-            Activos
+            {conCuenta('Activos', cuantosActivos)}
           </button>
           <button
             type="button"
             aria-pressed={verBajas}
             onClick={() => setParametros({ ver: 'bajas' })}
           >
-            Bajas
+            {conCuenta('Bajas', cuantasBajas)}
           </button>
         </fieldset>
       )}
