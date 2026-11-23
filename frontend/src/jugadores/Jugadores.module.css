@@ -146,11 +146,11 @@ a.fila:hover {
   white-space: nowrap;
 }
 
-/* La fila propia, en una sola línea con la marca «Tú» (GH-52) */
-.unaLinea {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+/* Debajo del nombre: la marca «Tú» (GH-52), la posición y la multa (GH-252); si no cabe, pasa a
+   otra línea en vez de cortarse */
+.segundaLinea {
+  overflow-wrap: break-word;
+  hyphens: auto;
 }
 
 .secundario {
@@ -622,4 +622,22 @@ a.fila:hover {
   font-weight: var(--peso-medio);
   line-height: 1.5rem;
   vertical-align: middle;
+}
+
+/* La multa pendiente, en la segunda línea, en gris y con el icono de monedas (GH-252) */
+.deuda {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+
+/* El nombre en la lista de la plantilla, entero: en pantallas muy estrechas pasa a dos líneas en vez
+   de cortarse (GH-252) */
+.texto .nombreJugador {
+  overflow: visible;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }

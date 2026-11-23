@@ -8,7 +8,6 @@ import { IconoEstado } from '../componentes/IconoEstado'
 import { useResumenAsistencia } from '../entrenos/datos'
 import { Porcentaje } from '../entrenos/Porcentaje'
 import { euros, useDeudas } from '../multas/datos'
-import estilosMultas from '../multas/Multas.module.css'
 import { useEstadisticas } from '../partidos/datos'
 import { usePlantillaActiva } from '../plantillas/PlantillaActiva'
 import { useBajaYReactivacion } from './acciones'
@@ -242,24 +241,29 @@ function Datos({
         estado={estadoJugador({ lesion: jugador.lesion, sanciones })}
       />
       <span className={estilos.texto}>
-        <strong>
+        <strong className={estilos.nombreJugador}>
           {nombreCompleto(jugador)}
           {invitado && <MarcaInvitado />}
         </strong>
-        {(propio || detalle) && (
-          <span className={`${estilos.secundario} ${estilos.unaLinea}`}>
+        {(propio || detalle || deuda) && (
+          <span className={`${estilos.secundario} ${estilos.segundaLinea}`}>
             {propio && <span className={estilos.marcaPropia}>Tú</span>}
             {detalle}
+            {/* La multa pendiente, detrás de la posición y en gris (GH-252): no le quita sitio al
+                nombre y no se confunde con los avisos, que son los ámbar */}
+            {deuda ? (
+              <>
+                {detalle && ' · '}
+                <span className={estilos.deuda}>
+                  <Coins aria-hidden size={14} />
+                  {euros(deuda)}
+                  <span className="solo-lectores"> de multas pendientes</span>
+                </span>
+              </>
+            ) : null}
           </span>
         )}
       </span>
-      {deuda ? (
-        <span className={estilosMultas.deuda}>
-          <Coins aria-hidden size={14} />
-          {euros(deuda)}
-          <span className="solo-lectores"> de multas pendientes</span>
-        </span>
-      ) : null}
       <Porcentaje valor={porcentaje} />
     </>
   )
