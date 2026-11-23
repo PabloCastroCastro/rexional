@@ -350,11 +350,24 @@ describe('titulares y suplentes', () => {
   it('se marcan los titulares (como mucho 11) y el resto queda de suplente', async () => {
     conPartido()
     const router = abrir('/plantillas/p1/partidos/p1/alineacion')
-    expect(await screen.findByText(/de 11 titulares/)).toHaveTextContent(
-      '2 de 11 titulares · 1 suplentes',
+    // Dos grupos con su recuento; la barra fija, el total (GH-293)
+    await screen.findByRole('button', { name: 'Guardar' })
+    expect(screen.getByRole('heading', { level: 2, name: /^Titulares/ })).toHaveTextContent(
+      'Titulares 2 de 11',
     )
-    await userEvent.click(screen.getByText('Brais'))
-    await userEvent.click(screen.getByText('Zoe'))
+    expect(screen.getByRole('heading', { level: 2, name: /^Suplentes/ })).toHaveTextContent(
+      'Suplentes 1',
+    )
+    expect(screen.getByRole('status')).toHaveTextContent('2 titulares · 1 suplente')
+    // Sin casillas: cada uno pasa al otro grupo con su botón, que dice a quién y adónde
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Pasar a Brais a suplentes' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Pasar a Zoe a titulares' }))
+    expect(
+      within(screen.getByRole('list', { name: 'Suplentes' }))
+        .getAllByRole('listitem')
+        .map((li) => li.textContent),
+    ).toEqual([expect.stringMatching(/Brais.*Titular$/)])
     await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
     expect(await screen.findByText('Guardado: 2 titulares y 1 suplente')).toBeInTheDocument()
     expect(enviado('PUT /api/plantillas/p1/partidos/p1/participaciones')).toEqual([
