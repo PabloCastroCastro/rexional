@@ -239,17 +239,25 @@ describe('lista de multas', () => {
     let lista = await screen.findByRole('list', { name: 'Multas' })
     expect(within(lista).getAllByRole('listitem')).toHaveLength(2)
     expect(screen.getByText(/2 multas · 6,50\s€/)).toBeInTheDocument()
-    await userEvent.click(
-      within(lista).getByRole('button', {
-        name: 'Cobrar a Brais Iglesias: Llegar tarde al entreno',
-      }),
-    )
+    // «Cobrar» con texto; el motivo, entero (GH-295)
+    const cobrar = within(lista).getByRole('button', {
+      name: 'Cobrar a Brais Iglesias: Llegar tarde al entreno',
+    })
+    expect(cobrar).toHaveTextContent('Cobrar')
+    expect(within(lista).getByText('Llegar tarde al entreno')).toBeInTheDocument()
+    await userEvent.click(cobrar)
     expect(await screen.findByText(/Cobrada: Brais Iglesias/)).toBeInTheDocument()
     expect(enviado('PATCH /api/plantillas/p1/multas/a')).toEqual([{ fechaPago: '2026-10-14' }])
 
+    // Borrar, en «⋯», con la misma confirmación
     await userEvent.click(
       within(lista).getByRole('button', {
-        name: 'Borrar la multa de Brais Iglesias: Pinchar el balón',
+        name: 'Opciones de la multa de Brais Iglesias: Pinchar el balón',
+      }),
+    )
+    await userEvent.click(
+      within(screen.getByRole('dialog', { name: 'Multa' })).getByRole('button', {
+        name: 'Borrar la multa',
       }),
     )
     await userEvent.click(
@@ -259,7 +267,11 @@ describe('lista de multas', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Cobradas' }))
     lista = await screen.findByRole('list', { name: 'Multas' })
-    expect(within(lista).getByRole('listitem')).toHaveTextContent(/Zoe.*cobrada/)
+    // Cobrada: «✓ Cobrada» y «Deshacer»
+    expect(within(lista).getByRole('listitem')).toHaveTextContent(/Zoe.*Cobrada/)
+    expect(
+      within(lista).getByRole('button', { name: /Deshacer el cobro de Zoe/ }),
+    ).toHaveTextContent('Deshacer')
     await userEvent.click(within(lista).getByRole('button', { name: /Deshacer el cobro de Zoe/ }))
     expect(await screen.findByText('Cobro deshecho: Zoe')).toBeInTheDocument()
     expect(enviado('PATCH /api/plantillas/p1/multas/c')).toEqual([{ fechaPago: null }])
@@ -334,7 +346,7 @@ describe('plantilla y rol jugador', () => {
     expect(await screen.findByRole('list', { name: 'Multas' })).toBeInTheDocument()
     expect(screen.queryByText('En caja')).not.toBeInTheDocument()
     expect(
-      screen.queryByRole('button', { name: /Cobrar|Borrar|Poner multa/ }),
+      screen.queryByRole('button', { name: /Cobrar|Borrar|Opciones|Deshacer|Poner multa/ }),
     ).not.toBeInTheDocument()
     expect(peticiones.map((p) => p.clave)).not.toContain('GET /api/plantillas/p1/multas/resumen')
 

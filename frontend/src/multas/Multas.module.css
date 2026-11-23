@@ -329,3 +329,93 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--espacio-3);
 }
+
+/* Una multa en tres líneas (GH-295): nombre e importe; el motivo entero; la fecha con las
+   acciones */
+.filaMulta {
+  display: grid;
+  gap: 2px;
+  padding: var(--espacio-3) var(--espacio-2) var(--espacio-2) var(--espacio-4);
+}
+
+.cabeceraMulta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+  padding-right: var(--espacio-2);
+}
+
+.nombreMulta {
+  min-width: 0;
+  font-weight: var(--peso-medio);
+}
+
+.motivoMulta {
+  overflow-wrap: anywhere;
+}
+
+.pieMulta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-1) var(--espacio-3);
+  min-height: var(--altura-tactil);
+}
+
+.marcaCobrada {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-1);
+  color: var(--color-exito);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
+}
+
+.accionesMulta {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-1);
+  margin-left: auto;
+}
+
+.filaMulta[data-cobrada="true"] .importe {
+  color: var(--color-texto-suave);
+  text-decoration: line-through;
+}
+
+.masMulta {
+  display: grid;
+  place-items: center;
+  width: var(--altura-tactil);
+  height: var(--altura-tactil);
+  border: 0;
+  border-radius: var(--radio-m);
+  background: none;
+  color: var(--color-texto-suave);
+  cursor: pointer;
+}
+
+/* Hoja «⋯» de la multa */
+.opcionesMulta {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.opcionesMulta > li > button {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  width: 100%;
+  min-height: calc(var(--altura-tactil) + var(--espacio-2));
+  padding: 0 var(--espacio-1);
+  border: 0;
+  background: transparent;
+  color: var(--color-peligro);
+  font: inherit;
+  font-weight: var(--peso-medio);
+  text-align: left;
+  cursor: pointer;
+}

@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Check, Coins, Plus, Trash2, Undo2 } from 'lucide-react'
+import { Check, Coins, Ellipsis, Plus, Trash2, Undo2 } from 'lucide-react'
 import { useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { api, datos, enviar } from '../api/cliente'
@@ -8,6 +8,7 @@ import { Boton } from '../componentes/Boton'
 import { Cargando } from '../componentes/Cargando'
 import { useConfirmacion } from '../componentes/Confirmacion'
 import { EstadoVacio } from '../componentes/EstadoVacio'
+import { HojaInferior } from '../componentes/HojaInferior'
 import { Selector } from '../componentes/Selector'
 import { hoy, textoFecha } from '../entrenos/datos'
 import { MarcaInvitado } from '../jugadores/BuscadorInvitables'
@@ -133,6 +134,7 @@ function FilaMulta({ multa, gestiona }: { multa: Multa; gestiona: boolean }) {
   const confirmar = useConfirmacion()
   const nombre = nombreCompleto(multa)
   const cobrada = multa.fechaPago !== null
+  const [opciones, setOpciones] = useState(false)
 
   const refrescar = () => cliente.invalidateQueries({ queryKey: CLAVE_MULTAS })
   const fallo = (error: unknown) =>
@@ -172,64 +174,89 @@ function FilaMulta({ multa, gestiona }: { multa: Multa; gestiona: boolean }) {
     onError: fallo,
   })
 
+  const detalle = `${nombre}: ${multa.motivo}`
+  // En tres líneas (GH-295): nombre e importe; el motivo entero; la fecha con las acciones
   return (
-    <div className={estilos.fila} data-cobrada={cobrada}>
-      <span className={estilos.texto}>
-        <strong>
+    <div className={estilos.filaMulta} data-cobrada={cobrada}>
+      <span className={estilos.cabeceraMulta}>
+        <strong className={estilos.nombreMulta}>
           {nombre}
           {multa.invitado && <MarcaInvitado />}
         </strong>
-        <span>{multa.motivo}</span>
-        <span className={estilos.secundario}>
-          {textoFecha(multa.fecha)}
-          {cobrada && multa.fechaPago && ` · cobrada ${textoFecha(multa.fechaPago).toLowerCase()}`}
-        </span>
+        <span className={estilos.importe}>{euros(multa.importeCentimos)}</span>
       </span>
-      <span className={estilos.importe}>{euros(multa.importeCentimos)}</span>
+      <span className={estilos.motivoMulta}>{multa.motivo}</span>
+      <span className={estilos.pieMulta}>
+        <span className={estilos.secundario}>{textoFecha(multa.fecha)}</span>
+        {cobrada && multa.fechaPago && (
+          <span className={estilos.marcaCobrada}>
+            <Check aria-hidden size={16} />
+            Cobrada {textoFecha(multa.fechaPago).toLowerCase()}
+          </span>
+        )}
+        {gestiona && (
+          <span className={estilos.accionesMulta}>
+            {cobrada ? (
+              <Boton
+                variante="texto"
+                icono={<Undo2 aria-hidden size={16} />}
+                aria-label={`Deshacer el cobro de ${detalle}`}
+                cargando={cobrar.isPending}
+                onClick={() => cobrar.mutate(null)}
+              >
+                Deshacer
+              </Boton>
+            ) : (
+              <Boton
+                variante="secundario"
+                icono={<Check aria-hidden size={18} />}
+                aria-label={`Cobrar a ${detalle}`}
+                cargando={cobrar.isPending}
+                onClick={() => cobrar.mutate(multa.fecha > hoy() ? multa.fecha : hoy())}
+              >
+                Cobrar
+              </Boton>
+            )}
+            {/* Borrar, en «⋯»: menos a mano que cobrar */}
+            <button
+              type="button"
+              className={estilos.masMulta}
+              aria-label={`Opciones de la multa de ${detalle}`}
+              aria-haspopup="dialog"
+              title="Opciones"
+              onClick={() => setOpciones(true)}
+            >
+              <Ellipsis aria-hidden size={20} />
+            </button>
+          </span>
+        )}
+      </span>
       {gestiona && (
-        <span className={estilos.botonesFila}>
-          {cobrada ? (
-            <button
-              type="button"
-              className={estilos.iconoAccion}
-              aria-label={`Deshacer el cobro de ${nombre}: ${multa.motivo}`}
-              title="Deshacer el cobro"
-              disabled={cobrar.isPending}
-              onClick={() => cobrar.mutate(null)}
-            >
-              <Undo2 aria-hidden size={18} />
-            </button>
-          ) : (
-            <button
-              type="button"
-              className={`${estilos.iconoAccion} ${estilos.cobrar}`}
-              aria-label={`Cobrar a ${nombre}: ${multa.motivo}`}
-              title="Cobrar"
-              disabled={cobrar.isPending}
-              onClick={() => cobrar.mutate(multa.fecha > hoy() ? multa.fecha : hoy())}
-            >
-              <Check aria-hidden size={18} />
-            </button>
+        <HojaInferior abierta={opciones} alCerrar={() => setOpciones(false)} titulo="Multa">
+          {opciones && (
+            <ul className={estilos.opcionesMulta}>
+              <li>
+                <button
+                  type="button"
+                  disabled={borrar.isPending}
+                  onClick={async () => {
+                    setOpciones(false)
+                    const confirmado = await confirmar({
+                      titulo: `¿Borrar la multa de ${nombre}?`,
+                      mensaje: `${multa.motivo}, ${euros(multa.importeCentimos)}. No se puede deshacer.`,
+                      textoConfirmar: 'Borrar multa',
+                      peligrosa: true,
+                    })
+                    if (confirmado) borrar.mutate()
+                  }}
+                >
+                  <Trash2 aria-hidden size={20} />
+                  Borrar la multa
+                </button>
+              </li>
+            </ul>
           )}
-          <button
-            type="button"
-            className={`${estilos.iconoAccion} ${estilos.peligro}`}
-            aria-label={`Borrar la multa de ${nombre}: ${multa.motivo}`}
-            title="Borrar"
-            disabled={borrar.isPending}
-            onClick={async () => {
-              const confirmado = await confirmar({
-                titulo: `¿Borrar la multa de ${nombre}?`,
-                mensaje: `${multa.motivo}, ${euros(multa.importeCentimos)}. No se puede deshacer.`,
-                textoConfirmar: 'Borrar multa',
-                peligrosa: true,
-              })
-              if (confirmado) borrar.mutate()
-            }}
-          >
-            <Trash2 aria-hidden size={18} />
-          </button>
-        </span>
+        </HojaInferior>
       )}
     </div>
   )
