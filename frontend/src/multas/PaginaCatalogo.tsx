@@ -40,12 +40,14 @@ export function PaginaCatalogo() {
           <Boton icono={<Plus aria-hidden size={18} />} onClick={() => setEditando(null)}>
             Añadir motivo
           </Boton>
-          {/* Un interruptor en una fila de 48 px, toda ella pulsable (GH-296) */}
+          {/* Un interruptor de 48 px de alto, todo él pulsable (GH-296), en la misma línea que «Añadir
+              motivo»: en pantalla, «Desactivados», para que quepan a 360 px */}
           <label className={estilos.filaInterruptor}>
-            Ver los desactivados
+            Desactivados
             <input
               type="checkbox"
               role="switch"
+              aria-label="Ver los desactivados"
               aria-checked={verDesactivados}
               className={estilos.entradaInterruptor}
               checked={verDesactivados}
