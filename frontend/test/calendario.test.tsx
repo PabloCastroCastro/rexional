@@ -221,7 +221,7 @@ describe('entrenos del día', () => {
     expect(opciones).toEqual([
       'Cambiar la hora',
       'Planificar el entreno',
-      'Resumen para WhatsApp',
+      'Pedir confirmación',
       'Cancelar entreno',
     ])
     expect(within(hoja).getByRole('link', { name: 'Planificar el entreno' })).toHaveAttribute(
@@ -229,9 +229,9 @@ describe('entrenos del día', () => {
       '/plantillas/p1/entrenos/plan/e1',
     )
 
-    // El resumen para WhatsApp cierra las opciones y abre su hoja
-    await userEvent.click(within(hoja).getByRole('button', { name: 'Resumen para WhatsApp' }))
-    expect(await screen.findByRole('dialog', { name: 'Resumen para WhatsApp' })).toBeInTheDocument()
+    // «Pedir confirmación» cierra las opciones y abre su hoja
+    await userEvent.click(within(hoja).getByRole('button', { name: 'Pedir confirmación' }))
+    expect(await screen.findByRole('dialog', { name: 'Pedir confirmación' })).toBeInTheDocument()
 
     expect(screen.queryByRole('button', { name: 'Cambiar hora' })).not.toBeInTheDocument()
   })

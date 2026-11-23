@@ -4244,8 +4244,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Resumen de respuestas para WhatsApp
-         * @description Delegado o superior. Quién va, quién está en duda, quién no y quién no ha respondido (de los jugadores activos en la dinámica), con el enlace para responder en la app, y el enlace wa.me para compartirlo.
+         * Mensaje para pedir que confirmen la asistencia
+         * @description Delegado o superior. Para el grupo del equipo: el entreno, el plazo para responder y el enlace para hacerlo en la app, y el enlace wa.me para compartirlo. 409 si el plazo ya se ha cerrado.
          */
         get: {
             parameters: {
@@ -4288,6 +4288,15 @@ export interface paths {
                 };
                 /** @description No existe */
                 404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Respuestas cerradas */
+                409: {
                     headers: {
                         [name: string]: unknown;
                     };

@@ -1,6 +1,7 @@
 import { eq, inArray } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { crearApp } from '../src/app.js'
+import { config } from '../src/config.js'
 import { db, pool } from '../src/db/cliente.js'
 import {
   asistencias,
@@ -288,20 +289,65 @@ describe('el cuerpo técnico', () => {
     })
   })
 
-  it('resumen para WhatsApp con quién va, duda, no va y no ha respondido, y el enlace a la app', async () => {
-    await responder(ids.sinHora ?? '', { respuesta: 'no_voy', motivo: 'Viaje' })
-    const res = await pedir('GET', `${base()}/${ids.sinHora}/respuestas/mensaje`, 'delegado')
+  // GH-213: pedir que confirmen, no contar quién va
+  const diaTexto = (n: number) =>
+    new Intl.DateTimeFormat('es-ES', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      timeZone: 'UTC',
+    })
+      .format(new Date(`${dia(n)}T12:00:00Z`))
+      .replace(',', '')
+  const semana = (n: number) =>
+    new Intl.DateTimeFormat('es-ES', { weekday: 'long', timeZone: 'UTC' }).format(
+      new Date(`${dia(n)}T12:00:00Z`),
+    )
+
+  it('pide confirmar: el entreno, el plazo y el enlace a la app, sin quién va ni motivos', async () => {
+    await responder(ids.manana ?? '', { respuesta: 'no_voy', motivo: 'Viaje' })
+    const res = await pedir('GET', `${base()}/${ids.manana}/respuestas/mensaje`, 'delegado')
+    expect(res.status).toBe(200)
     const { texto, whatsapp } = await res.json()
-    expect(texto).toContain('*CD Respuestas · Senior*')
-    expect(texto).toContain('❌ *No van (1)*\n7 · Brais (Viaje)')
-    expect(texto).toContain('⏳ *Sin responder (1)*\n9 · Zoe')
-    expect(texto).not.toContain('Hugo')
-    expect(texto).not.toContain('Bruno')
-    expect(texto).toContain(`/plantillas/${ids.senior}/entrenos`)
+    expect(texto).toBe(
+      [
+        '🏃 *CD Respuestas · Senior*',
+        `Entreno el ${diaTexto(1)} de 20:00 a 21:30`,
+        '',
+        `¿Vienes? Confirma en la app antes del ${semana(1)} a las 20:00:`,
+        `${config.urlPublica}/plantillas/${ids.senior}/entrenos`,
+      ].join('\n'),
+    )
+    expect(texto).not.toMatch(/Brais|Viaje|Van|Sin responder/)
     expect(whatsapp).toBe(`https://wa.me/?text=${encodeURIComponent(texto)}`)
     expect(
-      (await pedir('GET', `${base()}/${ids.sinHora}/respuestas/mensaje`, 'jugador')).status,
+      (await pedir('GET', `${base()}/${ids.manana}/respuestas/mensaje`, 'jugador')).status,
     ).toBe(403)
+  })
+
+  it('con hora límite, el plazo es antes; sin hora, hasta el día del entreno', async () => {
+    const ruta = `/plantillas/${ids.senior}`
+    await pedir('PATCH', ruta, 'admin', { horasLimiteRespuesta: 2 })
+    try {
+      const conHora = await (
+        await pedir('GET', `${base()}/${ids.pasado}/respuestas/mensaje`, 'delegado')
+      ).json()
+      expect(conHora.texto).toContain(`Entreno el ${diaTexto(2)} a las 20:00`)
+      expect(conHora.texto).toContain(`Confirma en la app antes del ${semana(2)} a las 18:00:`)
+    } finally {
+      await pedir('PATCH', ruta, 'admin', { horasLimiteRespuesta: 0 })
+    }
+    const sinHora = await (
+      await pedir('GET', `${base()}/${ids.sinHora}/respuestas/mensaje`, 'delegado')
+    ).json()
+    expect(sinHora.texto).toContain(`Entreno el ${diaTexto(3)}\n`)
+    expect(sinHora.texto).toContain(`Confirma en la app hasta el ${semana(3)}:`)
+  })
+
+  it('con el plazo cerrado no se ofrece el mensaje', async () => {
+    const res = await pedir('GET', `${base()}/${ids.ayer}/respuestas/mensaje`, 'delegado')
+    expect(res.status).toBe(409)
+    expect(await res.json()).toMatchObject({ error: { codigo: 'respuestas_cerradas' } })
   })
 })
 

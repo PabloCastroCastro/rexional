@@ -220,8 +220,12 @@ export function PaginaPasarLista() {
           <OpcionesEntreno
             entreno={elegida}
             abierta={opciones}
-            // El resumen para WhatsApp, mientras se muestra «¿Quién va?»: antes de pasar lista
-            conResumen={futuro || elegida.asiste + elegida.justificada + elegida.falta === 0}
+            // «Pedir confirmación», mientras se muestra «¿Quién va?» (antes de pasar lista) y se
+            // puede responder (GH-213)
+            conResumen={
+              elegida.respuestasAbiertas &&
+              (futuro || elegida.asiste + elegida.justificada + elegida.falta === 0)
+            }
             alCerrar={() => setOpciones(false)}
             alCambiarHora={() => {
               setOpciones(false)
@@ -390,7 +394,7 @@ function OpcionesEntreno({
               <li>
                 <button type="button" onClick={alCompartir}>
                   <Share2 aria-hidden size={20} />
-                  Resumen para WhatsApp
+                  Pedir confirmación
                 </button>
               </li>
             )}

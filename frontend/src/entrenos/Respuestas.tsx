@@ -214,7 +214,7 @@ function resumenRespuestas(r: EntrenoListado['respuestas']) {
 }
 
 // Entreno de hoy aún sin lista (GH-215): encima de la lista, una línea plegada con el resumen; al
-// abrirla, el recuento completo y el resumen para WhatsApp (GH-258)
+// abrirla, el recuento completo; al lado, «Pedir confirmación» (GH-258, GH-213)
 export function RespuestasDeHoy({ entreno }: { entreno: EntrenoListado }) {
   return (
     <section aria-label="Respuestas" className={estilos.filaRespuestasHoy}>
@@ -231,18 +231,19 @@ export function RespuestasDeHoy({ entreno }: { entreno: EntrenoListado }) {
   )
 }
 
-// Compartir quién va con el grupo del equipo: siempre en la cabecera de «¿Quién va?», como acción, y el
-// mensaje en una hoja con copiar y compartir
+// Pedir en el grupo del equipo que confirmen (GH-213): en la cabecera de «¿Quién va?», como acción, y
+// el mensaje en una hoja con copiar y compartir. Solo mientras se puede responder
 export function CompartirRespuestas({ entreno }: { entreno: EntrenoListado }) {
   const [abierta, setAbierta] = useState(false)
+  if (!entreno.respuestasAbiertas) return null
   return (
     <>
       <Boton
         variante="secundario"
         className={estilos.botonCompartir}
         icono={<Share2 aria-hidden size={18} />}
-        aria-label="Resumen para WhatsApp"
-        title="Resumen para WhatsApp"
+        aria-label="Pedir confirmación"
+        title="Pedir confirmación"
         onClick={() => setAbierta(true)}
       />
       <HojaRespuestas entreno={entreno} abierta={abierta} alCerrar={() => setAbierta(false)} />
@@ -261,7 +262,7 @@ export function HojaRespuestas({
   alCerrar: () => void
 }) {
   return (
-    <HojaInferior abierta={abierta} alCerrar={alCerrar} titulo="Resumen para WhatsApp">
+    <HojaInferior abierta={abierta} alCerrar={alCerrar} titulo="Pedir confirmación">
       {abierta && <MensajeRespuestas entreno={entreno} />}
     </HojaInferior>
   )
@@ -291,8 +292,8 @@ const useMensajeRespuestas = (plantillaId: string, entrenoId: string) =>
       ),
   })
 
-// Cuerpo técnico, en un próximo entreno: quién va, apuntar o corregir respuestas y el resumen para
-// WhatsApp
+// Cuerpo técnico, en un próximo entreno: quién va, apuntar o corregir respuestas y pedir que
+// confirmen
 export function RespuestasEntreno({ entreno }: { entreno: EntrenoListado }) {
   const plantilla = usePlantillaActiva()
   const cliente = useQueryClient()
