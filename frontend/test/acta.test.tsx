@@ -245,3 +245,49 @@ describe('jugadores de otras plantillas en el acta (GH-189)', () => {
     )
   })
 })
+
+describe('la revisión no espera a los de otras plantillas (GH-294)', () => {
+  it('se muestra en cuanto llega lo suyo y los de otras plantillas se añaden después', async () => {
+    // Issa, ya emparejado con un jugador de otra plantilla
+    conActa(senior26, PARTIDO, {
+      ...LEIDA,
+      lectura: {
+        ...LECTURA,
+        titulares: [persona(8, 'GÓMEZ GARCÍA, DANIEL', 'j1'), persona(4, 'NDONG, ISSA', 'j9')],
+      },
+    })
+    let soltar: (r: Response) => void = () => {}
+    manejadores['GET /api/plantillas/p1/invitables'] = () =>
+      new Promise<Response>((resolver) => {
+        soltar = resolver
+      })
+    abrir('/plantillas/p1/partidos/p1/acta')
+    // Sin esperar a la lista de otras plantillas
+    expect(await screen.findByRole('heading', { name: 'Revisar el acta' })).toBeInTheDocument()
+    const selector = screen.getByLabelText('NDONG, ISSA') as HTMLSelectElement
+    // El emparejado se ve con el nombre del acta, no como «No cuenta»
+    expect(selector).toHaveValue('j9')
+    expect(selector.selectedOptions[0]).toHaveTextContent('NDONG, ISSA · de otra plantilla')
+    expect(
+      within(within(selector).getByRole('group', { name: 'De otras plantillas' })).getByRole(
+        'option',
+      ),
+    ).toHaveTextContent('Cargando…')
+
+    // Cuando llega, se añaden y el emparejado se ve con su nombre de la app
+    soltar(json([{ jugadorId: 'j9', nombre: 'Issa', apellidos: 'Ndong', plantilla: 'Juvenil A' }]))
+    await waitFor(() =>
+      expect(selector.selectedOptions[0]).toHaveTextContent('Issa Ndong · Juvenil A'),
+    )
+    expect(within(selector).queryByText('Cargando…')).not.toBeInTheDocument()
+  })
+
+  it('si falla la lista de otras plantillas, la revisión se puede hacer igual', async () => {
+    conActa()
+    manejadores['GET /api/plantillas/p1/invitables'] = () =>
+      json({ error: { codigo: 'x', mensaje: 'Caída' } }, 500)
+    abrir('/plantillas/p1/partidos/p1/acta')
+    expect(await screen.findByRole('heading', { name: 'Revisar el acta' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Registrar el acta' })).toBeInTheDocument()
+  })
+})
