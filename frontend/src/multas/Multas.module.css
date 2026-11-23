@@ -419,3 +419,67 @@
   text-align: left;
   cursor: pointer;
 }
+
+/* Catálogo (GH-296): «Añadir motivo» y, debajo, «Ver los desactivados» como interruptor en una fila
+   de 48 px */
+.accionesCatalogo {
+  display: grid;
+  justify-items: start;
+  gap: var(--espacio-2);
+}
+
+.filaInterruptor {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+  width: 100%;
+  min-height: 3rem;
+  padding: 0 var(--espacio-4);
+  border-radius: var(--radio-l);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra-1);
+  font-weight: var(--peso-medio);
+  cursor: pointer;
+}
+
+/* La casilla nativa, accesible pero invisible; se ve el carril con su bola */
+.entradaInterruptor {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.pistaInterruptor {
+  display: flex;
+  flex: none;
+  align-items: center;
+  width: 2.75rem;
+  height: 1.5rem;
+  padding: 3px;
+  border-radius: var(--radio-completo);
+  background: var(--color-borde);
+  transition: background-color var(--duracion) var(--curva);
+}
+
+.pistaInterruptor > span {
+  width: 1.125rem;
+  height: 1.125rem;
+  border-radius: var(--radio-completo);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra-1);
+  transition: transform var(--duracion) var(--curva);
+}
+
+.entradaInterruptor:checked + .pistaInterruptor {
+  background: var(--color-primario);
+}
+
+.entradaInterruptor:checked + .pistaInterruptor > span {
+  transform: translateX(1.25rem);
+}
+
+.entradaInterruptor:focus-visible + .pistaInterruptor {
+  outline: 3px solid var(--color-foco);
+  outline-offset: 2px;
+}
