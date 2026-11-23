@@ -160,3 +160,62 @@ describe('cambio de contraseña', () => {
     expect(await screen.findByText(/Espera 2 minutos/)).toBeInTheDocument()
   })
 })
+
+describe('muchas sesiones (GH-297)', () => {
+  // La actual llega la última; las demás, desordenadas
+  const sesion = (n: number) => ({
+    ...IPHONE,
+    id: `o${n}`,
+    navegador: `Navegador ${n}`,
+    ultimoUso: `2026-11-${String(n).padStart(2, '0')}T10:00:00Z`,
+  })
+  const MUCHAS = [sesion(3), sesion(9), sesion(1), sesion(7), sesion(5), sesion(8), ESTA]
+
+  it('muestra la actual y las 4 más recientes, con «Cerrar las demás» justo debajo', async () => {
+    conSesiones(MUCHAS)
+    abrir('/plantillas/p1/mas/cuenta')
+    const recientes = await screen.findByRole('list', { name: 'Sesiones recientes' })
+    const filas = within(recientes).getAllByRole('listitem')
+    expect(filas.map((f) => f.querySelector('strong')?.textContent)).toEqual([
+      'Chrome en Android',
+      'Navegador 9 en iPhone',
+      'Navegador 8 en iPhone',
+      'Navegador 7 en iPhone',
+      'Navegador 5 en iPhone',
+    ])
+    expect(filas[1]).toHaveTextContent(/Último uso/)
+    expect(screen.queryByText('Navegador 3 en iPhone')).not.toBeInTheDocument()
+
+    // El botón va justo después de la lista, antes de «Ver las 2 restantes»
+    const cerrar = screen.getByRole('button', { name: 'Cerrar las demás sesiones' })
+    const ver = screen.getByRole('button', { name: 'Ver las 2 restantes' })
+    expect(
+      recientes.compareDocumentPosition(cerrar) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    expect(cerrar.compareDocumentPosition(ver) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+
+    await userEvent.click(ver)
+    const antiguas = screen.getByRole('list', { name: 'Sesiones más antiguas' })
+    expect(
+      within(antiguas)
+        .getAllByRole('listitem')
+        .map((f) => f.querySelector('strong')?.textContent),
+    ).toEqual(['Navegador 3 en iPhone', 'Navegador 1 en iPhone'])
+    expect(screen.queryByRole('button', { name: /restantes/ })).not.toBeInTheDocument()
+
+    // Misma confirmación de antes, con todas las demás
+    manejadores['POST /api/cuenta/sesiones/cerrar-otras'] = () => json({ cerradas: 6 })
+    await userEvent.click(cerrar)
+    expect(await screen.findByText(/Los otros 6 dispositivos/)).toBeInTheDocument()
+    await confirmar('Cerrar las demás')
+    expect(await screen.findByText('Sesión cerrada en 6 dispositivos')).toBeInTheDocument()
+  })
+
+  it('con 5 o menos se ven todas, sin «Ver las restantes»', async () => {
+    conSesiones(MUCHAS.slice(2))
+    abrir('/plantillas/p1/mas/cuenta')
+    const recientes = await screen.findByRole('list', { name: 'Sesiones recientes' })
+    expect(within(recientes).getAllByRole('listitem')).toHaveLength(5)
+    expect(screen.queryByRole('button', { name: /restante/ })).not.toBeInTheDocument()
+  })
+})
