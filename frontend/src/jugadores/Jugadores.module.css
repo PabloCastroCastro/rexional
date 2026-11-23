@@ -641,3 +641,23 @@ a.fila:hover {
   white-space: normal;
   overflow-wrap: anywhere;
 }
+
+/* Cabecera de la columna del porcentaje (GH-253): «Asistencia», centrada sobre la pastilla. A la
+   derecha deja lo mismo que la fila: el relleno del elemento de la lista y el de la fila, la flecha
+   y el hueco entre ambas */
+.cabeceraColumnas {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: calc(-1 * var(--espacio-2));
+  padding-right: calc(var(--espacio-3) + var(--espacio-4) + 20px + var(--espacio-3));
+  color: var(--color-texto-suave);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-medio);
+}
+
+.cabeceraColumnas > span {
+  display: flex;
+  justify-content: center;
+  width: 3.25rem;
+  white-space: nowrap;
+}
