@@ -254,21 +254,6 @@
   font-size: var(--texto-sm);
 }
 
-/* Deuda pendiente en la plantilla */
-.deuda {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  gap: 2px;
-  padding: 1px var(--espacio-2);
-  border: 1px solid var(--color-aviso);
-  border-radius: var(--radio-completo);
-  color: var(--color-aviso);
-  font-size: var(--texto-sm);
-  font-weight: var(--peso-medio);
-  font-variant-numeric: tabular-nums;
-}
-
 /* Totales de la caja */
 .totales {
   display: grid;

@@ -336,6 +336,18 @@ describe('plantilla y rol jugador', () => {
     expect(within(lista).getAllByRole('listitem')[1]).not.toHaveTextContent('multas pendientes')
   })
 
+  it('la deuda va en la segunda línea, detrás de la posición, y no junto al nombre (GH-252)', async () => {
+    conMultas()
+    manejadores['GET /api/plantillas/p1/jugadores'] = () =>
+      json(JUGADORES.map((j) => (j.jugadorId === 'j1' ? { ...j, posicion: 'defensa' } : j)))
+    abrir('/plantillas/p1/jugadores')
+    const lista = await screen.findByRole('list', { name: 'Jugadores' })
+    const deuda = await within(lista).findByText(/6,50\s€/)
+    // En la línea de la posición: «Defensa · 6,50 €»
+    expect(deuda.parentElement).toHaveTextContent(/^Defensa · 6,50\s€ de multas pendientes$/)
+    expect(deuda.closest('strong')).toBeNull()
+  })
+
   it('el rol jugador ve sus multas y el catálogo, sin caja ni acciones', async () => {
     conMultas(
       plantilla('p1', 'Senior', '2026-27', { rol: 'jugador', esAdminClub: false, jugadorId: 'j1' }),
