@@ -811,11 +811,11 @@ Una issue está terminada cuando: cumple sus criterios de aceptación en el ento
 | 12 · Asistente de ejercicios | Claves de API, diagrama táctico del ejercicio y generación de imágenes, animación y PDF en el servidor | v2.1.0, prevista |
 | 13 · Jugadores invitados | Convocar y, si el entrenador quiere, meter en la dinámica del equipo a jugadores de otra plantilla, de un club asociado o a prueba | v1.7.0, con GH-187, GH-188 y GH-189 |
 | 14 · Cambio de temporada | Crear las plantillas de la temporada nueva a partir de las de la anterior | antes de la temporada 2027-28, prevista |
-| 15 · Diseño | Pulido visual de todas las pestañas: Plantilla, Entrenos, Partidos, Multas y Más | pendiente |
+| 15 · Diseño | Pulido visual de todas las pestañas: Plantilla, Entrenos, Partidos, Multas y Más | v1.12.0, con GH-250 a GH-298 y GH-213 |
 
 Versión publicada en los ciclos ya cerrados y prevista en el resto. Los ciclos 1 a 3 no tuvieron release propia: se publicaron juntos en la v1.0.0. Lo que queda abierto de un ciclo ya publicado sale en la release siguiente a terminarlo.
 
-Fuera de los ciclos, el rediseño de la interfaz salió en la v1.10.0: la ficha del jugador en casillas y con su jerarquía (GH-226 y GH-234), Saira Condensed en los títulos y los números (GH-227), el resultado de los partidos en verde, ámbar o rojo (GH-228) y la tarjeta del partido (GH-229). En la v1.11.0, también sin ciclo, los jugadores lesionados (GH-230) y los sancionados calculados a partir de las tarjetas de las actas (GH-231).
+Fuera de los ciclos, el rediseño de la interfaz salió en la v1.10.0: la ficha del jugador en casillas y con su jerarquía (GH-226 y GH-234), Saira Condensed en los títulos y los números (GH-227), el resultado de los partidos en verde, ámbar o rojo (GH-228) y la tarjeta del partido (GH-229). En la v1.11.0, también sin ciclo, los jugadores lesionados (GH-230) y los sancionados calculados a partir de las tarjetas de las actas (GH-231). En la v1.12.0, junto al ciclo 15, los sancionados tachados en la convocatoria (GH-248).
 
 ---
 
@@ -853,7 +853,7 @@ Fuera de los ciclos, el rediseño de la interfaz salió en la v1.10.0: la ficha 
 | Ciclo 12 · Asistente de ejercicios | Claves de API, diagrama táctico del ejercicio y generación de imágenes, animación y PDF en el servidor (v2.1.0, prevista) |
 | Ciclo 13 · Jugadores invitados | Convocar y, si el entrenador quiere, meter en la dinámica del equipo a jugadores de otra plantilla del club (juveniles, equipo B), de un club asociado o a prueba (v1.7.0, con GH-187, GH-188 y GH-189) |
 | Ciclo 14 · Cambio de temporada | Crear las plantillas de la temporada nueva a partir de las de la anterior, copiando jugadores y cuerpo técnico (antes de la temporada 2027-28) |
-| Ciclo 15 · Diseño | Pulido visual de las pantallas, empezando por Plantilla, Entrenos y Partidos: estados sobre el dorsal, nombres que no se cortan, color solo en lo marcado, barra fija con el progreso, guardado fiable, asistencia por entreno y por mes, horario como resumen, biblioteca de ejercicios por categorías, partidos con marcador y racha, ficha del partido en Previa y Partido, y convocatoria por líneas |
+| Ciclo 15 · Diseño | Pulido visual de las pantallas, empezando por Plantilla, Entrenos y Partidos: estados sobre el dorsal, nombres que no se cortan, color solo en lo marcado, barra fija con el progreso, guardado fiable, asistencia por entreno y por mes, horario como resumen, biblioteca de ejercicios por categorías, partidos con marcador y racha, ficha del partido en Previa y Partido, y convocatoria por líneas (v1.12.0) |
 
 ### 11.3 Issues
 
