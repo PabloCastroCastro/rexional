@@ -50,14 +50,14 @@ describe('identidad del club', () => {
       clubRexional,
       plantilla('p1', 'Senior', '2026-27', { rol: 'admin', esAdminClub: false }),
     )
-    abrir('/plantillas/p1/mas/configuracion')
+    abrir('/plantillas/p1/mas/configuracion?pestana=club')
     expect(await screen.findByRole('heading', { name: 'Esta plantilla' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Identidad del club' })).not.toBeInTheDocument()
   })
 
   it('elige colores con vista previa en vivo y los guarda', async () => {
     conClub()
-    abrir('/plantillas/p1/mas/configuracion')
+    abrir('/plantillas/p1/mas/configuracion?pestana=club')
     const s = await seccion()
     const guardar = s.getByRole('button', { name: 'Guardar colores' })
     expect(guardar).toBeDisabled()
@@ -78,7 +78,7 @@ describe('identidad del club', () => {
 
   it('restablece los colores por defecto', async () => {
     conClub({ ...clubRexional, colorPrincipal: '#1d3a8a', colorSecundario: '#ffffff' })
-    abrir('/plantillas/p1/mas/configuracion')
+    abrir('/plantillas/p1/mas/configuracion?pestana=club')
     const s = await seccion()
     await userEvent.click(s.getByRole('button', { name: 'Restablecer los de por defecto' }))
     expect(enviado('PATCH /api/clubes/c1')).toEqual([
@@ -90,7 +90,7 @@ describe('identidad del club', () => {
     conClub()
     manejadores['PUT /api/clubes/c1/escudo'] = () =>
       json({ ...clubRexional, escudo: '/api/clubes/c1/escudo?v=nuevo', esAdmin: true })
-    abrir('/plantillas/p1/mas/configuracion')
+    abrir('/plantillas/p1/mas/configuracion?pestana=club')
     const s = await seccion()
     const archivo = new File(['png'], 'escudo.png', { type: 'image/png' })
     await userEvent.upload(s.getByLabelText('Escudo del club'), archivo)
@@ -106,7 +106,7 @@ describe('identidad del club', () => {
 
   it('avisa antes de subir un archivo que no es PNG ni WebP o que es demasiado grande', async () => {
     conClub()
-    abrir('/plantillas/p1/mas/configuracion')
+    abrir('/plantillas/p1/mas/configuracion?pestana=club')
     const s = await seccion()
     const usuario = userEvent.setup({ applyAccept: false })
     await usuario.upload(
@@ -134,7 +134,7 @@ describe('identidad del club', () => {
         },
         415,
       )
-    abrir('/plantillas/p1/mas/configuracion')
+    abrir('/plantillas/p1/mas/configuracion?pestana=club')
     const s = await seccion()
     await userEvent.upload(
       s.getByLabelText('Escudo del club'),
@@ -150,7 +150,7 @@ describe('identidad del club', () => {
     conClub({ ...clubRexional, escudo: '/api/clubes/c1/escudo?v=uno' })
     manejadores['DELETE /api/clubes/c1/escudo'] = () =>
       json({ ...clubRexional, escudo: null, esAdmin: true })
-    abrir('/plantillas/p1/mas/configuracion')
+    abrir('/plantillas/p1/mas/configuracion?pestana=club')
     const s = await seccion()
     expect(s.getByRole('button', { name: 'Cambiar escudo' })).toBeInTheDocument()
     await userEvent.click(s.getByRole('button', { name: 'Quitar escudo' }))
